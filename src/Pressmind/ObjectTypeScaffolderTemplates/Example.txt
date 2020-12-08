@@ -1,0 +1,34 @@
+<?php
+/**
+ * @var array $data
+ */
+
+/**
+ * @var Custom\MediaType\###CLASSNAME### $###VARIABLENAME###
+ */
+$###VARIABLENAME### = $data['data'];
+
+/**
+ * @var Pressmind\ORM\Object\Touristic\Booking\Package[] $booking_packages
+ */
+$booking_packages = $data['booking_packages'];
+
+/**
+ * @var Pressmind\ORM\Object\MediaObject $media_object
+ */
+$media_object = $data['media_object'];
+
+$cheapest_price = $media_object->getCheapestPrice();
+?>
+<h1>This is the Example View for Media Object Type "###OBJECTNAME###"</h1>
+<p>Open the file ###VIEWFILEPATH### in a text editor, to see how the information in this file was rendered</p>
+<?php if(!is_null($cheapest_price)) {?>
+    <h4>Cheapest Price</h4>
+    <pre>
+        <?php print_r($cheapest_price->toStdClass());?>
+    </pre>
+<?php }?>
+<h4>Properties for Media Type</h4>
+<dl>
+    ###PROPERTYLIST###
+</dl>

@@ -1,0 +1,134 @@
+{
+    "development": {
+        "server": {
+            "document_root": "BASE_PATH/httpdocs",
+            "web_server": "Apache2"
+        },
+        "database": {
+            "username": "",
+            "password": "",
+            "host": "127.0.0.1",
+            "port": "3306",
+            "dbname": "",
+            "engine": "MySQL"
+        },
+        "rest": {
+            "client": {
+                "api_endpoint": "https://api.pm-t2.com/v1.5/rest/",
+                "api_key": "",
+                "api_user": "",
+                "api_password": ""
+            },
+            "server": {
+                "api_endpoint": "/rest",
+                "api_key": "",
+                "api_user": "",
+                "api_password": ""
+            }
+        },
+        "tmp_dir": "APPLICATION_PATH/tmp",
+        "logging": {
+            "mode": "ALL",
+            "log_file_path": "APPLICATION_PATH/logs",
+            "error_email_address": "john.doe@local"
+        },
+        "debug": {
+            "mode": "on",
+            "ip_addresses": [
+                "127.0.0.1"
+            ]
+        },
+        "data": {
+            "touristic": {
+                "origins": [
+                    "0"
+                ],
+                "my_content_class_map": {}
+            },
+            "media_types": {},
+            "media_types_pretty_url": {},
+            "media_types_fulltext_index_fields": {},
+            "sections": {
+                "allowed": [
+                    "Default"
+                ],
+                "default": "Default",
+                "fallback": "Default",
+                "fallback_on_empty_values": true,
+                "replace": {
+                    "regular_expression": null,
+                    "replacement": null
+                }
+            },
+            "languages": {
+                "allowed": [
+                    "de"
+                ],
+                "default": "de"
+            },
+            "preview_url": "/detail.php?id={{id_media_object}}&preview={{preview}}"
+        },
+        "cache": {
+            "enabled": false,
+            "adapter": "Redis",
+            "ttl": "18000",
+            "strategy": "ALL"
+        },
+        "view_scripts": {
+            "base_path": "APPLICATION_PATH/Custom/Views"
+        },
+        "scaffolder_templates": {
+            "overwrite_existing_templates": false,
+            "base_path": "APPLICATION_PATH/ObjectTypeScaffolderTemplates"
+        },
+        "file_download": {
+            "download_file_path": "WEBSERVER_DOCUMENT_ROOT/assets/files"
+        },
+        "file_handling": {
+            "processor": {},
+            "storage": {
+                "provider": "filesystem",
+                "bucket": "WEBSERVER_DOCUMENT_ROOT/assets/files",
+                "credentials": {}
+            },
+            "http_src": "WEBSERVER_HTTP/assets/files"
+        },
+        "image_handling": {
+            "processor": {
+                "adapter": "ImageMagick",
+                "webp_support": false,
+                "webp_library": "cwebp",
+                "derivatives": {
+                    "thumbnail": {
+                        "max_width": "125",
+                        "max_height": "83",
+                        "preserve_aspect_ratio": false,
+                        "crop": true,
+                        "horizontal_crop": "center",
+                        "vertical_crop": "center",
+                        "webp_create": false,
+                        "webp_quality": 80
+                    },
+                    "teaser": {
+                        "max_width": "500",
+                        "max_height": "333",
+                        "preserve_aspect_ratio": false,
+                        "crop": true,
+                        "horizontal_crop": "center",
+                        "vertical_crop": "center",
+                        "webp_create": false,
+                        "webp_quality": 80
+                    }
+                },
+                "storage": {
+                    "provider": "filesystem",
+                    "bucket": "WEBSERVER_DOCUMENT_ROOT/assets/images",
+                    "credentials": {}
+                },
+                "http_src": "WEBSERVER_HTTP/assets/images"
+            }
+        }
+    },
+    "testing": [],
+    "production": []
+}

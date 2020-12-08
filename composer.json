@@ -1,0 +1,26 @@
+{
+    "name": "pressmind/sdk",
+    "description": "Core functionality for the pressmind Web-Core SDK",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Michael Graute",
+            "email": "m.graute@team-braeutigam.de"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+        "ext-json": "*",
+        "ext-curl": "*",
+        "ext-bcmath": "*",
+        "ext-pdo": "*",
+        "ext-readline": "*",
+        "ext-mbstring": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Pressmind\\": "src/Pressmind/"
+        }
+    }
+}

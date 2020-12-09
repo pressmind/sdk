@@ -25,7 +25,6 @@ class Redis implements AdapterInterface
 
     public function get($pKey)
     {
-        file_put_contents(APPLICATION_PATH . '/redis.txt', $pKey . "\n", FILE_APPEND);
         return $this->_server->get($pKey);
     }
 

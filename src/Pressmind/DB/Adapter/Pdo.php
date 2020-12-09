@@ -54,7 +54,6 @@ class Pdo implements AdapterInterface
      */
     public function execute($query, $parameters = null)
     {
-        file_put_contents(APPLICATION_PATH . '/database.txt', $query . "\n", FILE_APPEND);
         $this->prepare($query);
         if (!$this->statement->execute($parameters)) {
             $error = $this->statement->errorInfo();
@@ -71,8 +70,6 @@ class Pdo implements AdapterInterface
      */
     public function fetchAll($query = null, $parameters = null, $class_name = null)
     {
-        file_put_contents(APPLICATION_PATH . '/database.txt', $query . "\n", FILE_APPEND);
-        //file_put_contents(APPLICATION_PATH . '/database.txt', print_r($parameters, true) . "\n", FILE_APPEND);
         if (!is_null($query)) {
             $this->statement = $this->databaseConnection->prepare($query);
             $this->statement->execute($parameters);

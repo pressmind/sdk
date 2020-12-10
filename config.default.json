@@ -70,7 +70,13 @@
         },
         "cache": {
             "enabled": false,
-            "adapter": "Redis",
+            "adapter": {
+                "name": "Redis",
+                "config": {
+                    "host": "127.0.0.1",
+                    "port": 6379
+                }
+            },
             "ttl": "18000",
             "strategy": "ALL"
         },
@@ -119,14 +125,14 @@
                         "webp_create": false,
                         "webp_quality": 80
                     }
-                },
-                "storage": {
-                    "provider": "filesystem",
-                    "bucket": "WEBSERVER_DOCUMENT_ROOT/assets/images",
-                    "credentials": {}
-                },
-                "http_src": "WEBSERVER_HTTP/assets/images"
-            }
+                }
+            },
+            "storage": {
+                "provider": "filesystem",
+                "bucket": "WEBSERVER_DOCUMENT_ROOT/assets/images",
+                "credentials": {}
+            },
+            "http_src": "WEBSERVER_HTTP/assets/images"
         }
     },
     "testing": [],

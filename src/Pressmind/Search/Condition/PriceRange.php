@@ -50,7 +50,7 @@ class PriceRange implements ConditionInterface
     public function getValues()
     {
         $now = new \DateTime();
-        return [':price_from' => $this->priceFrom, ':price_to' => $this->priceTo, ':now' => $now->format('Y-m-d H:i:s')];
+        return [':price_from' => $this->priceFrom, ':price_to' => $this->priceTo, ':now' => $now->format('Y-m-d 00:00:00')];
     }
 
     public static function create($priceFrom, $priceTo)

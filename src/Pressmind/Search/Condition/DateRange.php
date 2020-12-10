@@ -75,7 +75,7 @@ class DateRange implements ConditionInterface
      */
     public function getValues()
     {
-        return [':date_from' => $this->dateFrom->format('Y-m-d 00:00:00'), ':date_to' => $this->dateTo->format('Y-m-d 00:00:00')];
+        return [':date_from' => $this->dateFrom->format('Y-m-d 00:00:00'), ':date_to' => $this->dateTo->format('Y-m-d 23:59:59')];
     }
 
     /**

@@ -189,7 +189,23 @@ abstract class AbstractObject implements SplSubject
             echo $query;
             print_r($values);
         }*/
-        $dataset = $this->_db->fetchAll($query, $values);
+        $dataset = [];
+        if($this->_cache_enabled) {
+            $key = md5($query . json_encode($values));
+            $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
+            if($cache_adapter->exists($key)) {
+                //echo get_class($this) . ': from cache' . "\n";
+                $dataset = json_decode($cache_adapter->get($key));
+            } else {
+                echo 'from db to cache: ' . $query;
+                $dataset = $this->_db->fetchAll($query, $values);
+                $cache_adapter->add($key, json_encode($dataset));
+            }
+        } else {
+            echo 'from db';
+            $dataset = $this->_db->fetchAll($query, $values);
+        }
+
         foreach ($dataset as $stdObject) {
             /**@var AbstractObject $object * */
             $class_name = get_class($this);
@@ -275,7 +291,7 @@ abstract class AbstractObject implements SplSubject
     private function _readFromCache($id)
     {
         $this->_write_log('_readFromCache( ' . $id . ' )');
-        $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']);
+        $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
         if($cache_adapter->exists($this->getDbTableName() . '_' . $id)) {
             //var_dump($cache_adapter->get($this->getDbTableName() . '_' . $id));
             $data = json_decode($cache_adapter->get($this->getDbTableName() . '_' . $id));
@@ -291,7 +307,7 @@ abstract class AbstractObject implements SplSubject
      */
     public function addToCache($id)
     {
-        $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']);
+        $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
         $this->setReadRelations(true);
         $data = $this->_readFromDb($id);
         $cache_adapter->add($this->getDbTableName() . '_' . $id, json_encode($this->toStdClass()));
@@ -302,7 +318,7 @@ abstract class AbstractObject implements SplSubject
      *
      */
     public function removeFromCache() {
-        $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']);
+        $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
         if($cache_adapter->exists($this->getDbTableName() . '_' . $this->getId())) {
             $cache_adapter->remove($this->getDbTableName() . '_' . $this->getId());
         }

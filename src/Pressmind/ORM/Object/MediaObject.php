@@ -460,13 +460,13 @@ class MediaObject extends AbstractObject
     public function getCheapestPrices($filters = null)
     {
         $now = new DateTime();
-        $where = "id_media_object = " . $this->getId() . " AND price_total > 0 AND date_departure > '" . $now->format('Y-m-d H:i:s') . "'";
+        $where = "id_media_object = " . $this->getId() . " AND price_total > 0 AND date_departure > '" . $now->format('Y-m-d 00:00:00') . "'";
         if(!is_null($filters)) {
             if(!is_null($filters->duration_from) && !is_null($filters->duration_to)) {
                 $where .= ' AND duration BETWEEN ' . $filters->duration_from . ' AND ' . $filters->duration_to;
             }
             if(!is_null($filters->date_from) && !is_null($filters->date_to)) {
-                $where .= " AND date_departure BETWEEN '" . $filters->date_from->format('Y-m-d H:i:s') . "' AND '" . $filters->date_to->format('Y-m-d H:i:s') . "'";
+                $where .= " AND date_departure BETWEEN '" . $filters->date_from->format('Y-m-d 00:00:00') . "' AND '" . $filters->date_to->format('Y-m-d 23:59:59') . "'";
             }
         }
         $cheapest_prices = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 2', ['price_total' => 'ASC', 'date_departure' => 'ASC']);

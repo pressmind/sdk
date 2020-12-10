@@ -148,8 +148,18 @@ class Search
             $this->_limits = $this->_paginator->getLimits($total_count);
         }
         $this->_concatSql();
-        //echo $this->_sql . "\n";
-        $db_result = $db->fetchAll($this->_sql, $this->_values);
+        if(Registry::getInstance()->get('config')['cache']['enabled']) {
+            $key = md5($this->_sql . json_encode($this->_values));
+            $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
+            if ($cache_adapter->exists($key)) {
+                $db_result = json_decode($cache_adapter->get($key));
+            } else {
+                $db_result = $db->fetchAll($this->_sql, $this->_values);
+                $cache_adapter->add($key, json_encode($db_result));
+            }
+        } else {
+            $db_result = $db->fetchAll($this->_sql, $this->_values);
+        }
         $result = new Result();
         $result->setQuery($this->_sql);
         $result->setValues($this->_values);

@@ -7,6 +7,7 @@ namespace Pressmind\Storage\Provider;
 use Aws\S3\Exception\S3Exception;
 use Aws\S3\S3Client;
 use Exception;
+use Pressmind\Log\Writer;
 use Pressmind\Registry;
 use Pressmind\Storage\Bucket;
 use Pressmind\Storage\File;
@@ -17,12 +18,14 @@ class S3 implements ProviderInterface
 
     private $_s3_client;
 
+    private $_log_file_name = 's3_storage';
+
     public function __construct()
     {
         $config = Registry::getInstance()->get('config');
         $this->_s3_client = new S3Client([
-            'version' => 'latest',
-            'region' => 'eu-central-1',
+            'version' => $config['file_handling']['storage']['version'],
+            'region' => $config['file_handling']['storage']['region'],
             'credentials' => $config['file_handling']['storage']['credentials']
         ]);
     }
@@ -35,7 +38,7 @@ class S3 implements ProviderInterface
      */
     public function save($file, $bucket)
     {
-        file_put_contents(APPLICATION_PATH . '/s3log.txt', $file->name . "\n", FILE_APPEND);
+        Writer::write($file->name, Writer::OUTPUT_FILE, $this->_log_file_name);
         try {
             $result = $this->_s3_client->putObject([
                 'Bucket' => $bucket->name,
@@ -43,7 +46,7 @@ class S3 implements ProviderInterface
                 'Body' => $file->content
             ]);
         } catch (S3Exception $e) {
-            file_put_contents(APPLICATION_PATH . '/s3log.txt', $e->getMessage() . "\n", FILE_APPEND);
+            Writer::write($e->getMessage(), Writer::OUTPUT_FILE, $this->_log_file_name, Writer::TYPE_ERROR);
         }
     }
 

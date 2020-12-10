@@ -133,7 +133,41 @@
                 "credentials": {}
             },
             "http_src": "WEBSERVER_HTTP/assets/images"
-        }
+        },
+        "scheduled_tasks": [
+            {
+                "name": "Log Clean Up",
+                "class": "\\Pressmind\\Log\\Service",
+                "schedule": {
+                    "type": "Daily",
+                    "time": "Fixed",
+                    "value": "23:30"
+                },
+                "methods": [
+                    {
+                        "method": "cleanUp",
+                        "parameters": null,
+                        "position": 0
+                    }
+                ]
+            },
+            {
+                "name": "Cache Clean Up",
+                "class": "\\Pressmind\\Cache\\Service",
+                "schedule": {
+                    "type": "Minutely",
+                    "time": "Period",
+                    "value": "5"
+                },
+                "methods": [
+                    {
+                        "method": "cleanUp",
+                        "parameters": null,
+                        "position": 0
+                    }
+                ]
+            }
+        ]
     },
     "testing": [],
     "production": []

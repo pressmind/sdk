@@ -4,6 +4,8 @@
 namespace Pressmind\Cache\Adapter;
 
 
+use Pressmind\Registry;
+
 class Redis implements AdapterInterface
 {
 
@@ -14,8 +16,9 @@ class Redis implements AdapterInterface
 
     public function __construct()
     {
+        $config = Registry::getInstance()->get('config');
         $this->_server = new \Redis();
-        $this->_server->connect('127.0.0.1', 6379);
+        $this->_server->connect($config['cache']['adapter']['config']['host'], $config['cache']['adapter']['config']['port']);
     }
 
     public function add($pKey, $pValue)

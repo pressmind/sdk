@@ -87,7 +87,6 @@ abstract class AbstractObject implements SplSubject
     {
         $text =  number_format(microtime(true) - $this->_start_time, 8) . get_class($this) . " " . $logtext;
         $this->_log[] = $text;
-        //file_put_contents(APPLICATION_PATH . '/object_log.txt', $text . "\n", FILE_APPEND);
     }
 
     public function getLog()
@@ -128,6 +127,7 @@ abstract class AbstractObject implements SplSubject
         $result = [];
         $order_columns = [];
         $query = "SELECT * FROM " . $this->getDbTableName();
+
         if (is_array($where)) {
             $query .= " WHERE ";
             $where_i = 0;
@@ -169,40 +169,37 @@ abstract class AbstractObject implements SplSubject
         } else if(!is_null($where)) {
             $query .= " WHERE " . $where;
         }
+
         if(isset($this->_definitions['database']['order_columns']) && !is_null($this->_definitions['database']['order_columns'])) {
             foreach ($this->_definitions['database']['order_columns'] as $column_name => $direction) {
                 $order_columns[] = $column_name . ' ' . $direction;
             }
         }
+
         if(!is_null($order) && is_array($order)) {
             foreach ($order as $column_name => $direction) {
                 $order_columns[] = $column_name . ' ' . $direction;
             }
         }
+
         if((isset($this->_definitions['database']['order_columns']) && !is_null($this->_definitions['database']['order_columns'])) || (!is_null($order) && is_array($order))) {
             $query .= ' ORDER BY ' . implode(', ', $order_columns);
         }
+
         if(!is_null($limit)) {
             $query .= ' LIMIT ' . $limit[0] . ', ' . $limit[1];
         }
-        /*if(get_class($this) == 'Custom\MediaType\Reise') {
-            echo $query;
-            print_r($values);
-        }*/
-        $dataset = [];
+
         if($this->_cache_enabled) {
             $key = md5($query . json_encode($values));
             $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
             if($cache_adapter->exists($key)) {
-                //echo get_class($this) . ': from cache' . "\n";
                 $dataset = json_decode($cache_adapter->get($key));
             } else {
-                echo 'from db to cache: ' . $query;
                 $dataset = $this->_db->fetchAll($query, $values);
                 $cache_adapter->add($key, json_encode($dataset));
             }
         } else {
-            echo 'from db';
             $dataset = $this->_db->fetchAll($query, $values);
         }
 

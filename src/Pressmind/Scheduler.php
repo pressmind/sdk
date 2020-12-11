@@ -29,24 +29,30 @@ class Scheduler
     }
 
     private function _findTasks() {
+        /** @var Task $task */
         foreach (Task::listAll(['active' => 1, 'running' => 0]) as $task) {
-            $this->_addTask($task);
+            if($task->shallRun()) {
+                $this->_addTask($task);
+            }
         }
+        Writer::write('Found ' . count($this->_getTasks()) . ' jobs', Writer::OUTPUT_FILE, 'scheduler');
     }
 
     /**
      * @throws Exception
      */
     public function walk() {
-        Writer::write('Starting scheduled jobs for ' . count($this->_getTasks()) . ' tasks', Writer::OUTPUT_FILE, 'scheduler');
+        if(count($this->_getTasks()) > 0) {
+            Writer::write('Processing of ' . count($this->_getTasks()) . ' jobs started', Writer::OUTPUT_FILE, 'scheduler');
+        }
         $i=0;
         foreach ($this->_getTasks() as $task) {
             $i++;
-            Writer::write('Job ' . $i . '("' . $task->getValue('name') . '") starting ...', Writer::OUTPUT_FILE, 'scheduler');
+            Writer::write('Job ' . $i . '("' . $task->name . '") starting ...', Writer::OUTPUT_FILE, 'scheduler');
             try {
-                Writer::write('Job ' . $i . '("' . $task->getValue('name') . '") completed with response: ' . $task->run(), Writer::OUTPUT_FILE, 'scheduler');
+                Writer::write('Job ' . $i . '("' . $task->name . '") completed with response: ' . $task->run(), Writer::OUTPUT_FILE, 'scheduler');
             } catch (Exception $e) {
-                Writer::write('Job ' . $i . '("' . $task->getValue('name') . '") failed: ' .  $e->getMessage(), Writer::OUTPUT_FILE, 'scheduler', Writer::TYPE_ERROR);
+                Writer::write('Job ' . $i . '("' . $task->name . '") failed: ' .  $e->getMessage(), Writer::OUTPUT_FILE, 'scheduler', Writer::TYPE_ERROR);
             }
         }
     }

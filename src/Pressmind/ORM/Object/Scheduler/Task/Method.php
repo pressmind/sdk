@@ -10,13 +10,15 @@ use Pressmind\ORM\Object\AbstractObject;
  * Class Method
  * @package Pressmind\ORM\Object\Scheduler\Task
  * @property integer $id
- * @property integer $task_id
+ * @property integer $id_task
  * @property string $name
  * @property string $parameters
  * @property integer $position
  */
 class Method extends AbstractObject
 {
+    protected $_disable_cache_permanently = true;
+
     protected $_definitions = [
         'class' => [
             'name' => self::class,
@@ -34,9 +36,9 @@ class Method extends AbstractObject
                 'validators' => null,
                 'filters' => null
             ],
-            'task_id' => [
-                'title' => 'task_id',
-                'name' => 'task_id',
+            'id_task' => [
+                'title' => 'id_task',
+                'name' => 'id_task',
                 'type' => 'integer',
                 'required' => true,
                 'validators' => null,

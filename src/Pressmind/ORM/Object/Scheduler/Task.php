@@ -6,6 +6,7 @@ namespace Pressmind\ORM\Object\Scheduler;
 
 use DateTime;
 use Exception;
+use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\Scheduler\Task\Method;
 
@@ -26,6 +27,8 @@ use Pressmind\ORM\Object\Scheduler\Task\Method;
  */
 class Task extends AbstractObject
 {
+    protected $_disable_cache_permanently = true;
+
     protected $_definitions = [
         'class' => [
             'name' => self::class,
@@ -138,29 +141,37 @@ class Task extends AbstractObject
     public function run()
     {
         $return = '';
-        if($this->_shallRun()) {
-            $this->running = true;
-            $this->update();
-            $classname = $this->class_name;
-            try {
-                $obj = new $classname();
-                foreach ($this->methods as $method) {
-                    $method_name = $method->name;
-                    $return = $obj->$method_name();
-                    $parameters = is_array(json_decode($method->parameters, true)) ? json_decode($method->parameters, true) : [];
-                    call_user_func_array([$obj, $method->name], array_values($parameters));
+        $this->running = true;
+        $this->update();
+        $classname = $this->class_name;
+        try {
+            $obj = new $classname();
+            foreach ($this->methods as $method) {
+                Writer::write('Processing task "' . $method->name . '"', Writer::OUTPUT_FILE, 'scheduler');
+                $parameters = is_array(json_decode($method->parameters, true)) ? json_decode($method->parameters, true) : [];
+                try {
+                    $method_return = call_user_func_array([$obj, $method->name], array_values($parameters));
+                    Writer::write('Task "' . $method->name . '" returned: ' . $method_return, Writer::OUTPUT_FILE, 'scheduler');
+                } catch (Exception $e) {
+                    Writer::write('Error while processing task ' . $method->name . ' in job' . $this->name . ': ' . $e->getMessage(), Writer::OUTPUT_FILE, 'scheduler', Writer::TYPE_ERROR);
                 }
-            } catch (Exception $e) {
-                $return = $e->getMessage();
             }
-            $this->running = false;
-            $this->last_run = new DateTime();
-            $this->update();
+            $return = 'Process successful';
+        } catch (Exception $e) {
+            Writer::write('Error while processing job' . $this->name . ': ' . $e->getMessage(), Writer::OUTPUT_FILE, 'scheduler', Writer::TYPE_ERROR);
+            $return = $e->getMessage();
         }
+        $this->running = false;
+        $this->last_run = new DateTime();
+        $this->update();
         return $return;
     }
 
-    private function _shallRun() {
+    /**
+     * @return bool
+     * @throws Exception
+     */
+    public function shallRun() {
         if($this->running === true) {
             return false;
         }
@@ -176,6 +187,11 @@ class Task extends AbstractObject
         return false;
     }
 
+    /**
+     * @param $period
+     * @return bool
+     * @throws Exception
+     */
     private function _checkMinutelySchedule($period)
     {
         $origin = $this->last_run;
@@ -183,6 +199,12 @@ class Task extends AbstractObject
         return $target->diff($origin)->i >= intval($period);
     }
 
+    /**
+     * @param $time
+     * @param $value
+     * @return bool
+     * @throws Exception
+     */
     private function _checkDailySchedule($time, $value) {
         if(strtolower($time) == 'fixed') {
             $origin = new DateTime();

@@ -41,6 +41,8 @@ abstract class AbstractObject implements SplSubject
      */
     protected $_cache_enabled;
 
+    protected $_disable_cache_permanently = false;
+
     protected $_read_relations = true;
 
     /**
@@ -77,6 +79,9 @@ abstract class AbstractObject implements SplSubject
         $registry = Registry::getInstance();
         $this->_db = $registry->get('db');
         $this->_cache_enabled = $registry->get('config')['cache']['enabled'];
+        if(true === $this->_disable_cache_permanently) {
+            $this->_cache_enabled = false;
+        }
         $this->setReadRelations($readRelations);
         if(!is_null($id)) {
             $this->read($id);
@@ -169,7 +174,6 @@ abstract class AbstractObject implements SplSubject
         } else if(!is_null($where)) {
             $query .= " WHERE " . $where;
         }
-
         if(isset($this->_definitions['database']['order_columns']) && !is_null($this->_definitions['database']['order_columns'])) {
             foreach ($this->_definitions['database']['order_columns'] as $column_name => $direction) {
                 $order_columns[] = $column_name . ' ' . $direction;
@@ -202,7 +206,9 @@ abstract class AbstractObject implements SplSubject
         } else {
             $dataset = $this->_db->fetchAll($query, $values);
         }
-
+        /*echo $query;
+        print_r($values);
+        print_r($dataset);*/
         foreach ($dataset as $stdObject) {
             /**@var AbstractObject $object * */
             $class_name = get_class($this);

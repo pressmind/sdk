@@ -15,139 +15,114 @@ namespace Pressmind\ORM\Object;
  */
 class Airline extends AbstractObject
 {
-    protected $_definitions = array(
-        'class' =>
-            array(
-                'name' => 'Airline',
-            ),
-        'database' =>
-            array(
-                'table_name' => 'pmt2core_airlines',
-                'primary_key' => 'id',
-            ),
-        'properties' =>
-            array(
-                'id' =>
-                    array(
-                        'title' => 'Id',
-                        'name' => 'id',
-                        'type' => 'integer',
-                        'required' => true,
-                        'validators' =>
-                            array(
-                                0 =>
-                                    array(
-                                        'name' => 'maxlength',
-                                        'params' => 22,
-                                    ),
-                            ),
-                        'filters' => NULL,
-                    ),
-                'name' =>
-                    array(
-                        'title' => 'Name',
-                        'name' => 'name',
-                        'type' => 'string',
-                        'required' => false,
-                        'validators' =>
-                            array(
-                                0 =>
-                                    array(
-                                        'name' => 'maxlength',
-                                        'params' => 255,
-                                    ),
-                            ),
-                        'filters' => NULL,
-                    ),
-                'alias' =>
-                    array(
-                        'title' => 'Alias',
-                        'name' => 'alias',
-                        'type' => 'string',
-                        'required' => false,
-                        'validators' =>
-                            array(
-                                0 =>
-                                    array(
-                                        'name' => 'maxlength',
-                                        'params' => 255,
-                                    ),
-                            ),
-                        'filters' => NULL,
-                    ),
-                'iata' =>
-                    array(
-                        'title' => 'Iata',
-                        'name' => 'iata',
-                        'type' => 'string',
-                        'required' => false,
-                        'validators' =>
-                            array(
-                                0 =>
-                                    array(
-                                        'name' => 'maxlength',
-                                        'params' => 2,
-                                    ),
-                            ),
-                        'filters' => NULL,
-                    ),
-                'icao' =>
-                    array(
-                        'title' => 'Icao',
-                        'name' => 'icao',
-                        'type' => 'string',
-                        'required' => false,
-                        'validators' =>
-                            array(
-                                0 =>
-                                    array(
-                                        'name' => 'maxlength',
-                                        'params' => 4,
-                                    ),
-                            ),
-                        'filters' => NULL,
-                    ),
-                'callsign' =>
-                    array(
-                        'title' => 'Callsign',
-                        'name' => 'callsign',
-                        'type' => 'string',
-                        'required' => false,
-                        'validators' =>
-                            array(
-                                0 =>
-                                    array(
-                                        'name' => 'maxlength',
-                                        'params' => 255,
-                                    ),
-                            ),
-                        'filters' => NULL,
-                    ),
-                'country' =>
-                    array(
-                        'title' => 'Country',
-                        'name' => 'country',
-                        'type' => 'string',
-                        'required' => false,
-                        'validators' =>
-                            array(
-                                0 =>
-                                    array(
-                                        'name' => 'maxlength',
-                                        'params' => 255,
-                                    ),
-                            ),
-                        'filters' => NULL,
-                    ),
-                'active' =>
-                    array(
-                        'title' => 'Active',
-                        'name' => 'active',
-                        'type' => 'boolean',
-                        'required' => false,
-                        'validators' => NULL,
-                        'filters' => NULL,
-                    ),
-            ),
-    );
+    protected $_definitions = [
+        'class' => [
+            'name' => self::class,
+        ],
+        'database' => [
+            'table_name' => 'pmt2core_airlines',
+            'primary_key' => 'id',
+        ],
+        'properties' => [
+            'id' => [
+                'title' => 'Id',
+                'name' => 'id',
+                'type' => 'integer',
+                'required' => true,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                ],
+                'filters' => null,
+            ],
+            'name' => [
+                'title' => 'Name',
+                'name' => 'name',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => null,
+            ],
+            'alias' => [
+                'title' => 'Alias',
+                'name' => 'alias',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => null,
+            ],
+            'iata' => [
+                'title' => 'Iata',
+                'name' => 'iata',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 2,
+                    ],
+                ],
+                'filters' => null,
+            ],
+            'icao' => [
+                'title' => 'Icao',
+                'name' => 'icao',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 4,
+                    ],
+                ],
+                'filters' => null,
+            ],
+            'callsign' => [
+                'title' => 'Callsign',
+                'name' => 'callsign',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => null,
+            ],
+            'country' => [
+                'title' => 'Country',
+                'name' => 'country',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => null,
+            ],
+            'active' => [
+                'title' => 'Active',
+                'name' => 'active',
+                'type' => 'boolean',
+                'required' => false,
+                'validators' => null,
+                'filters' => null,
+            ],
+        ],
+    ];
 }

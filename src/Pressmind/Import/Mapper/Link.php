@@ -23,7 +23,7 @@ class Link implements MapperInterface
             $mapped_object->section_name = '';
             $mapped_object->language = $pLanguage;
             $mapped_object->var_name = $pVarName;
-            $mapped_object->href = $pObject->hrefLink;
+            $mapped_object->href = isset($pObject->hrefLink) ? $pObject->hrefLink : null;
             $mapped_object->link_type = isset($pObject->link_type) ? $pObject->link_type : null;
             return [$mapped_object];
         } else {

@@ -87,9 +87,6 @@
             "overwrite_existing_templates": false,
             "base_path": "APPLICATION_PATH/ObjectTypeScaffolderTemplates"
         },
-        "file_download": {
-            "download_file_path": "WEBSERVER_DOCUMENT_ROOT/assets/files"
-        },
         "file_handling": {
             "processor": {},
             "storage": {

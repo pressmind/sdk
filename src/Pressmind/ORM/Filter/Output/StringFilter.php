@@ -10,7 +10,7 @@ class StringFilter implements FilterInterface
 
     public function filterValue($pValue)
     {
-        if(empty($pValue)) return null;
+        if(empty($pValue) || $pValue === 'null') return null;
         if(is_object($pValue)) return 'Error: Object to string conversion';
         return $pValue;
     }

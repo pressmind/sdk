@@ -16,7 +16,8 @@
         "ext-bcmath": "*",
         "ext-pdo": "*",
         "ext-readline": "*",
-        "ext-mbstring": "*"
+        "ext-mbstring": "*",
+        "ext-gd": "*"
     },
     "autoload": {
         "psr-4": {

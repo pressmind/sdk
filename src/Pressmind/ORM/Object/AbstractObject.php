@@ -605,6 +605,10 @@ abstract class AbstractObject implements SplSubject
                             }
                         }
                         $object->$related_key = $this->getId();
+                        if(isset($this->_definitions['database']['relation_key']) && $this->_definitions['database']['relation_key'] != $this->_definitions['database']['primary_key']) {
+                            $key_name = $this->_definitions['database']['relation_key'];
+                            $object->$related_key = $this->$key_name;
+                        }
                         $object->create();
                     }
                 }

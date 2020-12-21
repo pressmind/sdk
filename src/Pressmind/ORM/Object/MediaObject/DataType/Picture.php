@@ -217,28 +217,29 @@ class Picture extends AbstractObject
     ];
 
     /**
-     * @param null $derivativeName
+     * @param string $derivativeName
      * @return string
      */
     public function getUri($derivativeName = null) {
         $config = Registry::getInstance()->get('config');
-        if(!is_null($derivativeName)) {
-            if($derivative = $this->hasDerivative($derivativeName)) {
-                $uri = HelperFunctions::replaceConstantsFromConfig($config['image_handling']['http_src']) . '/' . $derivative->file_name;
-                if($config['image_processor']['webp_support'] == true && $config['image_processor']['derivatives'][$derivativeName]['webp_create'] == true && defined('WEBP_SUPPORT') && WEBP_SUPPORT === true) {
-                    $path_info = pathinfo($uri);
-                    if(file_exists($derivative->path . DIRECTORY_SEPARATOR . str_replace($path_info['extension'], 'webp', $derivative->file_name))) {
-                        $uri = str_replace($path_info['extension'], 'webp', $uri);
-                    }
-                }
-                $uri = is_null($this->path) ? $this->getTmpUri($derivativeName) : $uri;
-            } else {
-                $uri = is_null($this->path) ? $this->getTmpUri() : $config['image_processor']['image_http_path'] . $this->file_name;
-            }
-        } else {
-            $uri = is_null($this->path) ? $this->getTmpUri() : $config['image_processor']['image_http_path'] . $this->file_name;
+        if($this->download_successful == false) {
+            return $this->getTmpUri($derivativeName);
         }
-        return $uri;
+        if(is_null($derivativeName)) {
+            return HelperFunctions::replaceConstantsFromConfig($config['image_handling']['http_src']) . '/'  . $this->file_name;
+        }
+        if($derivative = $this->hasDerivative($derivativeName)) {
+            $uri = HelperFunctions::replaceConstantsFromConfig($config['image_handling']['http_src']) . '/' . $derivative->file_name;
+            if($config['image_processor']['webp_support'] == true && $config['image_processor']['derivatives'][$derivativeName]['webp_create'] == true && defined('WEBP_SUPPORT') && WEBP_SUPPORT === true) {
+                $path_info = pathinfo($uri);
+                if(file_exists($derivative->path . DIRECTORY_SEPARATOR . str_replace($path_info['extension'], 'webp', $derivative->file_name))) {
+                    $uri = str_replace($path_info['extension'], 'webp', $uri);
+                }
+            }
+            return $uri;
+        } else {
+            return HelperFunctions::replaceConstantsFromConfig($config['image_handling']['http_src']) . '/'  . $this->file_name;
+        }
     }
 
     /**

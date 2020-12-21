@@ -147,7 +147,7 @@
                     {
                         "method": "cleanUp",
                         "parameters": null,
-                        "position": 0
+                        "position": 1
                     }
                 ]
             },
@@ -163,7 +163,7 @@
                     {
                         "method": "cleanUp",
                         "parameters": null,
-                        "position": 0
+                        "position": 1
                     }
                 ]
             }

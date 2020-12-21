@@ -100,7 +100,6 @@
             "processor": {
                 "adapter": "ImageMagick",
                 "webp_support": false,
-                "webp_library": "cwebp",
                 "derivatives": {
                     "thumbnail": {
                         "max_width": "125",

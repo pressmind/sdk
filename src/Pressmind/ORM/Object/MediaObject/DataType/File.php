@@ -1,6 +1,7 @@
 <?php
 
 namespace Pressmind\ORM\Object\MediaObject\DataType;
+use Exception;
 use Pressmind\HelperFunctions;
 use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\Registry;
@@ -162,20 +163,39 @@ class File extends AbstractObject
         ]
     ];
 
+    /**
+     * @return string
+     */
     public function getUri() {
         $config = Registry::getInstance()->get('config');
         return HelperFunctions::replaceConstantsFromConfig($config['file_handling']['http_src']) . '/' . $this->file_name;
     }
 
-    public function getBinaryFile() {
+    /**
+     * @return \Pressmind\Storage\File
+     */
+    public function getFile()
+    {
         $config = Registry::getInstance()->get('config');
         $bucket = new Bucket($config['file_handling']['storage']['bucket']);
         $file = new \Pressmind\Storage\File($bucket);
         $file->name = $this->file_name;
+        return $file;
+    }
+
+    /**
+     * @return \Pressmind\Storage\File
+     * @throws Exception
+     */
+    public function getBinaryFile() {
+        $file = $this->getFile();
         $file->read();
         return $file;
     }
 
+    /**
+     * @throws Exception
+     */
     public function downloadOriginal()
     {
         $downloader = new \Pressmind\File\Downloader();

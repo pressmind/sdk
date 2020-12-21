@@ -218,9 +218,10 @@ class Picture extends AbstractObject
 
     /**
      * @param string $derivativeName
+     * @param boolean $force_webp
      * @return string
      */
-    public function getUri($derivativeName = null) {
+    public function getUri($derivativeName = null, $force_webp = false) {
         $config = Registry::getInstance()->get('config');
         if($this->download_successful == false) {
             return $this->getTmpUri($derivativeName);
@@ -230,11 +231,15 @@ class Picture extends AbstractObject
         }
         if($derivative = $this->hasDerivative($derivativeName)) {
             $uri = HelperFunctions::replaceConstantsFromConfig($config['image_handling']['http_src']) . '/' . $derivative->file_name;
-            if($config['image_processor']['webp_support'] == true && $config['image_processor']['derivatives'][$derivativeName]['webp_create'] == true && defined('WEBP_SUPPORT') && WEBP_SUPPORT === true) {
+            if(
+                (
+                    $config['image_handling']['processor']['webp_support'] == true &&
+                    $config['image_handling']['processor']['derivatives'][$derivativeName]['webp_create'] == true &&
+                    defined('WEBP_SUPPORT') && WEBP_SUPPORT === true
+                ) || $force_webp == true
+            ) {
                 $path_info = pathinfo($uri);
-                if(file_exists($derivative->path . DIRECTORY_SEPARATOR . str_replace($path_info['extension'], 'webp', $derivative->file_name))) {
-                    $uri = str_replace($path_info['extension'], 'webp', $uri);
-                }
+                $uri = str_replace($path_info['extension'], 'webp', $uri);
             }
             return $uri;
         } else {
@@ -254,8 +259,8 @@ class Picture extends AbstractObject
         $parsed_url = parse_url($this->tmp_url);
         parse_str($parsed_url['query'], $parsed_query);
         if(!is_null($derivativeName)) {
-            $parsed_query['w'] = $config['image_processor']['derivatives'][$derivativeName]['max_width'];
-            $parsed_query['h'] = $config['image_processor']['derivatives'][$derivativeName]['max_height'];
+            $parsed_query['w'] = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'];
+            $parsed_query['h'] = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'];
         }
         return $parsed_url['scheme'] . '://' . $parsed_url['host'] . $parsed_url['path'] . '?' . http_build_query($parsed_query);
     }
@@ -348,8 +353,6 @@ class Picture extends AbstractObject
     public function createDerivative($derivative_config, $image_processor, $image)
     {
         $derivative_binary_file = $image_processor->process($derivative_config, $image, $derivative_config->name);
-        //$webp_processor = new Processor\Adapter\WebPicture();
-        //$webp_processor->process($derivative_config, $this->path . DIRECTORY_SEPARATOR . $this->file_name, $derivative_config->name);
         $derivative = new Derivative();
         $derivative->id_image = $this->getId();
         $derivative->id_media_object = $this->id_media_object;
@@ -360,14 +363,29 @@ class Picture extends AbstractObject
         $derivative->height = $derivative_config->max_height;
         $derivative->create();
         $derivative_binary_file->save();
+        $webp_processor = new Processor\Adapter\WebPicture();
+        $webp_processor->process($derivative_config, $derivative_binary_file, $derivative_config->name);
         unset($derivative_binary_file);
     }
 
-    public function getBinaryFile() {
+    /**
+     * @return \Pressmind\Storage\File
+     */
+    public function getFile()
+    {
         $config = Registry::getInstance()->get('config');
         $bucket = new Bucket($config['image_handling']['storage']['bucket']);
         $file = new \Pressmind\Storage\File($bucket);
         $file->name = $this->file_name;
+        return $file;
+    }
+
+    /**
+     * @return \Pressmind\Storage\File
+     * @throws Exception
+     */
+    public function getBinaryFile() {
+        $file = $this->getFile();
         $file->read();
         return $file;
     }

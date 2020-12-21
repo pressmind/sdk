@@ -187,23 +187,7 @@ class Section extends Picture
      */
     public function createDerivative($derivative_config, $image_processor, $image)
     {
-        /*$path = $image_processor->process($derivative_config, $this->path . DIRECTORY_SEPARATOR . $this->file_name, $derivative_config->name);
-        $webp_processor = new Processor\Adapter\WebPicture();
-        $webp_processor->process($derivative_config, $this->path . DIRECTORY_SEPARATOR . $this->file_name, $derivative_config->name);
-        $derivative = new Derivative();
-        $derivative->id_image_section = $this->getId();
-        $derivative->id_media_object = $this->id_media_object;
-        $derivative->name = $derivative_config->name;
-        $derivative->file_name = pathinfo($path)['filename'] . '.' . pathinfo($path)['extension'];
-        $derivative->path = $this->path;
-        $derivative->width = $derivative_config->max_width;
-        $derivative->height = $derivative_config->max_height;
-        //$derivative->uri = $this->uri;
-        $derivative->create();*/
-
         $derivative_binary_file = $image_processor->process($derivative_config, $image, $derivative_config->name);
-        //$webp_processor = new Processor\Adapter\WebPicture();
-        //$webp_processor->process($derivative_config, $this->path . DIRECTORY_SEPARATOR . $this->file_name, $derivative_config->name);
         $derivative = new Derivative();
         $derivative->id_image_section = $this->getId();
         $derivative->id_media_object = $this->id_media_object;
@@ -214,6 +198,8 @@ class Section extends Picture
         $derivative->height = $derivative_config->max_height;
         $derivative->create();
         $derivative_binary_file->save();
+        $webp_processor = new Processor\Adapter\WebPicture();
+        $webp_processor->process($derivative_config, $derivative_binary_file, $derivative_config->name);
         unset($derivative_binary_file);
     }
 }

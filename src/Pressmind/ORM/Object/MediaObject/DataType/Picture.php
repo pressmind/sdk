@@ -298,6 +298,7 @@ class Picture extends AbstractObject
     /**
      * @param bool $use_cache
      * @param integer $retry_counter
+     * @return \Pressmind\Storage\File
      * @throws Exception
      */
     public function downloadOriginal($use_cache = true, $retry_counter = 0)

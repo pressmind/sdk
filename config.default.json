@@ -148,7 +148,7 @@
         "scheduled_tasks": [
             {
                 "name": "Log Clean Up",
-                "class": "\\Pressmind\\Log\\Service",
+                "class_name": "\\Pressmind\\Log\\Service",
                 "schedule": {
                     "type": "Daily",
                     "time": "Fixed",
@@ -164,7 +164,7 @@
             },
             {
                 "name": "Cache Clean Up",
-                "class": "\\Pressmind\\Cache\\Service",
+                "class_name": "\\Pressmind\\Cache\\Service",
                 "schedule": {
                     "type": "Minutely",
                     "time": "Period",

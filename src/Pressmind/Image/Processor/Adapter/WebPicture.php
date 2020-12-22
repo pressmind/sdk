@@ -5,7 +5,6 @@ namespace Pressmind\Image\Processor\Adapter;
 use Exception;
 use Pressmind\Image\Processor\AdapterInterface;
 use Pressmind\Image\Processor\Config;
-use Pressmind\Registry;
 use Pressmind\Storage\File;
 
 class WebPicture implements AdapterInterface
@@ -19,8 +18,7 @@ class WebPicture implements AdapterInterface
      */
     public function process($config, $file, $derivativeName)
     {
-        $conf = Registry::getInstance()->get('config');
-        if(isset($conf['image_handling']['processor']['webp_library']) && true === $config->webp_create) {
+        if(true === $config->webp_create) {
             $image = imagecreatefromstring($file->content);
             ob_start();
             imagewebp($image, null, $config->webp_quality);

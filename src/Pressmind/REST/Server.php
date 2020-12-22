@@ -41,6 +41,8 @@ class Server
      */
     private $_header_methods = ['OPTIONS', 'HEAD'];
 
+    private $_cache_enabled = false;
+
     /**
      * Server constructor.
      * @param null $pApiBaseUrl
@@ -61,6 +63,8 @@ class Server
             $this->_router->addRoute(new Router\Route($this->_request->getUri(), 'GET', '\\Pressmind\\REST\\Controller', implode('\\', $pieces), 'listAll'));
             $this->_router->addRoute(new Router\Route($this->_request->getUri(), 'POST', '\\Pressmind\\REST\\Controller', implode('\\', $pieces), 'listAll'));
         }
+        $config = Registry::getInstance()->get('config');
+        $this->_cache_enabled = ($config['cache']['enabled'] == true && in_array('REST', $config['cache']['types']) && $this->_request->getParameter($config['cache']['disable_parameter']['key']) != $config['cache']['disable_parameter']['value']);
     }
 
     /**
@@ -118,7 +122,30 @@ class Server
                         $class = new $classname();
                         $method = $route_match['action'];
                         if(method_exists($class, $method)) {
-                            $return = $class->$method($this->_request->getParameters());
+                            $config = Registry::getInstance()->get('config');
+                            $parameters = $this->_request->getParameters();
+                            $cache_update = ($this->_request->getParameter($config['cache']['update_parameter']['key']) == $config['cache']['update_parameter']['value']);
+                            unset($parameters[$config['cache']['update_parameter']['key']]);
+                            unset($parameters[$config['cache']['disable_parameter']['key']]);
+                            if($this->_cache_enabled) {
+                                $cache_adapter = \Pressmind\Cache\Adapter\Factory::create($config['cache']['adapter']['name']);
+                                $key = md5($classname . $method . json_encode($parameters));
+                                $result = $cache_adapter->get($key);
+                                if($result && !$cache_update) {
+                                    $return = json_decode($result);
+                                } else {
+                                    $request =  [
+                                        'type' => 'REST',
+                                        'classname' => $classname,
+                                        'method' => $method,
+                                        'parameters' => $parameters
+                                    ];
+                                    $return = $class->$method($parameters);
+                                    $cache_adapter->add($key, json_encode($return), $request);
+                                }
+                            } else {
+                                $return = $class->$method($parameters);
+                            }
                             $this->_response->setBody($return);
                         }
                     } catch (Exception $e) {

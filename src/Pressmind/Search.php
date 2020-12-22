@@ -5,6 +5,7 @@ namespace Pressmind;
 
 use Exception;
 use Pressmind\DB\Adapter\Pdo;
+use Pressmind\Log\Writer;
 use Pressmind\Search\Condition\ConditionInterface;
 use Pressmind\Search\Paginator;
 use Pressmind\Search\Result;
@@ -148,13 +149,15 @@ class Search
             $this->_limits = $this->_paginator->getLimits($total_count);
         }
         $this->_concatSql();
-        if(Registry::getInstance()->get('config')['cache']['enabled']) {
+        if(Registry::getInstance()->get('config')['cache']['enabled'] && in_array('SEARCH', Registry::getInstance()->get('config')['cache']['types'])) {
             $key = md5($this->_sql . json_encode($this->_values));
             $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
             if ($cache_adapter->exists($key)) {
+                Writer::write(get_class($this) . ' exec() reading from cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
                 $db_result = json_decode($cache_adapter->get($key));
             } else {
                 $db_result = $db->fetchAll($this->_sql, $this->_values);
+                Writer::write(get_class($this) . ' exec() writing to cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
                 $cache_adapter->add($key, json_encode($db_result));
             }
         } else {

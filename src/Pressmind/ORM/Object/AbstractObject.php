@@ -3,11 +3,13 @@
 namespace Pressmind\ORM\Object;
 
 use \Exception;
+use MongoDB\Driver\WriteResult;
 use Pressmind\Cache\Adapter\Redis;
 use Pressmind\DB\Adapter\AdapterInterface;
 use Pressmind\DB\Adapter\Pdo;
 use Pressmind\DB\Typemapper\Mysql;
 use Pressmind\Import\Mapper\Factory;
+use Pressmind\Log\Writer;
 use Pressmind\Registry;
 use Pressmind\ORM\Filter;
 use Pressmind\ORM\Validator;
@@ -78,7 +80,7 @@ abstract class AbstractObject implements SplSubject
         $this->_write_log('__constuct()');
         $registry = Registry::getInstance();
         $this->_db = $registry->get('db');
-        $this->_cache_enabled = $registry->get('config')['cache']['enabled'];
+        $this->_cache_enabled = $registry->get('config')['cache']['enabled'] && in_array('OBJECT', $registry->get('config')['cache']['types']);
         if(true === $this->_disable_cache_permanently) {
             $this->_cache_enabled = false;
         }
@@ -198,6 +200,7 @@ abstract class AbstractObject implements SplSubject
             $key = md5($query . json_encode($values));
             $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
             if($cache_adapter->exists($key)) {
+                Writer::write(get_class($this) . ' loadAll() reading from cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
                 $dataset = json_decode($cache_adapter->get($key));
             } else {
                 $dataset = $this->_db->fetchAll($query, $values);
@@ -258,7 +261,6 @@ abstract class AbstractObject implements SplSubject
      */
     public function read($id)
     {
-        $this->_write_log('read(' . $id . ')');
         $cache_adapter = null;
         if ($id != '0' && !empty($id)) {
             if($this->_cache_enabled) {
@@ -277,7 +279,6 @@ abstract class AbstractObject implements SplSubject
      */
     private function _readFromDb($id)
     {
-        $this->_write_log('_readFromDb( ' . $id . ' )');
         $query = "SELECT * FROM " .
             $this->getDbTableName() .
             " WHERE " . $this->_definitions['database']['primary_key'] .
@@ -293,8 +294,8 @@ abstract class AbstractObject implements SplSubject
      */
     private function _readFromCache($id)
     {
-        $this->_write_log('_readFromCache( ' . $id . ' )');
         $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
+        Writer::write(get_class($this) . ' _readFromCache() reading from cache. ID: ' . $this->getDbTableName() . '_' . $id, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
         if($cache_adapter->exists($this->getDbTableName() . '_' . $id)) {
             //var_dump($cache_adapter->get($this->getDbTableName() . '_' . $id));
             $data = json_decode($cache_adapter->get($this->getDbTableName() . '_' . $id));
@@ -311,6 +312,7 @@ abstract class AbstractObject implements SplSubject
     public function addToCache($id)
     {
         $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
+        Writer::write(get_class($this) . ' addToCache() writing to cache. ID: ' . $this->getDbTableName() . '_' . $id, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
         $this->setReadRelations(true);
         $data = $this->_readFromDb($id);
         $cache_adapter->add($this->getDbTableName() . '_' . $id, json_encode($this->toStdClass()));

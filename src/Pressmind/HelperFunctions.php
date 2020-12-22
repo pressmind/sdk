@@ -638,9 +638,10 @@ class HelperFunctions
 
     public static function replaceConstantsFromConfig($string)
     {
+        $config = Registry::getInstance()->get('config');
         return str_replace(
-            ['BASE_PATH','APPLICATION_PATH','WEBSERVER_DOCUMENT_ROOT','WEBSERVER_HTTP'],
-            [BASE_PATH,APPLICATION_PATH,WEBSERVER_DOCUMENT_ROOT,WEBSERVER_HTTP],
+            ['BASE_PATH','APPLICATION_PATH','WEBSERVER_DOCUMENT_ROOT','WEBSERVER_HTTP','DATABASE_NAME'],
+            [BASE_PATH,APPLICATION_PATH,WEBSERVER_DOCUMENT_ROOT,WEBSERVER_HTTP, $config['database']['dbname']],
             $string
         );
     }

@@ -74,11 +74,26 @@
                 "name": "Redis",
                 "config": {
                     "host": "127.0.0.1",
-                    "port": 6379
+                    "port": 6379,
+                    "connection_string": null
                 }
             },
-            "ttl": "18000",
-            "strategy": "ALL"
+            "key_prefix": "DATABASE_NAME",
+            "disable_parameter": {
+                "key": "no_cache",
+                "value": 1
+            },
+            "update_parameter": {
+                "key": "update_cache",
+                "value": 1
+            },
+            "types": [
+                "REST",
+                "SEARCH",
+                "OBJECT"
+            ],
+            "update_frequency": 3600,
+            "max_idle_time": 86400
         },
         "view_scripts": {
             "base_path": "APPLICATION_PATH/Custom/Views"

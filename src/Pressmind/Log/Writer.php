@@ -14,6 +14,7 @@ class Writer
     const OUTPUT_SCREEN = 'screen';
     const OUTPUT_FILE = 'file';
     const OUTPUT_BOTH = 'both';
+    const TYPE_DEBUG = 'DEBUG';
     const TYPE_INFO = 'INFO';
     const TYPE_WARNING = 'WARNING';
     const TYPE_ERROR = 'ERROR';

@@ -4,7 +4,7 @@
 namespace Pressmind\ORM\Object\Itinerary\Variant\Step;
 
 
-use mysql_xdevapi\Exception;
+use \Exception;
 use Pressmind\Image\Downloader;
 use Pressmind\Image\Processor\Adapter\WebPicture;
 use Pressmind\Image\Processor\Config;

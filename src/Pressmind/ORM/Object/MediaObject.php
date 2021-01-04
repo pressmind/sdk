@@ -4,8 +4,8 @@ namespace Pressmind\ORM\Object;
 
 use DateTime;
 use Exception;
-use Custom\AbstractMediaType;
-use Custom\MediaType\Factory;
+use Pressmind\ORM\Object\MediaType\AbstractMediaType;
+use Pressmind\ORM\Object\MediaType\Factory;
 use Pressmind\DB\Adapter\Pdo;
 use Pressmind\HelperFunctions;
 use Pressmind\MVC\View;

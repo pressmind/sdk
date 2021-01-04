@@ -4,7 +4,7 @@
 namespace Pressmind\Import;
 
 
-use Custom\MediaType\Factory;
+use Pressmind\ORM\Object\MediaType\Factory;
 use Exception;
 use Pressmind\HelperFunctions;
 use Pressmind\Registry;

@@ -213,7 +213,7 @@ class ObjectTypeScaffolder
             $definitions['properties'][$definitionField[0]] = $property;
         }
         $this->_class_definitions = $definitions;
-        $text = "<?php\n\nnamespace Custom\MediaType;\n\nuse Custom\AbstractMediaType;\nuse Pressmind\ORM\Object\MediaObject\DataType;" . $use . "\n\n/**\n * Class " . $this->_generateClassName($this->_object_definition->name) . "\n" . implode("\n", $properties) . "\n */\nclass " . $this->_generateClassName($this->_object_definition->name) . " extends AbstractMediaType {\nprotected \$_definitions = " . $this->_var_export($definitions, true) . ';}';
+        $text = "<?php\n\nnamespace Custom\MediaType;\n\nuse Pressmind\ORM\Object\MediaType\AbstractMediaType;\nuse Pressmind\ORM\Object\MediaObject\DataType;" . $use . "\n\n/**\n * Class " . $this->_generateClassName($this->_object_definition->name) . "\n" . implode("\n", $properties) . "\n */\nclass " . $this->_generateClassName($this->_object_definition->name) . " extends AbstractMediaType {\nprotected \$_definitions = " . $this->_var_export($definitions, true) . ';}';
         file_put_contents(APPLICATION_PATH . '/Custom/MediaType/' . $this->_generateClassName($this->_object_definition->name) . '.php', $text);
     }
 

@@ -15,6 +15,7 @@ use Pressmind\ORM\Object\MediaObject\MyContent;
 use Pressmind\ORM\Object\Touristic\Base;
 use Pressmind\ORM\Object\Touristic\Booking\Package;
 use Pressmind\ORM\Object\Touristic\Date;
+use Pressmind\ORM\Object\Touristic\Insurance\Group;
 use Pressmind\ORM\Object\Touristic\Transport;
 use Pressmind\Registry;
 use Pressmind\Search\CheapestPrice;
@@ -27,7 +28,9 @@ use stdClass;
  * @property integer $id_pool
  * @property integer $id_brand
  * @property integer $id_object_type
- * @property integer id_season
+ * @property integer $id_client
+ * @property integer $id_season
+ * @property integer $id_insurance_group
  * @property string $name
  * @property string $code
  * @property string $tags
@@ -35,16 +38,20 @@ use stdClass;
  * @property integer $state
  * @property DateTime $valid_from
  * @property DateTime $valid_to
- * @property integer $id_client
  * @property integer $hidden
  * @property boolean $is_reference
  * @property integer $reference_media_object
  * @property DateTime $different_season_from
  * @property DateTime $different_season_to
+ * @property string $booking_type
+ * @property string $booking_link
+ * @property string $sales_priority
+ * @property integer $sales_position
  * @property AbstractMediaType[] $data
  * @property MyContent[] $my_contents
  * @property Base $touristic_base
  * @property Package[] $booking_packages
+ * @property Group $insurance_group
  * @property Route[] $routes
  * @property Season $season
  * @property Brand $brand
@@ -140,6 +147,19 @@ class MediaObject extends AbstractObject
             'id_season' => [
                 'title' => 'id_season',
                 'name' => 'id_season',
+                'type' => 'integer',
+                'required' => true,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
+            'id_insurance_group' => [
+                'title' => 'id_insurance_group',
+                'name' => 'id_insurance_group',
                 'type' => 'integer',
                 'required' => true,
                 'validators' => [
@@ -267,6 +287,38 @@ class MediaObject extends AbstractObject
                 'title' => 'different_season_to',
                 'name' => 'different_season_to',
                 'type' => 'datetime',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'booking_type' => [
+                'title' => 'booking_type',
+                'name' => 'booking_type',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'booking_link' => [
+                'title' => 'booking_link',
+                'name' => 'booking_link',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'sales_priority' => [
+                'title' => 'booking_type',
+                'name' => 'booking_type',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'sales_position' => [
+                'title' => 'sales_position',
+                'name' => 'sales_position',
+                'type' => 'integer',
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,

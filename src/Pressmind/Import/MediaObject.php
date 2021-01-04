@@ -28,6 +28,7 @@ class MediaObject extends AbstractImport
         $media_object->id_client = 0;
         $media_object->id_season = $data->id_saison;
         $media_object->id_brand = $data->id_brand;
+        $media_object->id_insurance_group = $data->id_insurance_group;
         $media_object->name = $data->name;
         $media_object->code = $data->code;
         $media_object->tags = $data->tags;

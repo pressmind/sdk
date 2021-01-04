@@ -20,13 +20,13 @@ class Json implements AdapterInterface
 
     /**
      * Json constructor.
-     * @param string $fileName
+     * @param string $name
      * @param null $environment
      * @param array $options
      */
-    public function __construct($fileName, $environment = null, $options = [])
+    public function __construct($name, $environment = null, $options = [])
     {
-        $this->_config_file = $fileName;
+        $this->_config_file = $name;
         $this->_environment = is_null($environment) ? 'development' : $environment;
     }
 

@@ -21,8 +21,8 @@ class Season extends AbstractImport implements ImportInterface
                     $season->id = $result->id;
                     $season->name = $result->name;
                     $season->active = $result->active;
-                    $season->season_from = $result->saison_from;
-                    $season->season_to = $result->saison_to;
+                    $season->season_from = !empty($result->saison_from) ? \DateTime::createFromFormat('Y-m-d', $result->saison_from) : null;
+                    $season->season_to = !empty($result->saison_to) ? \DateTime::createFromFormat('Y-m-d', $result->saison_to) : null;
                     $season->create();
                 }
             }

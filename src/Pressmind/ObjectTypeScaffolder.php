@@ -185,6 +185,9 @@ class ObjectTypeScaffolder
                 'validators' => null,
                 'filters' => null
             ];
+            if($definitionField[0] == $definitions['database']['primary_key']) {
+                $property['required'] = true;
+            }
             if($definitionField[0] == 'id_media_object' || $definitionField[0] == 'language') {
                 $property['index'] = ['index'];
             }

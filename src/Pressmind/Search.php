@@ -264,11 +264,17 @@ class Search
             $sql_start = "SELECT COUNT(DISTINCT pmt2core_media_objects.id) as total_rows";
             $sql_end = "";
         }
-        $visibility = ' pmt2core_media_objects.visibility = 30 AND ';
+        $visibility = " pmt2core_media_objects.visibility = 30 AND ";
         if($this->hasCondition('Pressmind\Search\Condition\Visibility')) {
             $visibility = null;
         }
-        $this->_sql = $sql_start . $additional_fields_string . " FROM pmt2core_media_objects " . implode(' ', $joins) . " WHERE" . $visibility . " (" . implode(') AND (', $sql). ")" . $sql_end;
+        $now = new \DateTime();
+        $validity = " ((pmt2core_media_objects.valid_from IS NULL OR pmt2core_media_objects.valid_from <= '" . $now->format('Y-m-d H:i:s') . "') AND (pmt2core_media_objects.valid_to IS NULL OR pmt2core_media_objects.valid_to >= '" . $now->format('Y-m-d H:i:s') . "')) AND ";
+        if($this->hasCondition('Pressmind\Search\Condition\Validity')) {
+            $validity = null;
+        }
+
+        $this->_sql = $sql_start . $additional_fields_string . " FROM pmt2core_media_objects " . implode(' ', $joins) . " WHERE" . $visibility . $validity . " (" . implode(') AND (', $sql). ")" . $sql_end;
         if(empty($this->_conditions)) {
             $this->_sql = $sql_start . " FROM pmt2core_media_objects " . " WHERE pmt2core_media_objects.visibility = 30" . $sql_end;
         }
@@ -293,6 +299,7 @@ class Search
         if(!empty($this->_limits) && $returnTotalCount == false) {
             $this->_sql .= " LIMIT " . $this->_limits['start'] . ', ' . $this->_limits['length'];
         }
+        echo $this->_sql;
     }
 
     /**

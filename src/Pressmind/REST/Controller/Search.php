@@ -6,6 +6,7 @@ namespace Pressmind\REST\Controller;
 
 use Exception;
 use Pressmind\Search\Condition\ConditionInterface;
+use Pressmind\Search\Condition\Validity;
 use Pressmind\Search\Filter\FilterInterface;
 use Pressmind\Search\Paginator;
 
@@ -24,12 +25,22 @@ class Search
         $return_filters_only = isset($searchparameters->return_filters_only) ? boolval($searchparameters->return_filters_only) : false;
         $conditions = [];
 
+        $has_validity_condition = false;
         foreach($search_conditions as $search_condition) {
+            if(strtolower($search_condition->type) == 'validity') {
+                $has_validity_condition = true;
+            }
             $condition_name = 'Pressmind\\Search\\Condition\\' . ucfirst($search_condition->type);
             /** @var ConditionInterface $condition */
             $condition = new $condition_name();
             $condition->setConfig($search_condition->config);
             $conditions[] = $condition;
+        }
+
+        if(!$has_validity_condition) {
+            $now = new \DateTime();
+            $validity_condition = Validity::create($now, $now);
+            $conditions[] = $validity_condition;
         }
 
         $sort = !is_null($search_sort) ? [$search_sort->property => $search_sort->direction] : null;

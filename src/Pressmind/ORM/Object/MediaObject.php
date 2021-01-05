@@ -161,7 +161,7 @@ class MediaObject extends AbstractObject
                 'title' => 'id_insurance_group',
                 'name' => 'id_insurance_group',
                 'type' => 'integer',
-                'required' => true,
+                'required' => false,
                 'validators' => [
                     [
                         'name' => 'maxlength',
@@ -419,6 +419,20 @@ class MediaObject extends AbstractObject
                     'type' => 'hasOne',
                     'related_id' => 'id_brand',
                     'class' => Brand::class,
+                    'filters' => null
+                ],
+                'required' => false,
+                'validators' => null,
+                'filters' => null
+            ],
+            'insurance_group' => [
+                'title' => 'insurance_group',
+                'name' => 'insurance_group',
+                'type' => 'relation',
+                'relation' => [
+                    'type' => 'hasOne',
+                    'related_id' => 'id_insurance_group',
+                    'class' => Group::class,
                     'filters' => null
                 ],
                 'required' => false,

@@ -226,6 +226,15 @@ class Import
                 }
             }
 
+            if(is_a($response[0]->insurance_group, 'stdClass') && intval($response[0]->id_insurance_group) != 0) {
+                $insurance_info = [];
+                foreach ($response[0]->insurance_group as $key => $value) {
+                    $insurance_info['touristic_' . $key] = $value;
+                }
+                $insurance_data_importer = new TouristicData();
+                $insurance_data_importer->import($insurance_info, $id_media_object, $this->_import_type);
+            }
+
             if(is_array($response[0]->my_contents_to_media_object)) {
                 $my_content_importer = new MyContent($response[0]->my_contents_to_media_object);
                 $my_content_importer->import();

@@ -487,28 +487,34 @@ abstract class AbstractObject implements SplSubject
         }
     }
 
-    public function toStdClass()
+    public function toStdClass($with_relations = true)
     {
         $object = new stdClass();
         foreach ($this->_definitions['properties'] as $property_name => $property) {
-            if($property['type'] == 'relation') {
-                $objects_to_convert = $this->$property_name;
-                if(!empty($objects_to_convert)) {
-                    if ($property['relation']['type'] == 'hasOne' || $property['relation']['type'] == 'belongsTo') {
-                        $objects_to_convert = [$this->$property_name];
-                    }
-                    foreach ($objects_to_convert as $object_to_convert) {
+            if(true == $with_relations) {
+                if ($property['type'] == 'relation') {
+                    $objects_to_convert = $this->$property_name;
+                    if (!empty($objects_to_convert)) {
                         if ($property['relation']['type'] == 'hasOne' || $property['relation']['type'] == 'belongsTo') {
-                            $object->$property_name = $object_to_convert->toStdClass();
-                        } else {
-                            $object->$property_name[] = $object_to_convert->toStdClass();
+                            $objects_to_convert = [$this->$property_name];
                         }
+                        foreach ($objects_to_convert as $object_to_convert) {
+                            if ($property['relation']['type'] == 'hasOne' || $property['relation']['type'] == 'belongsTo') {
+                                $object->$property_name = $object_to_convert->toStdClass();
+                            } else {
+                                $object->$property_name[] = $object_to_convert->toStdClass();
+                            }
+                        }
+                    } else {
+                        $object->$property_name = null;
                     }
                 } else {
-                    $object->$property_name = null;
+                    $object->$property_name = $this->$property_name;
                 }
             } else {
-                $object->$property_name = $this->$property_name;
+                if ($property['type'] != 'relation') {
+                    $object->$property_name = $this->$property_name;
+                }
             }
         }
         return $object;

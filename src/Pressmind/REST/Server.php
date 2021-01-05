@@ -54,6 +54,8 @@ class Server
         $this->_router = new Router();
         $this->_router->addRoute(new Router\Route('search', 'POST', '\\Pressmind\\REST\\Controller', 'Search', 'search'));
         $this->_router->addRoute(new Router\Route('mediaObject/getByRoute', 'POST', '\\Pressmind\\REST\\Controller', 'MediaObject', 'getByRoute'));
+        $this->_router->addRoute(new Router\Route('touristic/insurance/calculatePrices', 'GET', '\\Pressmind\\REST\\Controller\\Touristic', 'Insurance', 'calculatePrices'));
+        $this->_router->addRoute(new Router\Route('touristic/insurance/calculatePrices', 'POST', '\\Pressmind\\REST\\Controller\\Touristic', 'Insurance', 'calculatePrices'));
         $pieces = (array_map('ucfirst', explode('/', $this->_request->getUri())));
         if(class_exists('\Custom\\REST\\Controller\\' . implode('\\', $pieces))) {
             $this->_router->addRoute(new Router\Route($this->_request->getUri(), 'GET', '\\Custom\\REST\\Controller', implode('\\', $pieces), 'index'));

@@ -477,6 +477,8 @@ class MediaObject extends AbstractObject
      * @throws Exception
      */
     public function render($template, $language = null, $custom_data = null) {
+        $this->setReadRelations(true);
+        $this->readRelations();
         $config = Registry::getInstance()->get('config');
         if(is_null($language)) {
             $language = $config['data']['languages']['default'];
@@ -620,6 +622,7 @@ class MediaObject extends AbstractObject
 
     public function getPrettyUrl()
     {
+        $this->routes;
         $routes = $this->routes;
         if(!empty($routes)) {
             return $routes[0]->route;

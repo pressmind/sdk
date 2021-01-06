@@ -299,7 +299,6 @@ class Search
         if(!empty($this->_limits) && $returnTotalCount == false) {
             $this->_sql .= " LIMIT " . $this->_limits['start'] . ', ' . $this->_limits['length'];
         }
-        echo $this->_sql;
     }
 
     /**

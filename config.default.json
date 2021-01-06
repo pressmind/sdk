@@ -27,6 +27,7 @@
             }
         },
         "tmp_dir": "APPLICATION_PATH/tmp",
+        "docs_dir": "WEBSERVER_DOCUMENT_ROOT/docs",
         "logging": {
             "mode": "ALL",
             "log_file_path": "APPLICATION_PATH/logs",

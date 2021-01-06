@@ -241,6 +241,8 @@ class ObjectTypeScaffolder
 
     public function generateObjectInformationFile()
     {
+        $config = Registry::getInstance()->get('config');
+
         $rows = [
             '<tr>
                 <th>Section</th>
@@ -267,7 +269,8 @@ class ObjectTypeScaffolder
             }
             $rows[] = '<tr><td>' . implode('</td><td>', $cols) . '</td></tr>';
         }
-        file_put_contents(WEBSERVER_DOCUMENT_ROOT . '/docs/objecttypes/'  . HelperFunctions::human_to_machine($this->_object_definition->name) .  '.html', '<h1>Custom\\MediaType\\' . $this->_generateClassName($this->_object_definition->name) . '</h1><table border="1" cellspacing="0" cellpadding="5">' . implode($rows) . '</table>');
+        $docs_dir = Helperfunctions::replaceConstantsFromConfig($config['docs_dir']) . DIRECTORY_SEPARATOR . 'objecttypes' . DIRECTORY_SEPARATOR;
+        file_put_contents($docs_dir  . HelperFunctions::human_to_machine($this->_object_definition->name) .  '.html', '<h1>Custom\\MediaType\\' . $this->_generateClassName($this->_object_definition->name) . '</h1><table border="1" cellspacing="0" cellpadding="5">' . implode($rows) . '</table>');
     }
 
     public function generateExampleViewFile()
@@ -302,7 +305,7 @@ class ObjectTypeScaffolder
             $this->_generateClassName($this->_object_definition->name),
             strtolower(HelperFunctions::human_to_machine($this->_object_definition->name)),
             $this->_object_definition->name,
-            str_replace('APPLICATION_PATH', APPLICATION_PATH, $config['view_scripts']['base_path']) . DIRECTORY_SEPARATOR  . $this->_generateClassName($this->_object_definition->name) .  '_Example.php',
+            Helperfunctions::replaceConstantsFromConfig($config['view_scripts']['base_path']) . DIRECTORY_SEPARATOR  . $this->_generateClassName($this->_object_definition->name) .  '_Example.php',
             $property_list
         ];
 
@@ -311,7 +314,7 @@ class ObjectTypeScaffolder
                 if ($file->isFile()) {
                     $example_suffix = str_replace('.' . $file->getExtension(), '', $file->getBasename());
                     $text = str_replace($search, $replace, file_get_contents($file->getRealPath()));
-                    $file_path = str_replace('APPLICATION_PATH', APPLICATION_PATH, $config['view_scripts']['base_path']) . DIRECTORY_SEPARATOR . $this->_generateClassName($this->_object_definition->name) . '_' . $example_suffix . '.php';
+                    $file_path = Helperfunctions::replaceConstantsFromConfig($config['view_scripts']['base_path']) . DIRECTORY_SEPARATOR . $this->_generateClassName($this->_object_definition->name) . '_' . $example_suffix . '.php';
                     if(!file_exists($file_path) || $config['scaffolder_templates']['overwrite_existing_templates'] == true) {
                         file_put_contents($file_path, $text);
                     }

@@ -1232,10 +1232,10 @@ abstract class AbstractObject implements SplSubject
                 $column_type = $type_mapper->mapTypeFromORMToMysqlWithPropertyDefinition($definition);
                 $column_name = $definition['name'];
                 $column_required = isset($definition['required']) ? $definition['required'] : false;
+                $change_to = $column_required ? 'NOT NULL' : 'NULL';
                 if (!is_null($column_type)) {
                     if(isset($database_table_info[$column_name])) {
                         $database_required = strtolower($database_table_info[$column_name]->Null) == 'no' ? true : false;
-                        $change_to = $column_required ? 'NOT NULL' : 'NULL';
                         if($column_required != $database_required) {
                             $change_from = $database_required ? 'NOT NULL' : 'NULL';
                             $differences[] = ['action' => 'alter_column_null', 'column_name' => $column_name, 'column_type' => $column_type, 'column_null' => $change_to, 'msg' => get_class($this) . ': database column ' . $column_name . ' has different IS NULL setting and needs to be altered from ' . $change_from . ' to ' . $change_to];
@@ -1244,7 +1244,7 @@ abstract class AbstractObject implements SplSubject
                             $differences[] = ['action' => 'alter_column_type', 'column_name' => $column_name, 'column_type' => $column_type, 'column_null' => $change_to, 'msg' => get_class($this) . ': database column ' . $column_name . ' has different type and needs to be altered from ' . $database_table_info[$column_name]->Type . ' to ' . strtolower($column_type)];
                         }
                     } else {
-                        $differences[] = ['action' => 'create_column', 'column_name' => $column_name, 'column_type' => $column_type, 'msg' => get_class($this) . ': database column ' . $column_name . ' does not exist in database and needs to be created'];
+                        $differences[] = ['action' => 'create_column', 'column_name' => $column_name, 'column_type' => $column_type, 'column_null' => $change_to, 'msg' => get_class($this) . ': database column ' . $column_name . ' does not exist in database and needs to be created'];
                     }
                 }
             }

@@ -265,7 +265,7 @@ class Search
             $sql_end = "";
         }
         $visibility = " pmt2core_media_objects.visibility = 30 AND ";
-        if($this->hasCondition('Pressmind\Search\Condition\Visibility')) {
+        if($this->hasCondition('Pressmind\Search\Condition\Visibility') || $this->hasCondition('Pressmind\Search\Condition\DataView')) {
             $visibility = null;
         }
         $now = new \DateTime();

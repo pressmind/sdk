@@ -16,6 +16,8 @@ class Info
         '\CategoryTree',
         '\CategoryTree\Item',
         '\CheapestPriceSpeed',
+        '\DataView',
+        '\DataView\SearchCondition',
         '\FulltextSearch',
         '\Scheduler\Task',
         '\Scheduler\Task\Method',

@@ -41,16 +41,14 @@ class AbstractImport
      */
     protected function _checkApiResponse($pResponse)
     {
-        $error_msg = '';
-        if (is_a($pResponse, 'stdClass') && isset($pResponse->result) && is_array($pResponse->result) && isset($pResponse->error) && $pResponse->error == false) {
+        if(isset($pResponse->error) && $pResponse->error == true) {
+            throw new Exception($pResponse->msg);
+        }
+        if (is_a($pResponse, 'stdClass') && isset($pResponse->result) && is_array($pResponse->result)) {
             return true;
         }
-        if(!isset($pResponse->result) || !isset($pResponse->error) || !isset($pResponse->msg) || !is_a($pResponse, 'stdClass')) {
-            $error_msg = 'API response is not well formatted.';
+        if(!isset($pResponse->result) || !is_a($pResponse, 'stdClass')) {
+            throw new Exception('API response is not well formatted.');
         }
-        if($pResponse->error == true) {
-            $error_msg = $pResponse->msg;
-        }
-        throw new Exception($error_msg);
     }
 }

@@ -85,6 +85,9 @@ class Import
     {
         $conf = Registry::getInstance()->get('config');
         $allowed_object_types = array_keys($conf['data']['media_types']);
+        if(isset($conf['data']['primary_media_type_ids']) && !empty($conf['data']['primary_media_type_ids'])) {
+            $allowed_object_types = $conf['data']['primary_media_type_ids'];
+        }
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::import()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
         foreach ($allowed_object_types as $allowed_object_type) {
             $allowed_visibilities = $conf['data']['media_types_allowed_visibilities'][$allowed_object_type];
@@ -146,7 +149,11 @@ class Import
         foreach ($dir as $file_info) {
             if (!$file_info->isDot()) {
                 $id_media_object = $file_info->getFilename();
-                if ($this->importMediaObject($id_media_object, false)) {
+                $import_linked_media_objects = false;
+                if(isset($conf['data']['primary_media_type_ids']) && !empty($conf['data']['primary_media_type_ids'])) {
+                    $import_linked_media_objects = true;
+                }
+                if ($this->importMediaObject($id_media_object, $import_linked_media_objects)) {
                     unlink($file_info->getPathname());
                     $this->_imported_ids[] = $id_media_object;
                 }
@@ -330,6 +337,7 @@ class Import
         }
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . 'Importer::removeOrphans() Checking ' . count($this->_imported_ids) . ' mediaobjects', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         $this->_findAndRemoveOrphans();
+
     }
 
     /**

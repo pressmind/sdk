@@ -46,6 +46,7 @@
                 ],
                 "my_content_class_map": {}
             },
+            "primary_media_type_ids": null,
             "media_types": {},
             "media_types_pretty_url": {},
             "media_types_fulltext_index_fields": {},

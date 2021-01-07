@@ -93,7 +93,7 @@ class MediaObjectData extends AbstractImport implements ImportInterface
                         } else if(isset($data_field->value) && isset($data_field->value->$section_id)) {
                             $value = $data_field->value->$section_id;
                         }
-                        if($data_field->type == 'objectlink' && $this->_import_type == 'mediaobject' && !is_null($value) && is_a($value,'stdClass') && isset($value->objects) && is_array($value->objects) && $this->_import_linked_objects == true) {
+                        if($data_field->type == 'objectlink' && !is_null($value) && is_a($value,'stdClass') && isset($value->objects) && is_array($value->objects) && $this->_import_linked_objects == true) {
                             foreach ($value->objects as $linked_media_object_id) {
                                 $linked_media_object_ids[] = $linked_media_object_id;
                             }

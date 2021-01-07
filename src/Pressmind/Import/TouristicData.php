@@ -84,7 +84,7 @@ class TouristicData extends AbstractImport
                         $this->_log[] = ' Importer::_importMediaObjectTouristicData(' . $id_media_object . '): ' . $class_name . ' mapping failed: ' . $e->getMessage();
                         $this->_errors[] = 'Importer::_importMediaObjectTouristicData(' . $id_media_object . '): ' . $class_name . ' mapping failed: ' . $e->getMessage();
                     }
-                    if ($touristic_object_name == 'touristic_housing_packages_description_links' && $import_type == 'mediaobject') {
+                    if ($touristic_object_name == 'touristic_housing_packages_description_links') {
                         if (isset($touristic_object->id_media_object) && !empty($touristic_object->id_media_object)) {
                             $linked_media_object_ids[] = $touristic_object->id_media_object;
                         }

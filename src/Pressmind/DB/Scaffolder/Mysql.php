@@ -210,7 +210,7 @@ class Mysql
                     if($pFieldInfo['type'] == 'string') {
                         $return = 'VARCHAR';
                     }
-                    if(($pFieldInfo['type'] == 'integer' || $pFieldInfo['type'] == 'int') && intval($validator_info['params']) > 10) {
+                    if(($pFieldInfo['type'] == 'integer' || $pFieldInfo['type'] == 'int') && intval($validator_info['params']) > 11) {
                         $return = 'BIGINT';
                     }
                     if($pFieldInfo['type'] != 'boolean') {

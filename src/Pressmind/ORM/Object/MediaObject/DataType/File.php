@@ -123,8 +123,8 @@ class File extends AbstractObject
                 'validators' => null,
             ],
             'mime_type'  => [
-                'title' => 'file_path',
-                'name' => 'file_path',
+                'title' => 'mime_type',
+                'name' => 'mime_type',
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,

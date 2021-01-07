@@ -68,6 +68,15 @@ class Mysql
                             $return = 'varchar';
                         }
                         $return .= '(' . $validator['params'] . ')';
+                        if($property['type'] == 'integer') {
+                            $return = 'int';
+                            if($validator['params'] > 11) {
+                                $return = 'bigint';
+                            }
+                        }
+                    }
+                    if($validator['name'] == 'unsigned') {
+                        $return .= ' unsigned';
                     }
                     if($validator['name'] == 'inarray') {
                         $return = 'enum(\'' . implode("','", $validator['params']) . '\')';
@@ -75,7 +84,24 @@ class Mysql
                 }
             } else {
                 if($property['type'] == 'integer') {
-                    $return = 'int(11)';
+                    if(isset($property['validators']) && is_array($property['validators'])) {
+                        foreach ($property['validators'] as $validator) {
+                            if ($validator['name'] == 'maxlength') {
+                                $type = 'int';
+                                if($validator['params'] > 11) {
+                                    $type = 'bigint';
+                                }
+                                $return = $type;
+                            } else {
+                                $return = 'int';
+                            }
+                            if($validator['name'] == 'unsigned') {
+                                $return .= ' unsigned';
+                            }
+                        }
+                    } else {
+                        $return = 'int';
+                    }
                 }
             }
             return $return;

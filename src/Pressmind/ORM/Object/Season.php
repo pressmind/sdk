@@ -13,6 +13,7 @@ use DateTime;
  * @property string $name
  * @property DateTime $season_from
  * @property DateTime $season_to
+ * @property string $time_of_year
  */
 class Season extends AbstractObject
 {
@@ -78,6 +79,23 @@ class Season extends AbstractObject
                 'filters' => null,
                 'validators' => null
             ],
+            'time_of_year' => [
+                'title' => 'time_of_year',
+                'name' => 'time_of_year',
+                'type' => 'string',
+                'required' => true,
+                'filters' => null,
+                'validators' => [
+                    [
+                        'name' => 'inarray',
+                        'params' => [
+                            'winter',
+                            'summer',
+                            'all'
+                        ]
+                    ]
+                ]
+            ]
         ]
     ];
 }

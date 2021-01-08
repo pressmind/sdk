@@ -30,6 +30,7 @@
         "docs_dir": "WEBSERVER_DOCUMENT_ROOT/docs",
         "logging": {
             "mode": "ALL",
+            "storage": "database",
             "log_file_path": "APPLICATION_PATH/logs",
             "error_email_address": "john.doe@local"
         },

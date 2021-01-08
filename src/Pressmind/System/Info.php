@@ -7,6 +7,7 @@ namespace Pressmind\System;
 class Info
 {
     const STATIC_MODELS = [
+        '\Log',
         '\Airline',
         '\Airport',
         '\Bank',

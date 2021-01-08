@@ -174,7 +174,7 @@ class MediaObject extends AbstractObject
                 'title' => 'Name',
                 'name' => 'name',
                 'type' => 'string',
-                'required' => true,
+                'required' => false,
                 'validators' => [
                     [
                         'name' => 'maxlength',

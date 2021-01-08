@@ -5,11 +5,14 @@ namespace Pressmind\Search\Condition;
 
 
 use Exception;
+use stdClass;
 
 class DataView implements ConditionInterface
 {
 
     public $name;
+
+    public $id;
 
     /**
      * @var \Pressmind\ORM\Object\DataView
@@ -24,11 +27,15 @@ class DataView implements ConditionInterface
 
     /**
      * DataView constructor.
-     * @param string $dataViewName
+     * @param string $name
+     * @param integer $id
      */
-    public function __construct($name = null)
+    public function __construct($name = null, $id = null)
     {
-        $this->name = $name;
+        $config = new stdClass();
+        $config->name = $name;
+        $config->id = $id;
+        //$this->setConfig($config);
     }
 
     public function getSQL()
@@ -58,11 +65,18 @@ class DataView implements ConditionInterface
 
     public function setConfig($config)
     {
-        $this->name = $config->name;
-        if($dataViews = \Pressmind\ORM\Object\DataView::listAll(['name' => $this->name])) {
-            $this->dataView = $dataViews[0];
+        $this->name = isset($config->name) ? $config->name : null;
+        $this->id = isset($config->id) ? $config->id : null;
+        if(!is_null($this->name)) {
+            if ($dataViews = \Pressmind\ORM\Object\DataView::listAll(['name' => $this->name])) {
+                $this->dataView = $dataViews[0];
+            } else {
+                throw new Exception('DataView with name ' . $this->name . ' does not exist');
+            }
+        } else if (!is_null($this->id)) {
+            $this->dataView = new \Pressmind\ORM\Object\DataView(intval($this->id), true);
         } else {
-            throw new Exception('DataView with name ' . $this->name . ' does not exist');
+            throw new Exception('Missing parameters! "name" or "id" has to be given!');
         }
         foreach ($this->dataView->search_conditions as $search_condition) {
             $condition_class_name = '\Pressmind\Search\Condition\\' . $search_condition->class_name;
@@ -87,11 +101,11 @@ class DataView implements ConditionInterface
 
     /**
      * @param null $name
-     * @return DateRange
+     * @return DataView
      */
-    public static function create($name = null)
+    public static function create($name = null, $id = null)
     {
-        $object = new self($name);
+        $object = new self($name, $id);
         return $object;
     }
 }

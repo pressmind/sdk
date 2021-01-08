@@ -314,6 +314,9 @@ class Import
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Finding and removing Orphans', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         $conf = Registry::getInstance()->get('config');
         $allowed_object_types = array_keys($conf['data']['media_types']);
+        if(isset($conf['data']['primary_media_type_ids']) && !empty($conf['data']['primary_media_type_ids'])) {
+            $allowed_object_types = $conf['data']['primary_media_type_ids'];
+        }
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::removeOrphans()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
         foreach ($allowed_object_types as $allowed_object_type) {
             $allowed_visibilities = $conf['data']['media_types_allowed_visibilities'][$allowed_object_type];
@@ -347,7 +350,12 @@ class Import
     {
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
-        $existing_media_objects = $db->fetchAll("SELECT id FROM pmt2core_media_objects");
+        $query = "SELECT id FROM pmt2core_media_objects";
+        $conf = Registry::getInstance()->get('config');
+        if(isset($conf['data']['primary_media_type_ids']) && !empty($conf['data']['primary_media_type_ids'])) {
+            $query = "SELECT id FROM pmt2core_media_objects WHERE id_object_type IN (" . implode(',', $conf['data']['primary_media_type_ids']) . ")";
+        }
+        $existing_media_objects = $db->fetchAll($query);
         foreach($existing_media_objects as $media_object) {
             if(!in_array($media_object->id, $this->_imported_ids)) {
                 $media_object_to_remove = new MediaObject($media_object->id);

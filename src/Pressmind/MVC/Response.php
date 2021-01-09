@@ -86,6 +86,10 @@ class Response
         if($this->_content_type == 'application/json') {
             $this->_body = json_encode($this->_body);
         }
+        if(isset($this->_headers['Content-Encoding']) && in_array('gzip', array_map('trim', explode(',', $this->_headers['Content-Encoding'])))) {
+            $this->_body = gzencode(trim( preg_replace( '/\s+/', ' ', $this->_body )), 9);
+        }
+        header('Content-Length: '.strlen($this->_body));
         echo $this->_body;
     }
 }

@@ -250,6 +250,14 @@ class Request
     }
 
     /**
+     * @param $name
+     * @return string
+     */
+    public function getHeader($name) {
+        return isset($this->_headers[$name]) ? $this->_headers[$name] : null;
+    }
+
+    /**
      * @return string
      */
     public function getMethod()

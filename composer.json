@@ -17,7 +17,8 @@
         "ext-pdo": "*",
         "ext-readline": "*",
         "ext-mbstring": "*",
-        "ext-gd": "*"
+        "ext-gd": "*",
+        "ext-zlib": "*"
     },
     "autoload": {
         "psr-4": {

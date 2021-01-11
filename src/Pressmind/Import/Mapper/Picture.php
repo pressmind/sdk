@@ -23,6 +23,7 @@ class Picture implements MapperInterface
             foreach ($pObject as $object) {
                 $mapped_object = new stdClass();
                 $mapped_object->sections = [];
+                $mapped_object->id = $object->id_media_object;
                 $mapped_object->id_media_object = $pIdMediaObject;
                 $mapped_object->section_name = '';
                 $mapped_object->language = $pLanguage;

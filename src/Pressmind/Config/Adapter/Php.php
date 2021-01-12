@@ -43,7 +43,7 @@ class Php implements AdapterInterface
             'testing' => [],
         ];
 
-        require_once $this->_config_file;
+        include_once $this->_config_file;
         $return_config['development'] = $config['development'];
         $return_config['production'] = array_merge($config['development'], $config['production']);
         $return_config['testing'] = array_merge($config['development'], $config['testing']);
@@ -56,9 +56,29 @@ class Php implements AdapterInterface
      */
     public function write($data)
     {
-        require_once $this->_config_file;
+        include $this->_config_file;
         /** @var array $config */
         $config[$this->_environment] = $data;
-        file_put_contents($this->_config_file, var_export($config, true));
+        $config_text = "<?php\n\$config = " . $this->_var_export($config, true) . ';';
+        file_put_contents($this->_config_file, $config_text);
+    }
+
+    /**
+     * @param $expression
+     * @param bool $return
+     * @return mixed|string|string[]|null
+     */
+    private function _var_export($expression, $return = false) {
+        $export = var_export($expression, true);
+        $export = preg_replace("/^([ ]*)(.*)/m", '$1$1$2', $export);
+        $array = preg_split("/\r\n|\n|\r/", $export);
+        $array = preg_replace(["/\s*array\s\($/", "/\)(,)?$/", "/\s=>\s$/"], [NULL, ']$1', ' => ['], $array);
+        $export = join(PHP_EOL, array_filter(["["] + $array));
+        if ($return) {
+            return $export;
+        } else  {
+            echo $export;
+        }
+        return null;
     }
 }

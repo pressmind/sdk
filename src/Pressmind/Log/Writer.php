@@ -56,13 +56,15 @@ class Writer
                     }
                 }
             } else if($config['logging']['storage'] == 'database') {
-                $log_set = new Log();
-                $log_set->type = $type;
-                $log_set->trace = json_encode(self::getTrace());
-                $log_set->category = $filename;
-                $log_set->date = $date;
-                $log_set->text = print_r($log, true);
-                $log_set->create();
+                if ($config['logging']['mode'] == 'ALL' || $type == $config['logging']['mode']) {
+                    $log_set = new Log();
+                    $log_set->type = $type;
+                    $log_set->trace = json_encode(self::getTrace());
+                    $log_set->category = $filename;
+                    $log_set->date = $date;
+                    $log_set->text = print_r($log, true);
+                    $log_set->create();
+                }
             }
         }
         //print_r(json_encode(self::getTrace()));

@@ -209,9 +209,6 @@ abstract class AbstractObject implements SplSubject
         } else {
             $dataset = $this->_db->fetchAll($query, $values);
         }
-        /*echo $query;
-        print_r($values);
-        print_r($dataset);*/
         foreach ($dataset as $stdObject) {
             /**@var AbstractObject $object * */
             $class_name = get_class($this);
@@ -390,7 +387,7 @@ abstract class AbstractObject implements SplSubject
      * @param string $property_name
      * @throws Exception
      */
-    private function _deleteHasManyRelation($property_name) {
+    protected function _deleteHasManyRelation($property_name) {
         /** @var AbstractObject[] $relations */
         $relations = $this->$property_name;
         if(is_array($relations)) {

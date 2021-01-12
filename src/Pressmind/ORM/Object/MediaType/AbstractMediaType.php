@@ -3,6 +3,7 @@
 namespace Pressmind\ORM\Object\MediaType;
 
 use Pressmind\ORM\Object\AbstractObject;
+use Pressmind\ORM\Object\MediaObject\DataType\Picture;
 use Pressmind\Registry;
 
 class AbstractMediaType extends AbstractObject
@@ -19,6 +20,19 @@ class AbstractMediaType extends AbstractObject
                 " WHERE id_media_object = ? AND language = ?";
             $dataset = $this->_db->fetchRow($query, [$pIdMediaObject, $pLanguage]);
             $this->fromStdClass($dataset);
+        }
+    }
+
+    protected function _deleteHasManyRelation($property_name)
+    {
+        /** @var AbstractObject[] $relations */
+        $relations = $this->$property_name;
+        if(is_array($relations)) {
+            foreach ($relations as $relation) {
+                if (!empty($relation) && !is_a($relation, Picture::class)) { //Pictures shall not be deleted
+                    $relation->delete(true);
+                }
+            }
         }
     }
 }

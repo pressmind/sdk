@@ -122,46 +122,17 @@ class Server
             }
             if ($route_match = $this->_router->handle($this->_request)) {
                 $classname = $route_match['module'] . '\\' . $route_match['controller'];
-                if (class_exists($classname)) {
-                    try {
-                        $class = new $classname();
-                        $method = $route_match['action'];
-                        if(method_exists($class, $method)) {
-                            $config = Registry::getInstance()->get('config');
-                            $parameters = $this->_request->getParameters();
-                            $cache_update = ($this->_request->getParameter($config['cache']['update_parameter']['key']) == $config['cache']['update_parameter']['value']);
-                            unset($parameters[$config['cache']['update_parameter']['key']]);
-                            unset($parameters[$config['cache']['disable_parameter']['key']]);
-                            if($this->_cache_enabled) {
-                                $cache_adapter = \Pressmind\Cache\Adapter\Factory::create($config['cache']['adapter']['name']);
-                                $key = md5($classname . $method . json_encode($parameters));
-                                $result = $cache_adapter->get($key);
-                                if($result && !$cache_update) {
-                                    $return = json_decode($result);
-                                } else {
-                                    $request =  [
-                                        'type' => 'REST',
-                                        'classname' => $classname,
-                                        'method' => $method,
-                                        'parameters' => $parameters
-                                    ];
-                                    $return = $class->$method($parameters);
-                                    $cache_adapter->add($key, json_encode($return), $request);
-                                }
-                            } else {
-                                $return = $class->$method($parameters);
-                            }
-                            $this->_response->setBody($return);
-                        }
-                    } catch (Exception $e) {
-                        $this->_response->setCode(500);
-                        $this->_response->setBody([
-                            'error' => true,
-                            'msg' => $e->getMessage()
-                        ]);
-                    }
-                } else {
+                $method = $route_match['action'];
+                $parameters = $this->_request->getParameters();
+                try {
+                    $result = $this->_callControllerAction($classname, $method, $parameters);
+                    $this->_response->setBody($result);
+                } catch (Exception $e) {
                     $this->_response->setCode(500);
+                    $this->_response->setBody([
+                        'error' => true,
+                        'msg' => $e->getMessage()
+                    ]);
                 }
             } else {
                 $this->_response->setCode(404);
@@ -170,6 +141,60 @@ class Server
             $this->_response->setCode(403);
         }
         $this->_response->send();
+    }
+
+    /**
+     * @param $classname
+     * @param $method
+     * @param $parameters
+     * @throws Exception
+     */
+    public function directCall($classname, $method, $parameters)
+    {
+        $this->_callControllerAction($classname, $method, $parameters);
+    }
+
+    /**
+     * @param $classname
+     * @param $method
+     * @param $parameters
+     * @throws Exception
+     */
+    private function _callControllerAction($classname, $method, $parameters)
+    {
+        if (class_exists($classname)) {
+            $class = new $classname();
+            if(method_exists($class, $method)) {
+                $config = Registry::getInstance()->get('config');
+                $cache_update = ($this->_request->getParameter($config['cache']['update_parameter']['key']) == $config['cache']['update_parameter']['value']);
+                unset($parameters[$config['cache']['update_parameter']['key']]);
+                unset($parameters[$config['cache']['disable_parameter']['key']]);
+                if($this->_cache_enabled) {
+                    $cache_adapter = \Pressmind\Cache\Adapter\Factory::create($config['cache']['adapter']['name']);
+                    $key = md5($classname . $method . json_encode($parameters));
+                    $result = $cache_adapter->get($key);
+                    if($result && !$cache_update) {
+                        $return = json_decode($result);
+                    } else {
+                        $request =  [
+                            'type' => 'REST',
+                            'classname' => $classname,
+                            'method' => $method,
+                            'parameters' => $parameters
+                        ];
+                        $return = $class->$method($parameters);
+                        $cache_adapter->add($key, json_encode($return), $request);
+                    }
+                } else {
+                    $return = $class->$method($parameters);
+                }
+                return $return;
+            } else {
+                throw new Exception('REST Controller Action' . $classname . '->' . $method . '() does not exist');
+            }
+        } else {
+            throw new Exception('REST Controller ' . $classname . ' does not exist');
+        }
     }
 
 }

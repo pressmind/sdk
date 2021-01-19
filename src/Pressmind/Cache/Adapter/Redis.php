@@ -4,8 +4,11 @@
 namespace Pressmind\Cache\Adapter;
 
 
+use DateTime;
 use Pressmind\HelperFunctions;
+use Pressmind\Log\Writer;
 use Pressmind\Registry;
+use Pressmind\REST\Server;
 
 class Redis implements AdapterInterface
 {
@@ -20,12 +23,17 @@ class Redis implements AdapterInterface
      */
     private $_prefix;
 
+    /**
+     * @var array
+     */
+    private $_config;
+
     public function __construct()
     {
-        $config = Registry::getInstance()->get('config');
+        $this->_config = Registry::getInstance()->get('config')['cache'];
         $this->_server = new \Redis();
-        $this->_server->connect($config['cache']['adapter']['config']['host'], $config['cache']['adapter']['config']['port']);
-        $this->_prefix = HelperFunctions::replaceConstantsFromConfig($config['cache']['key_prefix']);
+        $this->_server->connect($this->_config['adapter']['config']['host'], $this->_config['adapter']['config']['port']);
+        $this->_prefix = HelperFunctions::replaceConstantsFromConfig($this->_config['key_prefix']);
     }
 
     public function isEnabled()
@@ -60,5 +68,39 @@ class Redis implements AdapterInterface
     public function remove($pKey)
     {
         return $this->_server->del('pmt2core-' . $this->_prefix . '-' . $pKey);
+    }
+
+    public function cleanUp()
+    {
+        $keys = $this->_server->keys('pmt2core-' . $this->_prefix . '-*');
+        Writer::write('Found ' . count($keys) . ' keys in cache', WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
+        foreach ($this->_server->keys('pmt2core-' . $this->_prefix . '-*') as $key) {
+            Writer::write('Checking key ' . $key, WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
+            $idle_time = $this->_server->object('idletime', $key);
+            $info = json_decode($this->_server->hGet('pmt2corecacheinfo-' . $this->_prefix, $key));
+            $now = new DateTime();
+            $cache_date = $this->_server->hGet('pmt2corecachetime-' . $this->_prefix, $key);
+            $date = DateTime::createFromFormat(DateTime::ISO8601, $cache_date);
+            $age = $now->getTimestamp() - $date->getTimestamp();
+            Writer::write('Idle time: ' . $idle_time . ' sec.', WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
+            Writer::write('Age: ' . $age . ' sec.', WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
+            if($idle_time >= $this->_config['max_idle_time'] || $age >= $this->_config['update_frequency']) {
+                Writer::write('Deleting key ' . $key, WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
+                $this->_server->del($key);
+                $this->_server->hDel('pmt2corecacheinfo-' . $this->_prefix, $key);
+                $this->_server->hDel('pmt2corecachetime-' . $this->_prefix, $key);
+            }
+            if($age >= $this->_config['update_frequency'] && $idle_time < $this->_config['max_idle_time']) {
+                Writer::write('Updating key ' . $key . ' due to update frequency', WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
+                Writer::write('Type: ' . $info->type, WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
+                Writer::write('Class: ' . $info->classname, WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
+                Writer::write('Method: ' . $info->method, WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
+                Writer::write('Params: ' . print_r($info->parameters, true), WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
+                if(strtolower($info->type) == 'rest') {
+                    $rest_server = new Server();
+                    $rest_server->directCall($info->classname, $info->method, json_decode(json_encode($info->parameters), true));
+                }
+            }
+        }
     }
 }

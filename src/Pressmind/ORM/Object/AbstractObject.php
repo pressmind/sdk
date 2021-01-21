@@ -146,7 +146,7 @@ abstract class AbstractObject implements SplSubject
                 } else {
                     $operator = '=';
                 }
-                if(strtolower($operator) == 'in') {
+                if(strtolower($operator) == 'in' || strtolower($operator) == 'not in') {
                     $value_array = explode(',', $value);
                     $variable_replacement = ' (' . implode(',', array_fill(0,count($value_array),'?')) . ')';
                     foreach ($value_array as $item) {
@@ -163,7 +163,7 @@ abstract class AbstractObject implements SplSubject
                 } else if($value === 'IS NOT NULL') {
                     $operator = 'IS NOT NULL';
                     $variable_replacement = '';
-                } else if(strtolower($operator) != 'in') {
+                } else if(strtolower($operator) != 'in'  && strtolower($operator) != 'not in') {
                     $values[] = $value;
                 }
                 $keys[] = $key;

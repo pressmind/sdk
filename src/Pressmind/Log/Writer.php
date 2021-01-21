@@ -84,7 +84,13 @@ class Writer
         $traces = [];
         foreach (debug_backtrace() as $trace) {
             if($trace['function'] != 'getTrace') {
-                $traces[] = $trace['file'] . ':' . $trace['line'] . ' ' . $trace['class'] . $trace['type'] . $trace['function'] . '()';
+                if(isset($trace['file'])) {
+                    $line = isset($trace['line']) ? $trace['line'] : '';
+                    $class = isset($trace['class']) ? $trace['class'] : '';
+                    $type = isset($trace['type']) ? $trace['type'] : '';
+                    $function = isset($trace['function']) ? $trace['function'] : '';
+                    $traces[] = $trace['file'] . ':' . $line . ' ' . $class . $type . $function . '()';
+                }
             }
         }
         return array_reverse($traces);

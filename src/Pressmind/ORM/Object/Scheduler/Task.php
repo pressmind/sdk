@@ -147,9 +147,11 @@ class Task extends AbstractObject
         try {
             $obj = new $classname();
             foreach ($this->methods as $method) {
-                Writer::write('Processing task "' . $method->name . '"', Writer::OUTPUT_FILE, 'scheduler');
                 $parameters = is_array(json_decode($method->parameters, true)) ? json_decode($method->parameters, true) : [];
+                Writer::write('Processing task "' . $method->name . '"', Writer::OUTPUT_FILE, 'scheduler');
                 try {
+                    Writer::write('Calling method "' . $method->name . '"', Writer::OUTPUT_FILE, 'scheduler');
+                    Writer::write('Parameters "' . print_r($parameters, true) . '"', Writer::OUTPUT_FILE, 'scheduler');
                     $method_return = call_user_func_array([$obj, $method->name], array_values($parameters));
                     Writer::write('Task "' . $method->name . '" returned: ' . $method_return, Writer::OUTPUT_FILE, 'scheduler');
                 } catch (Exception $e) {

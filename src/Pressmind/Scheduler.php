@@ -50,7 +50,8 @@ class Scheduler
             $i++;
             Writer::write('Job ' . $i . '("' . $task->name . '") starting ...', Writer::OUTPUT_FILE, 'scheduler');
             try {
-                Writer::write('Job ' . $i . '("' . $task->name . '") completed with response: ' . $task->run(), Writer::OUTPUT_FILE, 'scheduler');
+                $response = $task->run();
+                Writer::write('Job ' . $i . '("' . $task->name . '") completed with response: ' . $response, Writer::OUTPUT_FILE, 'scheduler');
             } catch (Exception $e) {
                 Writer::write('Job ' . $i . '("' . $task->name . '") failed: ' .  $e->getMessage(), Writer::OUTPUT_FILE, 'scheduler', Writer::TYPE_ERROR);
             }

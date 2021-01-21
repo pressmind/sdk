@@ -32,7 +32,11 @@
             "mode": "ALL",
             "storage": "database",
             "log_file_path": "APPLICATION_PATH/logs",
-            "error_email_address": "john.doe@local"
+            "error_email_address": "john.doe@local",
+            "lifetime": 86400,
+            "keep_log_types": [
+                "ERROR"
+            ]
         },
         "debug": {
             "mode": "on",

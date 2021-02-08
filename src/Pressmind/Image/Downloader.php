@@ -45,7 +45,7 @@ class Downloader
             curl_setopt($ch, CURLOPT_TIMEOUT, 20);
             $raw = curl_exec($ch);
             curl_close($ch);
-            if ($raw === false) {
+            if ($raw === false || empty($raw)) {
                 throw new Exception('CURL Timeout or other error: ' . curl_error($ch));
             } else {
                 $file->content = $raw;

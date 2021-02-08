@@ -258,8 +258,8 @@ class Search
             }
         }
 
-        $sql_start = "SELECT pmt2core_media_objects.id";
-        $sql_end = " GROUP BY pmt2core_media_objects.id";
+        $sql_start = "SELECT DISTINCT pmt2core_media_objects.id";
+        $sql_end = "";
         if($returnTotalCount == true) {
             $sql_start = "SELECT COUNT(DISTINCT pmt2core_media_objects.id) as total_rows";
             $sql_end = "";

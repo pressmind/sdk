@@ -827,7 +827,11 @@ abstract class AbstractObject implements SplSubject
             /**
              * it might be that the property has additional filters assigned, so we need to apply them, too.
              */
-            return $this->filterPropertyValue($name, $filter->filterValue($value), $property_info['filters']);
+            if(isset($property_info['filters']) && !empty($property_info['filters'])) {
+                return $this->filterPropertyValue($name, $filter->filterValue($value), $property_info['filters']);
+            } else {
+                return $filter->filterValue($value);
+            }
         } catch (Exception $e) {
             echo $e->getMessage();
             return null;

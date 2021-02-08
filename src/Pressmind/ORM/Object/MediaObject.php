@@ -597,7 +597,7 @@ class MediaObject extends AbstractObject
         if($strategy == 'unique' || $strategy == 'count-up') {
             if($this->_doesRouteExist($final_url)) {
                 if($strategy == 'unique') {
-                    throw new Exception('Route with url ' . $final_url . ' already exists and route-building strategy is set to unique in config.json.');
+                    throw new Exception('Route with url ' . $final_url . ' already exists and route-building strategy is set to unique in config. Please check your configuration file.');
                 }
                 if($strategy == 'count-up') {
                     for ($i = 1; $i < 1000; $i++) {

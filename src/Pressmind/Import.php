@@ -275,6 +275,9 @@ class Import
             $itinerary_importer = new Itinerary($id_media_object);
             $itinerary_importer->import();
 
+            $media_object_importer = new Import\MediaObject();
+            $media_object_importer->import($response[0]);
+
             if(isset($config['data']['touristic']['my_content_class_map']) && isset($response[0]->my_contents_to_media_object) && is_array($response[0]->my_contents_to_media_object)) {
                 foreach($response[0]->my_contents_to_media_object as $my_content) {
                     if(isset($config['data']['touristic']['my_content_class_map'][$my_content->id_my_content])) {
@@ -282,12 +285,12 @@ class Import
                         /** @var ImportInterface $custom_importer */
                         $custom_importer = new $touristic_class_name($my_content, $id_media_object);
                         $custom_importer->import();
+                        $media_object = new ORM\Object\MediaObject($id_media_object, true);
+                        $media_object->insertCheapestPrice();
+                        unset($media_object);
                     }
                 }
             }
-
-            $media_object_importer = new \Pressmind\Import\MediaObject();
-            $media_object_importer->import($response[0]);
 
             unset($response);
             unset($old_object);

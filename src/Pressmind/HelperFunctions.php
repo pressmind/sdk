@@ -114,9 +114,6 @@ class HelperFunctions
      * @return string
      */
     static public function human_to_machine($human_name) {
-        if(mb_detect_encoding($human_name) == 'UTF-8') {
-            $human_name = utf8_decode($human_name);
-        };
         return preg_replace(
             array(
                 '/[^a-zA-Z0-9]+/',

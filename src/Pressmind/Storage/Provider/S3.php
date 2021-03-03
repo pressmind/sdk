@@ -16,8 +16,14 @@ use Pressmind\Storage\ProviderInterface;
 class S3 implements ProviderInterface
 {
 
+    /**
+     * @var S3Client
+     */
     private $_s3_client;
 
+    /**
+     * @var string
+     */
     private $_log_file_name = 's3_storage';
 
     public function __construct()

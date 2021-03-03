@@ -6,6 +6,7 @@ use Exception;
 use Pressmind\HelperFunctions;
 use Pressmind\Image\Downloader;
 use Pressmind\Image\Processor;
+use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\MediaObject\DataType\Picture\Derivative;
 use Pressmind\ORM\Object\MediaObject\DataType\Picture\Section;
@@ -316,9 +317,14 @@ class Picture extends AbstractObject
         $url = parse_url($this->tmp_url);
         parse_str($url['query'], $query);
         $last_error = null;
+        if($retry_counter > 0) {
+            Writer::write('ID ' . $this->getId() . ': Retry No. ' . $retry_counter . ' of downloading image from ' . $download_url, WRITER::OUTPUT_FILE, 'image_processor', Writer::TYPE_INFO);
+        }
         if($max_retries >= $retry_counter) {
             try {
                 $storage_file = $downloader->download($download_url, $this->file_name);
+                $mime_type = $storage_file->getMimetype();
+                $this->_checkMimetype($mime_type);
                 $new_file_name = $this->id_media_object . '_' . $query['id'] . '.' . HelperFunctions::getExtensionFromMimeType($storage_file->getMimetype());
                 $this->download_successful = true;
                 $this->mime_type = $storage_file->getMimetype();
@@ -329,12 +335,29 @@ class Picture extends AbstractObject
                 return $storage_file;
             } catch (Exception $e) {
                 $last_error = $e->getMessage();
-                $this->downloadOriginal(false, $retry_counter + 1);
+                Writer::write('ID ' . $this->getId() . ': Downloading image from ' . $download_url . ' failed at try: ' . $retry_counter, WRITER::OUTPUT_FILE, 'image_processor', Writer::TYPE_ERROR);
+                $this->downloadOriginal(false, ($retry_counter + 1));
             } catch (S3Exception $e) {
                 $last_error = $e->getMessage();
             }
         } else {
-            throw new Exception('Download of image ID: ' . $this->id . ' failed! Maximum retries exceeded! Last error: ' . $last_error);
+            throw new Exception('Download of image ID: ' . $this->id . ' failed! Maximum retries of ' . $max_retries . ' exceeded! Last error: ' . $last_error);
+        }
+    }
+
+    /**
+     * @param $mimetype
+     * @throws Exception
+     */
+    private function _checkMimetype($mimetype) {
+        $allowed_mimetypes = [
+            'image/jpeg',
+            'image/jpg',
+            'image/gif',
+            'image/png',
+        ];
+        if(!in_array($mimetype, $allowed_mimetypes)) {
+            throw new Exception('Mimetype ' . $mimetype . ' is not allowed for images');
         }
     }
 

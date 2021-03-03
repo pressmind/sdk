@@ -38,15 +38,16 @@ class Downloader
         $file->name = $targetName;
         if(!$file->exists()) {
             $ch = curl_init($url);
-            curl_setopt($ch, CURLOPT_HEADER, 0);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt($ch, CURLOPT_BINARYTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_HEADER, false);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 20);
             $raw = curl_exec($ch);
             curl_close($ch);
-            if ($raw === false || empty($raw)) {
+            if ($raw === false) {
                 throw new Exception('CURL Timeout or other error: ' . curl_error($ch));
+            } else if(empty($raw)) {
+                throw new Exception('Empty response for: ' . $url);
             } else {
                 $file->content = $raw;
             }

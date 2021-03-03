@@ -39,11 +39,11 @@ class Table implements MapperInterface
                     foreach ($row->cols as $col) {
                         $col_i++;
                         $table_row_column = new Row\Column();
-                        $table_row_column->colspan = $col->colspan;
-                        $table_row_column->style = $col->id_style;
-                        $table_row_column->height = $col->height;
-                        $table_row_column->width = $col->width;
-                        $table_row_column->text = $col->text;
+                        $table_row_column->colspan = isset($col->colspan) ? $col->colspan : null;
+                        $table_row_column->style = isset($col->id_style) ? $col->id_style : null;
+                        $table_row_column->height = isset($col->height) ? $col->height : null;
+                        $table_row_column->width = isset($col->width) ? $col->width : null;
+                        $table_row_column->text = isset($col->text) ? $col->text : null;
                         $table_row_column->sort = $col_i;
                         $table_row_columns[] = $table_row_column->toStdClass();
                     }

@@ -7,6 +7,7 @@ namespace Pressmind\Import;
 
 use Exception;
 use Pressmind\ORM\Object\AbstractObject;
+use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToInsurance;
 
 class TouristicData extends AbstractImport
 {
@@ -30,6 +31,7 @@ class TouristicData extends AbstractImport
         'touristic_insurance_groups' => '\Insurance\Group',
         'touristic_insurance_to_group' => '\Insurance\InsuranceToGroup',
         'touristic_insurances' => '\Insurance',
+        'touristic_additional_insurances' => '\Insurance',
         'touristic_insurances_price_tables' => '\Insurance\PriceTable',
     ];
 
@@ -66,6 +68,15 @@ class TouristicData extends AbstractImport
                     $touristic_objects = [$touristic_objects];
                 }
                 foreach ($touristic_objects as $touristic_object) {
+                    if($touristic_object_name == 'touristic_additional_insurances') {
+                        $main_insurance_id = $touristic_object->id_insurance;
+                        unset($touristic_object->id_insurance);
+                        $insuranceToinsurance = new InsuranceToInsurance();
+                        $insuranceToinsurance->id_insurance = $main_insurance_id;
+                        $insuranceToinsurance->id_sub_insurance = $touristic_object->id;
+                        $insuranceToinsurance->delete();
+                        $insuranceToinsurance->create();
+                    }
                     $class_name = '\Pressmind\ORM\Object\Touristic' . $this->_touristic_object_map[$touristic_object_name];
                     foreach ($touristic_object as $key => $value) {
                         if (isset($this->_touristic_object_field_map[$touristic_object_name][$key])) {

@@ -49,15 +49,8 @@ class Insurance extends AbstractController
         $mediaObject = new MediaObject(intval($params['id_media_object']), true);
         $response = [];
         foreach ($mediaObject->insurance_group->insurances as $insurance) {
-            if($insurance->active == false) {
-                $available = $insurance->isAvailableForTravelDateAndPriceAndPersonAge($date_start, $date_end, floatval($params['price_person']), intval($params['duration_nights']), $person_age, $total_number_of_persons);
-                if ($available) {
-                    $ret_insurance = $insurance->toStdClass(false);
-                    $ret_insurance->price = floatval($available->price);
-                    $ret_insurance->code = $available->code;
-                    $ret_insurance->code_ibe = $available->code_ibe;
-                    $response[] = $ret_insurance;
-                }
+            if($insurance->active == true && $available = $insurance->isAvailableForTravelDateAndPriceAndPersonAge($date_start, $date_end, floatval($params['price_person']), intval($params['duration_nights']), $person_age, $total_number_of_persons)) {
+                $response[] = $available;
             }
         }
         return $response;

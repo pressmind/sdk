@@ -22,7 +22,9 @@ use Pressmind\ORM\Object\Touristic\Insurance\PriceTable;
  * @property string $urlagb
  * @property integer $pax_min
  * @property integer $pax_max
+ * @property string $code
  * @property PriceTable[] $price_tables
+ * @property Insurance[] $sub_insurances
  */
 class Insurance extends AbstractObject
 {
@@ -191,6 +193,22 @@ class Insurance extends AbstractObject
                             ),
                         'filters' => NULL,
                     ),
+                'code' =>
+                    array(
+                        'title' => 'Code',
+                        'name' => 'code',
+                        'type' => 'string',
+                        'required' => false,
+                        'validators' =>
+                            array(
+                                0 =>
+                                    array(
+                                        'name' => 'maxlength',
+                                        'params' => 255,
+                                    ),
+                            ),
+                        'filters' => NULL,
+                    ),
                 'price_tables' => array(
                     'title' => 'Price tables',
                     'name' => 'price_tables',
@@ -203,7 +221,22 @@ class Insurance extends AbstractObject
                     'required' => false,
                     'validators' => null,
                     'filters' => null
-                )
+                ),
+                'sub_insurances' => [
+                    'name' => 'sub_insurances',
+                    'title' => 'sub_insurances',
+                    'type' => 'relation',
+                    'required' => false,
+                    'validators' => NULL,
+                    'filters' => NULL,
+                    'relation' => [
+                        'type' => 'ManyToMany',
+                        'class' => Insurance::class,
+                        'relation_table' => 'pmt2core_touristic_insurance_to_insurance',
+                        'related_id' => 'id_insurance',
+                        'target_id' => 'id_sub_insurance'
+                    ]
+                ]
             ),
     );
 
@@ -220,13 +253,23 @@ class Insurance extends AbstractObject
      * @param integer $total_number_of_persons
      * @return boolean|Calculated
      */
-    public function isAvailableForTravelDateAndPriceAndPersonAge($dateStart, $dateEnd, $travelPrice, $duration, $personAge = 18, $total_number_of_persons = 0)
+    public function isAvailableForTravelDateAndPriceAndPersonAge($dateStart, $dateEnd, $travelPrice, $duration, $personAge = 18, $total_number_of_persons = 0, $check_additional = false)
     {
         if($this->getId() == 0) { //If a default insurance (no insurance wanted) is given (id will be 0) we need to return a default object, so that the price can be displayed
             $calculated_insurance = new Calculated();
-            $calculated_insurance->id = $this->getId();
+            $calculated_insurance->name = $this->name;
+            $calculated_insurance->description = $this->description;
+            $calculated_insurance->description_long = $this->description_long;
+            $calculated_insurance->active = $this->active;
+            $calculated_insurance->duration_max_days = $this->duration_max_days;
+            $calculated_insurance->worldwide = $this->worldwide;
+            $calculated_insurance->is_additional_insurance = $this->is_additional_insurance;
+            $calculated_insurance->urlinfo = $this->urlinfo;
+            $calculated_insurance->urlproduktinfo = $this->urlproduktinfo;
+            $calculated_insurance->urlagb = $this->urlagb;
             $calculated_insurance->code = 'Default';
-            $calculated_insurance->code_ibe = '';
+            $calculated_insurance->code_price = null;
+            $calculated_insurance->code_ibe = null;
             $calculated_insurance->family_insurance = null;
             $calculated_insurance->pax_min = 0;
             $calculated_insurance->pax_max = 0;
@@ -235,9 +278,22 @@ class Insurance extends AbstractObject
         }
         $matches = array();
         try {
-            if($this->is_additional_insurance == 0) {
+            if($this->is_additional_insurance == 0 || $check_additional == true) {
                 $now = new DateTime();
                 foreach ($this->price_tables as $pricetable) {
+                    /*echo '-- ' . $this->name . '--' . "\n";
+                    echo 'age_from:' . print_r(($pricetable->age_from <= $personAge || $pricetable->age_from == 0 || $personAge == null), true). "\n";
+                    echo 'age_to:' . print_r(($pricetable->age_to >= $personAge || $pricetable->age_to == 0 || $personAge == null), true). "\n";
+                    echo 'travel_date_from:' . print_r(($pricetable->travel_date_from <= $dateStart || is_null($pricetable->travel_date_from)), true). "\n";
+                    echo 'travel_date_to:' . print_r(($pricetable->travel_date_to >= $dateEnd || is_null($pricetable->travel_date_to)), true). "\n";
+                    echo 'travel_duration_from:' . print_r( ($pricetable->travel_duration_from <= $duration || $pricetable->travel_duration_from == 0), true). "\n";
+                    echo 'travel_duration_to:' . print_r( ($pricetable->travel_duration_to >= $duration || $pricetable->travel_duration_to == 0), true). "\n";
+                    echo 'travel_price_min:' . print_r( ($pricetable->travel_price_min <= $travelPrice || $pricetable->travel_price_min == 0), true). "\n";
+                    echo 'travel_price_max:' . print_r( ($pricetable->travel_price_max >= $travelPrice || $pricetable->travel_price_max == 0), true). "\n";
+                    echo 'booking_date_from:' . print_r( ($pricetable->booking_date_from <= $now || is_null($pricetable->booking_date_from)), true). "\n";
+                    echo 'booking_date_to:' . print_r( ($pricetable->booking_date_to >= $now || is_null($pricetable->booking_date_to)), true). "\n";
+                    echo 'pax_min:' . print_r( ($pricetable->pax_min <= $total_number_of_persons || $pricetable->pax_min == 0 || $total_number_of_persons == null), true). "\n";
+                    echo 'pax_max:' . print_r( ($pricetable->pax_max >= $total_number_of_persons || $pricetable->pax_max == 0 || $total_number_of_persons == null), true). "\n";*/
                     if (
                         ($pricetable->age_from <= $personAge || $pricetable->age_from == 0 || $personAge == null)
                         && ($pricetable->age_to >= $personAge || $pricetable->age_to == 0 || $personAge == null)
@@ -264,12 +320,39 @@ class Insurance extends AbstractObject
                     }*/
                     $calculated_insurance = new Calculated();
                     $calculated_insurance->id = $this->getId();
-                    $calculated_insurance->code = $matches[0][2]->code;
+                    $calculated_insurance->name = $this->name;
+                    $calculated_insurance->description = $this->description;
+                    $calculated_insurance->description_long = $this->description_long;
+                    $calculated_insurance->active = $this->active;
+                    $calculated_insurance->duration_max_days = $this->duration_max_days;
+                    $calculated_insurance->worldwide = $this->worldwide;
+                    $calculated_insurance->is_additional_insurance = $this->is_additional_insurance;
+                    $calculated_insurance->urlinfo = $this->urlinfo;
+                    $calculated_insurance->urlproduktinfo = $this->urlproduktinfo;
+                    $calculated_insurance->urlagb = $this->urlagb;
+                    $calculated_insurance->code_price = $matches[0][2]->code;
+                    $calculated_insurance->code = $this->code;
                     $calculated_insurance->code_ibe = $matches[0][2]->code_ibe;
                     $calculated_insurance->family_insurance = $matches[0][2]->family_insurance;
                     $calculated_insurance->pax_min = $matches[0][2]->pax_min;
                     $calculated_insurance->pax_max = $matches[0][2]->pax_max;
-                    $calculated_insurance->price = bcmul($price, 1, 2);
+                    $calculated_insurance->price = floatval(bcmul($price, 1, 2));
+                    $calculated_insurance->sub_insurances = [];
+                    /*$calculated_insurance = $this->toStdClass(false);
+                    $calculated_insurance->price = floatval(bcmul($price, 1, 2));
+                    $calculated_insurance->code = $matches[0][2]->code;
+                    $calculated_insurance->code_price = $this->code;
+                    $calculated_insurance->code_ibe = $matches[0][2]->code_ibe;
+                    $calculated_insurance->sub_insurances = [];*/
+                    //print_r($this->sub_insurances);
+                    if(is_array($this->sub_insurances)) {
+                        foreach ($this->sub_insurances as $sub_insurance) {
+                            //print_r($sub_insurance);
+                            if($calculated_sub_insurance = $sub_insurance->isAvailableForTravelDateAndPriceAndPersonAge($dateStart, $dateEnd, $travelPrice, $duration, $personAge, $total_number_of_persons, true)) {
+                                $calculated_insurance->sub_insurances[] = $calculated_sub_insurance;
+                            }
+                        }
+                    }
                     return $calculated_insurance;
                 }
             }

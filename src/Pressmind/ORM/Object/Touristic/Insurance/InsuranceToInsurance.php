@@ -6,7 +6,7 @@ namespace Pressmind\ORM\Object\Touristic\Insurance;
 
 use Pressmind\ORM\Object\AbstractObject;
 
-class InsuranceToGroup extends AbstractObject
+class InsuranceToInsurance extends AbstractObject
 {
     protected $_dont_use_autoincrement_on_primary_key = true;
 
@@ -15,7 +15,7 @@ class InsuranceToGroup extends AbstractObject
             'name' => self::class,
         ],
         'database' => [
-            'table_name' => 'pmt2core_touristic_insurance_to_group',
+            'table_name' => 'pmt2core_touristic_insurance_to_insurance',
             'primary_key' => 'id_insurance',
         ],
         'properties' =>
@@ -33,9 +33,9 @@ class InsuranceToGroup extends AbstractObject
                     ],
                     'filters' => NULL,
                 ],
-                'id_insurance_group' => [
-                    'title' => 'Group ID',
-                    'name' => 'id_insurance_group',
+                'id_sub_insurance' => [
+                    'title' => 'Sub Insurance ID',
+                    'name' => 'id_sub_insurance',
                     'type' => 'string',
                     'required' => false,
                     'validators' => [

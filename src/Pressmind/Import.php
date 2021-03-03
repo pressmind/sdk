@@ -81,12 +81,14 @@ class Import
      * @param integer|null $id_pool
      * @throws Exception
      */
-    public function import($id_pool = null)
+    public function import($id_pool = null, $allowed_object_types = null)
     {
         $conf = Registry::getInstance()->get('config');
-        $allowed_object_types = array_keys($conf['data']['media_types']);
-        if(isset($conf['data']['primary_media_type_ids']) && !empty($conf['data']['primary_media_type_ids'])) {
-            $allowed_object_types = $conf['data']['primary_media_type_ids'];
+        if(is_null($allowed_object_types)) {
+            $allowed_object_types = array_keys($conf['data']['media_types']);
+            if(isset($conf['data']['primary_media_type_ids']) && !empty($conf['data']['primary_media_type_ids'])) {
+                $allowed_object_types = $conf['data']['primary_media_type_ids'];
+            }
         }
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::import()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
         foreach ($allowed_object_types as $allowed_object_type) {

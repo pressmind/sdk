@@ -725,6 +725,7 @@ class MediaObject extends AbstractObject
                         $cheapestPriceSpeed->price_mix = $booking_package->price_mix;
                         $cheapestPriceSpeed->price_option = $option->price;
                         $cheapestPriceSpeed->price_option_pseudo = $option->price_pseudo;
+                        $cheapestPriceSpeed->option_price_due = $option->price_due;
                         $cheapestPriceSpeed->price_regular_before_discount = $option->price;
                         $cheapestPriceSpeed->price_total = $option->price + $transport_price;
                         $cheapestPriceSpeed->transport_code = !is_null($transport_pair) && isset($transport_pair[1]) ? $transport_pair[1]->code : null;

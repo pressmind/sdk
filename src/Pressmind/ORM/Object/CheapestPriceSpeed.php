@@ -24,6 +24,7 @@ use DateTime;
  * @property integer $option_occupancy
  * @property integer $option_occupancy_min
  * @property integer $option_occupancy_max
+ * @property string $option_price_due
  * @property float $price_transport_total
  * @property float $price_transport_1
  * @property float $price_transport_2
@@ -55,8 +56,7 @@ class CheapestPriceSpeed extends AbstractObject
 
     protected $_definitions = [
         'class' => [
-            'name' => 'CheapestPriceSpeed',
-            'namespace' => '\Pressmind\ORM\Object'
+            'name' => self::class,
         ],
         'database' => [
             'table_name' => 'pmt2core_cheapest_price_speed',
@@ -281,6 +281,29 @@ class CheapestPriceSpeed extends AbstractObject
                 'required' => false,
                 'filters' => null,
                 'validators' => null
+            ],
+            'option_price_due' => [
+                'name' => 'option_price_due',
+                'title' => 'option_price_due',
+                'type' => 'string',
+                'required' => false,
+                'default_value' => 'person_stay',
+                'validators' => [
+                    [
+                        'name' => 'inarray',
+                        'params' => [
+                            0 => 'once',
+                            1 => 'nightly',
+                            2 => 'daily',
+                            3 => 'weekly',
+                            4 => 'stay',
+                            5 => 'nights_person',
+                            6 => 'person_stay',
+                            7 => 'once_stay'
+                        ]
+                    ]
+                ],
+                'filters' => NULL,
             ],
             'price_regular_before_discount' => [
                 'name' => 'price_regular_before_discount',

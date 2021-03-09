@@ -1215,6 +1215,7 @@ abstract class AbstractObject implements SplSubject
     }
 
     /**
+     * @return boolean|array
      * @throws Exception
      */
     public function checkStorageIntegrity()
@@ -1236,7 +1237,16 @@ abstract class AbstractObject implements SplSubject
                 $change_to = $column_required ? 'NOT NULL' : 'NULL';
                 if (!is_null($column_type)) {
                     if(isset($database_table_info[$column_name])) {
+                        $is_auto_increment = strtolower($database_table_info[$column_name]->Extra) == 'auto_increment' ? true : false;
+                        $is_primary_key = strtolower($database_table_info[$column_name]->Key) == 'pri' ? true : false;
                         $database_required = strtolower($database_table_info[$column_name]->Null) == 'no' ? true : false;
+
+                        if($is_auto_increment && $this->dontUseAutoincrementOnPrimaryKey() == true && (isset($this->_definitions['database']['primary_key']) && $column_name == $this->_definitions['database']['primary_key'])) {
+                            $differences[] = ['action' => 'remove_auto_increment', 'column_name' => $column_name, 'column_type' => $column_type, 'column_null' => $change_to, 'msg' => get_class($this) . ': database column ' . $column_name . ' has different auto_increment setting. auto_increment needs to be removed from ' . $column_name];
+                        }
+                        if(!$is_auto_increment && $this->dontUseAutoincrementOnPrimaryKey() == false && (isset($this->_definitions['database']['primary_key']) && $column_name == $this->_definitions['database']['primary_key'])) {
+                            $differences[] = ['action' => 'set_auto_increment', 'column_name' => $column_name, 'column_type' => $column_type, 'column_null' => $change_to, 'msg' => get_class($this) . ': database column ' . $column_name . ' has different auto_increment setting. auto_increment needs to be added to ' . $column_name];
+                        }
                         if($column_required != $database_required) {
                             $change_from = $database_required ? 'NOT NULL' : 'NULL';
                             $differences[] = ['action' => 'alter_column_null', 'column_name' => $column_name, 'column_type' => $column_type, 'column_null' => $change_to, 'msg' => get_class($this) . ': database column ' . $column_name . ' has different IS NULL setting and needs to be altered from ' . $change_from . ' to ' . $change_to];

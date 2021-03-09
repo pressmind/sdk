@@ -338,16 +338,8 @@ class Insurance extends AbstractObject
                     $calculated_insurance->pax_max = $matches[0][2]->pax_max;
                     $calculated_insurance->price = floatval(bcmul($price, 1, 2));
                     $calculated_insurance->sub_insurances = [];
-                    /*$calculated_insurance = $this->toStdClass(false);
-                    $calculated_insurance->price = floatval(bcmul($price, 1, 2));
-                    $calculated_insurance->code = $matches[0][2]->code;
-                    $calculated_insurance->code_price = $this->code;
-                    $calculated_insurance->code_ibe = $matches[0][2]->code_ibe;
-                    $calculated_insurance->sub_insurances = [];*/
-                    //print_r($this->sub_insurances);
                     if(is_array($this->sub_insurances)) {
                         foreach ($this->sub_insurances as $sub_insurance) {
-                            //print_r($sub_insurance);
                             if($calculated_sub_insurance = $sub_insurance->isAvailableForTravelDateAndPriceAndPersonAge($dateStart, $dateEnd, $travelPrice, $duration, $personAge, $total_number_of_persons, true)) {
                                 $calculated_insurance->sub_insurances[] = $calculated_sub_insurance;
                             }

@@ -17,6 +17,7 @@ use Pressmind\Storage\Bucket;
  * Class Plaintext
  * @package Pressmind\ORM\Object\MediaObject\DataType
  * @property integer $id
+ * @property integer $id_picture
  * @property integer $id_media_object
  * @property string $section_name
  * @property string $var_name
@@ -38,8 +39,6 @@ use Pressmind\Storage\Bucket;
 class Picture extends AbstractObject
 {
 
-    protected $_dont_use_autoincrement_on_primary_key = true;
-
     protected $_definitions = [
         'class' => [
             'name' => 'Picture',
@@ -54,6 +53,14 @@ class Picture extends AbstractObject
             'id' => [
                 'title' => 'id',
                 'name' => 'id',
+                'type' => 'integer',
+                'required' => true,
+                'filters' => null,
+                'validators' => null,
+            ],
+            'id_picture' => [
+                'title' => 'id_picture',
+                'name' => 'id_picture',
                 'type' => 'integer',
                 'required' => true,
                 'filters' => null,

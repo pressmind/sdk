@@ -11,13 +11,15 @@ use Pressmind\Storage\File;
 
 class Downloader
 {
-
     /**
      * @var string
      */
     private $_file_type;
 
-
+    /**
+     * Downloader constructor.
+     * @param string $file_type
+     */
     public function __construct($file_type = 'image')
     {
         $this->_file_type = $file_type;
@@ -25,18 +27,18 @@ class Downloader
 
     /**
      * @param string $url
-     * @param string $targetPath
      * @param string $targetName
+     * @param boolean $forceOverwrite
      * @return File
      * @throws Exception
      */
-    public function download($url, $targetName)
+    public function download($url, $targetName, $forceOverwrite = false)
     {
         $config = Registry::getInstance()->get('config');
         $bucket = new Bucket($config['image_handling']['storage']['bucket']);
         $file = new File($bucket);
         $file->name = $targetName;
-        if(!$file->exists()) {
+        if(!$file->exists() || $forceOverwrite === true) {
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_HEADER, false);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

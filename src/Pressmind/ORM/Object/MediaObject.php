@@ -793,20 +793,25 @@ class MediaObject extends AbstractObject
     }
 
     /**
-     * @param $tagName
+     * @param string $tagName
+     * @param string|null $language
      * @return mixed|null
      * @throws Exception
      */
-    public function getValueByTagName($tagName) {
+    public function getValueByTagName($tagName, $language = null) {
         /**@var ObjectdataTag[] $possible_columns**/
         $possible_columns = ObjectdataTag::listAll(['id_object_type' => $this->id_object_type, 'tag_name' => $tagName]);
         if(count($possible_columns) > 0) {
+            $data = $this->getDataForLanguage($language);
             $column_name = $possible_columns[0]->objectdata_column_name;
-            return($this->data[0]->$column_name);
+            return($data->$column_name);
         }
         return null;
     }
 
+    /**
+     * @return void
+     */
     public function createSearchIndex()
     {
         $config = Registry::getInstance()->get('config');

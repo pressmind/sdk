@@ -89,6 +89,11 @@ class Pdo implements AdapterInterface
      */
     public function fetchRow($query = null, $parameters = null, $class_name = null)
     {
+        if(strpos($query, 'LIMIT') === false) {
+            $query .= ' LIMIT 0,1';
+        } else {
+            $query = preg_replace('/(LIMIT) (\d*),\d*/', '$1 $2,1', $query);
+        }
         $result = $this->fetchAll($query, $parameters, $class_name);
         if (count($result) > 0) {
             return $result[0];

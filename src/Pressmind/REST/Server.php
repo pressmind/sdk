@@ -1,9 +1,7 @@
 <?php
 namespace Pressmind\REST;
 
-error_reporting(1);
-ini_set('display_errors', 1);
-
+use Pressmind\Cache\Adapter\Factory;
 use Pressmind\MVC\Request;
 use Pressmind\MVC\Response;
 use Pressmind\MVC\Router;
@@ -41,7 +39,10 @@ class Server
      */
     private $_header_methods = ['OPTIONS', 'HEAD'];
 
-    private $_cache_enabled = false;
+    /**
+     * @var bool
+     */
+    private $_cache_enabled;
 
     /**
      * Server constructor.
@@ -70,7 +71,6 @@ class Server
     }
 
     /**
-     * For now the authentication is disabled by always returning true, might change in feature releases
      * @return bool
      */
     private function _checkAuthentication()
@@ -91,7 +91,7 @@ class Server
     }
 
     /**
-     *
+     * @return void
      */
     public function handle() {
         if(!in_array($this->_request->getMethod(), array_merge($this->_output_methods, $this->_header_methods))) {
@@ -159,18 +159,22 @@ class Server
      * @param $method
      * @param $parameters
      * @throws Exception
+     * @return mixed
      */
     private function _callControllerAction($classname, $method, $parameters)
     {
         if (class_exists($classname)) {
             $class = new $classname();
+            if(method_exists($class, 'init')) {
+                $class->init($parameters);
+            }
             if(method_exists($class, $method)) {
                 $config = Registry::getInstance()->get('config');
                 $cache_update = ($this->_request->getParameter($config['cache']['update_parameter']['key']) == $config['cache']['update_parameter']['value']);
                 unset($parameters[$config['cache']['update_parameter']['key']]);
                 unset($parameters[$config['cache']['disable_parameter']['key']]);
                 if($this->_cache_enabled) {
-                    $cache_adapter = \Pressmind\Cache\Adapter\Factory::create($config['cache']['adapter']['name']);
+                    $cache_adapter = Factory::create($config['cache']['adapter']['name']);
                     $key = md5($classname . $method . json_encode($parameters));
                     $result = $cache_adapter->get($key);
                     if($result && !$cache_update) {

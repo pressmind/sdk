@@ -35,7 +35,7 @@ class Itinerary extends AbstractImport implements ImportInterface
             $variant->delete(true);
         }
         try {
-            $response = $client->sendRequest('Itinerary', null, ['id_media_object' => (int)$id_media_object]);
+            $response = $client->sendRequest('Itinerary', 'get', ['id_media_object' => (int)$id_media_object]);
             $this->_checkApiResponse($response);
         } catch (\Exception $e) {
             $this->_errors[] = $e->getMessage();

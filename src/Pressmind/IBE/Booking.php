@@ -87,7 +87,7 @@ class Booking
         $this->id_transport_way_1 =  isset($data['params']['idt1']) ? $data['params']['idt1'] : null;
         $this->id_transport_way_2 =  isset($data['params']['idt2']) ? $data['params']['idt2'] : null;
         $this->request_type =  isset($data['params']['t']) ? $data['params']['t'] : null;
-        $this->settings = $data['settings'];
+        $this->settings = isset($data['settings']) ? $data['settings'] : null;
     }
 
     /**
@@ -150,7 +150,7 @@ class Booking
                 }
             }
         }
-        if($this->settings['steps']['insurances']['show_no_insurance_option']['value'] == true && count($insurances) > 0) {
+        if(isset($this->settings['steps']['insurances']['show_no_insurance_option']['value']) && $this->settings['steps']['insurances']['show_no_insurance_option']['value'] == true && count($insurances) > 0) {
             $no_insurance_pricetable = new Insurance\PriceTable();
             $no_insurance = new Insurance();
             $no_insurance->name = $this->settings['steps']['insurances']['no_insurance_title']['value'];

@@ -290,6 +290,31 @@ class Import
                         $media_object = new ORM\Object\MediaObject($id_media_object, true);
                         $media_object->insertCheapestPrice();
                         unset($media_object);
+                        foreach ($custom_importer->getLogs() as $log) {
+                            Writer::write($log, WRITER::OUTPUT_FILE, 'my_content_class_map', WRITER::TYPE_INFO);
+                        }
+                        foreach ($custom_importer->getErrors() as $error) {
+                            Writer::write($error, WRITER::OUTPUT_FILE, 'my_content_class_map', WRITER::TYPE_ERROR);
+                        }
+                        if(count($custom_importer->getErrors()) > 0) {
+                            $this->_errors[] = 'Error in hook invoked by MyContent class map. See log "my_content_class_map" for details';
+                        }
+                    }
+                }
+            }
+
+            if(isset($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type]) && is_array($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type])) {
+                foreach ($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type] as $custom_import_class_name) {
+                    $custom_import_class = new $custom_import_class_name($id_media_object);
+                    $custom_import_class->import();
+                    foreach ($custom_import_class->getLog() as $log) {
+                        Writer::write($log, WRITER::OUTPUT_FILE, 'custom_import_hook', WRITER::TYPE_INFO);
+                    }
+                    foreach ($custom_import_class->getErrors() as $error) {
+                        Writer::write($error, WRITER::OUTPUT_FILE, 'custom_import_hook', WRITER::TYPE_ERROR);
+                    }
+                    if(count($custom_import_class->getErrors()) > 0) {
+                        $this->_errors[] = 'Error in custom import hook. See log "custom_import_hook" for details';
                     }
                 }
             }

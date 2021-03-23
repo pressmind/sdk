@@ -564,37 +564,41 @@ class MediaObject extends AbstractObject
     public function buildPrettyUrls()
     {
         $config = Registry::getInstance()->get('config');
-        $field = isset($config['data']['media_types_pretty_url'][$this->id_object_type]['field']) ? $config['data']['media_types_pretty_url'][$this->id_object_type]['field'] : ['name' => 'name'];
+        $fields = isset($config['data']['media_types_pretty_url'][$this->id_object_type]['fields']) ? $config['data']['media_types_pretty_url'][$this->id_object_type]['fields'] : ['name'];
+        $separator = isset($config['data']['media_types_pretty_url'][$this->id_object_type]['separator']) ? $config['data']['media_types_pretty_url'][$this->id_object_type]['separator'] : '-';
         $strategy = isset($config['data']['media_types_pretty_url'][$this->id_object_type]['strategy']) ? $config['data']['media_types_pretty_url'][$this->id_object_type]['strategy'] : 'unique';
-        $url = $this->name;
-        $field_name = $field['name'];
-        if($field_name == 'name' || $field_name == 'code') {
-            $url = strtolower(HelperFunctions::replaceLatinSpecialChars(trim($this->$field_name)));
-        } else {
-            $object = $this->data[0];
-            if($object->getPropertyDefinition($field_name)['type'] == 'string') {
-                if(!empty($object->$field_name)) {
-                    $url = strtolower(HelperFunctions::replaceLatinSpecialChars(trim($object->$field_name)));
-                }
-            }
-            if($object->getPropertyDefinition($field_name)['type'] == 'relation') {
-                $linked_object_field_name = $field['linked_object_field'];
-                $linked_objects = $object->$field_name;
-                if(!empty($object->$field_name)) {
-                    if(is_array($linked_objects)) {
-                        if(get_class($linked_objects[0]) == Objectlink::class) {
-                            $object_link = new MediaObject($linked_objects[0]->id_media_object_link);
-                            $url = strtolower(HelperFunctions::replaceLatinSpecialChars(trim($object_link->data[0]->$linked_object_field_name)));
-                        }
-                    } else {
-                        if(get_class($linked_objects) == Objectlink::class) {
-                            $object_link = new MediaObject($linked_objects->id_media_object_link);
-                            $url = strtolower(HelperFunctions::replaceLatinSpecialChars(trim($object_link->data[0]->$linked_object_field_name)));
-                        }
+        $url_array = [];
+        //$field_name = $field['name'];
+        foreach ($fields as $field) {
+            if(in_array($field, $this->getPropertyNames())) {
+                $url_array[] = strtolower(HelperFunctions::replaceLatinSpecialChars(trim($this->$field)));
+            } else {
+                $object = $this->getDataForLanguage();
+                if($object->getPropertyDefinition($field)['type'] == 'string') {
+                    if(!empty($object->$field)) {
+                        $url_array[] = strtolower(HelperFunctions::replaceLatinSpecialChars(trim(strip_tags($object->$field))));
                     }
                 }
+                /*if($object->getPropertyDefinition($field)['type'] == 'relation') {
+                    $linked_object_field_name = $field['linked_object_field'];
+                    $linked_objects = $object->$field_name;
+                    if(!empty($object->$field_name)) {
+                        if(is_array($linked_objects)) {
+                            if(get_class($linked_objects[0]) == Objectlink::class) {
+                                $object_link = new MediaObject($linked_objects[0]->id_media_object_link);
+                                $url = strtolower(HelperFunctions::replaceLatinSpecialChars(trim($object_link->data[0]->$linked_object_field_name)));
+                            }
+                        } else {
+                            if(get_class($linked_objects) == Objectlink::class) {
+                                $object_link = new MediaObject($linked_objects->id_media_object_link);
+                                $url = strtolower(HelperFunctions::replaceLatinSpecialChars(trim($object_link->data[0]->$linked_object_field_name)));
+                            }
+                        }
+                    }
+                }*/
             }
         }
+        $url = implode($separator, $url_array);
         $prefix = isset($config['data']['media_types_pretty_url'][$this->id_object_type]['prefix']) ? $config['data']['media_types_pretty_url'][$this->id_object_type]['prefix'] : '/';
         $suffix = isset($config['data']['media_types_pretty_url'][$this->id_object_type]['suffix']) ? $config['data']['media_types_pretty_url'][$this->id_object_type]['suffix'] : '';
         $final_url = $prefix . preg_replace('/\W+/', '-', $url) . $suffix;

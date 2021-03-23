@@ -21,15 +21,19 @@ class DateFilter implements FilterInterface {
         if(empty($pValue) || is_a($pValue, 'DateTime')) return $pValue;
         try {
             $value = null;
-            /**it might be that we receive a representation of a JSON DateTime Object, so we need to cover this case ...**/
+            /**it might be that we receive a JSON representation of a PHP DateTime Object, so we need to cover this case ...**/
             if((is_array($pValue) && isset($pValue['date'])) || (is_a($pValue, 'stdClass') && isset($pValue->date))) {
                 if(is_array($pValue)) {
                     $pValue = $pValue['date'];
                 } else {
                     $pValue = $pValue->date;
                 }
-                $value = DateTime::createFromFormat('Y-m-d', $pValue);
+                $value = DateTime::createFromFormat('Y-m-d H:i:s.000000', $pValue);
             } else {
+                preg_match('/(\d{4}-\d{2}-\d{2})/m', $pValue, $matches);
+                if(is_array($matches) && !empty($matches[0])) {
+                    $pValue = $matches[0];
+                }
                 $value = DateTime::createFromFormat('Y-m-d', $pValue);
             }
             return $value;

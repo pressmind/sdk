@@ -34,6 +34,7 @@ class ObjectIntegrityCheck
             $this->_database_table_info[$field->Field] = $field;
         }
         $type_mapper = new Mysql();
+        $pm_columns = ['id', 'id_media_object', 'language'];
         foreach ($objectDefinition->fields as $field) {
             if(isset($field->sections)) {
                 foreach ($field->sections as $section) {
@@ -43,6 +44,7 @@ class ObjectIntegrityCheck
                     }
                     $column_name = HelperFunctions::human_to_machine($field->var_name) . '_' . HelperFunctions::human_to_machine($section_name);
                     $column_type = $type_mapper->mapTypeFromPressMindToMysql($field->type);
+                    $pm_columns[] = $column_name;
                     if (!is_null($column_type)) {
                         if (isset($this->_database_table_info[$column_name])) {
                             if ($this->_database_table_info[$column_name]->Type !== strtolower($column_type)) {
@@ -53,6 +55,11 @@ class ObjectIntegrityCheck
                         }
                     }
                 }
+            }
+        }
+        foreach ($table as $column) {
+            if(!in_array($column->Field, $pm_columns)) {
+                $this->_differences[] = ['action' => 'drop_column', 'column_name' => $column->Field, 'msg' => 'database column ' . $column->Field . ' does not exist pressminds datascheme anymore, column needs to be deleted.'];
             }
         }
     }

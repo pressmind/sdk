@@ -29,7 +29,9 @@ class AbstractMediaType extends AbstractObject
         $relations = $this->$property_name;
         if(is_array($relations)) {
             foreach ($relations as $relation) {
-                $relation->delete(true);
+                if (!empty($relation)) {
+                    $relation->delete(true);
+                }
             }
         }
     }

@@ -280,6 +280,8 @@ class Import
             $media_object_importer = new Import\MediaObject();
             $media_object_importer->import($response[0]);
 
+            $my_content_importer_has_run = false;
+
             if(isset($config['data']['touristic']['my_content_class_map']) && isset($response[0]->my_contents_to_media_object) && is_array($response[0]->my_contents_to_media_object)) {
                 foreach($response[0]->my_contents_to_media_object as $my_content) {
                     if(isset($config['data']['touristic']['my_content_class_map'][$my_content->id_my_content])) {
@@ -287,10 +289,7 @@ class Import
                         /** @var ImportInterface $custom_importer */
                         $custom_importer = new $touristic_class_name($my_content, $id_media_object);
                         $custom_importer->import();
-                        $media_object = new ORM\Object\MediaObject($id_media_object, true);
-                        $media_object->insertCheapestPrice();
-                        unset($media_object);
-                        foreach ($custom_importer->getLogs() as $log) {
+                        foreach ($custom_importer->getLog() as $log) {
                             Writer::write($log, WRITER::OUTPUT_FILE, 'my_content_class_map', WRITER::TYPE_INFO);
                         }
                         foreach ($custom_importer->getErrors() as $error) {
@@ -303,7 +302,7 @@ class Import
                 }
             }
 
-            if(isset($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type]) && is_array($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type])) {
+            if(isset($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type]) && is_array($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type])  && $my_content_importer_has_run == false) {
                 foreach ($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type] as $custom_import_class_name) {
                     $custom_import_class = new $custom_import_class_name($id_media_object);
                     $custom_import_class->import();

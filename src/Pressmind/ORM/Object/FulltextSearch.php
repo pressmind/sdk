@@ -81,7 +81,7 @@ class FulltextSearch extends AbstractObject
                 'required' => false,
                 'filters' => NULL,
                 'index' => [
-                    'fulltext'
+                    'fulltext_values' => 'fulltext'
                 ]
             ],
         ]

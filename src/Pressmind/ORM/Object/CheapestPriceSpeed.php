@@ -61,6 +61,26 @@ class CheapestPriceSpeed extends AbstractObject
         'database' => [
             'table_name' => 'pmt2core_cheapest_price_speed',
             'primary_key' => 'id',
+            'indexes' => [
+                'id_id_media_object_price_total_date_departure_date_arrival_index' => [
+                    'type' => 'index',
+                    'columns' => [
+                        'id',
+                        'id_media_object',
+                        'price_total',
+                        'date_departure',
+                        'date_arrival'
+                    ]
+                ],
+                'id_id_media_object_price_total_index' => [
+                    'type' => 'index',
+                    'columns' => [
+                        'id',
+                        'id_media_object',
+                        'price_total'
+                    ]
+                ]
+            ]
         ],
         'properties' => [
             'id' => [
@@ -82,6 +102,9 @@ class CheapestPriceSpeed extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 32,
                     ]
+                ],
+                'index' => [
+                    'id_media_object' => 'index'
                 ]
             ],
             'id_booking_package' => [
@@ -176,7 +199,10 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'datetime',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => null,
+                'index' => [
+                    'date_departure' => 'index'
+                ]
             ],
             'date_arrival' => [
                 'name' => 'date_arrival',
@@ -184,7 +210,10 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'datetime',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => null,
+                'index' => [
+                    'date_arrival' => 'index'
+                ]
             ],
             'option_name' => [
                 'name' => 'option_name',
@@ -292,14 +321,14 @@ class CheapestPriceSpeed extends AbstractObject
                     [
                         'name' => 'inarray',
                         'params' => [
-                            0 => 'once',
-                            1 => 'nightly',
-                            2 => 'daily',
-                            3 => 'weekly',
-                            4 => 'stay',
-                            5 => 'nights_person',
-                            6 => 'person_stay',
-                            7 => 'once_stay'
+                            'once',
+                            'nightly',
+                            'daily',
+                            'weekly',
+                            'stay',
+                            'nights_person',
+                            'person_stay',
+                            'once_stay'
                         ]
                     ]
                 ],
@@ -319,7 +348,10 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'float',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => null,
+                'index' => [
+                    'price_total' => 'index'
+                ]
             ],
             'transport_code' => [
                 'name' => 'transport_code',

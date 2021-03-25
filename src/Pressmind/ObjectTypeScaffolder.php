@@ -189,7 +189,7 @@ class ObjectTypeScaffolder
                 $property['required'] = true;
             }
             if($definitionField[0] == 'id_media_object' || $definitionField[0] == 'language') {
-                $property['index'] = ['index'];
+                $property['index'] = [$definitionField[0] => 'index'];
             }
             if($definitionField[0] == 'language') {
                 $property['validators'] = [

@@ -103,10 +103,18 @@ class Mysql
             $sql = "ALTER TABLE " . $this->_orm_object->getDbTableName() . " ";
         }
         $unique = array();
-        $index = array();
+
+        $index = $this->_orm_object->getDbTableIndexes();
+
         $i = 0;
         $column_counter = 0;
         foreach ($pFields as $fieldName => $fieldInfo) {
+            if($fieldName == $this->_orm_object->getDbPrimaryKey()) {
+                $index[$fieldName] = [
+                    'type' => 'index',
+                    'columns' => [$fieldName]
+                ];
+            }
             if ($fieldInfo['type'] != 'relation') {
                 $additional_sql = array();
                 $null_allowed = '';
@@ -124,8 +132,14 @@ class Mysql
                     $unique[] = $fieldName;
                 }
                 if (isset($fieldInfo['index']) && is_array($fieldInfo['index'])) {
-                    foreach ($fieldInfo['index'] as $index_type) {
-                        $index[$index_type][] = $fieldName;
+                    foreach ($fieldInfo['index'] as $index_name => $index_type) {
+                        if(!isset($index[$index_name])) {
+                            $index[$index_name] = [];
+                        }
+                        $index[$index_name] = [
+                            'type' => $index_type,
+                            'columns' => [$fieldName]
+                        ];
                     }
                 }
                 $additional_sql[] = $null_allowed;
@@ -161,10 +175,10 @@ class Mysql
             }
         }
         if (count($index) > 0 && false == $pAlterTable) {
-            foreach ($index as $index_type => $index_field_names) {
-                foreach ($index_field_names as $index_field_name) {
-                    $sql .= ", " . strtoupper($index_type) . " " . $index_field_name .  " (" . $index_field_name . ")";
-                }
+            foreach ($index as $index_name => $index_info) {
+                //foreach ($index_field_names as $index_field_name) {
+                    $sql .= ", " . strtoupper($index_info['type']) . " " . $index_name .  " (" . implode(',', $index_info['columns']) . ")";
+                //}
             }
         }
         if (false == $pAlterTable) {

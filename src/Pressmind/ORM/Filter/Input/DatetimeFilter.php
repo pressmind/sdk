@@ -26,7 +26,7 @@ class DatetimeFilter implements FilterInterface {
             if(is_string($value) && strlen($pValue) == '10' && preg_match('/^(19|20)\d\d[-.](0[1-9]|1[012])[-.](0[1-9]|[12][0-9]|3[01])$/', $pValue) == 1) {
                 $pValue .= '00:00:00';
             }
-            /**it might happen that we receive a representation of a JSON DateTime Object, so we need to cover this case ...**/
+            /**it might happen that we receive a JSON representation of a PHP DateTime Object, so we need to cover this case ...**/
             if((is_array($pValue) && isset($pValue['date'])) || (is_a($pValue, 'stdClass') && isset($pValue->date))) {
                 if(is_array($pValue)) {
                     $pValue = $pValue['date'];

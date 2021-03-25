@@ -15,7 +15,6 @@ class Factory
     public static function create($adapterName)
     {
         $adapterName = 'Pressmind\\Image\\Processor\\Adapter\\' . ucfirst($adapterName);
-        $adapter = new $adapterName();
-        return $adapter;
+        return new $adapterName();
     }
 }

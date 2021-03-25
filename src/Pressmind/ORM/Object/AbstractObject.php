@@ -1109,6 +1109,14 @@ abstract class AbstractObject implements SplSubject
     }
 
     /**
+     * @return array
+     */
+    public function getDbTableIndexes()
+    {
+        return isset($this->_definitions['database']['indexes']) ? $this->_definitions['database']['indexes'] : [];
+    }
+
+    /**
      * Returns the column name of the primary key as defined in _definitions['database']['primary_key']
      * @return string
      */

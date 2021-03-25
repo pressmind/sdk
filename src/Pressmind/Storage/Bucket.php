@@ -36,7 +36,6 @@ class Bucket
      */
     public function addFile($file)
     {
-        /** @var ProviderInterface $storageProvider */
         $storageProvider = Factory::create($this->_storage_provider_name);
         return $storageProvider->save($file, $this);
     }
@@ -48,7 +47,6 @@ class Bucket
      */
     public function removeFile($file)
     {
-        /** @var ProviderInterface $storageProvider */
         $storageProvider = Factory::create($this->_storage_provider_name);
         return $storageProvider->delete($file, $this);
     }
@@ -59,7 +57,6 @@ class Bucket
      */
     public function fileExists($file)
     {
-        /** @var ProviderInterface $storageProvider */
         $storageProvider = Factory::create($this->_storage_provider_name);
         return $storageProvider->fileExists($file, $this);
     }
@@ -71,7 +68,6 @@ class Bucket
      */
     public function readFile($file)
     {
-        /** @var ProviderInterface $storageProvider */
         $storageProvider = Factory::create($this->_storage_provider_name);
         return $storageProvider->readFile($file, $this);
     }
@@ -83,7 +79,6 @@ class Bucket
      */
     public function setFileMode($file)
     {
-        /** @var ProviderInterface $storageProvider */
         $storageProvider = Factory::create($this->_storage_provider_name);
         return $storageProvider->setFileMode($file, $this);
     }
@@ -94,7 +89,6 @@ class Bucket
      * @throws Exception
      */
     public function listFiles() {
-        /** @var ProviderInterface $storageProvider */
         $storageProvider = Factory::create($this->_storage_provider_name);
         return $storageProvider->listBucket($this);
     }

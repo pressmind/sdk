@@ -269,9 +269,11 @@ class Booking
      */
     public function hasPickServices() {
         $has_pickup_services = false;
-        foreach ($this->getStartingpoint()->options as $option) {
-            if($option->is_pickup_service == true) {
-                $has_pickup_services = true;
+        if(!is_null($this->getStartingpoint())) {
+            foreach ($this->getStartingpoint()->options as $option) {
+                if ($option->is_pickup_service == true) {
+                    $has_pickup_services = true;
+                }
             }
         }
         return $has_pickup_services;
@@ -283,9 +285,11 @@ class Booking
      */
     public function hasStartingPoints() {
         $has_starting_points = false;
-        foreach ($this->getStartingpoint()->options as $option) {
-            if($option->is_pickup_service == false) {
-                $has_starting_points = true;
+        if(!is_null($this->getStartingpoint())) {
+            foreach ($this->getStartingpoint()->options as $option) {
+                if ($option->is_pickup_service == false) {
+                    $has_starting_points = true;
+                }
             }
         }
         return $has_starting_points;

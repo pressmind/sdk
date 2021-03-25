@@ -5,6 +5,7 @@ namespace Pressmind\Image;
 
 
 use Exception;
+use Pressmind\Log\Writer;
 use Pressmind\Registry;
 use Pressmind\Storage\Bucket;
 use Pressmind\Storage\File;
@@ -39,6 +40,7 @@ class Downloader
         $file = new File($bucket);
         $file->name = $targetName;
         if(!$file->exists() || $forceOverwrite === true) {
+            Writer::write('File ' . $file->name . ' does not exists. Downloading ...', WRITER::OUTPUT_FILE, 'image_processor', WRITER::TYPE_INFO);
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_HEADER, false);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -54,6 +56,7 @@ class Downloader
                 $file->content = $raw;
             }
         } else {
+            Writer::write('File ' . $file->name . ' allready exists. Skipping ...', WRITER::OUTPUT_FILE, 'image_processor', WRITER::TYPE_INFO);
             $file->read();
         }
         return $file;

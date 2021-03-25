@@ -98,7 +98,7 @@ class Ibe
             'trustbox_text' => !empty($mediaObject->getValueByTagName('pressmind-ib3.trustbox-text')) ? $mediaObject->getValueByTagName('pressmind-ib3.trustbox-text') : null,
             'services_box_title' => !empty($mediaObject->getValueByTagName('pressmind-ib3.services-box-title')) ? $mediaObject->getValueByTagName('pressmind-ib3.services-box-title') : null,
             'services_box_content' => !empty($mediaObject->getValueByTagName('pressmind-ib3.services-box-content')) ? $mediaObject->getValueByTagName('pressmind-ib3.services-box-content') : null,
-            'duration' => '',
+            'duration' => $booking->getBookingPackage()->duration,
             'transport_type' => 'BUS',
             'price_mix' => $booking->getBookingPackage()->price_mix
         ];

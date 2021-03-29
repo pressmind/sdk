@@ -11,12 +11,12 @@ class AbstractImport
     /**
      * @var array
      */
-    protected $_log;
+    protected $_log = [];
 
     /**
      * @var array
      */
-    protected $_errors;
+    protected $_errors = [];
 
     /**
      * @return array

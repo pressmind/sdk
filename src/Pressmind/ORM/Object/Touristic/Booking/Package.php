@@ -2,6 +2,7 @@
 
 namespace Pressmind\ORM\Object\Touristic\Booking;
 
+use DateInterval;
 use DateTime;
 use Exception;
 use Pressmind\ORM\Object\AbstractObject;
@@ -427,5 +428,36 @@ class Package extends AbstractObject
             $cheapest_price = CheapestPriceSpeed::listAll($where, ['price_total' => 'ASC']);
         }
         return $cheapest_price[0];
+    }
+
+    /**
+     * @param null|DateTime $dateFrom
+     * @param int $offsetDays
+     * @return Date[]
+     * @throws Exception
+     */
+    public function getValidDates($dateFrom = null, $offsetDays = 0) {
+        $dates = [];
+        if(is_null($dateFrom)) {
+            $dateFrom = new DateTime();
+            $dateFrom->add(new DateInterval('P' . $offsetDays . 'D'));
+        }
+        foreach ($this->dates as $date) {
+            if($date->departure > $dateFrom && count($date->getHousingOptions()) > 0) {
+                $dates[] = $date;
+            }
+        }
+        return $dates;
+    }
+
+    /**
+     * @param null $dateFrom
+     * @param int $offsetDays
+     * @return bool
+     * @throws Exception
+     */
+    public function hasValidDates($dateFrom = null, $offsetDays = 0)
+    {
+        return count($this->getValidDates($dateFrom, $offsetDays)) > 0;
     }
 }

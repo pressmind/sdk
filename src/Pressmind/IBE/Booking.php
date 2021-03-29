@@ -132,45 +132,33 @@ class Booking
      * @throws Exception
      */
     public function getInsurances() {
-        $insurances = array();
         $all_available_insurances = $this->getBookingPackage()->insurance_group->insurances;
         foreach ($all_available_insurances as $insurance) {
-            if ($calculated_insurance = $insurance->isAvailableForTravelDateAndPriceAndPersonAge(
-                $this->getDate()->arrival,
-                $this->getDate()->departure,
-                1,
-                $this->getBookingPackage()->duration,
-                null,
-                null
-            )) {
-                if($this->getBookingPackage()->ibe_type == 2 && empty($calculated_insurance->code_ibe)) {
-
-                } else {
-                    $insurances[] = $insurance;
-                }
-            }
+            $insurance->price_tables;
         }
-        if(isset($this->settings['steps']['insurances']['show_no_insurance_option']['value']) && $this->settings['steps']['insurances']['show_no_insurance_option']['value'] == true && count($insurances) > 0) {
+        if(isset($this->settings['steps']['insurances']['show_no_insurance_option']['value']) && $this->settings['steps']['insurances']['show_no_insurance_option']['value'] == true ) {
             $no_insurance_pricetable = new Insurance\PriceTable();
             $no_insurance = new Insurance();
-            $no_insurance->name = $this->settings['steps']['insurances']['no_insurance_title']['value'];
-            $no_insurance->description = $this->settings['steps']['insurances']['no_insurance_text']['value'];
+            $no_insurance->name = isset($this->settings['steps']['insurances']['no_insurance_title']['value']) ? $this->settings['steps']['insurances']['no_insurance_title']['value'] : 'Keine Versicherung gewünscht';
+            $no_insurance->description = isset($this->settings['steps']['insurances']['no_insurance_text']['value']) ? $this->settings['steps']['insurances']['no_insurance_text']['value'] : 'Ich wünsche keine Versicherung und trage die Kosten im Falle von Krankheit oder Stornierung selbst.';
             $no_insurance->id = 0;
             $no_insurance_pricetable->travel_date_from = $this->getDate()->departure->format('Y-m-d h:i:s');
             $no_insurance_pricetable->travel_date_to = $this->getDate()->arrival->format('Y-m-d h:i:s');
             $no_insurance_pricetable->booking_date_from = '1970-01-01 00:00:00';
             $no_insurance_pricetable->booking_date_to = '2999-01-01 00:00:00';
-            $no_insurance_pricetable->price_per_person = 0;
+            $no_insurance_pricetable->price = 0;
+            $no_insurance_pricetable->unit = 'per_person';
             $no_insurance_pricetable->travel_price_min = 0;
             $no_insurance_pricetable->travel_price_max = 1000000;
             $no_insurance_pricetable->age_from = 0;
             $no_insurance_pricetable->age_to = 999;
             $no_insurance_pricetable->id = 0;
             $no_insurance->price_tables = array($no_insurance_pricetable);
-            $insurances[] = $no_insurance;
+
+            $all_available_insurances[] = $no_insurance;
         }
 
-        return $insurances;
+        return $all_available_insurances;
     }
 
     /**

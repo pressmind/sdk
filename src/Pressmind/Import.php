@@ -223,6 +223,16 @@ class Import
                 $touristic_linked_media_object_ids = $touristic_data_importer_result['linked_media_object_ids'];
                 $starting_point_ids = $touristic_data_importer_result['starting_point_ids'];
 
+                foreach ($touristic_data_importer->getLog() as $log) {
+                    Writer::write($log, WRITER::OUTPUT_FILE, 'touristic_data_import', WRITER::TYPE_INFO);
+                }
+                foreach ($touristic_data_importer->getErrors() as $error) {
+                    Writer::write($error, WRITER::OUTPUT_FILE, 'touristic_data_import', WRITER::TYPE_ERROR);
+                }
+                if(count($touristic_data_importer->getErrors()) > 0) {
+                    $this->_errors[] = 'Error in ' . TouristicData::class . '. See log "touristic_data_import" for details';
+                }
+
                 if(is_array($starting_point_ids) && count($starting_point_ids) > 0) {
                     $this->_log[] = ' Importer::_importMediaObjectTouristicData(' . $id_media_object . '): importing starting point options';
                     $starting_point_options_importer = new StartingPointOptions($starting_point_ids);

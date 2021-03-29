@@ -9,7 +9,8 @@ use Pressmind\ORM\Object\AbstractObject;
  * @property string $id
  * @property string $id_insurance
  * @property string $code
- * @property float $price_per_person
+ * @property float $price
+ * @property string $unit
  * @property string $price_type
  * @property integer $family_insurance
  * @property integer $age_to
@@ -90,15 +91,31 @@ class PriceTable extends AbstractObject
                             ),
                         'filters' => NULL,
                     ),
-                'price_per_person' =>
+                'price' =>
                     array(
-                        'title' => 'Price_per_person',
-                        'name' => 'price_per_person',
+                        'title' => 'Price',
+                        'name' => 'price',
                         'type' => 'float',
                         'required' => true,
                         'validators' => NULL,
                         'filters' => NULL,
                     ),
+                'unit' => [
+                    'title' => 'unit',
+                    'name' => 'unit',
+                    'type' => 'string',
+                    'required' => true,
+                    'validators' => [
+                        [
+                            'name' => 'inarray',
+                            'params' => [
+                                'per_person',
+                                'per_unit',
+                            ],
+                        ]
+                    ],
+                    'filters' => NULL,
+                ],
                 'price_type' =>
                     array(
                         'title' => 'Price_type',

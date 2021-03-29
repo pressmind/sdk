@@ -35,7 +35,8 @@ class Picture implements MapperInterface
                 $mapped_object->tmp_url = $object->image->links->web;
                 if (!empty($object->image->filename)) {
                     $path_info = pathinfo($object->image->filename);
-                    $mapped_object->file_name = $pIdMediaObject . '_' . $object->id_media_object . '.' . $path_info['extension'];
+                    $extension = isset($path_info['extension']) ? '.' . $path_info['extension'] : null;
+                    $mapped_object->file_name = $pIdMediaObject . '_' . $object->id_media_object . $extension;
                 }
                 $mapped_object->width = $object->image->width;
                 $mapped_object->height = $object->image->height;

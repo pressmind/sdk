@@ -419,11 +419,46 @@ class Import
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): Starting post import processes ', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
 
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): bash -c "exec nohup php ' . APPLICATION_PATH . '/cli/image_processor.php > /dev/null 2>&1 &"', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
-        exec('bash -c "exec nohup php ' . APPLICATION_PATH . '/cli/image_processor.php > /dev/null 2>&1 &"');
+
+		$image_processor_path	=	APPLICATION_PATH . '/cli/image_processor.php';
+
+		if(!$this->checkRunFile($image_processor_path))
+		{
+			exec('bash -c "exec nohup php ' . $image_processor_path . ' > /dev/null 2>&1 &"');
+		}
 
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): bash -c "exec nohup php ' . APPLICATION_PATH . '/cli/file_downloader.php > /dev/null 2>&1 &"', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
-        exec('bash -c "exec nohup php ' . APPLICATION_PATH . '/cli/file_downloader.php > /dev/null 2>&1 &"');
+
+		$file_downloader_path	=	APPLICATION_PATH . '/cli/file_downloader.php';
+
+		if(!$this->checkRunFile($image_processor_path))
+		{
+			exec('bash -c "exec nohup php ' . $file_downloader_path . ' > /dev/null 2>&1 &"');
+		}
     }
+
+	/**
+	 * Check run command line path in with active PID
+	 *
+	 * @param string $path
+	 *
+	 * @return bool
+	 */
+    private function checkRunFile($path)
+	{
+        $outputPS		=	array();
+		exec('ps -C php -f', $outputPS);
+
+		foreach($outputPS as $line)
+		{
+			if(strpos($line, $path) !== false)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
 
     /**
      * @param $ids

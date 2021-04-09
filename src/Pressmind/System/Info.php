@@ -10,6 +10,8 @@ class Info
         '\Log',
         '\Airline',
         '\Airport',
+        '\Agency',
+        '\AgencyToMediaObject',
         '\Bank',
         '\Brand',
         '\ObjectdataTag',

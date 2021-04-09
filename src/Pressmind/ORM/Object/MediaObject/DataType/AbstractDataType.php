@@ -21,9 +21,11 @@ abstract class AbstractDataType extends AbstractObject
 
     public function __get($name)
     {
+        parent::__get($name);
         if(is_null($this->_section_name)) {
             $this->_section_name = Registry::getInstance()->get('defaultSectionName');
         }
+        return $this->$name;
     }
 
     public function load()

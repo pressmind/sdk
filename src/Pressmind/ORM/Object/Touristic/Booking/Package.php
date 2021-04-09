@@ -443,7 +443,7 @@ class Package extends AbstractObject
             $dateFrom->add(new DateInterval('P' . $offsetDays . 'D'));
         }
         foreach ($this->dates as $date) {
-            if($date->departure > $dateFrom && count($date->getHousingOptions()) > 0) {
+            if($date->departure > $dateFrom && (count($date->getHousingOptions()) > 0 || $this->duration == 1)) {
                 $dates[] = $date;
             }
         }

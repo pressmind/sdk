@@ -55,6 +55,7 @@ use stdClass;
  * @property Route[] $routes
  * @property Season $season
  * @property Brand $brand
+ * @property Agency[] $agencies
  */
 class MediaObject extends AbstractObject
 {
@@ -104,6 +105,9 @@ class MediaObject extends AbstractObject
                     ],
                 ],
                 'filters' => NULL,
+                'index' => [
+                    'id_pool' => 'index'
+                ]
             ],
             'id_object_type' => [
                 'title' => 'Id_object_type',
@@ -117,6 +121,9 @@ class MediaObject extends AbstractObject
                     ],
                 ],
                 'filters' => NULL,
+                'index' => [
+                    'id_object_type' => 'index'
+                ]
             ],
             'id_client' => [
                 'title' => 'Id_client',
@@ -130,6 +137,9 @@ class MediaObject extends AbstractObject
                     ],
                 ],
                 'filters' => NULL,
+                'index' => [
+                    'id_client' => 'index'
+                ]
             ],
             'id_brand' => [
                 'title' => 'id_brand',
@@ -143,6 +153,9 @@ class MediaObject extends AbstractObject
                     ],
                 ],
                 'filters' => NULL,
+                'index' => [
+                    'id_brand' => 'index'
+                ]
             ],
             'id_season' => [
                 'title' => 'id_season',
@@ -216,6 +229,9 @@ class MediaObject extends AbstractObject
                     ],
                 ],
                 'filters' => NULL,
+                'index' => [
+                    'visibility' => 'index'
+                ]
             ],
             'state' => [
                 'title' => 'State',
@@ -229,6 +245,9 @@ class MediaObject extends AbstractObject
                     ],
                 ],
                 'filters' => NULL,
+                'index' => [
+                    'state' => 'index'
+                ]
             ],
             'valid_from' => [
                 'title' => 'Valid_from',
@@ -237,6 +256,9 @@ class MediaObject extends AbstractObject
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,
+                'index' => [
+                    'valid_from' => 'index'
+                ]
             ],
             'valid_to' => [
                 'title' => 'Valid_to',
@@ -245,6 +267,9 @@ class MediaObject extends AbstractObject
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,
+                'index' => [
+                    'valid_to' => 'index'
+                ]
             ],
             'hidden' => [
                 'title' => 'Hidden',
@@ -439,6 +464,21 @@ class MediaObject extends AbstractObject
                 'validators' => null,
                 'filters' => null
             ],
+            'agencies' => [
+                'name' => 'agencies',
+                'title' => 'agencies',
+                'type' => 'relation',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+                'relation' => [
+                    'type' => 'ManyToMany',
+                    'class' => Agency::class,
+                    'relation_table' => 'pmt2core_agency_to_media_object',
+                    'related_id' => 'id_media_object',
+                    'target_id' => 'id_agency'
+                ]
+            ]
         ]
     ];
 
@@ -464,11 +504,12 @@ class MediaObject extends AbstractObject
                 $this->season->time_of_year = 'all';
             }
         }
+        return parent::__get($name);;
     }
 
     /**
      * @param null $language
-     * @return mixed
+     * @return AbstractMediaType
      */
     public function getDataForLanguage($language = null) {
         $config = Registry::getInstance()->get('config');
@@ -487,14 +528,12 @@ class MediaObject extends AbstractObject
      * @throws Exception
      */
     public function render($template, $language = null, $custom_data = null) {
-        $this->setReadRelations(true);
-        $this->readRelations();
         $config = Registry::getInstance()->get('config');
         if(is_null($language)) {
             $language = $config['data']['languages']['default'];
         }
         $media_type_name = ucfirst(HelperFunctions::human_to_machine($config['data']['media_types'][$this->id_object_type]));
-        $data = HelperFunctions::findObjectInArray($this->data, 'language', $language);
+        $data = $this->getDataForLanguage($language);
         $booking_packages = $this->booking_packages;
         $media_object = $this;
         $script_path = $config['view_scripts']['base_path'] . DIRECTORY_SEPARATOR . ucfirst($media_type_name) . '_' . ucfirst($template);

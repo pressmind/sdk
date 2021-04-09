@@ -3,6 +3,7 @@
 namespace Pressmind;
 
 use Pressmind\DB\Adapter\Pdo;
+use Pressmind\Import\Agency;
 use Pressmind\Import\Brand;
 use Pressmind\Import\CategoryTree;
 use Pressmind\Import\ImportInterface;
@@ -259,6 +260,20 @@ class Import
                 $my_content_importer->import();
             }
 
+            if(isset($response[0]->agencies) && is_array($response[0]->agencies) && count($response[0]->agencies) > 0) {
+                $agency_importer = new Agency($response[0]->agencies, $id_media_object);
+                $agency_importer->import();
+                foreach ($agency_importer->getLog() as $log) {
+                    Writer::write($log, WRITER::OUTPUT_FILE, 'agency_import', WRITER::TYPE_INFO);
+                }
+                foreach ($agency_importer->getErrors() as $error) {
+                    Writer::write($error, WRITER::OUTPUT_FILE, 'agency_import', WRITER::TYPE_ERROR);
+                }
+                if(count($agency_importer->getErrors()) > 0) {
+                    $this->_errors[] = 'Error in agency import. See log "agency_import" for details';
+                }
+            }
+
             if (is_array($response[0]->data)) {
                 $media_object_data_importer = new MediaObjectData($response[0], $id_media_object, $import_linked_objects);
                 $media_object_data_importer_result = $media_object_data_importer->import();
@@ -419,11 +434,46 @@ class Import
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): Starting post import processes ', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
 
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): bash -c "exec nohup php ' . APPLICATION_PATH . '/cli/image_processor.php > /dev/null 2>&1 &"', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
-        exec('bash -c "exec nohup php ' . APPLICATION_PATH . '/cli/image_processor.php > /dev/null 2>&1 &"');
+
+		$image_processor_path	=	APPLICATION_PATH . '/cli/image_processor.php';
+
+		if(!$this->checkRunFile($image_processor_path))
+		{
+			exec('bash -c "exec nohup php ' . $image_processor_path . ' > /dev/null 2>&1 &"');
+		}
 
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): bash -c "exec nohup php ' . APPLICATION_PATH . '/cli/file_downloader.php > /dev/null 2>&1 &"', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
-        exec('bash -c "exec nohup php ' . APPLICATION_PATH . '/cli/file_downloader.php > /dev/null 2>&1 &"');
+
+		$file_downloader_path	=	APPLICATION_PATH . '/cli/file_downloader.php';
+
+		if(!$this->checkRunFile($image_processor_path))
+		{
+			exec('bash -c "exec nohup php ' . $file_downloader_path . ' > /dev/null 2>&1 &"');
+		}
     }
+
+	/**
+	 * Check run command line path in with active PID
+	 *
+	 * @param string $path
+	 *
+	 * @return bool
+	 */
+    private function checkRunFile($path)
+	{
+        $outputPS		=	array();
+		exec('ps -C php -f', $outputPS);
+
+		foreach($outputPS as $line)
+		{
+			if(strpos($line, $path) !== false)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
 
     /**
      * @param $ids

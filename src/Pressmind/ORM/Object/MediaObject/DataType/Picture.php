@@ -314,7 +314,7 @@ class Picture extends AbstractObject
      */
     public function downloadOriginal($use_cache = true, $retry_counter = 0)
     {
-        $max_retries = 0;
+        $max_retries = 1;
         $download_url = $this->tmp_url;
         if($use_cache == false) {
             $download_url .= '&cache=0';
@@ -324,7 +324,7 @@ class Picture extends AbstractObject
         $url = parse_url($this->tmp_url);
         parse_str($url['query'], $query);
         $last_error = null;
-        if($retry_counter > 0) {
+        if($retry_counter > 0 && $max_retries >= $retry_counter) {
             Writer::write('ID ' . $this->getId() . ': Retry No. ' . $retry_counter . ' of downloading image from ' . $download_url, WRITER::OUTPUT_FILE, 'image_processor', Writer::TYPE_INFO);
         }
         if($max_retries >= $retry_counter) {

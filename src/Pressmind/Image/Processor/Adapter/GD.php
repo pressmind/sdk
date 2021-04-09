@@ -6,27 +6,31 @@ namespace Pressmind\Image\Processor\Adapter;
 
 use Pressmind\Image\Processor\AdapterInterface;
 use Pressmind\Image\Processor\Config;
+use Pressmind\Storage\File;
+use \Exception;
 
 class GD implements AdapterInterface
 {
 
     /**
      * @param Config $config
-     * @param string $file
-     * @param string $derivative_name
-     * @return string
+     * @param File $file
+     * @param string $derivativeName
+     * @return false|File
+     * @throws Exception
      */
-    public function process($config, $file, $derivative_name) {
+    public function process($config, $file, $derivativeName) {
 
-        $path_info = pathinfo($file);
-        $path = $path_info['dirname'];
-        $new_name = $path_info['filename'] . '_' . $derivative_name . '.' . $path_info['extension'];
-
-        if ( $config->max_width <= 0 && $config->max_width <= 0 ) {
-            return false;
+        $path_info = pathinfo($file->name);
+        $new_name = $path_info['filename'] . '_' . $derivativeName . '.' . $path_info['extension'];
+        $derivative_file = new File($file->getBucket());
+        $derivative_file->name = $new_name;
+        if($derivative_file->exists()) {
+            $derivative_file->read();
+            return $derivative_file;
         }
 
-        $info = getimagesize($file);
+        $info = getimagesize($file->content);
 
         list($width_old, $height_old) = $info;
 
@@ -46,13 +50,13 @@ class GD implements AdapterInterface
 
         switch ( $info[2] ) {
             case IMAGETYPE_GIF:
-                $image = imagecreatefromgif($file);
+                $image = imagecreatefromgif($file->content);
                 break;
             case IMAGETYPE_JPEG:
-                $image = imagecreatefromjpeg($file);
+                $image = imagecreatefromjpeg($file->content);
                 break;
             case IMAGETYPE_PNG:
-                $image = imagecreatefrompng($file);
+                $image = imagecreatefrompng($file->content);
                 break;
             default:
                 return false;
@@ -80,21 +84,23 @@ class GD implements AdapterInterface
 
         imagecopyresampled($image_resized, $image, 0, 0, 0, 0, $final_width, $final_height, $width_old, $height_old);
 
+        ob_start();
         switch ( $info[2] ) {
             case IMAGETYPE_GIF:
-                imagegif($image_resized, $path . DIRECTORY_SEPARATOR . $new_name);
+                imagegif($image_resized);
                 break;
             case IMAGETYPE_JPEG:
-                imagejpeg($image_resized, $path . DIRECTORY_SEPARATOR . $new_name);
+                imagejpeg($image_resized);
                 break;
             case IMAGETYPE_PNG:
-                imagepng($image_resized, $path . DIRECTORY_SEPARATOR . $new_name);
+                imagepng($image_resized);
                 break;
             default:
                 return false;
         }
+        $derivative_file->content = ob_get_clean();
 
-        return $path . DIRECTORY_SEPARATOR . $new_name;
+        return $derivative_file;
     }
 
 }

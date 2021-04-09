@@ -20,6 +20,7 @@ class Picture implements MapperInterface
     {
         $result = [];
         if(is_array($pObject)) {
+            $sort = 0;
             foreach ($pObject as $object) {
                 $mapped_object = new stdClass();
                 $mapped_object->sections = [];
@@ -33,6 +34,7 @@ class Picture implements MapperInterface
                 $mapped_object->alt = $object->alt;
                 $mapped_object->copyright = $object->copyright;
                 $mapped_object->tmp_url = $object->image->links->web;
+                $mapped_object->sort = $sort;
                 if (!empty($object->image->filename)) {
                     $path_info = pathinfo($object->image->filename);
                     $extension = isset($path_info['extension']) ? '.' . $path_info['extension'] : null;
@@ -56,6 +58,7 @@ class Picture implements MapperInterface
                     }
                 }
                 $result[] = $mapped_object;
+                $sort++;
             }
         }
         return $result;

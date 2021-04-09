@@ -3,6 +3,7 @@
 namespace Pressmind\ORM\Object\Touristic;
 
 use \DateTime;
+use Exception;
 use \Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\Touristic\Housing\Package;
 
@@ -12,6 +13,7 @@ use Pressmind\ORM\Object\Touristic\Housing\Package;
  * @property integer $id_media_object
  * @property string $id_booking_package
  * @property string $id_housing_package
+ * @property string $id_transport
  * @property string $type
  * @property string $season
  * @property string $code
@@ -121,7 +123,23 @@ class Option extends AbstractObject
                         'title' => 'Id_housing_package',
                         'name' => 'id_housing_package',
                         'type' => 'string',
-                        'required' => true,
+                        'required' => false,
+                        'validators' =>
+                            array(
+                                0 =>
+                                    array(
+                                        'name' => 'maxlength',
+                                        'params' => 32,
+                                    ),
+                            ),
+                        'filters' => NULL,
+                    ),
+                'id_transport' =>
+                    array(
+                        'title' => 'id_transport',
+                        'name' => 'id_transport',
+                        'type' => 'string',
+                        'required' => false,
                         'validators' =>
                             array(
                                 0 =>
@@ -148,7 +166,8 @@ class Option extends AbstractObject
                                                 0 => 'housing_option',
                                                 1 => 'extra',
                                                 2 => 'sightseeing',
-                                                3 => 'ticket'
+                                                3 => 'ticket',
+                                                4 => 'transport_extra'
                                             ),
                                     ),
                             ),
@@ -742,7 +761,7 @@ class Option extends AbstractObject
 
     /**
      * @return Package
-     * @throws \Exception
+     * @throws Exception
      */
     public function getHousingPackage() {
         $housing_packages = Package::listAll(['id' => $this->id_housing_package]);

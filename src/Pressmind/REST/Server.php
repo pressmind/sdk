@@ -127,7 +127,7 @@ class Server
                 $parameters = $this->_request->getParameters();
                 try {
                     $result = $this->_callControllerAction($classname, $method, $parameters);
-                    if(isset($result['redirect'])) {
+                    if(is_array($result) && isset($result['redirect'])) {
                         $url = $result['redirect'];
                         unset($result['redirect']);
                         $this->_response->setCode(302);

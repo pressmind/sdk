@@ -1090,13 +1090,35 @@ abstract class AbstractObject implements SplSubject
         return isset($this->_definitions['properties'][$propertyName]);
     }
 
+    /**
+     * @return array
+     */
     public function getPropertyDefinitions()
     {
         return $this->_definitions['properties'];
     }
 
+    /**
+     * @param string $propertyName
+     * @return array
+     */
     public function getPropertyDefinition($propertyName) {
         return $this->_definitions['properties'][$propertyName];
+    }
+
+    /**
+     * @return array
+     */
+    public function getStorageDefinitions() {
+        return $this->_definitions['database'];
+    }
+
+    /**
+     * @param string $definitionName
+     * @return mixed
+     */
+    public function getStorageDefinition($definitionName) {
+        return isset($this->_definitions['database'][$definitionName]) ? $this->_definitions['database'][$definitionName] : null;
     }
 
     /**
@@ -1228,46 +1250,7 @@ abstract class AbstractObject implements SplSubject
      */
     public function checkStorageIntegrity()
     {
-        /**@var Pdo $db**/
-        $db = Registry::getInstance()->get('db');
-        $type_mapper = new Mysql();
-        $table = $db->fetchAll('DESCRIBE ' . $this->getDbTableName());
-        $database_table_info = [];
-        $differences = [];
-        foreach ($table as $field) {
-            $database_table_info[$field->Field] = $field;
-        }
-        foreach ($this->getPropertyDefinitions() as $definition) {
-            if($definition['type'] != 'relation') {
-                $column_type = $type_mapper->mapTypeFromORMToMysqlWithPropertyDefinition($definition);
-                $column_name = $definition['name'];
-                $column_required = isset($definition['required']) ? $definition['required'] : false;
-                $change_to = $column_required ? 'NOT NULL' : 'NULL';
-                if (!is_null($column_type)) {
-                    if(isset($database_table_info[$column_name])) {
-                        $is_auto_increment = strtolower($database_table_info[$column_name]->Extra) == 'auto_increment' ? true : false;
-                        $is_primary_key = strtolower($database_table_info[$column_name]->Key) == 'pri' ? true : false;
-                        $database_required = strtolower($database_table_info[$column_name]->Null) == 'no' ? true : false;
-
-                        if($is_auto_increment && $this->dontUseAutoincrementOnPrimaryKey() == true && (isset($this->_definitions['database']['primary_key']) && $column_name == $this->_definitions['database']['primary_key'])) {
-                            $differences[] = ['action' => 'remove_auto_increment', 'column_name' => $column_name, 'column_type' => $column_type, 'column_null' => $change_to, 'msg' => get_class($this) . ': database column ' . $column_name . ' has different auto_increment setting. auto_increment needs to be removed from ' . $column_name];
-                        }
-                        if(!$is_auto_increment && $this->dontUseAutoincrementOnPrimaryKey() == false && (isset($this->_definitions['database']['primary_key']) && $column_name == $this->_definitions['database']['primary_key'])) {
-                            $differences[] = ['action' => 'set_auto_increment', 'column_name' => $column_name, 'column_type' => $column_type, 'column_null' => $change_to, 'msg' => get_class($this) . ': database column ' . $column_name . ' has different auto_increment setting. auto_increment needs to be added to ' . $column_name];
-                        }
-                        if($column_required != $database_required) {
-                            $change_from = $database_required ? 'NOT NULL' : 'NULL';
-                            $differences[] = ['action' => 'alter_column_null', 'column_name' => $column_name, 'column_type' => $column_type, 'column_null' => $change_to, 'msg' => get_class($this) . ': database column ' . $column_name . ' has different IS NULL setting and needs to be altered from ' . $change_from . ' to ' . $change_to];
-                        }
-                        if($column_type != $database_table_info[$column_name]->Type) {
-                            $differences[] = ['action' => 'alter_column_type', 'column_name' => $column_name, 'column_type' => $column_type, 'column_null' => $change_to, 'msg' => get_class($this) . ': database column ' . $column_name . ' has different type and needs to be altered from ' . $database_table_info[$column_name]->Type . ' to ' . strtolower($column_type)];
-                        }
-                    } else {
-                        $differences[] = ['action' => 'create_column', 'column_name' => $column_name, 'column_type' => $column_type, 'column_null' => $change_to, 'msg' => get_class($this) . ': database column ' . $column_name . ' does not exist in database and needs to be created'];
-                    }
-                }
-            }
-        }
-        return count($differences) > 0 ? $differences : true;
+        $integrityCheck = new \Pressmind\DB\IntegrityCheck\Mysql($this);
+        return $integrityCheck->check();
     }
 }

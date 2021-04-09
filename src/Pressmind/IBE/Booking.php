@@ -96,8 +96,7 @@ class Booking
      */
     public function getBookingPackage() {
         if(is_null($this->booking_package)) {
-            $this->booking_package = new Package();
-            $this->booking_package->read($this->id_booking_package);
+            $this->booking_package = new Package($this->id_booking_package, true);
         }
         $this->booking_package->dates;
         $this->booking_package->housing_packages;

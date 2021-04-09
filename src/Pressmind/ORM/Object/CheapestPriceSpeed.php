@@ -118,6 +118,9 @@ class CheapestPriceSpeed extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 32,
                     ]
+                ],
+                'index' => [
+                    'id_booking_package' => 'index'
                 ]
             ],
             'id_housing_package' => [
@@ -131,6 +134,9 @@ class CheapestPriceSpeed extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 32,
                     ]
+                ],
+                'index' => [
+                    'id_housing_package' => 'index'
                 ]
             ],
             'id_date' => [
@@ -144,6 +150,9 @@ class CheapestPriceSpeed extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 32,
                     ]
+                ],
+                'index' => [
+                    'id_date' => 'index'
                 ]
             ],
             'id_option' => [
@@ -157,6 +166,9 @@ class CheapestPriceSpeed extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 32,
                     ]
+                ],
+                'index' => [
+                    'id_option' => 'index'
                 ]
             ],
             'id_transport_1' => [
@@ -170,6 +182,9 @@ class CheapestPriceSpeed extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 32,
                     ]
+                ],
+                'index' => [
+                    'id_transport_1' => 'index'
                 ]
             ],
             'id_transport_2' => [
@@ -183,6 +198,9 @@ class CheapestPriceSpeed extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 32,
                     ]
+                ],
+                'index' => [
+                    'id_transport_2' => 'index'
                 ]
             ],
             'duration' => [

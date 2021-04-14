@@ -218,8 +218,8 @@ class Request
                     $this->_body = json_decode($this->_raw_body, true);
                     break;
                 default:
-                    $this->_raw_body = $_POST;
-                    $this->_body = $_POST;
+                    $this->_raw_body = file_get_contents('php://input');
+                    $this->_body = json_decode($this->_raw_body, true);
             }
             $this->_parameters = array_merge($this->_parameters, $this->_body);
         }

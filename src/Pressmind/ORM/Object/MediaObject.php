@@ -504,7 +504,7 @@ class MediaObject extends AbstractObject
                 $this->season->time_of_year = 'all';
             }
         }
-        return parent::__get($name);;
+        return parent::__get($name);
     }
 
     /**

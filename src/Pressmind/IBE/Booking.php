@@ -71,6 +71,8 @@ class Booking
      */
     public $settings;
 
+    public $date = null;
+
     /**
      * Booking constructor.
      * @param array $data
@@ -96,10 +98,8 @@ class Booking
      */
     public function getBookingPackage() {
         if(is_null($this->booking_package)) {
-            $this->booking_package = new Package($this->id_booking_package, true);
+            $this->booking_package = new Package($this->id_booking_package);
         }
-        $this->booking_package->dates;
-        $this->booking_package->housing_packages;
         return $this->booking_package;
     }
 
@@ -110,20 +110,22 @@ class Booking
      */
     public function getDate($pId = null)
     {
-        if(is_null($pId) && !is_null($this->id_date)) {
+        if (is_null($pId) && !is_null($this->id_date)) {
             $pId = $this->id_date;
-        } else if(is_null($pId) && is_null($this->id_date)) {
+        } else if (is_null($pId) && is_null($this->id_date)) {
             throw new Exception('Es konnte kein gültiges Reisedatum gefunden werden.');
         }
-        /**@var Date $date**/
-        if(is_null($this->id_booking_package)) {
-            $date = new Date();
-            $date->read($pId);
-            $this->id_booking_package = $date->id_booking_package;
-        } else {
-            $date = $this->getBookingPackage()->findObjectInArray('dates', 'id', $pId);
+        if (is_null($this->date)) {
+            /**@var Date $date * */
+            if (is_null($this->id_booking_package)) {
+                $this->date = new Date($pId);
+                $this->id_booking_package = $this->date->id_booking_package;
+                //$this->getBookingPackage();
+            } else {
+                $this->date = $this->getBookingPackage()->findObjectInArray('dates', 'id', $pId);
+            }
         }
-        return $date;
+        return $this->date;
     }
 
     /**
@@ -131,9 +133,13 @@ class Booking
      * @throws Exception
      */
     public function getInsurances() {
-        $all_available_insurances = $this->getBookingPackage()->insurance_group->insurances;
-        foreach ($all_available_insurances as $insurance) {
-            $insurance->price_tables;
+        if(!is_null($this->getBookingPackage()->insurance_group)) {
+            $all_available_insurances = $this->getBookingPackage()->insurance_group->insurances;
+            foreach ($all_available_insurances as $insurance) {
+                $insurance->price_tables;
+            }
+        } else {
+            $all_available_insurances = [];
         }
         if(isset($this->settings['steps']['insurances']['show_no_insurance_option']['value']) && $this->settings['steps']['insurances']['show_no_insurance_option']['value'] == true ) {
             $no_insurance_pricetable = new Insurance\PriceTable();
@@ -245,7 +251,8 @@ class Booking
                 }
             }
         } else {
-            $transports = $this->getDate($pIdDate)->transports;
+            $date = $this->getDate($pIdDate);
+            $transports = $date->transports;
         }
         return $transports;
     }

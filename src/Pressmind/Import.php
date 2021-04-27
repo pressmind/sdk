@@ -80,9 +80,11 @@ class Import
 
     /**
      * @param integer|null $id_pool
+     * @param array|null $allowed_object_types
+     * @param array|null $allowed_visibilities
      * @throws Exception
      */
-    public function import($id_pool = null, $allowed_object_types = null)
+    public function import($id_pool = null, $allowed_object_types = null, $allowed_visibilities = null)
     {
         $conf = Registry::getInstance()->get('config');
         if(is_null($allowed_object_types)) {
@@ -93,7 +95,9 @@ class Import
         }
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::import()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
         foreach ($allowed_object_types as $allowed_object_type) {
-            $allowed_visibilities = $conf['data']['media_types_allowed_visibilities'][$allowed_object_type];
+            if(is_null($allowed_visibilities)) {
+                $allowed_visibilities = $conf['data']['media_types_allowed_visibilities'][$allowed_object_type];
+            }
             if(is_array($allowed_visibilities)) {
                 foreach ($allowed_visibilities as $allowed_visibility) {
                     $params = [
@@ -107,7 +111,7 @@ class Import
                 }
             }
         }
-        $this->_importMediaObjectsFromFolder();
+        $this->importMediaObjectsFromFolder();
         $this->removeOrphans();
     }
 
@@ -144,7 +148,7 @@ class Import
     /**
      * @throws Exception
      */
-    private function _importMediaObjectsFromFolder()
+    public function importMediaObjectsFromFolder()
     {
         $config = Registry::getInstance()->get('config');
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::_importMediaObjectsFromFolder()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
@@ -351,6 +355,8 @@ class Import
             $overall_time_elapsed = number_format(microtime(true) - $this->_overall_start_time, 4) . ' sec';
             $this->_log[] = Writer::write('Total import time: ' . $overall_time_elapsed, Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
 
+            $this->postImport($id_media_object);
+
             return ($import_error == false);
         } else {
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): RestClient-Request for Media Object ID: ' . $id_media_object . ' failed', Writer::OUTPUT_FILE, 'import', Writer::TYPE_ERROR);
@@ -429,26 +435,30 @@ class Import
     /**
      * @throws Exception
      */
-    public function postImport()
+    public function postImport($id_media_object = null)
     {
+        $config = Registry::getInstance()->get('config');
+
+        $image_processor_path = APPLICATION_PATH . '/cli/image_processor.php' . (is_null($id_media_object) ? '' : ' ' . $id_media_object);
+
+        $php_binary = isset($config['server']['php_cli_binary']) && !empty($config['server']['php_cli_binary']) ? $config['server']['php_cli_binary'] : 'php';
+
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): Starting post import processes ', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
 
-        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): bash -c "exec nohup php ' . APPLICATION_PATH . '/cli/image_processor.php > /dev/null 2>&1 &"', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
-
-		$image_processor_path	=	APPLICATION_PATH . '/cli/image_processor.php';
+        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): bash -c "exec nohup php ' . $image_processor_path . ' > /dev/null 2>&1 &"', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
 
 		if(!$this->checkRunFile($image_processor_path))
 		{
-			exec('bash -c "exec nohup php ' . $image_processor_path . ' > /dev/null 2>&1 &"');
+			exec('bash -c "exec nohup ' . $php_binary . ' ' . $image_processor_path . ' > /dev/null 2>&1 &"');
 		}
 
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): bash -c "exec nohup php ' . APPLICATION_PATH . '/cli/file_downloader.php > /dev/null 2>&1 &"', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
 
-		$file_downloader_path	=	APPLICATION_PATH . '/cli/file_downloader.php';
+		$file_downloader_path = APPLICATION_PATH . '/cli/file_downloader.php';
 
 		if(!$this->checkRunFile($image_processor_path))
 		{
-			exec('bash -c "exec nohup php ' . $file_downloader_path . ' > /dev/null 2>&1 &"');
+			exec('bash -c "exec nohup ' . $php_binary . ' ' . $file_downloader_path . ' > /dev/null 2>&1 &"');
 		}
     }
 
@@ -461,17 +471,16 @@ class Import
 	 */
     private function checkRunFile($path)
 	{
-        $outputPS		=	array();
-		exec('ps -C php -f', $outputPS);
+	    if(strtolower(PHP_OS) == 'linux') { //ps -C will only work on Linux this way
+            $outputPS = array();
+            exec('ps -C php -f', $outputPS);
 
-		foreach($outputPS as $line)
-		{
-			if(strpos($line, $path) !== false)
-			{
-				return true;
-			}
-		}
-
+            foreach ($outputPS as $line) {
+                if (strpos($line, $path) !== false) {
+                    return true;
+                }
+            }
+        }
 		return false;
 	}
 

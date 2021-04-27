@@ -90,7 +90,7 @@ class Redis implements AdapterInterface
                 $this->_server->hDel('pmt2corecacheinfo-' . $this->_prefix, $key);
                 $this->_server->hDel('pmt2corecachetime-' . $this->_prefix, $key);
             }
-            if($age >= $this->_config['update_frequency'] && $idle_time < $this->_config['max_idle_time']) {
+            if($age >= $this->_config['update_frequency'] && $idle_time < $this->_config['max_idle_time'] && is_a($info, 'stdClass')) {
                 Writer::write('Updating key ' . $key . ' due to update frequency', WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
                 Writer::write('Type: ' . $info->type, WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
                 Writer::write('Class: ' . $info->classname, WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);

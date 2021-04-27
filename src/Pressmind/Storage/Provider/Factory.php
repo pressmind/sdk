@@ -14,7 +14,7 @@ class Factory
      * @return ProviderInterface
      */
     public static function create($providerName) {
-        $class_name = 'Pressmind\Storage\Provider\\' . $providerName;
+        $class_name = 'Pressmind\Storage\Provider\\' . ucfirst($providerName);
         $provider = new $class_name();
         return $provider;
     }

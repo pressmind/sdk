@@ -25,7 +25,7 @@ class Factory {
         return self::create($media_type_name, $pReadRelations);
     }
 
-    public function readFromCache($pMediaTypeId, $data) {
+    public static function readFromCache($pMediaTypeId, $data) {
         $config = Registry::getInstance()->get('config');
         $media_type_name = ucfirst(HelperFunctions::human_to_machine($config['data']['media_types'][$pMediaTypeId]));
         $class_name = 'Custom\MediaType\\' . $media_type_name;

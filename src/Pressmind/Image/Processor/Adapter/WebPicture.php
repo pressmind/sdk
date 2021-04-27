@@ -24,7 +24,7 @@ class WebPicture implements AdapterInterface
             $path_info = pathinfo($file->name);
             $webp_file->name = $path_info['filename'] . '.webp';
             Writer::write('Generating WebP-Version ' . $webp_file->name . ' for file ' . $file->name, WRITER::OUTPUT_FILE, 'image_processor', WRITER::TYPE_INFO);
-            if(!file_exists($webp_file)) {
+            if(!$webp_file->exists()) {
                 $image = imagecreatefromstring($file->content);
                 ob_start();
                 imagewebp($image, null, $config->webp_quality);

@@ -5,7 +5,6 @@ namespace Pressmind\MVC;
 
 
 use Pressmind\HelperFunctions;
-use stdClass;
 
 class Request
 {
@@ -60,7 +59,7 @@ class Request
      */
     public function __construct($pBaseUrl = '/')
     {
-        $this->_method = $_SERVER['REQUEST_METHOD'];
+        $this->_method = isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : null;
         $this->_parseRequestHeaders();
         $this->_parseRequestUri($pBaseUrl);
         $this->_parseRequestBody();
@@ -72,7 +71,14 @@ class Request
     private function _apache_request_headers()
     {
         if (function_exists('apache_request_headers')) {
-            return apache_request_headers();
+            $headers = apache_request_headers();
+            foreach ($headers as $key => $value) {
+                if(strtolower($key) != $key) {
+                    $headers[strtolower($key)] = $value;
+                    unset($headers[$key]);
+                }
+            }
+            return $headers;
         }
         $arh = [];
         $rx_http = '/\AHTTP_/';
@@ -85,7 +91,7 @@ class Request
                     foreach ($rx_matches as $ak_key => $ak_val) $rx_matches[$ak_key] = ucfirst(strtolower($ak_val));
                     $arh_key = implode('-', $rx_matches);
                 }
-                $arh[$arh_key] = $val;
+                $arh[strtolower($arh_key)] = $val;
             }
         }
         return ($arh);
@@ -115,7 +121,7 @@ class Request
      */
     private function _parseRequestUri($pBaseUrl = null)
     {
-        $this->_raw_uri = $_SERVER['REQUEST_URI'];
+        $this->_raw_uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : null;
         if (strpos($this->_raw_uri, '?') !== false) {
             $request_array = explode('?', $this->_raw_uri);
             $this->_raw_uri = $request_array[0];
@@ -205,23 +211,25 @@ class Request
     private function _parseRequestBody()
     {
         if ($this->_method == 'POST' || $this->_method == 'PUT') {
-            $content_type = explode(';', $this->_headers['Content-Type'])[0];
-            $body = null;
+            $content_type = explode(';', $this->getHeader('Content-Type'))[0];
             switch ($content_type) {
                 case 'application/x-www-form-urlencoded':
                 case 'multipart/form-data':
-                    $this->_raw_body = $_POST;
-                    $this->_body = $_POST;
-                    break;
-                case 'application/json':
                     $this->_raw_body = file_get_contents('php://input');
-                    $this->_body = json_decode($this->_raw_body, true);
+                    $decoded_body = json_decode($this->_raw_body, true);
+                    if($decoded_body !== null) {
+                        $this->_body = $decoded_body;
+                    } else {
+                        $this->_body = $this->_raw_body;
+                    }
                     break;
                 default:
                     $this->_raw_body = file_get_contents('php://input');
                     $this->_body = json_decode($this->_raw_body, true);
             }
-            $this->_parameters = array_merge($this->_parameters, $this->_body);
+            if(is_array($this->_body)) {
+                $this->_parameters = array_merge($this->_parameters, $this->_body);
+            }
         }
     }
 
@@ -254,6 +262,7 @@ class Request
      * @return string
      */
     public function getHeader($name) {
+        $name = strtolower($name);
         return isset($this->_headers[$name]) ? $this->_headers[$name] : null;
     }
 

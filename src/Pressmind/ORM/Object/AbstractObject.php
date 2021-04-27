@@ -140,9 +140,15 @@ abstract class AbstractObject implements SplSubject
             $where_i = 0;
             foreach ($where as $key => $value) {
                 $variable_replacement = ' ?';
-                if(is_array($value)) {
+                if (is_array($value) && count($value) >= 2) {
                     $operator = $value[0];
                     $value = $value[1];
+                } elseif(is_array($value) && count($value) == 1) {
+                    $value = $value[0];
+                    $operator = '=';
+                } elseif(is_array($value) && empty($value)) {
+                    $value = null;
+                    $operator = '=';
                 } else {
                     $operator = '=';
                 }

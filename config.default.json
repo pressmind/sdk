@@ -2,7 +2,8 @@
     "development": {
         "server": {
             "document_root": "BASE_PATH/httpdocs",
-            "web_server": "Apache2"
+            "web_server": "Apache2",
+            "php_cli_binary" : "php"
         },
         "database": {
             "username": "",

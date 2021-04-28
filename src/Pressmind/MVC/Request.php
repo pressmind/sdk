@@ -215,8 +215,8 @@ class Request
             switch ($content_type) {
                 case 'application/x-www-form-urlencoded':
                 case 'multipart/form-data':
-                    $this->_raw_body = file_get_contents('php://input');
-                    $decoded_body = json_decode($this->_raw_body, true);
+                    $this->_raw_body = $_POST;
+                    $decoded_body = is_array($this->_raw_body) ? null : json_decode($this->_raw_body, true);
                     if($decoded_body !== null) {
                         $this->_body = $decoded_body;
                     } else {

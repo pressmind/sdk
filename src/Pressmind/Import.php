@@ -211,13 +211,8 @@ class Import
 
         if (is_array($response) && count($response) > 0) {
 
-            $old_object = null;
-            $current_object = new ORM\Object\MediaObject();
-            $current_object->setReadRelations(true);
-            if($current_object->read($id_media_object)) {
-                $old_object = clone $current_object;
-                $current_object->delete(true);
-            }
+            $current_object = new ORM\Object\MediaObject($id_media_object, true, true);
+            $current_object->delete(true);
 
             $this->_start_time = microtime(true);
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): parsing data', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
@@ -348,7 +343,6 @@ class Import
             }
 
             unset($response);
-            unset($old_object);
 
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '):  Objects removed from heap', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . '--------------------------------------------------------------------------------', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
@@ -471,6 +465,7 @@ class Import
 	 */
     private function checkRunFile($path)
 	{
+	    return false;
 	    if(strtolower(PHP_OS) == 'linux') { //ps -C will only work on Linux this way
             $outputPS = array();
             exec('ps -C php -f', $outputPS);

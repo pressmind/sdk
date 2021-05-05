@@ -35,6 +35,7 @@ class Downloader
      */
     public function download($url, $targetName, $forceOverwrite = false)
     {
+        Writer::write('Download of file ' . $targetName . ' from ' . $url . ' requested', WRITER::OUTPUT_FILE, 'image_processor', WRITER::TYPE_INFO);
         $config = Registry::getInstance()->get('config');
         $bucket = new Bucket($config['image_handling']['storage']['bucket']);
         $file = new File($bucket);
@@ -49,8 +50,10 @@ class Downloader
             $raw = curl_exec($ch);
             curl_close($ch);
             if ($raw === false) {
+                Writer::write('CURL Timeout or other error: ' . curl_error($ch), WRITER::OUTPUT_FILE, 'image_processor', WRITER::TYPE_ERROR);
                 throw new Exception('CURL Timeout or other error: ' . curl_error($ch));
             } else if(empty($raw)) {
+                Writer::write('Empty response for: ' . $url, WRITER::OUTPUT_FILE, 'image_processor', WRITER::TYPE_ERROR);
                 throw new Exception('Empty response for: ' . $url);
             } else {
                 $file->content = $raw;

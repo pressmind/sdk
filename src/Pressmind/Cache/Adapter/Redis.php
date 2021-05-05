@@ -9,6 +9,7 @@ use Pressmind\HelperFunctions;
 use Pressmind\Log\Writer;
 use Pressmind\Registry;
 use Pressmind\REST\Server;
+use Pressmind\Search;
 
 class Redis implements AdapterInterface
 {
@@ -74,6 +75,7 @@ class Redis implements AdapterInterface
     {
         $keys = $this->_server->keys('pmt2core-' . $this->_prefix . '-*');
         Writer::write('Found ' . count($keys) . ' keys in cache', WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
+        $error = false;
         foreach ($this->_server->keys('pmt2core-' . $this->_prefix . '-*') as $key) {
             Writer::write('Checking key ' . $key, WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
             $idle_time = $this->_server->object('idletime', $key);
@@ -96,11 +98,27 @@ class Redis implements AdapterInterface
                 Writer::write('Class: ' . $info->classname, WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
                 Writer::write('Method: ' . $info->method, WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
                 Writer::write('Params: ' . print_r($info->parameters, true), WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
-                if(strtolower($info->type) == 'rest') {
-                    $rest_server = new Server();
-                    $rest_server->directCall($info->classname, $info->method, json_decode(json_encode($info->parameters), true));
+                try {
+                    if (strtolower($info->type) == 'rest') {
+                        $rest_server = new Server();
+                        $rest_server->directCall($info->classname, $info->method, json_decode(json_encode($info->parameters), true));
+                    }
+                    if (strtolower($info->type) == 'search') {
+                        $search = new Search();
+                        $result = $search->updateCache($info->parameters);
+                        Writer::write('Update returned: ' . $result, WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
+                    }
+                    if (strtolower($info->type) == 'object') {
+                        $classname = $info->classname;
+                        $object = new $classname();
+                        $result = $object->updateCache($info->parameters->id);
+                        Writer::write('Update returned: ' . $result, WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
+                    }
+                } catch (\Exception $e) {
+                    $error = true;
                 }
             }
         }
+        return $error;
     }
 }

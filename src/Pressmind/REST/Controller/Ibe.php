@@ -81,11 +81,11 @@ class Ibe
             $predefined_options[$this->parameters['params']['ido']] = 1;
         }
 
-        if($booking->booking_package->price_mix == 'date_housing') {
+        if($booking->getBookingPackage()->price_mix == 'date_housing') {
             if (isset($this->parameters['params']['idhp'])) {
                 $housing_packages = [$booking->getHousingPackage($this->parameters['params']['idhp'])->toStdClass()];
             } else {
-                $housing_packages = $booking->booking_package->housing_packages;
+                $housing_packages = $booking->getBookingPackage()->housing_packages;
             }
         } else if($booking->booking_package->price_mix == 'date_transport') {
             $housing_package = new Package();
@@ -106,7 +106,7 @@ class Ibe
                     $option->min_pax = 1;
                     $option->occupancy_max = 10;
                     $option->occupancy_min = 1;
-                    $option->occupancy = isset($predefined_options[$transport->id]) ? $predefined_options[$transport->id] : 1;;
+                    $option->occupancy = isset($predefined_options[$transport->id]) ? $predefined_options[$transport->id] : 1;
                     $option->price = $transport->price;
                     $option->price_due = 'person_stay';
                     $transport->price = 0;
@@ -120,9 +120,9 @@ class Ibe
             $housing_package->name = !empty($booking_package->name) ? $booking_package->name : $result['product']['title'];
             $options = [];
             foreach ($extras as $key => $extra) {
-                $extra->occupancy = isset($predefined_options[$extra->id]) ? $predefined_options[$extra->id] : 1;
-                $extra->occupancy_min = 1;
+                $extra->occupancy_min = $extra->min_pax > 0 ? $extra->min_pax : 1;
                 $extra->occupancy_max = $extra->max_pax > 0 ? $extra->max_pax : 10;
+                $extra->occupancy = (isset($predefined_options[$extra->id]) && $predefined_options[$extra->id] > $extra->occupancy_min) ? $predefined_options[$extra->id] : $extra->occupancy_min;
                 if ($extra->type == 'ticket' && $booking->booking_package->price_mix == 'date_ticket') {
                     $options[] = $extra;
                     unset($extras[$key]);

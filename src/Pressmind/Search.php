@@ -4,6 +4,7 @@ namespace Pressmind;
 
 
 use Exception;
+use Pressmind\Cache\Adapter\Factory;
 use Pressmind\DB\Adapter\Pdo;
 use Pressmind\Log\Writer;
 use Pressmind\Search\Condition\ConditionInterface;
@@ -150,15 +151,22 @@ class Search
         }
         $this->_concatSql();
         if(Registry::getInstance()->get('config')['cache']['enabled'] && in_array('SEARCH', Registry::getInstance()->get('config')['cache']['types'])) {
-            $key = md5($this->_sql . json_encode($this->_values));
-            $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
+            $key = 'SEARCH_' . md5($this->_sql . json_encode($this->_values));
+            echo $key;
+            echo $this->_sql;
+            $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
             if ($cache_adapter->exists($key)) {
                 Writer::write(get_class($this) . ' exec() reading from cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
                 $db_result = json_decode($cache_adapter->get($key));
             } else {
                 $db_result = $db->fetchAll($this->_sql, $this->_values);
                 Writer::write(get_class($this) . ' exec() writing to cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
-                $cache_adapter->add($key, json_encode($db_result));
+                $info = new \stdClass();
+                $info->type = 'SEARCH';
+                $info->classname = self::class;
+                $info->method = 'updateCache';
+                $info->parameters = ['sql' => $this->_sql, 'values' => $this->_values];
+                $cache_adapter->add($key, json_encode($db_result), $info);
             }
         } else {
             $db_result = $db->fetchAll($this->_sql, $this->_values);
@@ -172,7 +180,31 @@ class Search
         } else {
             $this->_total_result_count = count($db_result);
         }
+        print_r($db_result);
         return $result;
+    }
+
+    /**
+     * @param \stdClass $params
+     */
+    public function updateCache($params) {
+        try {
+            $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
+            $key = 'SEARCH_' . md5($params->sql . json_encode($params->values));
+            /**@var Pdo $db */
+            $db = Registry::getInstance()->get('db');
+            $db_result = $db->fetchAll($params->sql, (array)$params->values);
+            $info = new \stdClass();
+            $info->type = 'SEARCH';
+            $info->classname = self::class;
+            $info->method = 'updateCache';
+            $info->parameters = ['sql' => $params->sql, 'values' => $params->values];
+            Writer::write(get_class($this) . ' exec() writing to cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
+            $cache_adapter->add($key, json_encode($db_result), $info);
+            return $key. ': ' . $params->sql;
+        } catch (Exception $e) {
+            return $e->getMessage();
+        }
     }
 
     /**
@@ -269,7 +301,7 @@ class Search
             $visibility = null;
         }
         $now = new \DateTime();
-        $validity = " ((pmt2core_media_objects.valid_from IS NULL OR pmt2core_media_objects.valid_from <= '" . $now->format('Y-m-d H:i:s') . "') AND (pmt2core_media_objects.valid_to IS NULL OR pmt2core_media_objects.valid_to >= '" . $now->format('Y-m-d H:i:s') . "')) AND ";
+        $validity = " ((pmt2core_media_objects.valid_from IS NULL OR pmt2core_media_objects.valid_from <= '" . $now->format('Y-m-d H:i:00') . "') AND (pmt2core_media_objects.valid_to IS NULL OR pmt2core_media_objects.valid_to >= '" . $now->format('Y-m-d H:i:00') . "')) AND ";
         if($this->hasCondition('Pressmind\Search\Condition\Validity')) {
             $validity = null;
         }

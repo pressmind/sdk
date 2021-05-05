@@ -4,7 +4,6 @@
 namespace Pressmind\Log;
 
 
-use Pressmind\HelperFunctions;
 use Pressmind\ORM\Object\Log;
 use Pressmind\Registry;
 use \DateTime;
@@ -25,12 +24,15 @@ class Writer
      * @param $log
      * @param string $output
      * @param string $filename
-     * @return mixed|string
+     * @param string $type
+     * @return string
      * @throws Exception
      */
     static function write($log, $output = 'screen', $filename = 'messages', $type = 'INFO')
     {
+        $config = Registry::getInstance()->get('config');
         $log_file_name = $filename;
+        $log_modes = is_array($config['logging']['mode']) ? $config['logging']['mode'] : [$config['logging']['mode']];
         if($type != self::TYPE_INFO) {
             $log_file_name .= '_' . strtolower($type);
         }
@@ -42,7 +44,6 @@ class Writer
             }
         }
         if($output == self::OUTPUT_FILE || $output == self::OUTPUT_BOTH) {
-            $config = Registry::getInstance()->get('config');
             $date = new DateTime();
             if($config['logging']['storage'] == 'filesystem') {
                 $log_text = '[' . $date->format('Y-m-d H:i:s') . '] ' . print_r($log, true);
@@ -56,7 +57,7 @@ class Writer
                     }
                 }
             } else if($config['logging']['storage'] == 'database') {
-                if ($config['logging']['mode'] == 'ALL' || $type == $config['logging']['mode']) {
+                if (in_array('ALL', $log_modes) || in_array($type, $log_modes)) {
                     $log_set = new Log();
                     $log_set->type = $type;
                     $log_set->trace = json_encode(self::getTrace());
@@ -67,7 +68,6 @@ class Writer
                 }
             }
         }
-        //print_r(json_encode(self::getTrace()));
         return $log_text;
     }
 
@@ -79,6 +79,9 @@ class Writer
         return isset($config['logging']['log_file_path']) ? str_replace('APPLICATION_PATH', APPLICATION_PATH, $config['logging']['log_file_path']) : APPLICATION_PATH . DIRECTORY_SEPARATOR . 'logs';
     }
 
+    /**
+     * @return array
+     */
     static function getTrace()
     {
         $traces = [];

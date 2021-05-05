@@ -30,7 +30,9 @@
         "tmp_dir": "APPLICATION_PATH/tmp",
         "docs_dir": "WEBSERVER_DOCUMENT_ROOT/docs",
         "logging": {
-            "mode": "ALL",
+            "mode": [
+                "ERROR"
+            ],
             "storage": "database",
             "log_file_path": "APPLICATION_PATH/logs",
             "error_email_address": "john.doe@local",

@@ -180,7 +180,6 @@ class Search
         } else {
             $this->_total_result_count = count($db_result);
         }
-        print_r($db_result);
         return $result;
     }
 

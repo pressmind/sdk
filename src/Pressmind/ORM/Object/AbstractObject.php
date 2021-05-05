@@ -39,9 +39,16 @@ abstract class AbstractObject implements SplSubject
     protected $_dont_use_autoincrement_on_primary_key = false;
 
     /**
+     * @var
+     */
+    protected $_use_cache = false;
+
+    /**
      * @var boolean
      */
     protected $_cache_enabled;
+
+    protected $_skip_cache_on_read = false;
 
     protected $_disable_cache_permanently = false;
 
@@ -74,16 +81,17 @@ abstract class AbstractObject implements SplSubject
      * @param bool $readRelations
      * @throws Exception
      */
-    public function __construct($id = null, $readRelations = false)
+    public function __construct($id = null, $readRelations = false, $skipCache = false)
     {
         $this->_start_time = microtime(true);
-        $this->_write_log('__constuct()');
+        $this->_write_log('__construct(' . (is_null($id) ? 'null' : $id) . ', ' . ($readRelations == true ? 'true' : 'false') . ', ' . ($skipCache == true ? 'true' : 'false') . ')');
         $registry = Registry::getInstance();
         $this->_db = $registry->get('db');
-        $this->_cache_enabled = $registry->get('config')['cache']['enabled'] && in_array('OBJECT', $registry->get('config')['cache']['types']);
+        $this->_cache_enabled = $registry->get('config')['cache']['enabled'] && in_array('OBJECT', $registry->get('config')['cache']['types']) && $this->_use_cache;
         if(true === $this->_disable_cache_permanently) {
             $this->_cache_enabled = false;
         }
+        $this->_skip_cache_on_read = $skipCache;
         $this->setReadRelations($readRelations);
         if(!is_null($id)) {
             $this->read($id);
@@ -92,7 +100,7 @@ abstract class AbstractObject implements SplSubject
 
     private function _write_log($logtext)
     {
-        $text =  number_format(microtime(true) - $this->_start_time, 8) . get_class($this) . " " . $logtext;
+        $text =  'Time: ' . number_format(microtime(true) - $this->_start_time, 8) . " " . " Heap: " . bcdiv(memory_get_usage(), (1000 * 1000), 2) . ' MByte ' . get_class($this) . " " . $logtext;
         $this->_log[] = $text;
     }
 
@@ -264,15 +272,18 @@ abstract class AbstractObject implements SplSubject
      */
     public function read($id)
     {
-        $cache_adapter = null;
         if ($id != '0' && !empty($id)) {
-            if($this->_cache_enabled) {
+            if($this->_cache_enabled && !$this->_skip_cache_on_read) {
                 $this->_readFromCache($id);
             } else {
                 $this->_readFromDb($id);
             };
         }
         return true;
+    }
+
+    public function setSkipCache($skipCache) {
+        $this->_skip_cache_on_read = $skipCache;
     }
 
     /**
@@ -282,6 +293,8 @@ abstract class AbstractObject implements SplSubject
      */
     private function _readFromDb($id)
     {
+        $this->_write_log('_readFromDb(' . $id . ')');
+        Writer::write(get_class($this) . ' _readFromDb() reading from databsse. ID: ' . $id, Writer::OUTPUT_FILE, 'database', Writer::TYPE_DEBUG);
         $query = "SELECT * FROM " .
             $this->getDbTableName() .
             " WHERE " . $this->_definitions['database']['primary_key'] .
@@ -297,11 +310,13 @@ abstract class AbstractObject implements SplSubject
      */
     private function _readFromCache($id)
     {
+        $this->_write_log('_readFromCache(' . $id . ')');
+        $key = $this->_createCacheKey($id);
+        $this->_write_log(Registry::getInstance()->get('config')['cache']['adapter']['name'] . ' cache key: ' . $key);
         $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
-        Writer::write(get_class($this) . ' _readFromCache() reading from cache. ID: ' . $this->getDbTableName() . '_' . $id, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
-        if($cache_adapter->exists($this->getDbTableName() . '_' . $id)) {
-            //var_dump($cache_adapter->get($this->getDbTableName() . '_' . $id));
-            $data = json_decode($cache_adapter->get($this->getDbTableName() . '_' . $id));
+        Writer::write(get_class($this) . ' _readFromCache() reading from cache. ID: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
+        if($cache_adapter->exists($key)) {
+            $data = json_decode($cache_adapter->get($key));
             $this->fromCache($data);
         } else {
             $data = $this->addToCache($id);
@@ -309,17 +324,43 @@ abstract class AbstractObject implements SplSubject
         return $data;
     }
 
+    private function _createCacheKey($id) {
+        return $this->getDbTableName() . '_' . $id;
+    }
+
     /**
      * @return mixed
      */
     public function addToCache($id)
     {
+        $key = $this->_createCacheKey($id);
         $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
-        Writer::write(get_class($this) . ' addToCache() writing to cache. ID: ' . $this->getDbTableName() . '_' . $id, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
+        Writer::write(get_class($this) . ' addToCache() writing to cache. ID: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
         $this->setReadRelations(true);
         $data = $this->_readFromDb($id);
-        $cache_adapter->add($this->getDbTableName() . '_' . $id, json_encode($this->toStdClass()));
+        $info = new stdClass();
+        $info->type = 'OBJECT';
+        $info->classname = get_class($this);
+        $info->method = 'addToCache';
+        $info->parameters = ['id' => $id];
+        $cache_adapter->add($key, json_encode($this->toStdClass()), $info);
         return $data;
+    }
+
+    public function updateCache($id) {
+        $key = $this->_createCacheKey($id);
+        $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
+        Writer::write(get_class($this) . ' updateCache() writing to cache. ID: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
+        $this->setReadRelations(true);
+        $this->_readFromDb($id);
+        $info = new stdClass();
+        $info->type = 'OBJECT';
+        $info->classname = get_class($this);
+        $info->method = 'addToCache';
+        $info->parameters = ['id' => $id];
+        //$cache_adapter->remove($key);
+        $cache_adapter->add($key, json_encode($this->toStdClass()), $info);
+        return 'Object ' . $key . ' added to cache';
     }
 
     /**
@@ -352,7 +393,7 @@ abstract class AbstractObject implements SplSubject
      */
     public function setReadRelations($readRelations)
     {
-        $this->_write_log('setReadRelations(' . $readRelations . ')');
+        $this->_write_log('setReadRelations(' . ($readRelations == true ? 'true' : 'false') . ')');
         $this->_read_relations = $readRelations;
     }
 
@@ -894,9 +935,15 @@ abstract class AbstractObject implements SplSubject
     {
         if(!empty($value)) {
             foreach ($validatorSpecs as $validatorSpec) {
-                $validator = Validator\Factory::create($validatorSpec);
-                if (!$validator->isValid($value)) {
-                    throw new Exception('Validation for property ' . $name . ' failed for class ' . get_class($this) . ': ' . $validator->getError());
+                try {
+                    $validator = Validator\Factory::create($validatorSpec);
+                    if (!$validator->isValid($value)) {
+                        throw new Exception('Validation for property ' . $name . ' failed for class ' . get_class($this) . ': ' . $validator->getError());
+                    }
+                } catch (Exception $e) {
+                    throw new Exception('Validator ' . $validatorSpec['name'] . ' could not be created in class ' . get_class($this));
+                } catch (\Error $e) {
+                    throw new Exception('Validator ' . $validatorSpec['name'] . ' could not be created in class ' . get_class($this));
                 }
             }
         }

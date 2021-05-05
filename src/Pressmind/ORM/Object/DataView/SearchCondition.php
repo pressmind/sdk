@@ -18,8 +18,7 @@ class SearchCondition extends AbstractObject
 {
     protected $_definitions = [
         'class' => [
-            'name' => 'SearchCondition',
-            'namespace' => '\Pressmind\ORM\Object\DataView',
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_data_view_search_conditions',
@@ -35,7 +34,7 @@ class SearchCondition extends AbstractObject
                 'validators' => [
                     [
                         'name' => 'maxlength',
-                        'params' => 20,
+                        'params' => 22,
                     ],
                     [
                         'name' => 'unsigned',
@@ -52,7 +51,7 @@ class SearchCondition extends AbstractObject
                 'validators' => [
                     [
                         'name' => 'maxlength',
-                        'params' => 20,
+                        'params' => 22,
                     ],
                     [
                         'name' => 'unsigned',

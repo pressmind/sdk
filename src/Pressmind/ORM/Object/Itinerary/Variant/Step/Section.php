@@ -22,8 +22,7 @@ class Section extends AbstractObject
 {
     protected $_definitions = [
         'class' => [
-            'name' => 'Section',
-            'namespace' => 'Pressmind\ORM\Object\Itinerary\Variant\Step'
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_itinerary_step_sections',
@@ -43,7 +42,19 @@ class Section extends AbstractObject
                 'name' => 'id_step',
                 'type' => 'integer',
                 'required' => false,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_step' => 'index'
+                ],
                 'filters' => null
             ],
             'id_section' => [
@@ -51,7 +62,15 @@ class Section extends AbstractObject
                 'name' => 'id_section',
                 'type' => 'string',
                 'required' => false,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ]
+                ],
+                'index' => [
+                    'id_section' => 'index'
+                ],
                 'filters' => null
             ],
             'name' => [

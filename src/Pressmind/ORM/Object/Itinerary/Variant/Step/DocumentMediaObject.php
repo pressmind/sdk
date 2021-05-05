@@ -29,8 +29,7 @@ class DocumentMediaObject extends AbstractObject
 {
     protected $_definitions = [
         'class' => [
-            'name' => 'DocumentMediaObject',
-            'namespace' => 'Pressmind\ORM\Object\Itinerary\Variant\Step'
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_itinerary_step_document_media_objects',
@@ -50,7 +49,19 @@ class DocumentMediaObject extends AbstractObject
                 'name' => 'id_step',
                 'type' => 'integer',
                 'required' => false,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_step' => 'index'
+                ],
                 'filters' => null
             ],
             'id_media_object' => [
@@ -58,7 +69,19 @@ class DocumentMediaObject extends AbstractObject
                 'name' => 'id_media_object',
                 'type' => 'integer',
                 'required' => false,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_media_object' => 'index'
+                ],
                 'filters' => null
             ],
             'copyright' => [
@@ -128,7 +151,7 @@ class DocumentMediaObject extends AbstractObject
         return false;
     }
 
-    public function getImageSrc($derivativeName)
+    public function getUri($derivativeName)
     {
         $config = Registry::getInstance()->get('config');
         if(!isset($config['image_processor']['derivatives'][$derivativeName])) {

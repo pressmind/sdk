@@ -6,6 +6,12 @@ namespace Pressmind\ORM\Object\Touristic\Insurance;
 
 use Pressmind\ORM\Object\AbstractObject;
 
+/**
+ * Class InsuranceToInsurance
+ * @package Pressmind\ORM\Object\Touristic\Insurance
+ * @property string $id_insurance
+ * @property string $id_sub_insurance
+ */
 class InsuranceToInsurance extends AbstractObject
 {
     protected $_dont_use_autoincrement_on_primary_key = true;
@@ -32,6 +38,9 @@ class InsuranceToInsurance extends AbstractObject
                         ],
                     ],
                     'filters' => NULL,
+                    'index' => [
+                        'id_insurance' => 'index'
+                    ]
                 ],
                 'id_sub_insurance' => [
                     'title' => 'Sub Insurance ID',
@@ -45,6 +54,9 @@ class InsuranceToInsurance extends AbstractObject
                        ],
                     ],
                     'filters' => NULL,
+                    'index' => [
+                        'id_sub_insurance' => 'index'
+                    ]
                 ]
             ]
     );

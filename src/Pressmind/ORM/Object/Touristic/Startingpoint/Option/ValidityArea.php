@@ -5,7 +5,8 @@ namespace Pressmind\ORM\Object\Touristic\Startingpoint\Option;
 use Pressmind\ORM\Object\AbstractObject;
 
 /**
- * Class TouristicStartingpointOptionsValidityArea
+ * Class ValidityArea
+ * @TODO unused???
  * @property string $id_startingpoint_option
  * @property string $zip
  * @property integer $id_startingpoint
@@ -16,15 +17,13 @@ class ValidityArea extends AbstractObject
     protected $_dont_use_autoincrement_on_primary_key = true;
 
     protected $_definitions = array(
-        'class' =>
-            array(
-                'name' => 'TouristicStartingpointOptionsValidityArea',
-            ),
-        'database' =>
-            array(
-                'table_name' => 'pmt2core_touristic_startingpoint_options_validity_areas',
-                'primary_key' => NULL,
-            ),
+        'class' => [
+            'name' => self::class,
+        ],
+        'database' => [
+            'table_name' => 'pmt2core_touristic_startingpoint_options_validity_areas',
+            'primary_key' => NULL,
+        ],
         'properties' =>
             array(
                 'id_startingpoint_option' =>

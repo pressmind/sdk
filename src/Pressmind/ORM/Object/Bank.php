@@ -20,7 +20,7 @@ class Bank extends AbstractObject
     protected $_definitions = array (
   'class' =>
   array (
-    'name' => 'Bank',
+      'name' => self::class
   ),
   'database' =>
   array (

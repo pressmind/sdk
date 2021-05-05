@@ -30,8 +30,7 @@ class Section extends Picture
 {
     protected $_definitions = [
         'class' => [
-            'name' => 'Section',
-            'namespace' => '\Pressmind\ORM\MediaObject\DataType\Picture',
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_media_object_image_sections',
@@ -45,7 +44,16 @@ class Section extends Picture
                 'type' => 'integer',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
             ],
             'id_media_object' => [
                 'title' => 'id_media_object',
@@ -53,7 +61,19 @@ class Section extends Picture
                 'type' => 'integer',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_media_object' => 'index'
+                ]
             ],
             'id_image' => [
                 'title' => 'id_image',
@@ -61,7 +81,19 @@ class Section extends Picture
                 'type' => 'integer',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_image' => 'index'
+                ]
             ],
             'section_name' => [
                 'title' => 'section_name',
@@ -69,7 +101,15 @@ class Section extends Picture
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ]
+                ],
+                'index' => [
+                    'section_name' => 'index'
+                ]
             ],
             'file_name' => [
                 'title' => 'file_name',
@@ -149,7 +189,7 @@ class Section extends Picture
      * @param integer $retry_counter
      * @throws Exception
      */
-    public function downloadOriginal($use_cache = true, $retry_counter = 0)
+    public function downloadOriginal($use_cache = true, $retry_counter = 0, $last_error = null)
     {
         $max_retries = 2;
         $download_url = $this->tmp_url;

@@ -22,8 +22,7 @@ class Derivative extends AbstractObject
 {
     protected $_definitions = [
         'class' => [
-            'name' => 'Derivative',
-            'namespace' => 'Pressmind\ORM\Object\Itinerary\Variant\Step\DocumentMediaObject'
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_itinerary_step_document_media_object_derivatives',
@@ -43,7 +42,19 @@ class Derivative extends AbstractObject
                 'name' => 'id_document_media_object',
                 'type' => 'integer',
                 'required' => false,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_document_media_object' => 'index'
+                ],
                 'filters' => null
             ],
             'name' => [

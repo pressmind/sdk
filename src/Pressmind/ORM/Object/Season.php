@@ -21,8 +21,7 @@ class Season extends AbstractObject
 
     protected $_definitions = [
         'class' => [
-            'name' => 'Season',
-            'namespace' => '\Pressmind\ORM\Object',
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_seasons',
@@ -40,6 +39,10 @@ class Season extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
             ],
             'active' => [

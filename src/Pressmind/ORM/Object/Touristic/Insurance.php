@@ -8,7 +8,7 @@ use Pressmind\ORM\Object\Touristic\Insurance\Calculated;
 use Pressmind\ORM\Object\Touristic\Insurance\PriceTable;
 
 /**
- * Class TouristicInsurance
+ * Class Insurance
  * @property string $id
  * @property boolean $active
  * @property string $name
@@ -31,213 +31,197 @@ class Insurance extends AbstractObject
     protected $_dont_use_autoincrement_on_primary_key = true;
 
     protected $_definitions = array(
-        'class' =>
-            array(
-                'name' => 'TouristicInsurance',
-            ),
+        'class' => [
+            'name' => self::class,
+        ],
         'database' =>
             array(
                 'table_name' => 'pmt2core_touristic_insurances',
                 'primary_key' => 'id',
             ),
-        'properties' =>
-            array(
-                'id' =>
-                    array(
-                        'title' => 'Id',
-                        'name' => 'id',
-                        'type' => 'string',
-                        'required' => true,
-                        'validators' =>
-                            array(
-                                0 =>
-                                    array(
-                                        'name' => 'maxlength',
-                                        'params' => 32,
-                                    ),
-                            ),
-                        'filters' => NULL,
-                    ),
-                'active' =>
-                    array(
-                        'title' => 'Active',
-                        'name' => 'active',
-                        'type' => 'boolean',
-                        'required' => false,
-                        'validators' => null,
-                        'filters' => NULL,
-                    ),
-                'name' =>
-                    array(
-                        'title' => 'Name',
-                        'name' => 'name',
-                        'type' => 'string',
-                        'required' => false,
-                        'validators' =>
-                            array(
-                                0 =>
-                                    array(
-                                        'name' => 'maxlength',
-                                        'params' => 255,
-                                    ),
-                            ),
-                        'filters' => NULL,
-                    ),
-                'description' =>
-                    array(
-                        'title' => 'Description',
-                        'name' => 'description',
-                        'type' => 'string',
-                        'required' => false,
-                        'validators' => NULL,
-                        'filters' => NULL,
-                    ),
-                'description_long' =>
-                    array(
-                        'title' => 'Description_long',
-                        'name' => 'description_long',
-                        'type' => 'string',
-                        'required' => false,
-                        'filters' => NULL,
-                    ),
-                'duration_max_days' =>
-                    array(
-                        'title' => 'Duration_max_days',
-                        'name' => 'duration_max_days',
-                        'type' => 'integer',
-                        'required' => false,
-                        'validators' =>
-                            array(
-                                0 =>
-                                    array(
-                                        'name' => 'maxlength',
-                                        'params' => 11,
-                                    ),
-                            ),
-                        'filters' => NULL,
-                    ),
-                'worldwide' =>
-                    array(
-                        'title' => 'Worldwide',
-                        'name' => 'worldwide',
-                        'type' => 'boolean',
-                        'required' => false,
-                        'validators' => NULL,
-                        'filters' => NULL,
-                    ),
-                'is_additional_insurance' =>
-                    array(
-                        'title' => 'Is_additional_insurance',
-                        'name' => 'is_additional_insurance',
-                        'type' => 'boolean',
-                        'required' => false,
-                        'validators' => NULL,
-                        'filters' => NULL,
-                    ),
-                'urlinfo' =>
-                    array(
-                        'title' => 'Urlinfo',
-                        'name' => 'urlinfo',
-                        'type' => 'string',
-                        'required' => false,
-                        'validators' => NULL,
-                        'filters' => NULL,
-                    ),
-                'urlproduktinfo' =>
-                    array(
-                        'title' => 'Urlproduktinfo',
-                        'name' => 'urlproduktinfo',
-                        'type' => 'string',
-                        'required' => false,
-                        'validators' => NULL,
-                        'filters' => NULL,
-                    ),
-                'urlagb' =>
-                    array(
-                        'title' => 'Urlagb',
-                        'name' => 'urlagb',
-                        'type' => 'string',
-                        'required' => false,
-                        'validators' => NULL,
-                        'filters' => NULL,
-                    ),
-                'pax_min' =>
-                    array(
-                        'title' => 'Pax_min',
-                        'name' => 'pax_min',
-                        'type' => 'integer',
-                        'required' => false,
-                        'validators' =>
-                            array(
-                                0 =>
-                                    array(
-                                        'name' => 'maxlength',
-                                        'params' => 11,
-                                    ),
-                            ),
-                        'filters' => NULL,
-                    ),
-                'pax_max' =>
-                    array(
-                        'title' => 'Pax_max',
-                        'name' => 'pax_max',
-                        'type' => 'integer',
-                        'required' => false,
-                        'validators' =>
-                            array(
-                                0 =>
-                                    array(
-                                        'name' => 'maxlength',
-                                        'params' => 11,
-                                    ),
-                            ),
-                        'filters' => NULL,
-                    ),
-                'code' =>
-                    array(
-                        'title' => 'Code',
-                        'name' => 'code',
-                        'type' => 'string',
-                        'required' => false,
-                        'validators' =>
-                            array(
-                                0 =>
-                                    array(
-                                        'name' => 'maxlength',
-                                        'params' => 255,
-                                    ),
-                            ),
-                        'filters' => NULL,
-                    ),
-                'price_tables' => array(
-                    'title' => 'Price tables',
-                    'name' => 'price_tables',
-                    'type' => 'relation',
-                    'relation' => array(
-                        'type' => 'hasMany',
-                        'related_id' => 'id_insurance',
-                        'class' => '\\Pressmind\\ORM\\Object\\Touristic\\Insurance\\PriceTable'
-                    ),
-                    'required' => false,
-                    'validators' => null,
-                    'filters' => null
-                ),
-                'sub_insurances' => [
-                    'name' => 'sub_insurances',
-                    'title' => 'sub_insurances',
-                    'type' => 'relation',
-                    'required' => false,
-                    'validators' => NULL,
-                    'filters' => NULL,
-                    'relation' => [
-                        'type' => 'ManyToMany',
-                        'class' => Insurance::class,
-                        'relation_table' => 'pmt2core_touristic_insurance_to_insurance',
-                        'related_id' => 'id_insurance',
-                        'target_id' => 'id_sub_insurance'
+        'properties' => [
+            'id' => [
+                'title' => 'Id',
+                'name' => 'id',
+                'type' => 'string',
+                'required' => true,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
+            'active' => [
+                'title' => 'Active',
+                'name' => 'active',
+                'type' => 'boolean',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'name' => [
+                'title' => 'Name',
+                'name' => 'name',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
+            'description' => [
+                'title' => 'Description',
+                'name' => 'description',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'description_long' => [
+                'title' => 'Description_long',
+                'name' => 'description_long',
+                'type' => 'string',
+                'required' => false,
+                'filters' => NULL,
+            ],
+            'duration_max_days' => [
+                'title' => 'Duration_max_days',
+                'name' => 'duration_max_days',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 11,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
                     ]
-                ]
-            ),
+                ],
+                'filters' => NULL,
+            ],
+            'worldwide' => [
+                'title' => 'Worldwide',
+                'name' => 'worldwide',
+                'type' => 'boolean',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'is_additional_insurance' => [
+                'title' => 'Is_additional_insurance',
+                'name' => 'is_additional_insurance',
+                'type' => 'boolean',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'urlinfo' => [
+                'title' => 'Urlinfo',
+                'name' => 'urlinfo',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'urlproduktinfo' => [
+                'title' => 'Urlproduktinfo',
+                'name' => 'urlproduktinfo',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'urlagb' => [
+                'title' => 'Urlagb',
+                'name' => 'urlagb',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'pax_min' => [
+                'title' => 'Pax_min',
+                'name' => 'pax_min',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 11,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'filters' => NULL,
+            ],
+            'pax_max' => [
+                'title' => 'Pax_max',
+                'name' => 'pax_max',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 11,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'filters' => NULL,
+            ],
+            'code' => [
+                'title' => 'Code',
+                'name' => 'code',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
+            'price_tables' => [
+                'title' => 'Price tables',
+                'name' => 'price_tables',
+                'type' => 'relation',
+                'relation' => [
+                    'type' => 'hasMany',
+                    'related_id' => 'id_insurance',
+                    'class' => PriceTable::class,
+                ],
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'sub_insurances' => [
+                'name' => 'sub_insurances',
+                'title' => 'sub_insurances',
+                'type' => 'relation',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+                'relation' => [
+                    'type' => 'ManyToMany',
+                    'class' => Insurance::class,
+                    'relation_table' => 'pmt2core_touristic_insurance_to_insurance',
+                    'related_id' => 'id_insurance',
+                    'target_id' => 'id_sub_insurance',
+                ],
+            ],
+        ]
     );
 
     /**

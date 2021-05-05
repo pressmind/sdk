@@ -33,8 +33,15 @@ class AgencyToMediaObject extends AbstractObject
                             'name' => 'maxlength',
                             'params' => 22,
                         ],
+                        [
+                            'name' => 'unsigned',
+                            'params' => null,
+                        ]
                     ],
                     'filters' => NULL,
+                    'index' => [
+                        'id_agency' => 'index'
+                    ]
                 ],
                 'id_media_object' => [
                     'title' => 'Media Object ID',
@@ -46,8 +53,15 @@ class AgencyToMediaObject extends AbstractObject
                             'name' => 'maxlength',
                             'params' => 22,
                         ],
+                        [
+                            'name' => 'unsigned',
+                            'params' => null,
+                        ]
                     ],
                     'filters' => NULL,
+                    'index' => [
+                        'id_media_object' => 'index'
+                    ]
                 ]
             ]
     );

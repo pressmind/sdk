@@ -29,7 +29,7 @@ class Geozip extends AbstractObject
 {
     protected $_definitions = [
         'class' => [
-            'name' => 'Geozip',
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_geozip',

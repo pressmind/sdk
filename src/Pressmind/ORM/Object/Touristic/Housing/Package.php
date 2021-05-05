@@ -37,169 +37,159 @@ class Package extends AbstractObject
                 'table_name' => 'pmt2core_touristic_housing_packages',
                 'primary_key' => 'id',
             ),
-        'properties' =>
-            array(
-                'id' =>
-                    array(
-                        'title' => 'Id',
-                        'name' => 'id',
-                        'type' => 'string',
-                        'required' => true,
-                        'validators' =>
-                            array(
-                                0 =>
-                                    array(
-                                        'name' => 'maxlength',
-                                        'params' => 32,
-                                    ),
-                            ),
-                        'filters' => NULL,
-                    ),
-                'id_media_object' =>
-                    array(
-                        'title' => 'Id_media_object',
-                        'name' => 'id_media_object',
-                        'type' => 'integer',
-                        'required' => true,
-                        'validators' =>
-                            array(
-                                0 =>
-                                    array(
-                                        'name' => 'maxlength',
-                                        'params' => 22,
-                                    ),
-                            ),
-                        'filters' => NULL,
-                    ),
-                'id_booking_package' =>
-                    array(
-                        'title' => 'Id_booking_package',
-                        'name' => 'id_booking_package',
-                        'type' => 'string',
-                        'required' => true,
-                        'validators' =>
-                            array(
-                                0 =>
-                                    array(
-                                        'name' => 'maxlength',
-                                        'params' => 32,
-                                    ),
-                            ),
-                        'filters' => NULL,
-                    ),
-                'name' =>
-                    array(
-                        'title' => 'Name',
-                        'name' => 'name',
-                        'type' => 'string',
-                        'required' => false,
-                        'validators' => NULL,
-                        'filters' => NULL,
-                    ),
-                'code' =>
-                    array(
-                        'title' => 'Code',
-                        'name' => 'code',
-                        'type' => 'string',
-                        'required' => false,
-                        'validators' =>
-                            array(
-                                0 =>
-                                    array(
-                                        'name' => 'maxlength',
-                                        'params' => 255,
-                                    ),
-                            ),
-                        'filters' => NULL,
-                    ),
-                'nights' =>
-                    array(
-                        'title' => 'Nights',
-                        'name' => 'nights',
-                        'type' => 'integer',
-                        'required' => true,
-                        'validators' =>
-                            array(
-                                0 =>
-                                    array(
-                                        'name' => 'maxlength',
-                                        'params' => 22,
-                                    ),
-                            ),
-                        'filters' => NULL,
-                    ),
-                'text' =>
-                    array(
-                        'title' => 'Text',
-                        'name' => 'text',
-                        'type' => 'string',
-                        'required' => false,
-                        'validators' => NULL,
-                        'filters' => NULL,
-                    ),
-                'code_ibe' =>
-                    array(
-                        'title' => 'Code_ibe',
-                        'name' => 'code_ibe',
-                        'type' => 'string',
-                        'required' => false,
-                        'validators' =>
-                            array(
-                                0 =>
-                                    array(
-                                        'name' => 'maxlength',
-                                        'params' => 255,
-                                    ),
-                            ),
-                        'filters' => NULL,
-                    ),
-                'room_type' =>
-                    array(
-                        'title' => 'Room_type',
-                        'name' => 'room_type',
-                        'type' => 'string',
-                        'required' => true,
-                        'validators' =>
-                            array(
-                                0 =>
-                                    array(
-                                        'name' => 'maxlength',
-                                        'params' => 255,
-                                    ),
-                            ),
-                        'filters' => NULL,
-                    ),
-                'options' => array(
-                    'title' => 'Options',
-                    'name' => 'options',
-                    'type' => 'relation',
-                    'relation' => array(
-                        'type' => 'hasMany',
-                        'related_id' => 'id_housing_package',
-                        'class' => Option::class,
-                        'filters' => array(
-                            'type' => 'housing_option'
-                        )
-                    ),
-                    'required' => false,
-                    'validators' => null,
-                    'filters' => null
-                ),
-                'description_links' => array(
-                    'title' => 'Description Links',
-                    'name' => 'description_links',
-                    'type' => 'relation',
-                    'relation' => array(
-                        'type' => 'hasMany',
-                        'related_id' => 'id_housing_package',
-                        'class' => DescriptionLink::class,
-                        'filters' => null,
-                    ),
-                    'required' => false,
-                    'validators' => null,
-                    'filters' => null
-                )
-            ),
+        'properties' => [
+            'id' => [
+                'title' => 'Id',
+                'name' => 'id',
+                'type' => 'string',
+                'required' => true,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
+            'id_media_object' => [
+                'title' => 'Id_media_object',
+                'name' => 'id_media_object',
+                'type' => 'integer',
+                'required' => true,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'filters' => NULL,
+                'index' => [
+                    'id_media_object' => 'index'
+                ]
+            ],
+            'id_booking_package' => [
+                'title' => 'Id_booking_package',
+                'name' => 'id_booking_package',
+                'type' => 'string',
+                'required' => true,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ],
+                ],
+                'filters' => NULL,
+                'index' => [
+                    'id_booking_package' => 'index'
+                ]
+            ],
+            'name' => [
+                'title' => 'Name',
+                'name' => 'name',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'code' => [
+                'title' => 'Code',
+                'name' => 'code',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
+            'nights' => [
+                'title' => 'Nights',
+                'name' => 'nights',
+                'type' => 'integer',
+                'required' => true,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'filters' => NULL,
+            ],
+            'text' => [
+                'title' => 'Text',
+                'name' => 'text',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'code_ibe' => [
+                'title' => 'Code_ibe',
+                'name' => 'code_ibe',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
+            'room_type' => [
+                'title' => 'Room_type',
+                'name' => 'room_type',
+                'type' => 'string',
+                'required' => true,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
+            'options' => [
+                'title' => 'Options',
+                'name' => 'options',
+                'type' => 'relation',
+                'relation' => [
+                    'type' => 'hasMany',
+                    'related_id' => 'id_housing_package',
+                    'class' => 'Pressmind\\ORM\\Object\\Touristic\\Option',
+                    'filters' => [
+                        'type' => 'housing_option',
+                    ],
+                ],
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'description_links' => [
+                'title' => 'Description Links',
+                'name' => 'description_links',
+                'type' => 'relation',
+                'relation' => [
+                    'type' => 'hasMany',
+                    'related_id' => 'id_housing_package',
+                    'class' => 'Pressmind\\ORM\\Object\\Touristic\\Housing\\Package\\DescriptionLink',
+                    'filters' => NULL,
+                ],
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+        ]
     );
 
     /**

@@ -24,8 +24,7 @@ class Step extends AbstractObject
 {
     protected $_definitions = [
         'class' => [
-            'name' => 'Step',
-            'namespace' => 'Pressmind\ORM\Object\Itinerary\Variant'
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_itinerary_steps',
@@ -37,7 +36,16 @@ class Step extends AbstractObject
                 'name' => 'id',
                 'type' => 'integer',
                 'required' => true,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
                 'filters' => null
             ],
             'id_variant' => [
@@ -45,7 +53,19 @@ class Step extends AbstractObject
                 'name' => 'id_variant',
                 'type' => 'integer',
                 'required' => false,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_variant' => 'index'
+                ],
                 'filters' => null
             ],
             'type' => [

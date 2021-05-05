@@ -54,6 +54,9 @@ class DescriptionLink extends AbstractObject
                     ],
                 ],
                 'filters' => NULL,
+                'index' => [
+                    'id_housing_package' => 'index'
+                ]
             ],
             'id_media_object' => [
                 'title' => 'ID Media Object',
@@ -65,8 +68,15 @@ class DescriptionLink extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => NULL,
+                'index' => [
+                    'id_media_object' => 'index'
+                ]
             ],
             'sort' => [
                 'title' => 'Sort',
@@ -78,6 +88,10 @@ class DescriptionLink extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 11,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => NULL,
             ],

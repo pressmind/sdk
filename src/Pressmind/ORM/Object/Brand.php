@@ -17,8 +17,7 @@ class Brand extends AbstractObject
 
     protected $_definitions = [
         'class' => [
-            'name' => 'Brand',
-            'namespace' => '\Pressmind\ORM\Object',
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_brands',
@@ -36,6 +35,10 @@ class Brand extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
             ],
             'name' => [
@@ -48,7 +51,7 @@ class Brand extends AbstractObject
                     [
                         'name' => 'maxlength',
                         'params' => 255,
-                    ],
+                    ]
                 ],
             ],
             'tags' => [

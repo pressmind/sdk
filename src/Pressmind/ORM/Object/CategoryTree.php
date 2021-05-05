@@ -19,7 +19,7 @@ class CategoryTree extends AbstractObject
 
     protected $_definitions = [
         'class' => [
-            'name' => 'CategoryTree',
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_category_trees',
@@ -36,6 +36,10 @@ class CategoryTree extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => NULL,
             ],

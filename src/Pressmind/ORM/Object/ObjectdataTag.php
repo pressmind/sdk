@@ -13,7 +13,7 @@ class ObjectdataTag extends AbstractObject
 {
     protected $_definitions = [
         'class' => [
-           'name' => 'ObjectdataTag',
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_objectdata_tags',
@@ -26,10 +26,14 @@ class ObjectdataTag extends AbstractObject
                 'type' => 'integer',
                 'required' => true,
                 'validators' => [
-                   [
+                    [
                        'name' => 'maxlength',
                        'params' => 22,
-                   ],
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => null,
             ],
@@ -45,6 +49,9 @@ class ObjectdataTag extends AbstractObject
                     ],
                 ],
                 'filters' => null,
+                'index' => [
+                    'id_object_type' => 'index'
+                ],
             ],
             'objectdata_column_name' => [
                 'title' => 'Column Name',

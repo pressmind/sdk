@@ -83,8 +83,15 @@ class Package extends AbstractObject
                             'name' => 'maxlength',
                             'params' => 22,
                         ],
+                        [
+                            'name' => 'unsigned',
+                            'params' => null,
+                        ]
                     ],
-                    'filters' => null
+                    'filters' => null,
+                    'index' => [
+                        'id_media_object' => 'index'
+                    ]
                 ),
             'name' => [
                 'title' => 'Name',
@@ -112,6 +119,10 @@ class Package extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 11,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => null
             ],
@@ -154,8 +165,15 @@ class Package extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
-                'filters' => null
+                'filters' => null,
+                'index' => [
+                    'id_pickupservice' => 'index'
+                ]
             ),
             'id_insurance_group' => [
                 'title' => 'Id_insurance_group',
@@ -167,8 +185,15 @@ class Package extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
-                'filters' => null
+                'filters' => null,
+                'index' => [
+                    'id_insurance_group' => 'index'
+                ]
             ],
             'ibe_type' => [
                 'title' => 'Ibe_type',
@@ -179,6 +204,10 @@ class Package extends AbstractObject
                     [
                         'name' => 'maxlength',
                         'params' => 11,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
                     ]
                 ],
                 'filters' => null
@@ -206,8 +235,15 @@ class Package extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
-                'filters' => null
+                'filters' => null,
+                'index' => [
+                    'id_origin' => 'index'
+                ]
             ],
             'code' => [
                 'title' => 'code',
@@ -308,12 +344,6 @@ class Package extends AbstractObject
                     'type' => 'hasMany',
                     'related_id' => 'id_booking_package',
                     'class' => Date::class,
-                    /*'filters' => array(
-                        'departure' => array(
-                            '>',
-                            'CURRENT_DATE'
-                        )
-                    ),*/
                     'order_columns' => [
                         'departure' => 'ASC'
                     ]

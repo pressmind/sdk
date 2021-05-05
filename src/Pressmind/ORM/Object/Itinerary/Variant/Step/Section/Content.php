@@ -17,8 +17,7 @@ class Content extends AbstractObject
 {
     protected $_definitions = [
         'class' => [
-            'name' => 'Content',
-            'namespace' => 'Pressmind\ORM\Object\Itinerary\Variant\Step\Section'
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_itinerary_step_section_contents',
@@ -38,7 +37,19 @@ class Content extends AbstractObject
                 'name' => 'id_section',
                 'type' => 'integer',
                 'required' => false,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_section' => 'index'
+                ],
                 'filters' => null
             ],
             'headline' => [

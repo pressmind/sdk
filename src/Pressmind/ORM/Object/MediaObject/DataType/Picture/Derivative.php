@@ -24,8 +24,7 @@ class Derivative extends AbstractObject
 {
     protected $_definitions = [
         'class' => [
-            'name' => 'Derivative',
-            'namespace' => '\Pressmind\ORM\MediaObject\DataType\Image',
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_media_object_image_derivatives',
@@ -38,7 +37,16 @@ class Derivative extends AbstractObject
                 'type' => 'integer',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
             ],
             'id_media_object' => [
                 'title' => 'id_media_object',
@@ -46,7 +54,19 @@ class Derivative extends AbstractObject
                 'type' => 'integer',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_media_object' => 'index'
+                ]
             ],
             'id_image' => [
                 'title' => 'id_image',
@@ -54,7 +74,19 @@ class Derivative extends AbstractObject
                 'type' => 'integer',
                 'required' => false,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_image' => 'index'
+                ]
             ],
             'id_image_section' => [
                 'title' => 'id_image_section',
@@ -62,7 +94,19 @@ class Derivative extends AbstractObject
                 'type' => 'integer',
                 'required' => false,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_image_section' => 'index'
+                ]
             ],
             'name' => [
                 'title' => 'name',

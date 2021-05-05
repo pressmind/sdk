@@ -17,8 +17,7 @@ class Route extends AbstractObject
 {
     protected $_definitions = [
         'class' => [
-            'name' => 'Route',
-            'namespace' => '\Pressmind\ORM\Object',
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_routes',
@@ -31,7 +30,16 @@ class Route extends AbstractObject
                 'type' => 'integer',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
             ],
             'route' => [
                 'title' => 'route',
@@ -47,7 +55,19 @@ class Route extends AbstractObject
                 'type' => 'integer',
                 'required' => false,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_media_object' => 'index'
+                ]
             ],
             'id_object_type' => [
                 'title' => 'id_object_type',
@@ -56,14 +76,25 @@ class Route extends AbstractObject
                 'required' => false,
                 'filters' => null,
                 'validators' => null,
+                'index' => [
+                    'id_object_type' => 'index'
+                ]
             ],
             'language' => [
                 'title' => 'language',
                 'name' => 'language',
                 'type' => 'string',
                 'required' => false,
-                'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ],
+                ],
+                'filters' => NULL,
+                'index' => [
+                    'language' => 'index'
+                ]
             ]
         ]
     ];

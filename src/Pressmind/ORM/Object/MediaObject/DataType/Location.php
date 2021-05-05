@@ -18,8 +18,7 @@ class Location extends AbstractObject
 {
     protected $_definitions = [
         'class' => [
-            'name' => 'Location',
-            'namespace' => '\Pressmind\ORM\MediaObject\DataType',
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_media_object_geodata',
@@ -32,7 +31,16 @@ class Location extends AbstractObject
                 'type' => 'integer',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
             ],
             'id_media_object' => [
                 'title' => 'id_media_object',
@@ -40,7 +48,19 @@ class Location extends AbstractObject
                 'type' => 'integer',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_media_object' => 'index'
+                ]
             ],
             'section_name' => [
                 'title' => 'section_name',
@@ -56,7 +76,15 @@ class Location extends AbstractObject
                 'type' => 'string',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ],
+                'index' => [
+                    'language' => 'index'
+                ]
             ],
             'var_name'  => [
                 'title' => 'var_name',
@@ -64,7 +92,15 @@ class Location extends AbstractObject
                 'type' => 'string',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ]
+                ],
+                'index' => [
+                    'var_name' => 'index'
+                ]
             ],
             'title' => [
                 'title' => 'title',

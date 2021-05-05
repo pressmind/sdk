@@ -19,8 +19,7 @@ class Log extends AbstractObject
 {
     protected $_definitions = [
         'class' => [
-            'name' => 'Log',
-            'namespace' => '\Pressmind\ORM\Object',
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_logs',
@@ -38,6 +37,10 @@ class Log extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
             ],
             'date' => [

@@ -4,6 +4,7 @@ namespace Pressmind\ORM\Object;
 
 use DateTime;
 use Exception;
+use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\MediaType\AbstractMediaType;
 use Pressmind\ORM\Object\MediaType\Factory;
 use Pressmind\DB\Adapter\Pdo;
@@ -70,10 +71,12 @@ class MediaObject extends AbstractObject
     private $_all_available_dates;
 
     protected $_dont_use_autoincrement_on_primary_key = true;
+
+    protected $_use_cache = true;
+
     protected $_definitions = [
         'class' => [
-            'name' => 'MediaObject',
-            'namespace' => '\Pressmind\ORM\Object'
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_media_objects',
@@ -90,6 +93,10 @@ class MediaObject extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => NULL,
             ],
@@ -103,6 +110,10 @@ class MediaObject extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => NULL,
                 'index' => [
@@ -119,6 +130,10 @@ class MediaObject extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => NULL,
                 'index' => [
@@ -135,6 +150,10 @@ class MediaObject extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => NULL,
                 'index' => [
@@ -151,6 +170,10 @@ class MediaObject extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => NULL,
                 'index' => [
@@ -167,6 +190,10 @@ class MediaObject extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => NULL,
             ],
@@ -180,6 +207,10 @@ class MediaObject extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => NULL,
             ],
@@ -227,6 +258,10 @@ class MediaObject extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 11,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => NULL,
                 'index' => [
@@ -243,6 +278,10 @@ class MediaObject extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 11,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => NULL,
                 'index' => [
@@ -297,8 +336,15 @@ class MediaObject extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => NULL,
+                'index' => [
+                    'reference_media_object' => 'index'
+                ]
             ],
             'different_season_from' => [
                 'title' => 'different_season_from',
@@ -533,17 +579,33 @@ class MediaObject extends AbstractObject
             $language = $config['data']['languages']['default'];
         }
         $media_type_name = ucfirst(HelperFunctions::human_to_machine($config['data']['media_types'][$this->id_object_type]));
-        $data = $this->getDataForLanguage($language);
-        $booking_packages = $this->booking_packages;
         $media_object = $this;
         $script_path = $config['view_scripts']['base_path'] . DIRECTORY_SEPARATOR . ucfirst($media_type_name) . '_' . ucfirst($template);
         $view = new View($script_path);
-        return $view->render([
-            'data' => $data,
-            'booking_packages' => $booking_packages,
-            'media_object' => $media_object,
-            'custom_data' => $custom_data
-        ]);
+        $return = null;
+        if($config['cache']['enabled'] && in_array('RENDERER', $config['cache']['types']) && $this->_use_cache) {
+            $id = $this->getId();
+            $key = $this->getDbTableName() . '_' . $id . '_' . $template;
+            $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
+            Writer::write(get_class($this) . ' _readFromCache() reading from cache. ID: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
+            if ($cache_adapter->exists($key)) {
+               $return = $cache_adapter->get($key);
+            } else {
+                $return = $view->render([
+                    'media_object' => $media_object,
+                    'custom_data' => $custom_data,
+                    'language' => $language
+                ]);
+                $cache_adapter->add($key, $return);
+            }
+        } else {
+            $return = $view->render([
+                'media_object' => $media_object,
+                'custom_data' => $custom_data,
+                'language' => $language
+            ]);
+        }
+        return $return;
     }
 
     /**
@@ -607,7 +669,6 @@ class MediaObject extends AbstractObject
         $separator = isset($config['data']['media_types_pretty_url'][$this->id_object_type]['separator']) ? $config['data']['media_types_pretty_url'][$this->id_object_type]['separator'] : '-';
         $strategy = isset($config['data']['media_types_pretty_url'][$this->id_object_type]['strategy']) ? $config['data']['media_types_pretty_url'][$this->id_object_type]['strategy'] : 'unique';
         $url_array = [];
-        //$field_name = $field['name'];
         foreach ($fields as $field) {
             if(in_array($field, $this->getPropertyNames())) {
                 $url_array[] = strtolower(HelperFunctions::replaceLatinSpecialChars(trim($this->$field)));

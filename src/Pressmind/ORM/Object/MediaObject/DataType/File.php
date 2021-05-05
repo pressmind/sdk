@@ -27,8 +27,7 @@ class File extends AbstractObject
 {
     protected $_definitions = [
         'class' => [
-            'name' => 'File',
-            'namespace' => '\Pressmind\ORM\MediaObject\DataType',
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_media_object_files',
@@ -44,7 +43,7 @@ class File extends AbstractObject
                 'validators' => [
                     [
                         'name' => 'maxlength',
-                        'params' => 20,
+                        'params' => 22,
                     ],
                     [
                         'name' => 'unsigned',
@@ -61,13 +60,16 @@ class File extends AbstractObject
                 'validators' => [
                     [
                         'name' => 'maxlength',
-                        'params' => 20,
+                        'params' => 22,
                     ],
                     [
                         'name' => 'unsigned',
                         'params' => null,
                     ]
                 ],
+                'index' => [
+                    'id_media_object' => 'index'
+                ]
             ],
             'section_name' => [
                 'title' => 'section_name',
@@ -89,6 +91,9 @@ class File extends AbstractObject
                         'params' => 32,
                     ]
                 ],
+                'index' => [
+                    'language' => 'index'
+                ]
             ],
             'var_name'  => [
                 'title' => 'var_name',
@@ -96,7 +101,15 @@ class File extends AbstractObject
                 'type' => 'string',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ]
+                ],
+                'index' => [
+                    'var_name' => 'index'
+                ]
             ],
             'id_file' => [
                 'title' => 'id_file',

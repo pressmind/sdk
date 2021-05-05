@@ -28,8 +28,7 @@ class MyContent extends AbstractObject
 
     protected $_definitions = [
         'class' => [
-            'name' => 'Base',
-            'namespace' => '\Pressmind\ORM\Object\MediaObject'
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_media_object_my_contents',
@@ -46,6 +45,10 @@ class MyContent extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => null
             ],
@@ -59,8 +62,15 @@ class MyContent extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
-                'filters' => null
+                'filters' => null,
+                'index' => [
+                    'id_media_object' => 'index'
+                ]
             ],
             'id_my_content' => [
                 'title' => 'ID MyContent',
@@ -72,15 +82,22 @@ class MyContent extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
-                'filters' => null
+                'filters' => null,
+                'index' => [
+                    'id_my_content' => 'index'
+                ]
             ],
             'import_id' => [
                 'title' => 'Import ID',
                 'name' => 'import_id',
                 'type' => 'string',
                 'required' => false,
-                'filters' => null
+                'filters' => null,
             ],
             'editor_link' => [
                 'title' => 'Editor link',

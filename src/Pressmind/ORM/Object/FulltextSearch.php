@@ -15,7 +15,7 @@ class FulltextSearch extends AbstractObject
 {
     protected $_definitions = [
         'class' => [
-            'name' => self::class,
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_fulltext_search',
@@ -32,6 +32,10 @@ class FulltextSearch extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => NULL,
             ],
@@ -45,8 +49,15 @@ class FulltextSearch extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => NULL,
+                'index' => [
+                    'id_media_object' => 'index'
+                ]
             ],
             'var_name' => [
                 'title' => 'Variable Name',
@@ -60,6 +71,9 @@ class FulltextSearch extends AbstractObject
                     ],
                 ],
                 'filters' => NULL,
+                'index' => [
+                    'var_name' => 'index'
+                ]
             ],
             'language' => [
                 'title' => 'Variable Name',
@@ -69,10 +83,13 @@ class FulltextSearch extends AbstractObject
                 'validators' => [
                     [
                         'name' => 'maxlength',
-                        'params' => 255,
+                        'params' => 32,
                     ],
                 ],
                 'filters' => NULL,
+                'index' => [
+                    'language' => 'index'
+                ]
             ],
             'fulltext_values' => [
                 'title' => 'Variable Name',

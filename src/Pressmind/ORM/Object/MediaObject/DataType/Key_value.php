@@ -20,8 +20,7 @@ class Key_value extends AbstractObject
 {
     protected $_definitions = [
         'class' => [
-            'name' => 'Objectlink',
-            'namespace' => '\Pressmind\ORM\MediaObject\DataType',
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_media_object_key_value',
@@ -34,7 +33,16 @@ class Key_value extends AbstractObject
                 'type' => 'integer',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
             ],
             'id_media_object' => [
                 'title' => 'id_media_object',
@@ -42,7 +50,19 @@ class Key_value extends AbstractObject
                 'type' => 'integer',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_media_object' => 'index'
+                ]
             ],
             'section_name' => [
                 'title' => 'section_name',
@@ -58,7 +78,15 @@ class Key_value extends AbstractObject
                 'type' => 'string',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ],
+                'index' => [
+                    'language' => 'index'
+                ]
             ],
             'var_name'  => [
                 'title' => 'var_name',
@@ -66,7 +94,15 @@ class Key_value extends AbstractObject
                 'type' => 'string',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ]
+                ],
+                'index' => [
+                    'var_name' => 'index'
+                ]
             ],
             'rows' => [
                 'title' => 'rows',

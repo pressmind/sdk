@@ -19,8 +19,7 @@ class DataView extends AbstractObject
 
     protected $_definitions = [
         'class' => [
-            'name' => 'DataView',
-            'namespace' => '\Pressmind\ORM\Object',
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_data_views',
@@ -36,7 +35,7 @@ class DataView extends AbstractObject
                 'validators' => [
                     [
                         'name' => 'maxlength',
-                        'params' => 20,
+                        'params' => 22,
                     ],
                     [
                         'name' => 'unsigned',

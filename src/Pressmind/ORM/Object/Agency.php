@@ -33,6 +33,10 @@ class Agency extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => null,
             ],
@@ -45,7 +49,7 @@ class Agency extends AbstractObject
                     [
                         'name' => 'maxlength',
                         'params' => 255,
-                    ],
+                    ]
                 ],
                 'filters' => null,
             ],

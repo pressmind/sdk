@@ -41,8 +41,7 @@ class Picture extends AbstractObject
 
     protected $_definitions = [
         'class' => [
-            'name' => 'Picture',
-            'namespace' => '\Pressmind\ORM\MediaObject\DataType',
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_media_object_images',
@@ -56,7 +55,16 @@ class Picture extends AbstractObject
                 'type' => 'integer',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
             ],
             'id_picture' => [
                 'title' => 'id_picture',
@@ -64,7 +72,19 @@ class Picture extends AbstractObject
                 'type' => 'integer',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_picture' => 'index'
+                ]
             ],
             'id_media_object' => [
                 'title' => 'id_media_object',
@@ -72,7 +92,19 @@ class Picture extends AbstractObject
                 'type' => 'integer',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_media_object' => 'index'
+                ]
             ],
             'section_name' => [
                 'title' => 'section_name',
@@ -88,7 +120,15 @@ class Picture extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ],
+                'index' => [
+                    'language' => 'index'
+                ]
             ],
             'var_name'  => [
                 'title' => 'var_name',
@@ -96,7 +136,15 @@ class Picture extends AbstractObject
                 'type' => 'string',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ]
+                ],
+                'index' => [
+                    'language' => 'index'
+                ]
             ],
             'caption' => [
                 'title' => 'caption',
@@ -312,7 +360,7 @@ class Picture extends AbstractObject
      * @return \Pressmind\Storage\File
      * @throws Exception
      */
-    public function downloadOriginal($use_cache = true, $retry_counter = 0)
+    public function downloadOriginal($use_cache = true, $retry_counter = 0, $last_error = null)
     {
         $max_retries = 1;
         $download_url = $this->tmp_url;
@@ -323,13 +371,13 @@ class Picture extends AbstractObject
         $query = [];
         $url = parse_url($this->tmp_url);
         parse_str($url['query'], $query);
-        $last_error = null;
         if($retry_counter > 0 && $max_retries >= $retry_counter) {
             Writer::write('ID ' . $this->getId() . ': Retry No. ' . $retry_counter . ' of downloading image from ' . $download_url, WRITER::OUTPUT_FILE, 'image_processor', Writer::TYPE_INFO);
         }
+        $tmp_file_name = empty($this->file_name) ? $this->id_media_object . '_' . $this->id_picture . '.tmp' : $this->file_name;
         if($max_retries >= $retry_counter) {
             try {
-                $storage_file = $downloader->download($download_url, $this->file_name);
+                $storage_file = $downloader->download($download_url, $tmp_file_name);
                 $mime_type = $storage_file->getMimetype();
                 $this->_checkMimetype($mime_type);
                 $new_file_name = $this->id_media_object . '_' . $query['id'] . '.' . HelperFunctions::getExtensionFromMimeType($storage_file->getMimetype());
@@ -342,8 +390,8 @@ class Picture extends AbstractObject
                 return $storage_file;
             } catch (Exception $e) {
                 $last_error = $e->getMessage();
-                Writer::write('ID ' . $this->getId() . ': Downloading image from ' . $download_url . ' failed at try: ' . $retry_counter, WRITER::OUTPUT_FILE, 'image_processor', Writer::TYPE_ERROR);
-                $this->downloadOriginal(false, ($retry_counter + 1));
+                Writer::write('ID ' . $this->getId() . ': Downloading image from ' . $download_url . ' failed at try ' . $retry_counter . '. Error: ' . $last_error, WRITER::OUTPUT_FILE, 'image_processor', Writer::TYPE_ERROR);
+                $this->downloadOriginal(false, ($retry_counter + 1), $last_error);
             } catch (S3Exception $e) {
                 $last_error = $e->getMessage();
             }

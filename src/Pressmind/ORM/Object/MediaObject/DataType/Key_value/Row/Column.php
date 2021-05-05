@@ -26,12 +26,12 @@ class Column extends AbstractObject
 {
     protected $_definitions = [
         'class' => [
-            'name' => 'Column',
-            'namespace' => '\Pressmind\ORM\MediaObject\DataType\Key_value\Row',
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_media_object_key_value_row_columns',
             'primary_key' => 'id',
+            'order_columns' => ['sort' => 'ASC']
         ],
         'properties' => [
             'id' => [
@@ -40,7 +40,16 @@ class Column extends AbstractObject
                 'type' => 'integer',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
             ],
             'id_key_value' => [
                 'title' => 'id_key_value',
@@ -48,7 +57,19 @@ class Column extends AbstractObject
                 'type' => 'integer',
                 'required' => false,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_key_value' => 'index'
+                ]
             ],
             'id_key_value_row' => [
                 'title' => 'id_key_value_row',
@@ -56,7 +77,19 @@ class Column extends AbstractObject
                 'type' => 'integer',
                 'required' => false,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_key_value_row' => 'index'
+                ]
             ],
             'sort' => [
                 'title' => 'sort',

@@ -19,12 +19,12 @@ class Row extends AbstractObject
 {
     protected $_definitions = [
         'class' => [
-            'name' => 'Row',
-            'namespace' => '\Pressmind\ORM\MediaObject\DataType\Key_value',
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_media_object_key_value_rows',
             'primary_key' => 'id',
+            'order_columns' => ['sort' => 'ASC']
         ],
         'properties' => [
             'id' => [
@@ -33,7 +33,16 @@ class Row extends AbstractObject
                 'type' => 'integer',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
             ],
             'id_key_value' => [
                 'title' => 'id_key_value',
@@ -41,7 +50,19 @@ class Row extends AbstractObject
                 'type' => 'integer',
                 'required' => true,
                 'filters' => null,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_key_value' => 'index'
+                ]
             ],
             'sort' => [
                 'title' => 'sort',

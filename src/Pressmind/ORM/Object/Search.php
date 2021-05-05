@@ -18,7 +18,7 @@ class Search extends AbstractObject
     protected $_definitions = array(
         'class' =>
             array(
-                'name' => 'Search',
+                'name' => self::class
             ),
         'database' =>
             array(

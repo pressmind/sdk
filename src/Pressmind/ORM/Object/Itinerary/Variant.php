@@ -26,8 +26,7 @@ class Variant extends AbstractObject
 {
     protected $_definitions = [
         'class' => [
-            'name' => 'Variant',
-            'namespace' => 'Pressmind\ORM\Object\Itinerary'
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_itinerary_variants',
@@ -39,7 +38,16 @@ class Variant extends AbstractObject
                 'name' => 'id',
                 'type' => 'integer',
                 'required' => true,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
                 'filters' => null
             ],
             'id_media_object' => [
@@ -47,7 +55,19 @@ class Variant extends AbstractObject
                 'name' => 'id_media_object',
                 'type' => 'integer',
                 'required' => false,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_media_object' => 'index'
+                ],
                 'filters' => null
             ],
             'id_booking_package' => [
@@ -55,7 +75,19 @@ class Variant extends AbstractObject
                 'name' => 'id_booking_package',
                 'type' => 'integer',
                 'required' => false,
-                'validators' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_booking_package' => 'index'
+                ],
                 'filters' => null
             ],
             'booking_package_name' => [

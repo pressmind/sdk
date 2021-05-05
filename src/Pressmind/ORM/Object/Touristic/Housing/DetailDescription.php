@@ -13,15 +13,13 @@ use Pressmind\ORM\Object\AbstractObject;
 class DetailDescription extends AbstractObject
 {
     protected $_definitions = array(
-        'class' =>
-            array(
-                'name' => 'TouristicHousingDetailDescription',
-            ),
-        'database' =>
-            array(
-                'table_name' => 'pmt2core_touristic_housing_detail_descriptions',
-                'primary_key' => NULL,
-            ),
+        'class' => [
+            'name' => self::class,
+        ],
+        'database' => [
+            'table_name' => 'pmt2core_touristic_housing_detail_descriptions',
+            'primary_key' => NULL,
+        ],
         'properties' =>
             array(
                 'id_housing_package' =>

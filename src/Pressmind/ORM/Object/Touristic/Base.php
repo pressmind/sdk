@@ -21,8 +21,7 @@ class Base extends AbstractObject
 
     protected $_definitions = [
         'class' => [
-            'name' => 'Base',
-            'namespace' => '\Pressmind\ORM\Object\Touristic'
+            'name' => self::class
         ],
         'database' => [
             'table_name' => 'pmt2core_touristic_base',
@@ -38,7 +37,7 @@ class Base extends AbstractObject
                     [
                         'name' => 'maxlength',
                         'params' => 32,
-                    ],
+                    ]
                 ],
                 'filters' => NULL
             ],
@@ -52,8 +51,15 @@ class Base extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
-                'filters' => NULL
+                'filters' => NULL,
+                'index' => [
+                    'id_media_object' => 'index'
+                ]
             ],
             'id_season_set' => [
                 'title' => 'ID Season Set',
@@ -65,8 +71,15 @@ class Base extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
-                'filters' => NULL
+                'filters' => NULL,
+                'index' => [
+                    'id_season_set' => 'index'
+                ]
             ],
             'booking_on_request' => [
                 'title' => 'Booking on request',
@@ -85,6 +98,10 @@ class Base extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 22,
                     ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => NULL
             ]

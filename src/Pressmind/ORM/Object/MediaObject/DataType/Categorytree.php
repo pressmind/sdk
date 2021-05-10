@@ -13,7 +13,7 @@ use Pressmind\ORM\Object\CategoryTree\Item;
  * @property string $language
  * @property string $var_name
  * @property integer $id_tree
- * @property integer $id_item
+ * @property string $id_item
  * @property \Pressmind\ORM\Object\CategoryTree $tree
  * @property Item $item;
  */
@@ -125,7 +125,7 @@ class Categorytree extends AbstractObject
                 'validators' => [
                     [
                         'name' => 'maxlength',
-                        'params' => 32,
+                        'params' => 255,
                     ]
                 ],
                 'index' => [

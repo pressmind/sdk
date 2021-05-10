@@ -152,8 +152,6 @@ class Search
         $this->_concatSql();
         if(Registry::getInstance()->get('config')['cache']['enabled'] && in_array('SEARCH', Registry::getInstance()->get('config')['cache']['types'])) {
             $key = 'SEARCH_' . md5($this->_sql . json_encode($this->_values));
-            echo $key;
-            echo $this->_sql;
             $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
             if ($cache_adapter->exists($key)) {
                 Writer::write(get_class($this) . ' exec() reading from cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);

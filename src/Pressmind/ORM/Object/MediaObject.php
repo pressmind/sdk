@@ -21,6 +21,7 @@ use Pressmind\ORM\Object\Touristic\Transport;
 use Pressmind\Registry;
 use Pressmind\Search\CheapestPrice;
 use Pressmind\ValueObject\MediaObject\Result\GetByPrettyUrl;
+use Pressmind\ValueObject\MediaObject\Result\GetPrettyUrls;
 use stdClass;
 
 /**
@@ -576,7 +577,7 @@ class MediaObject extends AbstractObject
     public function render($template, $language = null, $custom_data = null) {
         $config = Registry::getInstance()->get('config');
         if(is_null($language)) {
-            $language = $config['data']['languages']['default'];
+            //$language = $config['data']['languages']['default'];
         }
         $media_type_name = ucfirst(HelperFunctions::human_to_machine($config['data']['media_types'][$this->id_object_type]));
         $media_object = $this;
@@ -662,7 +663,7 @@ class MediaObject extends AbstractObject
      * @return string[]
      * @throws Exception
      */
-    public function buildPrettyUrls()
+    public function buildPrettyUrls($language = null)
     {
         $config = Registry::getInstance()->get('config');
         $fields = isset($config['data']['media_types_pretty_url'][$this->id_object_type]['fields']) ? $config['data']['media_types_pretty_url'][$this->id_object_type]['fields'] : ['name'];
@@ -673,7 +674,7 @@ class MediaObject extends AbstractObject
             if(in_array($field, $this->getPropertyNames())) {
                 $url_array[] = strtolower(HelperFunctions::replaceLatinSpecialChars(trim($this->$field)));
             } else {
-                $object = $this->getDataForLanguage();
+                $object = $this->getDataForLanguage($language);
                 if($object->getPropertyDefinition($field)['type'] == 'string') {
                     if(!empty($object->$field)) {
                         $url_array[] = strtolower(HelperFunctions::replaceLatinSpecialChars(trim(strip_tags($object->$field))));
@@ -737,26 +738,52 @@ class MediaObject extends AbstractObject
     /**
      * @return string|null
      */
-    public function getPrettyUrl()
+    public function getPrettyUrl($language = null)
     {
-        $this->routes;
         $routes = $this->routes;
+        $language_prefix = is_null($language) ? null : '/' . $language;
         if(!empty($routes)) {
-            return $routes[0]->route;
+            return $language_prefix . $routes[0]->route;
         }
         return null;
     }
 
     /**
+     * @return GetPrettyUrls[]
+     */
+    public function getPrettyUrls()
+    {
+        $config = Registry::getInstance()->get('config');
+        $result = [];
+        foreach ($this->routes as $route) {
+            $object = new GetPrettyUrls();
+
+            $object->id = $route->id;
+            $object->id_media_object = $route->id_media_object;
+            $object->id_object_type = $route->id_object_type;
+            $object->route = $route->route;
+            $object->language = $route->language;
+            $object->is_default = $route->language == $config['data']['languages']['default'];
+
+            $result[] = $object;
+        }
+        return $result;
+    }
+
+    /**
      * @param string $route
      * @param integer $id_object_type
-     * @param string $language = 'de'
+     * @param null|string $language
      * @param null|integer $visibility
      * @return GetByPrettyUrl[]
      * @throws Exception
      */
-    public static function getByPrettyUrl($route, $id_object_type = null, $language = 'de', $visibility = null)
+    public static function getByPrettyUrl($route, $id_object_type = null, $language = null, $visibility = null)
     {
+        if(is_null($language)) {
+            $config = Registry::getInstance()->get('config');
+            $language = $config['data']['languages']['default'];
+        }
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
         $sql = [];

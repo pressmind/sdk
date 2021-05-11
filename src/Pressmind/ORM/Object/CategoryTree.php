@@ -116,13 +116,17 @@ class CategoryTree extends AbstractObject
 
     /**
      * @param string|int $media_object_type
-     * @param $variable_name
-     * @param string $language
+     * @param string $variable_name
+     * @param null|string $language
      * @return CategoryTree
      * @throws Exception
      */
-    public static function findForMediaObjectType($media_object_type, $variable_name, $language = 'de')
+    public static function findForMediaObjectType($media_object_type, $variable_name, $language = null)
     {
+        if(is_null($language)) {
+            $config = Registry::getInstance()->get('config');
+            $language = $config['data']['languages']['default'];
+        }
         $media_object_type_id = null;
         if(is_int($media_object_type)) {
             $media_object_type_id = $media_object_type;

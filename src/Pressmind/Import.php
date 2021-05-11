@@ -15,7 +15,9 @@ use Pressmind\Import\Season;
 use Pressmind\Import\StartingPointOptions;
 use Pressmind\Import\TouristicData;
 use Pressmind\Log\Writer;
+use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\MediaObject;
+use Pressmind\ORM\Object\Route;
 use Pressmind\REST\Client;
 use \DirectoryIterator;
 use \Exception;
@@ -273,12 +275,25 @@ class Import
                 }
             }
 
+            $brands_importer = new Brand();
+            $brands_importer->import();
+
+            $seasons_importer = new Season();
+            $seasons_importer->import();
+
+            $itinerary_importer = new Itinerary($id_media_object);
+            $itinerary_importer->import();
+
+            $media_object_importer = new Import\MediaObject();
+            $media_object = $media_object_importer->import($response[0]);
+
             if (is_array($response[0]->data)) {
-                $media_object_data_importer = new MediaObjectData($response[0], $id_media_object, $import_linked_objects);
+                $media_object_data_importer = new MediaObjectData($response[0], $id_media_object, $this->_import_type, $import_linked_objects);
                 $media_object_data_importer_result = $media_object_data_importer->import();
 
                 $linked_media_object_ids = $media_object_data_importer_result['linked_media_object_ids'];
                 $category_tree_ids = $media_object_data_importer_result['category_tree_ids'];
+                $imported_languages = $media_object_data_importer_result['languages'];
 
                 if(is_array($category_tree_ids) && count($category_tree_ids) > 0) {
                     $this->_log[] = ' Importer::_importMediaObjectData(' . $id_media_object . '): Importing Category Trees';
@@ -290,19 +305,35 @@ class Import
                     $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): found linked media objects in media object data. Importing ...', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
                     $this->importMediaObjectsFromArray($linked_media_object_ids, false);
                 }
+
+                $media_object->readRelations();
+                /**@var Pdo $db**/
+                $db = Registry::getInstance()->get('db');
+                $this->_log[] = ' Deleting Route entries for media object id: ' . $id_media_object;
+                $db->delete('pmt2core_routes', ['id_media_object = ?', $id_media_object]);
+                $this->_log[] = ' Inserting Route entries for media object id: ' . $id_media_object;
+
+                if(is_array($imported_languages)) {
+                    foreach ($imported_languages as $language) {
+                        try {
+                            $urls = $media_object->buildPrettyUrls($language);
+                            foreach ($urls as $url) {
+                                $route = new Route();
+                                $route->id_media_object = $id_media_object;
+                                $route->id_object_type = $media_object->id_object_type;
+                                $route->route = $url;
+                                $route->language = $language;
+                                $route->create();
+                                unset($route);
+                            }
+                        } catch (Exception $e) {
+                            $this->_log[] = ' Creating routes failed for media object id ' . $id_media_object . ': ' . $e->getMessage();
+                            $this->_errors[] = ' Creating routes failed for media object id ' . $id_media_object . ': ' . $e->getMessage();
+                        }
+                    }
+                    $this->_log[] = ' Routes inserted for media object id: ' . $id_media_object;
+                }
             }
-
-            $brands_importer = new Brand();
-            $brands_importer->import();
-
-            $seasons_importer = new Season();
-            $seasons_importer->import();
-
-            $itinerary_importer = new Itinerary($id_media_object);
-            $itinerary_importer->import();
-
-            $media_object_importer = new Import\MediaObject();
-            $media_object_importer->import($response[0]);
 
             $my_content_importer_has_run = false;
 
@@ -343,6 +374,7 @@ class Import
             }
 
             unset($response);
+            unset($media_object);
 
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '):  Objects removed from heap', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . '--------------------------------------------------------------------------------', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);

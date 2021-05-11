@@ -4,9 +4,12 @@
 namespace Pressmind\Import;
 
 
+use Pressmind\DB\Adapter\Pdo;
+use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\MediaType\Factory;
 use Exception;
 use Pressmind\HelperFunctions;
+use Pressmind\ORM\Object\Route;
 use Pressmind\Registry;
 use stdClass;
 
@@ -65,6 +68,7 @@ class MediaObjectData extends AbstractImport implements ImportInterface
         $this->_log[] = ' MediaObjectData::import(' . $this->_id_media_object . '): Importing media object data';
         $values = [];
         $linked_media_object_ids = [];
+        $languages = [];
         foreach ($this->_data->data as $data_field) {
             if (is_array($data_field->sections)) {
                 foreach ($data_field->sections as $section) {
@@ -101,6 +105,7 @@ class MediaObjectData extends AbstractImport implements ImportInterface
                         $values[$language]['language'] = strtolower($language);
                         $values[$language]['id_media_object'] = $this->_id_media_object;
                         $values[$language][$column_name] = $value;
+                        $languages[] = strtolower($language);
                     }
                 }
             }
@@ -110,12 +115,11 @@ class MediaObjectData extends AbstractImport implements ImportInterface
         }
         foreach ($values as $language => $section_data) {
             try {
-                $media_object = Factory::createById($this->_data->id_media_objects_data_type);
-                $media_object->fromImport($section_data);
-                $media_object->create();
-                $this->_log[] = ' Importer::_importMediaObjectData(' . $this->_id_media_object . '): Object ' . get_class($media_object) . ' created with ID: ' . $media_object->getId();
-                unset($media_object);
-                unset($old_object);
+                $media_object_data = Factory::createById($this->_data->id_media_objects_data_type);
+                $media_object_data->fromImport($section_data);
+                $media_object_data->create();
+                $this->_log[] = ' Importer::_importMediaObjectData(' . $this->_id_media_object . '): Object ' . get_class($media_object_data) . ' created with ID: ' . $this->_id_media_object;
+                unset($media_object_data);
             } catch (Exception $e) {
                 $this->_log[] = $e->getMessage();
             }
@@ -125,7 +129,8 @@ class MediaObjectData extends AbstractImport implements ImportInterface
 
         return [
             'linked_media_object_ids' => $linked_media_object_ids,
-            'category_tree_ids' => $category_tree_ids
+            'category_tree_ids' => $category_tree_ids,
+            'languages' => array_unique($languages)
         ];
     }
 }

@@ -19,6 +19,7 @@ class MediaObject extends AbstractImport
      */
     public function import($data)
     {
+        /**@var Pdo $db**/
         $db = Registry::getInstance()->get('db');
 
         $media_object = new \Pressmind\ORM\Object\MediaObject();
@@ -44,14 +45,14 @@ class MediaObject extends AbstractImport
         $media_object->booking_link = $data->booking_link;
         $media_object->sales_priority = $data->sales_prio;
         $media_object->sales_position = $data->position;
-        try {
+        /*try {
             $old_media_object = new \Pressmind\ORM\Object\MediaObject();
             $old_media_object->read($data->id_media_object);
             $old_media_object->delete();
             unset($old_media_object);
         } catch (Exception $e) {
             $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Deleting old object failed';
-        }
+        }*/
         $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Creating media object';
         try {
             $media_object->create();
@@ -59,28 +60,9 @@ class MediaObject extends AbstractImport
             $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Creating media object failed: ' . $e->getMessage();
             $this->_errors[] = 'Importer::importMediaObject(' . $media_object->getId() . '):  Creating media object failed: ' . $e->getMessage();
         }
-        $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Deleting Route entries';
-        $db->delete('pmt2core_routes', ['id_media_object = ?', $media_object->getId()]);
-        $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Inserting Route entries';
         $media_object->setReadRelations(true);
         $media_object->readRelations();
-        try {
-            $urls = $media_object->buildPrettyUrls();
-            foreach ($urls as $url) {
-                $route = new Route();
-                $route->id_media_object = $media_object->getId();
-                $route->id_object_type = $media_object->id_object_type;
-                $route->route = $url;
-                $route->language = 'de';
-                $route->create();
-            }
-        } catch (Exception $e) {
-            $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Creating routes failed: ' . $e->getMessage();
-            $this->_errors[] = 'Importer::importMediaObject(' . $media_object->getId() . '):  Creating routes failed: ' . $e->getMessage();
-        }
-        $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Routes updated';
         $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Deleting CheapestPriceSpeed entries';
-        /**@var Pdo $db**/
         $db->delete('pmt2core_cheapest_price_speed', ['id_media_object = ?', $media_object->getId()]);
         $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Inserting CheapestPriceSpeed entries';
         try {
@@ -96,5 +78,7 @@ class MediaObject extends AbstractImport
             $this->_errors[] = 'Importer::importMediaObject(' . $media_object->getId() . '):  Creating search index failed: ' . $e->getMessage();
         }
         $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  CheapestPriceSpeed table updated';
+
+        return $media_object;
     }
 }

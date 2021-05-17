@@ -251,10 +251,10 @@ class HelperFunctions
 
     /**
      * trims text to a space then adds ellipses if desired
-     * @param string $input text to trim
-     * @param int $length in characters to trim to
-     * @param string|bool $ellipses ellipses are to be added
-     * @param bool $strip_html if html tags are to be stripped
+     * @param string $pInput text to trim
+     * @param int $pLength in characters to trim to
+     * @param string|bool $pEllipses ellipses are to be added
+     * @param bool $pStripHtml if html tags are to be stripped
      * @return string
      */
     public static function trimText($pInput, $pLength, $pEllipses = '...', $pStripHtml = true)
@@ -641,5 +641,35 @@ class HelperFunctions
             [BASE_PATH,APPLICATION_PATH,WEBSERVER_DOCUMENT_ROOT,WEBSERVER_HTTP, $config['database']['dbname']],
             $string
         );
+    }
+
+    /**
+     * @param array $arguments
+     * @return array
+     */
+    public static function parseCliArguments($arguments) {
+        $args_list = [];
+        $args_dictionary = [];
+        for ($i = 0; $i < count($arguments); $i++) {
+            if(substr($arguments[$i], 0, 2) == '--') {
+                if(isset($arguments[$i + 1]) && substr($arguments[$i + 1], 0, 1) != '-') {
+                    $args_dictionary[substr($arguments[$i], 2)] = $arguments[$i + 1];
+                    $i++;
+                } else {
+                    $args_list[] = substr($arguments[$i], 2);
+                }
+            } else if(substr($arguments[$i], 0, 1) == '-') {
+                $arg = substr($arguments[$i], 1);
+                for($j = 0; $j < strlen($arg); $j++) {
+                    $args_list[] = substr($arg, $j, 1);
+                }
+            } else {
+                $args_list[] = $arguments[$i];
+            }
+        }
+        return [
+            'list' => $args_list,
+            'dictionary' => $args_dictionary
+        ];
     }
 }

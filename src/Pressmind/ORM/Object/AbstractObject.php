@@ -679,7 +679,7 @@ abstract class AbstractObject implements SplSubject
                 if(!empty($this->$key)) {
                     /**@var AbstractObject $object**/
                     $object = $this->$key;
-                    print_r($object);
+                    // print_r($object);
                     if(isset($property['relation']['on_save_related_properties']) && is_array($property['relation']['on_save_related_properties'])) {
                         foreach($property['relation']['on_save_related_properties'] as $local_property_name => $foreign_property_name) {
                             $object->$foreign_property_name = $this->$local_property_name;

@@ -49,7 +49,8 @@ class S3 implements ProviderInterface
             $result = $this->_s3_client->putObject([
                 'Bucket' => $bucket->name,
                 'Key' => $file->name,
-                'Body' => $file->content
+                'Body' => $file->content,
+                'ContentType' => $file->getMimetype()
             ]);
         } catch (S3Exception $e) {
             Writer::write($e->getMessage(), Writer::OUTPUT_FILE, $this->_log_file_name, Writer::TYPE_ERROR);

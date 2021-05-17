@@ -951,25 +951,34 @@ class MediaObject extends AbstractObject
             $complete_fulltext = [];
             $fulltext = [];
             foreach ($this->data as $data) {
-                $complete_fulltext = [];
+                $complete_fulltext[$data->language] = [];
                 $fulltext[] = [
                     'var_name' => 'code',
                     'language' => $data->language,
                     'id_media_object' => $this->getId(),
                     'fulltext_values' => $this->code
                 ];
+                if (in_array('code', $config['data']['media_types_fulltext_index_fields'][$this->id_object_type])) {
+                    $complete_fulltext[$data->language][] = $this->code;
+                }
                 $fulltext[] = [
                     'var_name' => 'name',
                     'language' => $data->language,
                     'id_media_object' => $this->getId(),
                     'fulltext_values' => $this->name
                 ];
+                if (in_array('name', $config['data']['media_types_fulltext_index_fields'][$this->id_object_type])) {
+                    $complete_fulltext[$data->language][] = $this->name;
+                }
                 $fulltext[] = [
                     'var_name' => 'tags',
                     'language' => $data->language,
                     'id_media_object' => $this->getId(),
                     'fulltext_values' => $this->tags
                 ];
+                if (in_array('tags', $config['data']['media_types_fulltext_index_fields'][$this->id_object_type])) {
+                    $complete_fulltext[$data->language][] = $this->tags;
+                }
                 foreach ($data->getPropertyDefinitions() as $name => $definition) {
                     $add_to_complete_fulltext = in_array($name, $config['data']['media_types_fulltext_index_fields'][$this->id_object_type]);
                     if ($definition['type'] == 'string') {

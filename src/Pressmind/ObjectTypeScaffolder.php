@@ -129,7 +129,7 @@ class ObjectTypeScaffolder
         if(!isset($conf['data']['media_types_fulltext_index_fields'])) {
             $conf['data']['media_types_fulltext_index_fields'] = [];
         }
-        $conf['data']['media_types_fulltext_index_fields'][$this->_tablename] = $this->getVarNames();
+        $conf['data']['media_types_fulltext_index_fields'][$this->_tablename] = array_merge(['name' => 'name', 'code' => 'code', 'tags' => 'tags'], $this->getVarNames());
         Registry::getInstance()->get('config_adapter')->write($conf);
         Registry::getInstance()->add('config', $conf);
         foreach ($this->_log as $log) {

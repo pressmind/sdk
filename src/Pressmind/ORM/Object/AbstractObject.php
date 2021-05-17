@@ -277,7 +277,7 @@ abstract class AbstractObject implements SplSubject
                 $this->_readFromCache($id);
             } else {
                 $this->_readFromDb($id);
-            };
+            }
         }
         return true;
     }
@@ -947,6 +947,15 @@ abstract class AbstractObject implements SplSubject
                 }
             }
         }
+    }
+
+    /**
+     * @param $name
+     * @return mixed|string|null
+     * @throws Exception
+     */
+    public function __isset($name) {
+        return $this->__get($name);
     }
 
     /**

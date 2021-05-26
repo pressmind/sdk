@@ -373,6 +373,8 @@ class Import
                 }
             }
 
+            $media_object->createSearchIndex();
+
             unset($response);
             unset($media_object);
 

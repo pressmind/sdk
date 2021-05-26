@@ -159,7 +159,7 @@ class Import
             if (!$file_info->isDot()) {
                 $id_media_object = $file_info->getFilename();
                 $import_linked_media_objects = false;
-                if(isset($conf['data']['primary_media_type_ids']) && !empty($conf['data']['primary_media_type_ids'])) {
+                if(isset($config['data']['primary_media_type_ids']) && !empty($config['data']['primary_media_type_ids'])) {
                     $import_linked_media_objects = true;
                 }
                 if ($this->importMediaObject($id_media_object, $import_linked_media_objects)) {
@@ -382,8 +382,6 @@ class Import
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . '--------------------------------------------------------------------------------', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             $overall_time_elapsed = number_format(microtime(true) - $this->_overall_start_time, 4) . ' sec';
             $this->_log[] = Writer::write('Total import time: ' . $overall_time_elapsed, Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
-
-            $this->postImport($id_media_object);
 
             return ($import_error == false);
         } else {

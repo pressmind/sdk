@@ -6,12 +6,12 @@ namespace Pressmind\ORM\Object;
 /**
  * Class AgencyToMediaObject
  * @package Pressmind\ORM\Object
+ * @property integer $id
  * @property integer $id_agency
  * @property integer $id_media_object
  */
 class AgencyToMediaObject extends AbstractObject
 {
-    protected $_dont_use_autoincrement_on_primary_key = true;
 
     protected $_definitions = array(
         'class' => [
@@ -19,10 +19,27 @@ class AgencyToMediaObject extends AbstractObject
         ],
         'database' => [
             'table_name' => 'pmt2core_agency_to_media_object',
-            'primary_key' => 'id_agency',
+            'primary_key' => 'id',
         ],
         'properties' =>
             [
+                'id' => [
+                    'title' => 'ID',
+                    'name' => 'id',
+                    'type' => 'integer',
+                    'required' => true,
+                    'validators' => [
+                        [
+                            'name' => 'maxlength',
+                            'params' => 22,
+                        ],
+                        [
+                            'name' => 'unsigned',
+                            'params' => null,
+                        ]
+                    ],
+                    'filters' => NULL,
+                ],
                 'id_agency' => [
                     'title' => 'Agency ID',
                     'name' => 'id_agency',

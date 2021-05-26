@@ -152,13 +152,12 @@ class Task extends AbstractObject
                 try {
                     Writer::write('Calling method "' . $method->name . '"', Writer::OUTPUT_FILE, 'scheduler');
                     Writer::write('Parameters "' . print_r($parameters, true) . '"', Writer::OUTPUT_FILE, 'scheduler');
-                    $method_return = call_user_func_array([$obj, $method->name], array_values($parameters));
-                    Writer::write('Task "' . $method->name . '" returned: ' . $method_return, Writer::OUTPUT_FILE, 'scheduler');
+                    $return = call_user_func_array([$obj, $method->name], array_values($parameters));
+                    Writer::write('Task "' . $method->name . '" returned: ' . $return, Writer::OUTPUT_FILE, 'scheduler');
                 } catch (Exception $e) {
                     Writer::write('Error while processing task ' . $method->name . ' in job' . $this->name . ': ' . $e->getMessage(), Writer::OUTPUT_FILE, 'scheduler', Writer::TYPE_ERROR);
                 }
             }
-            $return = 'Process successful';
         } catch (Exception $e) {
             Writer::write('Error while processing job' . $this->name . ': ' . $e->getMessage(), Writer::OUTPUT_FILE, 'scheduler', Writer::TYPE_ERROR);
             $return = $e->getMessage();

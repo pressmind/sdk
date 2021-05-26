@@ -32,6 +32,8 @@ abstract class AbstractObject implements SplSubject
      */
     protected $_check_variables_for_existence = true;
 
+    protected $_dont_auto_create_has_one_relations = false;
+
     /**
      * @var bool
      */
@@ -680,7 +682,7 @@ abstract class AbstractObject implements SplSubject
                 $related_key = $property['relation']['related_id'];
                 $object = $this->$key;
                 if(!empty($object)) {
-                    if(!isset($this->dont_auto_create_has_one_relations) || $this->dont_auto_create_has_one_relations == false) {
+                    if($this->_dont_auto_create_has_one_relations == false) {
                         $object->create();
                         $this->$related_key = $object->getId();
                         $this->update();

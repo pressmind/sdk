@@ -20,7 +20,7 @@ use Pressmind\ORM\Object\CategoryTree\Item;
 class Categorytree extends AbstractObject
 {
 
-    public $dont_auto_create_has_one_relations = true;
+    protected $_dont_auto_create_has_one_relations = true;
 
     protected $_definitions = [
         'class' => [

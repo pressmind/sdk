@@ -5,6 +5,7 @@ namespace Pressmind\ORM\Object\Touristic;
 use DateTime;
 use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\Touristic\Insurance\Calculated;
+use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToInsurance;
 use Pressmind\ORM\Object\Touristic\Insurance\PriceTable;
 
 /**
@@ -217,6 +218,7 @@ class Insurance extends AbstractObject
                     'type' => 'ManyToMany',
                     'class' => Insurance::class,
                     'relation_table' => 'pmt2core_touristic_insurance_to_insurance',
+                    'relation_class' => InsuranceToInsurance::class,
                     'related_id' => 'id_insurance',
                     'target_id' => 'id_sub_insurance',
                 ],

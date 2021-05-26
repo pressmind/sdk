@@ -522,6 +522,7 @@ class MediaObject extends AbstractObject
                     'type' => 'ManyToMany',
                     'class' => Agency::class,
                     'relation_table' => 'pmt2core_agency_to_media_object',
+                    'relation_class' => AgencyToMediaObject::class,
                     'related_id' => 'id_media_object',
                     'target_id' => 'id_agency'
                 ]

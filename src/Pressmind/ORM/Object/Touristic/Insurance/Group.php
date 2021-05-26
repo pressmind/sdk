@@ -79,6 +79,7 @@ class Group extends AbstractObject
                     'type' => 'ManyToMany',
                     'class' => Insurance::class,
                     'relation_table' => 'pmt2core_touristic_insurance_to_group',
+                    'relation_class' => InsuranceToGroup::class,
                     'related_id' => 'id_insurance_group',
                     'target_id' => 'id_insurance',
                 ],

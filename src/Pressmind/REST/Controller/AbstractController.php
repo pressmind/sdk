@@ -92,19 +92,22 @@ abstract class AbstractController
      * @throws Exception
      */
     public function read($id, $readRelations = false, $apiTemplate = false, $properties = null) {
-        $this->orm_class->read($id);
-        $this->orm_class->setReadRelations($readRelations);
-        $this->orm_class->readRelations();
-        if(!is_null($apiTemplate)) {
-            return $this->orm_class->renderApiOutputTemplate($apiTemplate);
-        }
-        if(!is_null($properties) && is_array($properties)) {
-            $return = [];
-            foreach ($properties as $property_name) {
-                $return[$property_name] = $this->orm_class->$property_name;
+        if(!is_null($this->orm_class->read($id))) {
+            $this->orm_class->setReadRelations($readRelations);
+            $this->orm_class->readRelations();
+            if (!is_null($apiTemplate)) {
+                return $this->orm_class->renderApiOutputTemplate($apiTemplate);
             }
-            return $return;
+            if (!is_null($properties) && is_array($properties)) {
+                $return = [];
+                foreach ($properties as $property_name) {
+                    $return[$property_name] = $this->orm_class->$property_name;
+                }
+                return $return;
+            }
+            return $this->orm_class;
+        } else {
+            return null;
         }
-        return $this->orm_class;
     }
 }

@@ -33,6 +33,7 @@ class Writer
         $config = Registry::getInstance()->get('config');
         $log_file_name = $filename;
         $log_modes = is_array($config['logging']['mode']) ? $config['logging']['mode'] : [$config['logging']['mode']];
+        $log_categories = (isset($config['logging']['categories']) && is_array($config['logging']['categories'])) ? $config['logging']['categories'] : [$filename];
         if($type != self::TYPE_INFO) {
             $log_file_name .= '_' . strtolower($type);
         }
@@ -57,7 +58,7 @@ class Writer
                     }
                 }
             } else if($config['logging']['storage'] == 'database') {
-                if (in_array('ALL', $log_modes) || in_array($type, $log_modes)) {
+                if ((in_array('ALL', $log_modes) || in_array($type, $log_modes)) && (in_array('ALL', $log_categories) || in_array($filename, $log_categories))) {
                     $log_set = new Log();
                     $log_set->type = $type;
                     $log_set->trace = json_encode(self::getTrace());

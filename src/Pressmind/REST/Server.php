@@ -187,14 +187,25 @@ class Server
                     if($result && !$cache_update) {
                         $return = json_decode($result);
                     } else {
-                        $request =  [
-                            'type' => 'REST',
-                            'classname' => $classname,
-                            'method' => $method,
-                            'parameters' => $parameters
-                        ];
+                        $addToCache = true;
                         $return = $class->$method($parameters);
-                        $cache_adapter->add($key, json_encode($return), $request);
+                        if(empty($return)) {
+                            $addToCache = false;
+                        }
+                        if($classname == '\Pressmind\REST\Controller\Search') {
+                            if(!isset($return['totalResultCount']) || $return['totalResultCount'] == 0) {
+                                $addToCache = false;
+                            }
+                        }
+                        if($addToCache) {
+                            $request = [
+                                'type' => 'REST',
+                                'classname' => $classname,
+                                'method' => $method,
+                                'parameters' => $parameters
+                            ];
+                            $cache_adapter->add($key, json_encode($return), $request);
+                        }
                     }
                 } else {
                     $return = $class->$method($parameters);

@@ -2,12 +2,11 @@
 
 namespace Pressmind\ORM\Object;
 
+use DateTime;
+use Error;
 use \Exception;
-use MongoDB\Driver\WriteResult;
-use Pressmind\Cache\Adapter\Redis;
 use Pressmind\DB\Adapter\AdapterInterface;
-use Pressmind\DB\Adapter\Pdo;
-use Pressmind\DB\Typemapper\Mysql;
+use Pressmind\DB\IntegrityCheck\Mysql;
 use Pressmind\Import\Mapper\Factory;
 use Pressmind\Log\Writer;
 use Pressmind\Registry;
@@ -56,7 +55,7 @@ abstract class AbstractObject implements SplSubject
 
     /**
      * @var bool
-     * @todo neccessary?
+     * @todo necessary?
      */
     protected $_permissions = array(
         'read' => 'all',
@@ -98,9 +97,9 @@ abstract class AbstractObject implements SplSubject
         }
     }
 
-    private function _write_log($logtext)
+    private function _write_log($logText)
     {
-        $text =  'Time: ' . number_format(microtime(true) - $this->_start_time, 8) . " " . " Heap: " . bcdiv(memory_get_usage(), (1000 * 1000), 2) . ' MByte ' . get_class($this) . " " . $logtext;
+        $text =  'Time: ' . number_format(microtime(true) - $this->_start_time, 8) . " " . " Heap: " . bcdiv(memory_get_usage(), (1000 * 1000), 2) . ' MByte ' . get_class($this) . " " . $logText;
         $this->_log[] = $text;
     }
 
@@ -168,7 +167,7 @@ abstract class AbstractObject implements SplSubject
                     }
                 }
                 if($value === 'CURRENT_DATE') {
-                    $now = new \DateTime();
+                    $now = new DateTime();
                     $value = $now->format('Y-m-d h:i:s');
                 }
                 if($value === 'IS NULL') {
@@ -274,12 +273,12 @@ abstract class AbstractObject implements SplSubject
     {
         if ($id != '0' && !empty($id)) {
             if($this->_cache_enabled && !$this->_skip_cache_on_read) {
-                $this->_readFromCache($id);
+                return $this->_readFromCache($id);
             } else {
-                $this->_readFromDb($id);
+                return $this->_readFromDb($id);
             }
         }
-        return true;
+        return null;
     }
 
     public function setSkipCache($skipCache) {
@@ -294,7 +293,7 @@ abstract class AbstractObject implements SplSubject
     private function _readFromDb($id)
     {
         $this->_write_log('_readFromDb(' . $id . ')');
-        Writer::write(get_class($this) . ' _readFromDb() reading from databsse. ID: ' . $id, Writer::OUTPUT_FILE, 'database', Writer::TYPE_DEBUG);
+        Writer::write(get_class($this) . ' _readFromDb() reading from database. ID: ' . $id, Writer::OUTPUT_FILE, 'database', Writer::TYPE_DEBUG);
         $query = "SELECT * FROM " .
             $this->getDbTableName() .
             " WHERE " . $this->_definitions['database']['primary_key'] .
@@ -621,13 +620,13 @@ abstract class AbstractObject implements SplSubject
         if ($required_check !== true) {
             throw new Exception('Missing required properties: ' . implode(', ', $required_check) . ' in ' . get_class($this));
         }
-        $fieldlist = $this->getPropertyNames();
+        $field_list = $this->getPropertyNames();
         $values = [];
-        foreach ($fieldlist as $index => $fieldname) {
-            if ($fieldname != $this->getDbPrimaryKey() || $this->_dont_use_autoincrement_on_primary_key == true) {
-                $values[$fieldname] = $this->parsePropertyValue($fieldname, $this->$fieldname, 'output');
+        foreach ($field_list as $index => $field_name) {
+            if ($field_name != $this->getDbPrimaryKey() || $this->_dont_use_autoincrement_on_primary_key == true) {
+                $values[$field_name] = $this->parsePropertyValue($field_name, $this->$field_name, 'output');
             } else {
-                unset($fieldlist[$index]);
+                unset($field_list[$index]);
             }
         }
         $id = $this->_db->insert($this->getDbTableName(), $values);
@@ -635,8 +634,11 @@ abstract class AbstractObject implements SplSubject
             $this->setId($id);
         }
         $this->_createHasManyRelations();
-        //$this->_createHasOneRelations();
+        $this->_createHasOneRelations();
         $this->_createBelongsToRelations();
+        $this->_createManyToManyRelations();
+
+        return true;
     }
 
     /**
@@ -676,17 +678,13 @@ abstract class AbstractObject implements SplSubject
             if ($property['type'] == 'relation' && isset($property['relation']) && $property['relation']['type'] == 'hasOne') {
                 $key = $property['name'];
                 $related_key = $property['relation']['related_id'];
-                if(!empty($this->$key)) {
-                    /**@var AbstractObject $object**/
-                    $object = $this->$key;
-                    // print_r($object);
-                    if(isset($property['relation']['on_save_related_properties']) && is_array($property['relation']['on_save_related_properties'])) {
-                        foreach($property['relation']['on_save_related_properties'] as $local_property_name => $foreign_property_name) {
-                            $object->$foreign_property_name = $this->$local_property_name;
-                        }
+                $object = $this->$key;
+                if(!empty($object)) {
+                    if(!isset($this->dont_auto_create_has_one_relations) || $this->dont_auto_create_has_one_relations == false) {
+                        $object->create();
+                        $this->$related_key = $object->getId();
+                        $this->update();
                     }
-                    $object->$related_key = $this->getId();
-                    $object->create();
                 }
             }
         }
@@ -710,6 +708,27 @@ abstract class AbstractObject implements SplSubject
                     }
                     $object->$related_key = $this->getId();
                     $object->create();
+                }
+            }
+        }
+    }
+
+    private function _createManyToManyRelations() {
+        foreach ($this->_definitions['properties'] as $property) {
+            if ($property['type'] == 'relation' && isset($property['relation']) && strtolower($property['relation']['type']) == 'manytomany') {
+                $relation_table_object_class_name = $property['relation']['relation_class'];
+                $related_id_name = $property['relation']['related_id'];
+                $target_id_name = $property['relation']['target_id'];
+                $key = $property['name'];
+                $objects = $this->$key;
+                if(!empty($objects) && is_array($objects)) {
+                    foreach ($objects as $object) {
+                        $object->create();
+                        $relation_table_object = new $relation_table_object_class_name();
+                        $relation_table_object->$related_id_name = $this->getId();
+                        $relation_table_object->$target_id_name = $object->id;
+                        $relation_table_object->create();
+                    }
                 }
             }
         }
@@ -885,7 +904,7 @@ abstract class AbstractObject implements SplSubject
         }
     }
 
-    private function parseHasMany($name, $values) {
+    private function _parseHasMany($name, $values) {
         $property_info = $this->_definitions['properties'][$name];
         $class_name = $property_info['relation']['class'];
         $result = [];
@@ -942,7 +961,7 @@ abstract class AbstractObject implements SplSubject
                     }
                 } catch (Exception $e) {
                     throw new Exception('Validator ' . $validatorSpec['name'] . ' could not be created in class ' . get_class($this));
-                } catch (\Error $e) {
+                } catch (Error $e) {
                     throw new Exception('Validator ' . $validatorSpec['name'] . ' could not be created in class ' . get_class($this));
                 }
             }
@@ -1020,8 +1039,8 @@ abstract class AbstractObject implements SplSubject
 
     private function getRelationBelongsTo($property_info) {
         $this->_write_log('getRelationBelongsTo(' . $property_info['name'] . ')');
-        $fieldname = $property_info['name'];
-        if (!empty($this->getId()) && empty($this->$fieldname)) {
+        $field_name = $property_info['name'];
+        if (!empty($this->getId()) && empty($this->$field_name)) {
             if(isset($property_info['relation']['from_factory']) && $property_info['relation']['from_factory'] === true) {
                 $factory_class_name = $property_info['relation']['class'];
                 $parameters = [];
@@ -1061,8 +1080,8 @@ abstract class AbstractObject implements SplSubject
     private function getRelationHasMany($property_info)
     {
         $this->_write_log('getRelationHasMany(' . $property_info['name'] . ')');
-        $fieldname = $property_info['name'];
-        if (!empty($this->getId()) && empty($this->$fieldname)) {
+        $field_name = $property_info['name'];
+        if (!empty($this->getId()) && empty($this->$field_name)) {
             if(isset($property_info['relation']['from_factory']) && $property_info['relation']['from_factory'] === true) {
                 $factory_class_name = $property_info['relation']['class'];
                 $parameters = [];
@@ -1312,7 +1331,7 @@ abstract class AbstractObject implements SplSubject
      */
     public function checkStorageIntegrity()
     {
-        $integrityCheck = new \Pressmind\DB\IntegrityCheck\Mysql($this);
+        $integrityCheck = new Mysql($this);
         return $integrityCheck->check();
     }
 }

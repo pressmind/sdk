@@ -497,7 +497,6 @@ class Import
 	 */
     private function checkRunFile($path)
 	{
-	    return false;
 	    if(strtolower(PHP_OS) == 'linux') { //ps -C will only work on Linux this way
             $outputPS = array();
             exec('ps -C php -f', $outputPS);

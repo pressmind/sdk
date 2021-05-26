@@ -18,6 +18,9 @@ class Search
      * @throws Exception
      */
     public function search($searchparameters) {
+        if (empty($searchparameters)) {
+            return null;
+        }
         $searchparameters = json_decode(json_encode($searchparameters));
         $search_conditions = $searchparameters->conditions;
         $search_sort = isset($searchparameters->sort) ? $searchparameters->sort : null;

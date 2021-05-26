@@ -24,8 +24,8 @@ use Pressmind\ORM\Object\Touristic\SeasonalPeriod;
  * @property string $url
  * @property string $text
  * @property string $price_mix
- * @property integer $id_pickupservice
- * @property integer $id_insurance_group
+ * @property string $id_pickupservice
+ * @property string $id_insurance_group
  * @property integer $ibe_type
  * @property string $product_type_ibe
  * @property integer $id_origin
@@ -158,16 +158,12 @@ class Package extends AbstractObject
             'id_pickupservice' => array(
                 'title' => 'Id_pickupservice',
                 'name' => 'id_pickupservice',
-                'type' => 'integer',
+                'type' => 'string',
                 'required' => false,
                 'validators' => [
                     [
                         'name' => 'maxlength',
-                        'params' => 22,
-                    ],
-                    [
-                        'name' => 'unsigned',
-                        'params' => null,
+                        'params' => 32,
                     ]
                 ],
                 'filters' => null,
@@ -178,16 +174,12 @@ class Package extends AbstractObject
             'id_insurance_group' => [
                 'title' => 'Id_insurance_group',
                 'name' => 'id_insurance_group',
-                'type' => 'integer',
+                'type' => 'string',
                 'required' => false,
                 'validators' => [
                     [
                         'name' => 'maxlength',
-                        'params' => 22,
-                    ],
-                    [
-                        'name' => 'unsigned',
-                        'params' => null,
+                        'params' => 32,
                     ]
                 ],
                 'filters' => null,

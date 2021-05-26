@@ -74,30 +74,33 @@ class Redis implements AdapterInterface
     public function cleanUp()
     {
         $keys = $this->_server->keys('pmt2core-' . $this->_prefix . '-*');
-        Writer::write('Found ' . count($keys) . ' keys in cache', WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
+        $total_keys = count($keys);
+        Writer::write('Found ' . $total_keys . ' keys in cache', WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
         $error = false;
-        foreach ($this->_server->keys('pmt2core-' . $this->_prefix . '-*') as $key) {
-            Writer::write('Checking key ' . $key, WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
+        $i = 0;
+        foreach ($keys as $key) {
+            $i++;
+            Writer::write($i . ' of ' . $total_keys . ' Checking key ' . $key, WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_INFO);
             $idle_time = $this->_server->object('idletime', $key);
             $info = json_decode($this->_server->hGet('pmt2corecacheinfo-' . $this->_prefix, $key));
             $now = new DateTime();
             $cache_date = $this->_server->hGet('pmt2corecachetime-' . $this->_prefix, $key);
             $date = DateTime::createFromFormat(DateTime::ISO8601, $cache_date);
             $age = $now->getTimestamp() - $date->getTimestamp();
-            Writer::write('Idle time: ' . $idle_time . ' sec.', WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
-            Writer::write('Age: ' . $age . ' sec.', WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
+            Writer::write('Idle time: ' . $idle_time . ' sec.', WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_INFO);
+            Writer::write('Age: ' . $age . ' sec.', WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_INFO);
             if($idle_time >= $this->_config['max_idle_time'] || $age >= $this->_config['update_frequency']) {
-                Writer::write('Deleting key ' . $key, WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
+                Writer::write('Deleting key ' . $key, WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_INFO);
                 $this->_server->del($key);
                 $this->_server->hDel('pmt2corecacheinfo-' . $this->_prefix, $key);
                 $this->_server->hDel('pmt2corecachetime-' . $this->_prefix, $key);
             }
             if($age >= $this->_config['update_frequency'] && $idle_time < $this->_config['max_idle_time'] && is_a($info, 'stdClass')) {
-                Writer::write('Updating key ' . $key . ' due to update frequency', WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
-                Writer::write('Type: ' . $info->type, WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
-                Writer::write('Class: ' . $info->classname, WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
-                Writer::write('Method: ' . $info->method, WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
-                Writer::write('Params: ' . print_r($info->parameters, true), WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
+                Writer::write('Updating key ' . $key . ' due to update frequency', WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_INFO);
+                Writer::write('Type: ' . $info->type, WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_INFO);
+                Writer::write('Class: ' . $info->classname, WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_INFO);
+                Writer::write('Method: ' . $info->method, WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_INFO);
+                Writer::write('Params: ' . print_r($info->parameters, true), WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_INFO);
                 try {
                     if (strtolower($info->type) == 'rest') {
                         $rest_server = new Server();
@@ -106,19 +109,23 @@ class Redis implements AdapterInterface
                     if (strtolower($info->type) == 'search') {
                         $search = new Search();
                         $result = $search->updateCache($info->parameters);
-                        Writer::write('Update returned: ' . $result, WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
+                        Writer::write('Update returned: ' . $result, WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_INFO);
                     }
                     if (strtolower($info->type) == 'object') {
                         $classname = $info->classname;
                         $object = new $classname();
                         $result = $object->updateCache($info->parameters->id);
-                        Writer::write('Update returned: ' . $result, WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
+                        Writer::write('Update returned: ' . $result, WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_INFO);
                     }
                 } catch (\Exception $e) {
+                    Writer::write('Failed Updating key ' . $key . ': ' . $e->getMessage(), WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_ERROR);
                     $error = true;
                 }
             }
         }
-        return $error;
+        if($error == true) {
+            throw new \Exception('Pressmind\Cache\Adapter\Redis::cleanUp() threw errors. See log category "redis" for more information');
+        }
+        return 'Task completed';
     }
 }

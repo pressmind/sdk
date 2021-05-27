@@ -623,7 +623,7 @@ class MediaObject extends AbstractObject
     }
 
     /**
-     * @param CheapestPrice $filters
+     * @param null|CheapestPrice $filters
      * @return CheapestPriceSpeed
      * @throws Exception
      */
@@ -634,7 +634,7 @@ class MediaObject extends AbstractObject
     }
 
     /**
-     * @param null|stdClass $filters
+     * @param null|CheapestPrice $filters
      * @return CheapestPriceSpeed[]
      * @throws Exception
      */
@@ -642,6 +642,7 @@ class MediaObject extends AbstractObject
     {
         $now = new DateTime();
         $where = "id_media_object = " . $this->getId() . " AND price_total > 0 AND date_departure > '" . $now->format('Y-m-d 00:00:00') . "'";
+        $occupancy_filter_is_set = false;
         if(!is_null($filters)) {
             if(!is_null($filters->duration_from) && !is_null($filters->duration_to)) {
                 $where .= ' AND duration BETWEEN ' . $filters->duration_from . ' AND ' . $filters->duration_to;
@@ -649,12 +650,23 @@ class MediaObject extends AbstractObject
             if(!is_null($filters->date_from) && !is_null($filters->date_to)) {
                 $where .= " AND date_departure BETWEEN '" . $filters->date_from->format('Y-m-d 00:00:00') . "' AND '" . $filters->date_to->format('Y-m-d 23:59:59') . "'";
             }
+            if(!is_null($filters->price_from) && !is_null($filters->price_to)) {
+                $where .= ' AND price_total BETWEEN ' . $filters->price_from . ' AND ' . $filters->price_to;
+            }
+            if(!is_null($filters->occupancy)) {
+                $where .= ' AND ((' . $filters->occupancy . ' BETWEEN occupancy_min AND occupancy_max) OR occupancy = ' . $filters->occupancy . ')';
+                $occupancy_filter_is_set = true;
+            }
         }
-        $cheapest_prices = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 2', ['price_total' => 'ASC', 'date_departure' => 'ASC']);
-        if(empty($cheapest_prices)) {
-            $cheapest_prices = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 1', ['price_total' => 'ASC', 'date_departure' => 'ASC']);
-        }
-        if(empty($cheapest_prices)) {
+        if(!$occupancy_filter_is_set) {
+            $cheapest_prices = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 2', ['price_total' => 'ASC', 'date_departure' => 'ASC']);
+            if (empty($cheapest_prices)) {
+                $cheapest_prices = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 1', ['price_total' => 'ASC', 'date_departure' => 'ASC']);
+            }
+            if (empty($cheapest_prices)) {
+                $cheapest_prices = CheapestPriceSpeed::listAll($where, ['price_total' => 'ASC', 'date_departure' => 'ASC']);
+            }
+        } else {
             $cheapest_prices = CheapestPriceSpeed::listAll($where, ['price_total' => 'ASC', 'date_departure' => 'ASC']);
         }
         return $cheapest_prices;
@@ -856,8 +868,8 @@ class MediaObject extends AbstractObject
                         $cheapestPriceSpeed->option_code = $option->code;
                         $cheapestPriceSpeed->option_board_type = $option->board_type;
                         $cheapestPriceSpeed->option_occupancy = $option->occupancy;
-                        $cheapestPriceSpeed->option_occupancy_min = $option->occupancy_min;
-                        $cheapestPriceSpeed->option_occupancy_max = $option->occupancy_max;
+                        $cheapestPriceSpeed->option_occupancy_min = empty($option->occupancy_min) ? $option->occupancy : $option->occupancy_min;
+                        $cheapestPriceSpeed->option_occupancy_max = empty($option->occupancy_max) ? $option->occupancy : $option->occupancy_max;
                         $cheapestPriceSpeed->price_transport_total = $transport_price;
                         $cheapestPriceSpeed->price_transport_1 = !is_null($transport_pair) && isset($transport_pair[1]) ? $transport_pair[1]->price : null;
                         $cheapestPriceSpeed->price_transport_2 = !is_null($transport_pair) && isset($transport_pair[1]) && isset($transport_pair[2]) ? $transport_pair[2]->price : null;

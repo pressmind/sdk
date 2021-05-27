@@ -17,12 +17,12 @@ class HousingOption implements ConditionInterface
     /**
      * @var integer|null
      */
-    private $_occupancy;
+    public $occupancy;
 
     /**
      * @var array
      */
-    private $_status;
+    public $status;
 
     /**
      * HousingOption constructor.
@@ -30,11 +30,11 @@ class HousingOption implements ConditionInterface
      * @param array $status
      */
     public function __construct($occupancy = null, $status = [HelperFunctions::HOUSING_OPTION_STATUS_ACTIVE, HelperFunctions::HOUSING_OPTION_STATUS_LOW, HelperFunctions::HOUSING_OPTION_STATUS_REQUEST]) {
-        $this->_occupancy = $occupancy;
+        $this->occupancy = $occupancy;
         if(!is_array($status)) {
             $status = [intval($status)];
         }
-        $this->_status = $status;
+        $this->status = $status;
     }
 
     /**
@@ -43,10 +43,10 @@ class HousingOption implements ConditionInterface
     public function getSQL()
     {
         $conditions = [];
-        if(!is_null($this->_occupancy)) {
+        if(!is_null($this->occupancy)) {
             $conditions[] = '(:occupancy BETWEEN pmt2core_cheapest_price_speed.option_occupancy_min AND pmt2core_cheapest_price_speed.option_occupancy_max OR :occupancy = pmt2core_cheapest_price_speed.option_occupancy)';
         }
-        if(!empty($this->_status)) {
+        if(!empty($this->status)) {
             $conditions[] = 'pmt2core_cheapest_price_speed.state IN (:status)';
         }
         return implode(' AND ', $conditions);
@@ -58,11 +58,11 @@ class HousingOption implements ConditionInterface
     public function getValues()
     {
         $values = [];
-        if(!is_null($this->_occupancy)) {
-            $values[':occupancy'] = $this->_occupancy;
+        if(!is_null($this->occupancy)) {
+            $values[':occupancy'] = $this->occupancy;
         }
-        if(!empty($this->_status)) {
-            $values[':status'] = implode(',', $this->_status);
+        if(!empty($this->status)) {
+            $values[':status'] = implode(',', $this->status);
         }
         return $values;
     }
@@ -96,10 +96,10 @@ class HousingOption implements ConditionInterface
      */
     public function setConfig($config)
     {
-        $this->_occupancy = isset($config->occupancy) ? $config->occupancy: null;
-        $this->_status = isset($config->status) ? $config->status : null;
-        if(!is_array($this->_status)) {
-            $this->_status = [intval($this->_status)];
+        $this->occupancy = isset($config->occupancy) ? $config->occupancy: null;
+        $this->status = isset($config->status) ? $config->status : null;
+        if(!is_array($this->status)) {
+            $this->status = [intval($this->status)];
         }
     }
 
@@ -108,8 +108,8 @@ class HousingOption implements ConditionInterface
      */
     public function getConfig() {
         return [
-            'occupancy' => $this->_occupancy,
-            'status' => $this->_status
+            'occupancy' => $this->occupancy,
+            'status' => $this->status
         ];
     }
 

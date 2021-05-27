@@ -7,8 +7,8 @@ namespace Pressmind;
 class HelperFunctions
 {
 
-    const HOUSING_OPTION_STATUS_ACTIVE = 0;
-    const HOUSING_OPTION_STATUS_BOOKED_OUT = 1;
+    const HOUSING_OPTION_STATUS_ACTIVE = 1;
+    const HOUSING_OPTION_STATUS_BOOKED_OUT = 0;
     const HOUSING_OPTION_STATUS_LOW = 2;
     const HOUSING_OPTION_STATUS_REQUEST = 3;
     const HOUSING_OPTION_STATUS_STOP = 4;

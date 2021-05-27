@@ -39,7 +39,7 @@ class Duration implements FilterInterface
             $min = $duration_condition->durationFrom;
             $max = $duration_condition->durationTo;
         }
-        $results = $this->_search->getResults();
+        $results = $this->_search->getResults(false, true);
         $durations = [];
         foreach ($results as $result) {
             foreach ($result->booking_packages as $booking_package) {

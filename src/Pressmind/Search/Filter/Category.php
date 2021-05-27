@@ -35,7 +35,7 @@ class Category implements FilterInterface
      * @throws Exception
      */
     public function getResult() {
-        $results = $this->_search->getResults();
+        $results = $this->_search->getResults(false, true);
         $ids = [];
         foreach ($results as $result) {
             $ids[] = $result->getId();

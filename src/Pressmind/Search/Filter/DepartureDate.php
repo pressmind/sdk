@@ -60,7 +60,7 @@ class DepartureDate implements FilterInterface
             $date_range->to = $latest_departure_date;
             return $date_range;
         } else {
-            $results = $this->_search->getResults();
+            $results = $this->_search->getResults(false, true);
             $media_object_ids = [];
             foreach ($results as $result) {
                 $media_object_ids[] = $result->id;

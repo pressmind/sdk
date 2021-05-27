@@ -133,7 +133,7 @@ class Search
      * @return Result
      * @throws Exception
      */
-    public function exec()
+    public function exec($disablePaginator = false)
     {
         /**@var Pdo $db*/
         $db = Registry::getInstance()->get('db');
@@ -147,7 +147,11 @@ class Search
                     $total_count = $this->_limits['length'];
                 }
             }
-            $this->_limits = $this->_paginator->getLimits($total_count);
+            if(!$disablePaginator) {
+                $this->_limits = $this->_paginator->getLimits($total_count);
+            } else {
+                $this->_limits = [];
+            }
         }
         $this->_concatSql();
         if(Registry::getInstance()->get('config')['cache']['enabled'] && in_array('SEARCH', Registry::getInstance()->get('config')['cache']['types'])) {
@@ -209,8 +213,11 @@ class Search
      * @return ORM\Object\MediaObject[]
      * @throws Exception
      */
-    public function getResults($loadFull = false)
+    public function getResults($loadFull = false, $disablePaginator = false)
     {
+        if(true === $disablePaginator) {
+            return $this->exec(true)->getResult($loadFull);
+        }
         if(is_null($this->_result)) {
             $this->_result = $this->exec();
         }
@@ -346,7 +353,7 @@ class Search
 
     /**
      * @param $pClassName
-     * @return ConditionInterface|null
+     * @return ConditionInterface|bool
      */
     public function getCondition($pClassName)
     {

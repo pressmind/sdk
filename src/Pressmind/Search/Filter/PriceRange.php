@@ -39,7 +39,7 @@ class PriceRange implements FilterInterface
             $min = $price_condition->priceFrom;
             $max = $price_condition->priceTo;
         }
-        $results = $this->_search->getResults();
+        $results = $this->_search->getResults(false, true);
         $prices = [];
         foreach ($results as $result) {
             $cheapest_price = $result->getCheapestPrice();

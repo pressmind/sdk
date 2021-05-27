@@ -65,7 +65,16 @@ class DepartureDate implements FilterInterface
             foreach ($results as $result) {
                 $media_object_ids[] = $result->id;
             }
-            $dates = $db->fetchAll("SELECT date_departure from pmt2core_cheapest_price_speed WHERE id_media_object in(" . implode(',', $media_object_ids) . ") ORDER BY date_departure ASC");
+            $query = [];
+            $query[] = "SELECT date_departure from pmt2core_cheapest_price_speed WHERE id_media_object in(" . implode(',', $media_object_ids) . ")";
+            /** @var Search\Condition\HousingOption $housing_option_condition */
+            if($housing_option_condition = $this->_search->getCondition('\Pressmind\Search\Condition\HousingOption')) {
+                $cheapest_price_filter = new Search\CheapestPrice();
+                $cheapest_price_filter->occupancy = $housing_option_condition->occupancy;
+                $query[] = "AND (" . $housing_option_condition->occupancy . " BETWEEN option_occupancy_min AND option_occupancy_max OR option_occupancy = " . $housing_option_condition->occupancy . ")";
+            }
+            $query[] = "ORDER BY date_departure ASC";
+            $dates = $db->fetchAll(implode(' ', $query));
             if (count($dates) > 0) {
                 $counter = count($dates) - 1;
                 $earliest_departure_date = \DateTime::createFromFormat('Y-m-d H:i:s', $dates[0]->date_departure);

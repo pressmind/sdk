@@ -43,6 +43,7 @@ class PriceRange implements FilterInterface
         $prices = [];
         foreach ($results as $result) {
             $cheapest_price_filter = null;
+            /** @var Search\Condition\HousingOption $housing_option_condition */
             if($housing_option_condition = $this->_search->getCondition('\Pressmind\Search\Condition\HousingOption')) {
                 $cheapest_price_filter = new Search\CheapestPrice();
                 $cheapest_price_filter->occupancy = $housing_option_condition->occupancy;

@@ -654,7 +654,7 @@ class MediaObject extends AbstractObject
                 $where .= ' AND price_total BETWEEN ' . $filters->price_from . ' AND ' . $filters->price_to;
             }
             if(!is_null($filters->occupancy)) {
-                $where .= ' AND ((' . $filters->occupancy . ' BETWEEN occupancy_min AND occupancy_max) OR occupancy = ' . $filters->occupancy . ')';
+                $where .= ' AND ((' . $filters->occupancy . ' BETWEEN option_occupancy_min AND option_occupancy_max) OR option_occupancy = ' . $filters->occupancy . ')';
                 $occupancy_filter_is_set = true;
             }
         }

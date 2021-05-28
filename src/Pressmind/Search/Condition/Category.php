@@ -35,16 +35,22 @@ class Category implements ConditionInterface
     private $_combine_operator;
 
     /**
+     * @var bool
+     */
+    private $_linked_object_search;
+
+    /**
      * Category constructor.
      * @param string $pVarName
      * @param array $pItemIds
      * @param string $pCombineOperator
      */
-    public function __construct($pVarName = null, $pItemIds = null, $pCombineOperator = 'OR')
+    public function __construct($pVarName = null, $pItemIds = null, $pCombineOperator = 'OR', $linkedObjectSearch = false)
     {
         $this->var_name = $pVarName;
         $this->item_ids = $pItemIds;
         $this->_combine_operator = $pCombineOperator;
+        $this->_linked_object_search = $linkedObjectSearch;
     }
 
     /**
@@ -84,7 +90,14 @@ class Category implements ConditionInterface
      */
     public function getJoins()
     {
-        return 'INNER JOIN pmt2core_media_object_tree_items ' . $this->var_name . ' ON pmt2core_media_objects.id = ' . $this->var_name . '.id_media_object';
+        $joins = [];
+        if($this->_linked_object_search) {
+            $joins[] = 'LEFT JOIN pmt2core_media_object_object_links ON (pmt2core_media_objects.id = pmt2core_media_object_object_links.id_media_object)';
+            $joins[] = 'LEFT JOIN pmt2core_media_object_tree_items ' . $this->var_name . ' ON pmt2core_media_object_object_links.id_media_object_link = ' . $this->var_name . '.id_media_object';
+        } else {
+            $joins[] = 'LEFT JOIN pmt2core_media_object_tree_items ' . $this->var_name . ' ON pmt2core_media_objects.id = ' . $this->var_name . '.id_media_object';
+        }
+        return implode(' ', $joins);
     }
 
     /**
@@ -101,18 +114,18 @@ class Category implements ConditionInterface
      * @param string $pCombineOperator
      * @return Category
      */
-    public static function create($pVarName, $pItemIds, $pCombineOperator = 'OR')
+    public static function create($pVarName, $pItemIds, $pCombineOperator = 'OR', $linkedObjectSearch = false)
     {
-        $object = new self($pVarName, $pItemIds, $pCombineOperator);
-        return $object;
+       return new self($pVarName, $pItemIds, $pCombineOperator, $linkedObjectSearch);
     }
 
     /**
      * @param stdClass $config
      */
     public function setConfig($config) {
-        $this->var_name = $config->var_name;
-        $this->item_ids = $config->item_ids;
-        $this->_combine_operator = $config->combine_operator;
+        $this->var_name = isset($config->var_name) ? $config->var_name : null;
+        $this->item_ids = isset($config->item_ids) ? $config->item_ids : null;
+        $this->_combine_operator = isset($config->combine_operator) ? $config->combine_operator : 'OR';
+        $this->_linked_object_search = isset($config->linked_object_search) ? $config->linked_object_search : null;
     }
 }

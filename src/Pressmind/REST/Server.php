@@ -186,6 +186,9 @@ class Server
                     $result = $cache_adapter->get($key);
                     if($result && !$cache_update) {
                         $return = json_decode($result);
+                        $cache_info = $cache_adapter->getInfo($key);
+                        $this->_response->addHeader('X-PMT2CORE-CACHE-KEY', $key);
+                        $this->_response->addHeader('X-PMT2CORE-CACHE-DATE', $cache_info['date']);
                     } else {
                         $addToCache = true;
                         $return = $class->$method($parameters);

@@ -34,11 +34,7 @@ class Duration implements FilterInterface
     {
         $min = null;
         $max = null;
-        /** @var Search\Condition\DurationRange $duration_condition */
-        if($duration_condition = $this->_search->getCondition(Search\Condition\DurationRange::class)) {
-            $min = $duration_condition->durationFrom;
-            $max = $duration_condition->durationTo;
-        }
+        $this->_search->removeCondition(Search\Condition\DurationRange::class);
         $results = $this->_search->getResults(false, true);
         $durations = [];
         foreach ($results as $result) {

@@ -12,6 +12,9 @@ use Pressmind\Search\Paginator;
 
 class Search
 {
+
+    private $_debug = false;
+
     /**
      * @param array $searchparameters
      * @return array
@@ -22,6 +25,10 @@ class Search
             return null;
         }
         $searchparameters = json_decode(json_encode($searchparameters));
+        if(isset($searchparameters->debug) && $searchparameters->debug == true) {
+            $this->_debug = true;
+            unset($searchparameters->debug);
+        }
         $search_conditions = $searchparameters->conditions;
         $search_sort = isset($searchparameters->sort) ? $searchparameters->sort : null;
         $search_limit = isset($searchparameters->limit) ? $searchparameters->limit : null;
@@ -89,13 +96,15 @@ class Search
             }
             $result['filters'] = $filters;
         }
-        /*$result['debug'] = [
-            'query' => $search->getQuery(),
-            'values' => $search->getValues(),
-            'foo' => $search->getTotalResultCount(),
-            //'pagesize' => $search->getPaginator()->getPageSize(),
-            'searchParameters' => $searchparameters
-        ];*/
+        if($this->_debug) {
+            $result['debug'] = [
+                'query' => $search->getQuery(),
+                'values' => $search->getValues(),
+                'foo' => $search->getTotalResultCount(),
+                //'pagesize' => $search->getPaginator()->getPageSize(),
+                'searchParameters' => $searchparameters
+            ];
+        }
 
         return $result;
     }

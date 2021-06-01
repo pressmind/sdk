@@ -3,13 +3,9 @@
 
 namespace Pressmind\Import;
 
-
-use Pressmind\DB\Adapter\Pdo;
-use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\MediaType\Factory;
 use Exception;
 use Pressmind\HelperFunctions;
-use Pressmind\ORM\Object\Route;
 use Pressmind\Registry;
 use stdClass;
 
@@ -73,15 +69,16 @@ class MediaObjectData extends AbstractImport implements ImportInterface
             if (is_array($data_field->sections)) {
                 foreach ($data_field->sections as $section) {
                     $var_name = HelperFunctions::human_to_machine($data_field->var_name);
-                    if(!in_array($var_name, $this->_var_names_to_be_ignored)) {
+                    $section->language = empty($section->language) ? $default_language : $section->language;
+                    $language = empty($section->language) ? $default_language : $section->language;
+                    $language = strtolower($language);
+                    if(!in_array($var_name, $this->_var_names_to_be_ignored) && in_array($language, $conf['data']['languages']['allowed'])) {
                         $section_name = $section->name;
                         if(isset($conf['data']['sections']['replace']) && !empty($conf['data']['sections']['replace']['regular_expression'])) {
                             $section_name = preg_replace($conf['data']['sections']['replace']['regular_expression'], $conf['data']['sections']['replace']['replacement'], $section_name);
                         }
                         $column_name = $var_name . '_' . HelperFunctions::human_to_machine($section_name);
-                        $section->language = empty($section->language) ? $default_language : $section->language;
-                        $language = empty($section->language) ? $default_language : $section->language;
-                        $language = strtolower($language);
+
                         if (!isset($values[$language])) $values[$language] = [];
                         $section_id = $section->id;
                         $value = null;

@@ -245,6 +245,8 @@ class Search
      */
     public function _concatSql($returnTotalCount = false)
     {
+        $this->_sql = null;
+        $this->_values = [];
         $sql_sorted = [];
         $joins_sorted = [];
         $additional_fields_sorted = [];
@@ -359,6 +361,18 @@ class Search
     {
         foreach ($this->_conditions as $condition) {
             if(is_a($condition, $pClassName)) {
+                return $condition;
+            }
+        }
+        return false;
+    }
+
+    public function removeCondition($pClassName)
+    {
+        foreach ($this->_conditions as $index => $condition) {
+            if(is_a($condition, $pClassName)) {
+                array_splice($this->_conditions, $index, 1);
+                $this->_concatSql();
                 return $condition;
             }
         }

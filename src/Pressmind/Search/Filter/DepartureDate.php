@@ -70,8 +70,10 @@ class DepartureDate implements FilterInterface
             /** @var Search\Condition\HousingOption $housing_option_condition */
             if($housing_option_condition = $this->_search->getCondition('\Pressmind\Search\Condition\HousingOption')) {
                 $cheapest_price_filter = new Search\CheapestPrice();
-                $cheapest_price_filter->occupancy = $housing_option_condition->occupancy;
-                $query[] = "AND (" . $housing_option_condition->occupancy . " BETWEEN option_occupancy_min AND option_occupancy_max OR option_occupancy = " . $housing_option_condition->occupancy . ")";
+                $cheapest_price_filter->occupancies = $housing_option_condition->occupancies;
+                foreach ($housing_option_condition->occupancies as $occupancy) {
+                    $query[] = "AND (" . $occupancy . " BETWEEN option_occupancy_min AND option_occupancy_max OR option_occupancy = " . $occupancy. ")";
+                }
             }
             $query[] = "ORDER BY date_departure ASC";
             $dates = $db->fetchAll(implode(' ', $query));

@@ -47,18 +47,21 @@ class Duration implements FilterInterface
             /** @var Search\Condition\HousingOption $housing_option_condition */
             if($housing_option_condition = $this->_search->getCondition('\Pressmind\Search\Condition\HousingOption')) {
                 $cheapest_price_filter = new Search\CheapestPrice();
-                $cheapest_price_filter->occupancy = $housing_option_condition->occupancy;
+                $cheapest_price_filter->occupancies = $housing_option_condition->occupancies;
             }
             $cheapest_price = $result->getCheapestPrice($cheapest_price_filter);
             if(!is_null($cheapest_price) && (($min == null || $max == null) || ($min <= $cheapest_price->price_total && $max >= $cheapest_price->price_total))) {
                 $durations[] = $cheapest_price->duration;
             }
         }
-        sort($durations);
-        $min_max_result = new MinMax();
-        $min_max_result->min = $durations[0];
-        $min_max_result->max = $durations[count($durations)-1];
-        return $min_max_result;
+        if(count($durations) > 0) {
+            sort($durations);
+            $min_max_result = new MinMax();
+            $min_max_result->min = $durations[0];
+            $min_max_result->max = $durations[count($durations) - 1];
+            return $min_max_result;
+        }
+        return new MinMax();
     }
 
     public static function create($search) {

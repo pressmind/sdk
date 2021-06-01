@@ -43,7 +43,7 @@ class PriceRange implements FilterInterface
             /** @var Search\Condition\HousingOption $housing_option_condition */
             if($housing_option_condition = $this->_search->getCondition('\Pressmind\Search\Condition\HousingOption')) {
                 $cheapest_price_filter = new Search\CheapestPrice();
-                $cheapest_price_filter->occupancy = $housing_option_condition->occupancy;
+                $cheapest_price_filter->occupancies = $housing_option_condition->occupancies;
             }
             $cheapest_price = $result->getCheapestPrice($cheapest_price_filter);
             if(!is_null($cheapest_price) && (($min == null || $max == null) || ($min <= $cheapest_price->price_total && $max >= $cheapest_price->price_total))) {

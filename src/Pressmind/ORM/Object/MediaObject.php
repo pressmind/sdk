@@ -653,10 +653,16 @@ class MediaObject extends AbstractObject
             if(!is_null($filters->price_from) && !is_null($filters->price_to)) {
                 $where .= ' AND price_total BETWEEN ' . $filters->price_from . ' AND ' . $filters->price_to;
             }
-            if(!is_null($filters->occupancy)) {
-                $where .= ' AND ((' . $filters->occupancy . ' BETWEEN option_occupancy_min AND option_occupancy_max) OR option_occupancy = ' . $filters->occupancy . ')';
+            if(!is_null($filters->occupancies)) {
+                $where .= ' AND ((';
+                $foo = [];
+                foreach ($filters->occupancies as $occupancy) {
+                    $foo[] = '(' . $occupancy . ' BETWEEN option_occupancy_min AND option_occupancy_max) OR option_occupancy = ' . $occupancy;
+                }
+                $where .= implode(') OR (', $foo) .  '))';
                 $occupancy_filter_is_set = true;
             }
+            //echo $where;
         }
         if(!$occupancy_filter_is_set) {
             $cheapest_prices = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 2', ['price_total' => 'ASC', 'date_departure' => 'ASC']);

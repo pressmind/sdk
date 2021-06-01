@@ -15,9 +15,9 @@ class HousingOption implements ConditionInterface
     private $_sort = 6;
 
     /**
-     * @var integer|null
+     * @var array|null
      */
-    public $occupancy;
+    public $occupancies;
 
     /**
      * @var array
@@ -25,12 +25,20 @@ class HousingOption implements ConditionInterface
     public $status;
 
     /**
+     * @var array
+     */
+    private $_values = [];
+
+    /**
      * HousingOption constructor.
      * @param null $occupancy
      * @param array $status
      */
-    public function __construct($occupancy = null, $status = [HelperFunctions::HOUSING_OPTION_STATUS_ACTIVE, HelperFunctions::HOUSING_OPTION_STATUS_LOW, HelperFunctions::HOUSING_OPTION_STATUS_REQUEST]) {
-        $this->occupancy = $occupancy;
+    public function __construct($occupancyies = null, $status = [HelperFunctions::HOUSING_OPTION_STATUS_ACTIVE, HelperFunctions::HOUSING_OPTION_STATUS_LOW, HelperFunctions::HOUSING_OPTION_STATUS_REQUEST]) {
+        if(!is_array($occupancyies) && !is_null($occupancyies)) {
+            $occupancyies = [intval($occupancyies)];
+        }
+        $this->occupancies = $occupancyies;
         if(!is_array($status)) {
             $status = [intval($status)];
         }
@@ -43,11 +51,16 @@ class HousingOption implements ConditionInterface
     public function getSQL()
     {
         $conditions = [];
-        if(!is_null($this->occupancy)) {
-            $conditions[] = '(:occupancy BETWEEN pmt2core_cheapest_price_speed.option_occupancy_min AND pmt2core_cheapest_price_speed.option_occupancy_max OR :occupancy = pmt2core_cheapest_price_speed.option_occupancy)';
+        if(is_array($this->occupancies)) {
+            foreach ($this->occupancies as $index => $occupancy) {
+                $occupancy_conditions[] = '(:occupancy' . $index . ' BETWEEN pmt2core_cheapest_price_speed.option_occupancy_min AND pmt2core_cheapest_price_speed.option_occupancy_max OR :occupancy' . $index . ' = pmt2core_cheapest_price_speed.option_occupancy)';
+                $this->_values[':occupancy' . $index] = $occupancy;
+            }
+            $conditions[] = '(' . implode(') OR (' , $occupancy_conditions) . ')';
         }
         if(!empty($this->status)) {
             $conditions[] = 'pmt2core_cheapest_price_speed.state IN (:status)';
+            $this->_values[':status'] = implode(',', $this->status);
         }
         return implode(' AND ', $conditions);
     }
@@ -57,14 +70,7 @@ class HousingOption implements ConditionInterface
      */
     public function getValues()
     {
-        $values = [];
-        if(!is_null($this->occupancy)) {
-            $values[':occupancy'] = $this->occupancy;
-        }
-        if(!empty($this->status)) {
-            $values[':status'] = implode(',', $this->status);
-        }
-        return $values;
+        return $this->_values;
     }
 
     /**
@@ -96,7 +102,7 @@ class HousingOption implements ConditionInterface
      */
     public function setConfig($config)
     {
-        $this->occupancy = isset($config->occupancy) ? $config->occupancy: null;
+        $this->occupancies = isset($config->occupancies) ? $config->occupancies: null;
         $this->status = isset($config->status) ? $config->status : null;
         if(!is_array($this->status)) {
             $this->status = [intval($this->status)];
@@ -108,7 +114,7 @@ class HousingOption implements ConditionInterface
      */
     public function getConfig() {
         return [
-            'occupancy' => $this->occupancy,
+            'occupancies' => $this->occupancies,
             'status' => $this->status
         ];
     }
@@ -118,9 +124,9 @@ class HousingOption implements ConditionInterface
      * @param array $status
      * @return HousingOption
      */
-    public static function create($occupancy = null, $status = [HelperFunctions::HOUSING_OPTION_STATUS_ACTIVE, HelperFunctions::HOUSING_OPTION_STATUS_LOW, HelperFunctions::HOUSING_OPTION_STATUS_REQUEST])
+    public static function create($occupancies = null, $status = [HelperFunctions::HOUSING_OPTION_STATUS_ACTIVE, HelperFunctions::HOUSING_OPTION_STATUS_LOW, HelperFunctions::HOUSING_OPTION_STATUS_REQUEST])
     {
-        return new self($occupancy, $status);
+        return new self($occupancies, $status);
     }
 
     /**

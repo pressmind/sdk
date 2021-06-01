@@ -34,16 +34,9 @@ class PriceRange implements FilterInterface
     {
         $min = null;
         $max = null;
-        /** @var Search\Condition\PriceRange $price_condition */
-        /*if($price_condition = $this->_search->getCondition(Search\Condition\PriceRange::class)) {
-            $min = $price_condition->priceFrom;
-            $max = $price_condition->priceTo;
-        }*/
-        $disable_pagination = false;
-        if($this->_search->removeCondition(Search\Condition\PriceRange::class)) {
-            $disable_pagination = true;
-        }
-        $results = $this->_search->getResults(false, $disable_pagination);
+
+        $this->_search->removeCondition(Search\Condition\PriceRange::class);
+        $results = $this->_search->getResults(false, true);
         $prices = [];
         foreach ($results as $result) {
             $cheapest_price_filter = null;

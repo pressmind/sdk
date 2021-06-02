@@ -26,7 +26,7 @@ class Ibe
         $mediaObject = new MediaObject($this->parameters['params']['imo']);
         $result = [];
         $image_info = null;
-        $images = $mediaObject->getValueByTagName('truetravel.teaser.image');
+        $images = $mediaObject->getValueByTagName('pressmind-ib3.teaser-image');
         if(!is_null($images)) {
             $image = $images[0];
             $image_info['uri'] = substr($image->getUri('teaser'), 0, 4) == 'http' ? $image->getUri('teaser') : WEBSERVER_HTTP . $image->getUri('teaser');
@@ -49,7 +49,7 @@ class Ibe
         }
         $result['date'] = $booking->getDate();
         $result['product'] = [
-            'title' => !empty($mediaObject->getValueByTagName('truetravel.headline')) ? strip_tags($mediaObject->getValueByTagName('truetravel.headline')) : $mediaObject->name,
+            'title' => !empty($mediaObject->getValueByTagName('pressmind-ib3.headline')) ? strip_tags($mediaObject->getValueByTagName('pressmind-ib3.headline')) : $mediaObject->name,
             'subtitle' => '',
             'description' => '',
             'name' => '',

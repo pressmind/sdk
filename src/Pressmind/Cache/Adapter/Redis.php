@@ -71,6 +71,19 @@ class Redis implements AdapterInterface
         return $this->_server->del('pmt2core-' . $this->_prefix . '-' . $pKey);
     }
 
+    public function getKeys()
+    {
+        return $this->_server->keys('pmt2core-' . $this->_prefix . '-*');
+    }
+
+    public function getInfo($pKey)
+    {
+        return [
+            'info' => json_decode($this->_server->hGet('pmt2corecacheinfo-' . $this->_prefix, 'pmt2core-' . $this->_prefix . '-' . $pKey)),
+            'date' => $this->_server->hGet('pmt2corecachetime-' . $this->_prefix, 'pmt2core-' . $this->_prefix . '-' . $pKey)
+        ];
+    }
+
     public function cleanUp()
     {
         $keys = $this->_server->keys('pmt2core-' . $this->_prefix . '-*');
@@ -82,11 +95,15 @@ class Redis implements AdapterInterface
             $i++;
             Writer::write($i . ' of ' . $total_keys . ' Checking key ' . $key, WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_INFO);
             $idle_time = $this->_server->object('idletime', $key);
+            $last_idle_time = hGet('pmt2corecacheidletime-' . $this->_prefix, $key);
             $info = json_decode($this->_server->hGet('pmt2corecacheinfo-' . $this->_prefix, $key));
             $now = new DateTime();
             $cache_date = $this->_server->hGet('pmt2corecachetime-' . $this->_prefix, $key);
             $date = DateTime::createFromFormat(DateTime::ISO8601, $cache_date);
             $age = $now->getTimestamp() - $date->getTimestamp();
+            if($idle_time - $last_idle_time > 0) {
+                $idle_time = $idle_time + $age;
+            }
             Writer::write('Idle time: ' . $idle_time . ' sec.', WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_INFO);
             Writer::write('Age: ' . $age . ' sec.', WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_INFO);
             if($idle_time >= $this->_config['max_idle_time'] || $age >= $this->_config['update_frequency']) {
@@ -94,6 +111,7 @@ class Redis implements AdapterInterface
                 $this->_server->del($key);
                 $this->_server->hDel('pmt2corecacheinfo-' . $this->_prefix, $key);
                 $this->_server->hDel('pmt2corecachetime-' . $this->_prefix, $key);
+                $this->_server->hDel('pmt2corecacheidletime-' . $this->_prefix, $key);
             }
             if($age >= $this->_config['update_frequency'] && $idle_time < $this->_config['max_idle_time'] && is_a($info, 'stdClass')) {
                 Writer::write('Updating key ' . $key . ' due to update frequency', WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_INFO);
@@ -121,6 +139,7 @@ class Redis implements AdapterInterface
                     Writer::write('Failed Updating key ' . $key . ': ' . $e->getMessage(), WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_ERROR);
                     $error = true;
                 }
+                $this->_server->hSet('pmt2corecacheidletime-' . $this->_prefix, $key, $idle_time);
             }
         }
         if($error == true) {

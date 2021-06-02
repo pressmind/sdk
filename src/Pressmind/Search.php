@@ -173,6 +173,8 @@ class Search
         } else {
             $db_result = $db->fetchAll($this->_sql, $this->_values);
         }
+        echo $this->_sql;
+        print_r($this->_values);
         $result = new Result();
         $result->setQuery($this->_sql);
         $result->setValues($this->_values);

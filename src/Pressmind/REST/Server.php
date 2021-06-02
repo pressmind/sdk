@@ -53,8 +53,12 @@ class Server
         $this->_request = new Request($pApiBaseUrl);
         $this->_response = new Response();
         $this->_router = new Router();
+        $this->_router->addRoute(new Router\Route('system/updateTags', 'GET', '\\Pressmind\\REST\\Controller', 'System', 'updateTags'));
         $this->_router->addRoute(new Router\Route('search', 'POST', '\\Pressmind\\REST\\Controller', 'Search', 'search'));
         $this->_router->addRoute(new Router\Route('import', 'GET', '\\Pressmind\\REST\\Controller', 'Import', 'index'));
+        $this->_router->addRoute(new Router\Route('redis/getKeys', 'GET', '\\Pressmind\\REST\\Controller', 'Redis', 'getKeys'));
+        $this->_router->addRoute(new Router\Route('redis/getKeyValue', 'GET', '\\Pressmind\\REST\\Controller', 'Redis', 'getKeyValue'));
+        $this->_router->addRoute(new Router\Route('redis/getInfo', 'GET', '\\Pressmind\\REST\\Controller', 'Redis', 'getInfo'));
         $this->_router->addRoute(new Router\Route('mediaObject/getByRoute', 'POST', '\\Pressmind\\REST\\Controller', 'MediaObject', 'getByRoute'));
         $this->_router->addRoute(new Router\Route('touristic/insurance/calculatePrices', 'GET', '\\Pressmind\\REST\\Controller\\Touristic', 'Insurance', 'calculatePrices'));
         $this->_router->addRoute(new Router\Route('touristic/insurance/calculatePrices', 'POST', '\\Pressmind\\REST\\Controller\\Touristic', 'Insurance', 'calculatePrices'));

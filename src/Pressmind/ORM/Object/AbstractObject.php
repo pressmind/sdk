@@ -28,19 +28,22 @@ abstract class AbstractObject implements SplSubject
     protected $_definitions;
 
     /**
-     * @var bool
+     * @var boolean
      */
     protected $_check_variables_for_existence = true;
 
+    /**
+     * @var boolean
+     */
     protected $_dont_auto_create_has_one_relations = false;
 
     /**
-     * @var bool
+     * @var boolean
      */
     protected $_dont_use_autoincrement_on_primary_key = false;
 
     /**
-     * @var
+     * @var boolean
      */
     protected $_use_cache = false;
 
@@ -49,10 +52,19 @@ abstract class AbstractObject implements SplSubject
      */
     protected $_cache_enabled;
 
+    /**
+     * @var boolean
+     */
     protected $_skip_cache_on_read = false;
 
+    /**
+     * @var boolean
+     */
     protected $_disable_cache_permanently = false;
 
+    /**
+     * @var boolean
+     */
     protected $_read_relations = true;
 
     /**
@@ -74,6 +86,9 @@ abstract class AbstractObject implements SplSubject
      */
     protected $_log = [];
 
+    /**
+     * @var null
+     */
     protected $_start_time = null;
 
     /**
@@ -99,12 +114,18 @@ abstract class AbstractObject implements SplSubject
         }
     }
 
+    /**
+     * @param string $logText
+     */
     private function _write_log($logText)
     {
         $text =  'Time: ' . number_format(microtime(true) - $this->_start_time, 8) . " " . " Heap: " . bcdiv(memory_get_usage(), (1000 * 1000), 2) . ' MByte ' . get_class($this) . " " . $logText;
         $this->_log[] = $text;
     }
 
+    /**
+     * @return array
+    */
     public function getLog()
     {
         return $this->_log;
@@ -283,6 +304,9 @@ abstract class AbstractObject implements SplSubject
         return null;
     }
 
+    /**
+     * @param boolean $skipCache
+     */
     public function setSkipCache($skipCache) {
         $this->_skip_cache_on_read = $skipCache;
     }
@@ -308,6 +332,7 @@ abstract class AbstractObject implements SplSubject
     /**
      * @param $id
      * @return mixed
+     * @throws Exception
      */
     private function _readFromCache($id)
     {
@@ -325,12 +350,17 @@ abstract class AbstractObject implements SplSubject
         return $data;
     }
 
+    /**
+     * @param $id
+     * @return string
+     */
     private function _createCacheKey($id) {
         return $this->getDbTableName() . '_' . $id;
     }
 
     /**
      * @return mixed
+     * @throws Exception
      */
     public function addToCache($id)
     {
@@ -348,6 +378,11 @@ abstract class AbstractObject implements SplSubject
         return $data;
     }
 
+    /**
+     * @param $id
+     * @return string
+     * @throws Exception
+     */
     public function updateCache($id) {
         $key = $this->_createCacheKey($id);
         $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
@@ -447,6 +482,9 @@ abstract class AbstractObject implements SplSubject
         }
     }
 
+    /**
+     * @param string $property_name
+     */
     private function _deleteBelongsToRelation($property_name) {
         $relation = $this->$property_name;
         if(!empty($relation)) {
@@ -493,6 +531,9 @@ abstract class AbstractObject implements SplSubject
         $this->readRelations();
     }
 
+    /**
+     * @param array $pArray
+     */
     public function fromArray($pArray) {
         foreach ($pArray as $key => $value) {
             $this->$key = $value;
@@ -532,6 +573,10 @@ abstract class AbstractObject implements SplSubject
         }
     }
 
+    /**
+     * @param boolean $with_relations
+     * @return stdClass
+     */
     public function toStdClass($with_relations = true)
     {
         $object = new stdClass();
@@ -565,6 +610,10 @@ abstract class AbstractObject implements SplSubject
         return $object;
     }
 
+    /**
+     * @param $data
+     * @return $this
+     */
     public function fromCache($data) {
         $this->_write_log('fromCache()');
         foreach ($this->_definitions['properties'] as $property_name => $property) {
@@ -1033,8 +1082,9 @@ abstract class AbstractObject implements SplSubject
             $relation_class_name = $property_info['relation']['class'];
             /**@var $relation_object AbstractObject* */
             $relation_object = new $relation_class_name($this->$relation_object_id_name, $this->_read_relations);
-            //$relation_object->read()
-            return $relation_object;
+            if(!empty($relation_object->getId())) {
+                return $relation_object;
+            }
         }
         return null;
     }

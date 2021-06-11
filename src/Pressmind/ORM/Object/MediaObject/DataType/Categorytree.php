@@ -77,8 +77,8 @@ class Categorytree extends AbstractObject
                 'validators' => null,
             ],
             'language' => [
-                'title' => 'section_name',
-                'name' => 'section_name',
+                'title' => 'language',
+                'name' => 'language',
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,

@@ -36,6 +36,7 @@ class PriceRange implements FilterInterface
         $max = null;
 
         $this->_search->removeCondition(Search\Condition\PriceRange::class);
+        $this->_search->setSortProperties([]);
         $results = $this->_search->getResults(false, true);
         $prices = [];
         foreach ($results as $result) {

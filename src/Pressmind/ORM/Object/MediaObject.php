@@ -662,6 +662,18 @@ class MediaObject extends AbstractObject
                 $where .= implode(') OR (', $foo) .  '))';
                 $occupancy_filter_is_set = true;
             }
+            if(!is_null($filters->id_option)) {
+                $where .= ' AND id_option = ' . $filters->id_option;
+            }
+            if(!is_null($filters->id_date)) {
+                $where .= ' AND id_date = ' . $filters->id_date;
+            }
+            if(!is_null($filters->id_booking_package)) {
+                $where .= ' AND id_booking_package = ' . $filters->id_booking_package;
+            }
+            if(!is_null($filters->id_housing_package)) {
+                $where .= ' AND id_housing_package = ' . $filters->id_housing_package;
+            }
             //echo $where;
         }
         if(!$occupancy_filter_is_set) {

@@ -62,14 +62,17 @@ class CheapestPriceSpeed extends AbstractObject
             'table_name' => 'pmt2core_cheapest_price_speed',
             'primary_key' => 'id',
             'indexes' => [
-                'id_id_media_object_price_total_date_departure_date_arrival_index' => [
+                'search_filter_index' => [
                     'type' => 'index',
                     'columns' => [
                         'id',
                         'id_media_object',
                         'price_total',
                         'date_departure',
-                        'date_arrival'
+                        'date_arrival',
+                        'option_occupancy',
+                        'option_occupancy_min',
+                        'option_occupancy_max',
                     ]
                 ],
                 'id_id_media_object_price_total_index' => [
@@ -263,7 +266,10 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'integer',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => null,
+                'index' => [
+                    'option_occupancy' => 'index'
+                ]
             ],
             'option_occupancy_min' => [
                 'name' => 'option_occupancy_min',
@@ -271,7 +277,10 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'integer',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => null,
+                'index' => [
+                    'option_occupancy_min' => 'index'
+                ]
             ],
             'option_occupancy_max' => [
                 'name' => 'option_occupancy_max',
@@ -279,7 +288,10 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'integer',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => null,
+                'index' => [
+                    'option_occupancy_max' => 'index'
+                ]
             ],
             'price_transport_total' => [
                 'name' => 'price_transport_total',

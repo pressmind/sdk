@@ -41,14 +41,11 @@ class Mysql
     {
         $this->_orm_object = $ormObject;
         /**@var AdapterInterface $db**/
-        $db = Registry::getInstance()->get('db');
+        /*$db = Registry::getInstance()->get('db');
         $this->_database_table_allready_exists = $db->fetchRow("SHOW TABLES like '" . $this->_orm_object->getDbTableName() . "'") != null ? true : false;
         if($this->_database_table_allready_exists) {
             $is_object_ok = $this->_orm_object->checkStorageIntegrity();
-            if($is_object_ok !== true) {
-                //print_r($is_object_ok);
-            }
-        }
+        }*/
     }
 
     public function getLog()

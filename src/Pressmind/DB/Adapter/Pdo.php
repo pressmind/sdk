@@ -4,6 +4,8 @@ namespace Pressmind\DB\Adapter;
 
 use \Exception;
 use \PDOStatement;
+use Pressmind\HelperFunctions;
+use Pressmind\Registry;
 use \stdClass;
 
 /**
@@ -70,14 +72,26 @@ class Pdo implements AdapterInterface
      */
     public function fetchAll($query = null, $parameters = null, $class_name = null)
     {
+        $database_query_log_enabled = Registry::getInstance()->get('config')['logging']['enable_database_query_logging'] ?? false;
+        if($database_query_log_enabled) {
+            $debug_start_time = microtime(true);
+        }
         if (!is_null($query)) {
             $this->statement = $this->databaseConnection->prepare($query);
             $this->statement->execute($parameters);
         }
         if(!is_null($class_name)) {
-            return $this->statement->fetchAll(\PDO::FETCH_CLASS, $class_name);
+            $result = $this->statement->fetchAll(\PDO::FETCH_CLASS, $class_name);
+        } else {
+            $result = $this->statement->fetchAll(\PDO::FETCH_OBJ);
         }
-        return $this->statement->fetchAll(\PDO::FETCH_OBJ);
+        if($database_query_log_enabled) {
+            $now = new \DateTime();
+            $logfile = Registry::getInstance()->get('config')['logging']['database_query_log_file'] ?? APPLICATION_PATH . '/logs/db_query_log.txt';
+            $debug_end_time = microtime(true);
+            file_put_contents(HelperFunctions::replaceConstantsFromConfig($logfile), $now->format(DATE_ISO8601) . ' - ' . ($debug_end_time - $debug_start_time) . ': ' . $query . "\n", FILE_APPEND);
+        }
+        return $result;
     }
 
     /**

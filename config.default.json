@@ -43,7 +43,9 @@
             "keep_log_types": [
                 "ERROR"
             ],
-            "enable_advanced_object_log": false
+            "enable_advanced_object_log": false,
+            "enable_database_query_logging": false,
+            "database_query_log_file": "APPLICATION_PATH/logs/db_query_log.txt"
         },
         "debug": {
             "mode": "on",

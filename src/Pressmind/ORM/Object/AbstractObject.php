@@ -119,8 +119,11 @@ abstract class AbstractObject implements SplSubject
      */
     private function _write_log($logText)
     {
-        $text =  'Time: ' . number_format(microtime(true) - $this->_start_time, 8) . " " . " Heap: " . bcdiv(memory_get_usage(), (1000 * 1000), 2) . ' MByte ' . get_class($this) . " " . $logText;
-        $this->_log[] = $text;
+        $logging_enabled = Registry::getInstance()->get('config')['logging']['enable_advanced_object_log'] ?? false;
+        if($logging_enabled) {
+            $text = 'Time: ' . number_format(microtime(true) - $this->_start_time, 8) . " " . " Heap: " . bcdiv(memory_get_usage(), (1000 * 1000), 2) . ' MByte ' . get_class($this) . " " . $logText;
+            $this->_log[] = $text;
+        }
     }
 
     /**
@@ -442,9 +445,6 @@ abstract class AbstractObject implements SplSubject
         $this->_db->delete($this->getDbTableName(), [$this->getDbPrimaryKey() . " = ?", $this->getId()]);
         if(true === $deleteRelations) {
             $this->_deleteRelations();
-            /*$this->_deleteHasManyRelations($deleteRelations);
-            $this->_deleteHasOneRelations();
-            $this->_deleteManyToManyRelations();*/
         }
     }
 

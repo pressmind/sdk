@@ -42,7 +42,8 @@
             "lifetime": 86400,
             "keep_log_types": [
                 "ERROR"
-            ]
+            ],
+            "enable_advanced_object_log": false
         },
         "debug": {
             "mode": "on",

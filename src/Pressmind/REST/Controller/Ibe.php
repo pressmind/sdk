@@ -195,7 +195,7 @@ class Ibe
         $result['available_insurances'] = $insurances;
         $result['available_housing_options'] = $booking->getAvailableHousingOptionsForDate();
         $result['available_transports'] = $booking->getTransports();
-        $result['available_starting_points'] = $this->_getStartingPointOptionsForId($booking->getDate()->id_starting_point, 0, 10);//$this->parameters['settings']['steps']['starting_points']['pagination_page_size']['value']);
+        $result['available_starting_points'] = $this->_getStartingPointOptionsForId($booking->getDate()->id_starting_point, 0, $this->parameters['settings']['steps']['starting_points']['pagination_page_size']['value']);
         $result['available_exit_points'] = $this->_getExitPointOptionsForId($booking->getDate()->id_starting_point, 0, 10);//$this->_getParameter('settings')['steps']['starting_points']['pagination_page_size']['value']);
         $result['has_pickup_services'] = $booking->hasPickServices();
         $result['has_starting_points'] = $booking->hasStartingPoints();
@@ -239,9 +239,10 @@ class Ibe
         return array('total' => count($total_exit_point_options), 'exit_point_options' => $limited_exit_point_options);
     }
 
-    public function pressmind_ib3_v2_get_exit_point() {
-        $id_starting_point = $this->getParameter('id_starting_point');
-        $starting_point_option_code = $this->getParameter('starting_point_option_code');
+    public function pressmind_ib3_v2_get_exit_point($params) {
+        $this->parameters = $params['data'];
+        $id_starting_point = $this->parameters['id_starting_point'] ?? null;
+        $starting_point_option_code = $this->parameters['starting_point_option_code'] ?? null;
         $exit_point = null;
         $optionObject = new \Pressmind\ORM\Object\Touristic\Startingpoint\Option();
         $exit_point_result = $optionObject->listAll(['id_startingpoint' => $id_starting_point, '`exit`' => 1, 'code' => $starting_point_option_code]);

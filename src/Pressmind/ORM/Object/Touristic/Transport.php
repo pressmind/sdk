@@ -11,6 +11,7 @@ use Pressmind\System\I18n;
  * @property string $id_date
  * @property integer $id_media_object
  * @property string $id_booking_package
+ * @property integer $id_early_bird_discount_group
  * @property string $code
  * @property string $description
  * @property string $type
@@ -27,7 +28,7 @@ use Pressmind\System\I18n;
  * @property integer $id_starting_point
  * @property DateTime $transport_date_from
  * @property DateTime $transport_date_to
- * @property integer $id_early_bird
+ * @property EarlyBirdDiscountGroup $early_bird_discount_group
  */
 class Transport extends AbstractObject
 {
@@ -105,6 +106,22 @@ class Transport extends AbstractObject
                 'filters' => NULL,
                 'index' => [
                     'id_booking_package' => 'index'
+                ]
+            ],
+            'id_early_bird_discount_group' => [
+                'title' => 'id_early_bird_discount_group',
+                'name' => 'id_early_bird_discount_group',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ],
+                ],
+                'filters' => NULL,
+                'index' => [
+                    'id_early_bird_discount_group' => 'index'
                 ]
             ],
             'code' => [
@@ -294,19 +311,19 @@ class Transport extends AbstractObject
                 'validators' => NULL,
                 'filters' => NULL,
             ],
-            'id_early_bird' => [
-                'title' => 'Id_early_bird',
-                'name' => 'id_early_bird',
-                'type' => 'integer',
-                'required' => false,
-                'validators' => [
-                    [
-                        'name' => 'maxlength',
-                        'params' => 11,
-                    ],
+            'early_bird_discount_group' => [
+                'title' => 'Early Bird Discount',
+                'name' => 'early_bird_discount_group',
+                'type' => 'relation',
+                'relation' => [
+                    'type' => 'hasOne',
+                    'related_id' => 'id_early_bird_discount_group',
+                    'class' => EarlyBirdDiscountGroup::class,
                 ],
+                'required' => false,
+                'validators' => NULL,
                 'filters' => NULL,
-            ],
+            ]
         ]
     );
 

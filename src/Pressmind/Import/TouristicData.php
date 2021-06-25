@@ -43,6 +43,12 @@ class TouristicData extends AbstractImport
         'touristic_base' => [
             'id_ibe_types' => 'id_ibe_type',
             'id_saison_set' => 'id_season_set'
+        ],
+        'touristic_dates' => [
+            'id_earlybird_discount' => 'id_early_bird_discount_group'
+        ],
+        'touristic_transports' => [
+            'id_early_bird' => 'id_early_bird_discount_group'
         ]
     ];
 

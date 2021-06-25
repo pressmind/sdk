@@ -1,15 +1,14 @@
 <?php
 
-namespace Pressmind\ORM\Object\Touristic\Booking;
+namespace Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup;
 
 use DateTime;
 use Pressmind\ORM\Object\AbstractObject;
 
 /**
- * Class Earlybird
- * @property integer $id
- * @property integer $id_booking_package
- * @property integer $id_media_object
+ * Class Item
+ * @property string $id
+ * @property string $id_early_bird_discount_group
  * @property DateTime $travel_date_from
  * @property DateTime $travel_date_to
  * @property DateTime $booking_date_from
@@ -19,7 +18,7 @@ use Pressmind\ORM\Object\AbstractObject;
  * @property boolean $round
  * @property boolean $early_payer
  */
-class Earlybird extends AbstractObject
+class Item extends AbstractObject
 {
 
     protected $_dont_use_autoincrement_on_primary_key = true;
@@ -29,7 +28,7 @@ class Earlybird extends AbstractObject
             'name' => self::class,
         ],
         'database' => [
-            'table_name' => 'pmt2core_touristic_booking_earlybirds',
+            'table_name' => 'pmt2core_touristic_early_bird_discount_group_item',
             'primary_key' => 'id',
         ],
         'properties' => [
@@ -46,9 +45,9 @@ class Earlybird extends AbstractObject
                 ],
                 'filters' => NULL,
             ],
-            'id_booking_package' => [
-                'title' => 'Id_booking_package',
-                'name' => 'id_booking_package',
+            'id_early_bird_discount_group' => [
+                'title' => 'Id',
+                'name' => 'id',
                 'type' => 'string',
                 'required' => true,
                 'validators' => [
@@ -59,27 +58,7 @@ class Earlybird extends AbstractObject
                 ],
                 'filters' => NULL,
                 'index' => [
-                    'id_booking_package' => 'index'
-                ]
-            ],
-            'id_media_object' => [
-                'title' => 'Id_media_object',
-                'name' => 'id_media_object',
-                'type' => 'integer',
-                'required' => true,
-                'validators' => [
-                    [
-                        'name' => 'maxlength',
-                        'params' => 22,
-                    ],
-                    [
-                        'name' => 'unsigned',
-                        'params' => null,
-                    ]
-                ],
-                'filters' => NULL,
-                'index' => [
-                    'id_media_object' => 'index'
+                    'id_early_bird_discount_group' => 'index'
                 ]
             ],
             'travel_date_from' => [
@@ -126,11 +105,14 @@ class Earlybird extends AbstractObject
                 'title' => 'Type',
                 'name' => 'type',
                 'type' => 'string',
-                'required' => false,
+                'required' => true,
                 'validators' => [
                     [
-                        'name' => 'maxlength',
-                        'params' => 12,
+                        'name' => 'inarray',
+                        'params' => [
+                            'P',
+                            'F'
+                        ],
                     ],
                 ],
                 'filters' => NULL,

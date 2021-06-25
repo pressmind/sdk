@@ -8,7 +8,7 @@ class PriceRange implements ConditionInterface
     /**
      * @var integer
      */
-    private $_sort = 6;
+    private $_sort = 2;
 
     /**
      * @var integer
@@ -39,7 +39,25 @@ class PriceRange implements ConditionInterface
 
     public function getJoins()
     {
-        return 'INNER JOIN pmt2core_cheapest_price_speed on pmt2core_media_objects.id = pmt2core_cheapest_price_speed.id_media_object';
+        return 'INNER JOIN (SELECT pmt2core_cheapest_price_speed.id_media_object, MIN(pmt2core_cheapest_price_speed.price_total) as cheapest_price_total, pmt2core_cheapest_price_speed.date_departure
+                     FROM pmt2core_cheapest_price_speed
+                     WHERE ###CONDITIONS### GROUP BY pmt2core_cheapest_price_speed.id_media_object) cheapest_price_speed on pmt2core_media_objects.id = cheapest_price_speed.id_media_object';
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getJoinType()
+    {
+        return 'SUBSELECT';
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getSubselectJoinTable()
+    {
+        return 'pmt2core_cheapest_price_speed';
     }
 
     public function getAdditionalFields()

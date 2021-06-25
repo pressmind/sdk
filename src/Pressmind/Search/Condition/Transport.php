@@ -59,6 +59,22 @@ class Transport implements ConditionInterface
         return 'INNER JOIN pmt2core_cheapest_price_speed on pmt2core_media_objects.id = pmt2core_cheapest_price_speed.id_media_object';
     }
 
+    /**
+     * @return string|null
+     */
+    public function getJoinType()
+    {
+        return null;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getSubselectJoinTable()
+    {
+        return null;
+    }
+
     public function getAdditionalFields()
     {
         return null;

@@ -64,6 +64,22 @@ class ObjectType implements ConditionInterface
         return null;//'INNER JOIN pmt2core_media_object_tree_items on pmt2core_media_objects.id = pmt2core_media_object_tree_items.id_media_object';
     }
 
+    /**
+     * @return string|null
+     */
+    public function getJoinType()
+    {
+        return null;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getSubselectJoinTable()
+    {
+        return null;
+    }
+
     public function getAdditionalFields()
     {
         return null;

@@ -105,6 +105,22 @@ class Fulltext implements ConditionInterface
         return 'INNER JOIN pmt2core_fulltext_search ON pmt2core_fulltext_search.id_media_object = pmt2core_media_objects.id';
     }
 
+    /**
+     * @return string|null
+     */
+    public function getJoinType()
+    {
+        return null;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getSubselectJoinTable()
+    {
+        return null;
+    }
+
     public function getAdditionalFields()
     {
         return null;

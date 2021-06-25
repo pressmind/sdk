@@ -7,7 +7,9 @@ use Exception;
 use Pressmind\Cache\Adapter\Factory;
 use Pressmind\DB\Adapter\Pdo;
 use Pressmind\Log\Writer;
+use Pressmind\ORM\Object\MediaObject;
 use Pressmind\Search\Condition\ConditionInterface;
+use Pressmind\Search\Filter\PriceRange;
 use Pressmind\Search\Paginator;
 use Pressmind\Search\Result;
 
@@ -40,8 +42,14 @@ class Search
     /**
      * @var array
      */
+    private $_subselect_joins = [];
+
+    /**
+     * @var array
+     */
     private $_sort_properties_database_mapper = [
-        'price' => 'pmt2core_cheapest_price_speed.price_total'
+        'price' => 'cheapest_price_total',
+        'date_departure' => 'cheapest_price_speed.date_departure'
     ];
 
     /**
@@ -63,6 +71,8 @@ class Search
      * @var Result
      */
     private $_result = null;
+
+    public $return_id_only = false;
 
     /**
      * Search constructor.
@@ -154,14 +164,18 @@ class Search
             }
         }
         $this->_concatSql();
-        if(Registry::getInstance()->get('config')['cache']['enabled'] && in_array('SEARCH', Registry::getInstance()->get('config')['cache']['types'])) {
+        $class_name = MediaObject::class;
+        if (true === $this->return_id_only) {
+            $class_name = null;
+        }
+        if (Registry::getInstance()->get('config')['cache']['enabled'] && in_array('SEARCH', Registry::getInstance()->get('config')['cache']['types'])) {
             $key = 'SEARCH_' . md5($this->_sql . json_encode($this->_values));
             $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
             if ($cache_adapter->exists($key)) {
                 Writer::write(get_class($this) . ' exec() reading from cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
                 $db_result = json_decode($cache_adapter->get($key));
             } else {
-                $db_result = $db->fetchAll($this->_sql, $this->_values);
+                $db_result = $db->fetchAll($this->_sql, $this->_values, $class_name);
                 Writer::write(get_class($this) . ' exec() writing to cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
                 $info = new \stdClass();
                 $info->type = 'SEARCH';
@@ -171,7 +185,7 @@ class Search
                 $cache_adapter->add($key, json_encode($db_result), $info);
             }
         } else {
-            $db_result = $db->fetchAll($this->_sql, $this->_values);
+            $db_result = $db->fetchAll($this->_sql, $this->_values, $class_name);
         }
         $result = new Result();
         $result->setQuery($this->_sql);
@@ -188,7 +202,8 @@ class Search
     /**
      * @param \stdClass $params
      */
-    public function updateCache($params) {
+    public function updateCache($params)
+    {
         try {
             $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
             $key = 'SEARCH_' . md5($params->sql . json_encode($params->values));
@@ -202,7 +217,7 @@ class Search
             $info->parameters = ['sql' => $params->sql, 'values' => $params->values];
             Writer::write(get_class($this) . ' exec() writing to cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
             $cache_adapter->add($key, json_encode($db_result), $info);
-            return $key. ': ' . $params->sql;
+            return $key . ': ' . $params->sql;
         } catch (Exception $e) {
             return $e->getMessage();
         }
@@ -240,6 +255,33 @@ class Search
         return $this->_values;
     }
 
+    private function _concatJoins()
+    {
+
+    }
+
+    private function concatConditions()
+    {
+
+    }
+
+    /**
+     * @param ConditionInterface $condition
+     * @return string
+     */
+    private function _addSubselectJoin($condition)
+    {
+        if(!isset($this->_subselect_joins[$condition->getSubselectJoinTable()])) {
+            $this->_subselect_joins[$condition->getSubselectJoinTable()] = ['sort' => $condition->getSort() ,'join' => $condition->getJoins(), 'conditions' => []];
+        }
+        $this->_subselect_joins[$condition->getSubselectJoinTable()]['conditions'][] = $condition->getSQL();
+    }
+
+    private function _concatSubSelectJoin($subselectJoin) {
+        $conditions = implode(') AND (', $subselectJoin['conditions']);
+        return str_replace('###CONDITIONS###', '(' . $conditions . ')', $subselectJoin['join']);
+    }
+
     /**
      * @param bool $returnTotalCount
      */
@@ -257,15 +299,26 @@ class Search
         $config = Registry::getInstance()->get('config');
         $db_engine = $config['database']['engine'];
         foreach ($this->_conditions as $key => $condition) {
-            if(!isset($joins_sorted[$condition->getSort()])) $joins_sorted[$condition->getSort()] = [];
-            if(!is_null($condition->getJoins()) && !in_array($condition->getJoins(), $joins_sorted[$condition->getSort()])) {
-                $joins_sorted[$condition->getSort()][] = $condition->getJoins();
+            if (!isset($joins_sorted[$condition->getSort()])) $joins_sorted[$condition->getSort()] = [];
+            if(strtolower($condition->getJoinType()) != 'subselect') {
+                if (!is_null($condition->getJoins()) && !in_array($condition->getJoins(), $joins_sorted[$condition->getSort()])) {
+                    $joins_sorted[$condition->getSort()][] = $condition->getJoins();
+                }
+                if (!is_null($condition->getAdditionalFields())) {
+                    $additional_fields_sorted[$condition->getSort()][] = $condition->getAdditionalFields();
+                }
+                if (!is_null($condition->getSQL())) {
+                    $sql_sorted[$condition->getSort()][] = $condition->getSQL();
+                }
+            } else {
+                $this->_addSubselectJoin($condition);
             }
-            if(!is_null($condition->getAdditionalFields())) {
-                $additional_fields_sorted[$condition->getSort()][] = $condition->getAdditionalFields();
-            }
-            $sql_sorted[$condition->getSort()][] = $condition->getSQL();
             $this->_values = array_merge($condition->getValues(), $this->_values);
+        }
+        if(!empty($this->_subselect_joins)) {
+            foreach ($this->_subselect_joins as $key => $subselect_join) {
+                $joins_sorted[$subselect_join['sort']][] = $this->_concatSubSelectJoin($subselect_join);
+            }
         }
         if(!empty($additional_fields)) {
             $additional_fields_string = ' , ' . implode(', ', $additional_fields);
@@ -274,6 +327,21 @@ class Search
         ksort($sql_sorted);
         ksort($joins_sorted);
         ksort($additional_fields_sorted);
+
+        $order_strings = [];
+
+        if(!empty($this->_sort_properties)  && $returnTotalCount == false) {
+            foreach ($this->_sort_properties as $property => $direction) {
+                if(array_key_exists($property, $this->_sort_properties_database_mapper)) {
+                    $property = $this->_sort_properties_database_mapper[$property];
+                }
+                if($direction == 'RAND()') {
+                    $order_strings[] = 'RAND()';
+                } else {
+                    $order_strings[] = $property . ' ' . $direction;
+                }
+            }
+        }
 
         /**
          * Flatten the arrays after sorting
@@ -296,8 +364,21 @@ class Search
             }
         }
 
-        $sql_start = "SELECT DISTINCT pmt2core_media_objects.id";
+        $sql_start = "SELECT pmt2core_media_objects.id";
+        if(false === $this->return_id_only) {
+            $sql_start = "SELECT pmt2core_media_objects.*";
+            if(in_array('cheapest_price_total ASC', $order_strings) || $this->hasCondition('Pressmind\Search\Condition\PriceRange') && $returnTotalCount == false) {
+                $sql_start .= ', cheapest_price_total';
+            }
+        }
         $sql_end = "";
+        if(in_array('cheapest_price_total ASC', $order_strings) && !$this->hasCondition('Pressmind\Search\Condition\PriceRange') && $returnTotalCount == false) {
+            $joins[] = 'INNER JOIN (SELECT id_media_object, MIN(price_total) as cheapest_price_total
+                    FROM pmt2core_cheapest_price_speed
+                    WHERE price_total > 0 AND NOT ISNULL(price_total) AND (price_total BETWEEN 1 AND 10000000)
+                    AND option_occupancy <= 2
+                    GROUP BY id_media_object) cheapest_price_speed On cheapest_price_speed.id_media_object = pmt2core_media_objects.id';
+        }
         if($returnTotalCount == true) {
             $sql_start = "SELECT COUNT(DISTINCT pmt2core_media_objects.id) as total_rows";
             $sql_end = "";
@@ -311,32 +392,26 @@ class Search
         if($this->hasCondition('Pressmind\Search\Condition\Validity')) {
             $validity = null;
         }
-
         $this->_sql = $sql_start . $additional_fields_string . " FROM pmt2core_media_objects " . implode(' ', $joins) . " WHERE" . $visibility . $validity . " (" . implode(') AND (', $sql). ")" . $sql_end;
         if(empty($this->_conditions)) {
             $this->_sql = $sql_start . " FROM pmt2core_media_objects " . " WHERE pmt2core_media_objects.visibility = 30" . $sql_end;
         }
-        if(!empty($this->_sort_properties)  && $returnTotalCount == false) {
-            $order_strings = [];
-            foreach ($this->_sort_properties as $property => $direction) {
-                if(array_key_exists($property, $this->_sort_properties_database_mapper)) {
-                    $property = $this->_sort_properties_database_mapper[$property];
-                }
-                if($direction == 'RAND()') {
-                    $order_strings[] = 'RAND()';
-                } else {
-                    if(strtolower($db_engine) == 'mariadb') {
-                        $order_strings[] = $property . ' ' . $direction;
-                    } else {
-                        $order_strings[] = 'ANY_VALUE(' . $property . ') ' . $direction;
-                    }
-                }
-            }
+        if(!empty($order_strings)) {
             $this->_sql .= ' ORDER BY ' . implode(', ', $order_strings);
         }
         if(!empty($this->_limits) && $returnTotalCount == false) {
             $this->_sql .= " LIMIT " . $this->_limits['start'] . ', ' . $this->_limits['length'];
         }
+    }
+
+
+    public function removeLimits()
+    {
+        $this->_limits = [];
+    }
+
+    public function removeSortProperties() {
+        $this->_sort_properties = [];
     }
 
     /**
@@ -367,14 +442,25 @@ class Search
         return false;
     }
 
+    /**
+     * @param $pClassName
+     * @return ConditionInterface[]
+     */
+    public function getConditions()
+    {
+        return $this->_conditions;
+    }
+
     public function removeCondition($pClassName)
     {
+        $i = 0;
         foreach ($this->_conditions as $index => $condition) {
             if(is_a($condition, $pClassName)) {
-                array_splice($this->_conditions, $index, 1);
+                array_splice($this->_conditions, $i, 1);
                 $this->_concatSql();
                 return $condition;
             }
+            $i++;
         }
         return false;
     }

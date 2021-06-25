@@ -83,6 +83,22 @@ class CategoryGlobal implements ConditionInterface
     /**
      * @return string|null
      */
+    public function getJoinType()
+    {
+        return null;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getSubselectJoinTable()
+    {
+        return null;
+    }
+
+    /**
+     * @return string|null
+     */
     public function getAdditionalFields()
     {
         return null;

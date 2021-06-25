@@ -35,8 +35,7 @@ class Result
     public function getResult($loadfull = false) {
         if(empty($this->_result)) {
             foreach ($this->_result_raw as $result_item) {
-                $media_object = new MediaObject($result_item->id, $loadfull);
-                $this->_result[] = $media_object;
+                $this->_result[] = $result_item;
             }
         }
         return $this->_result;

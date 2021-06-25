@@ -51,6 +51,22 @@ class Validity implements ConditionInterface
         return null;
     }
 
+    /**
+     * @return string|null
+     */
+    public function getJoinType()
+    {
+        return null;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getSubselectJoinTable()
+    {
+        return null;
+    }
+
     public function getAdditionalFields()
     {
         return null;

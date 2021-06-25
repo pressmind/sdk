@@ -106,6 +106,22 @@ class Text implements ConditionInterface
         return 'INNER JOIN objectdata_' . $this->_object_type_id . ' ON objectdata_' . $this->_object_type_id . '.id_media_object = pmt2core_media_objects.id';
     }
 
+    /**
+     * @return string|null
+     */
+    public function getJoinType()
+    {
+        return null;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getSubselectJoinTable()
+    {
+        return null;
+    }
+
     public function getAdditionalFields()
     {
         return null;

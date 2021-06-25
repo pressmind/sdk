@@ -63,9 +63,17 @@ class Category implements ConditionInterface
         foreach ($this->item_ids as $item_id) {
             $term_counter++;
             $item_id_strings[] = $this->var_name . '.id_item = :' . $this->var_name . $term_counter;
+            $item_id_strings_linked_search[] = $this->var_name . '_mo.id_item = :' . $this->var_name . $term_counter;
             $this->_values[':' . $this->var_name . $term_counter] = $item_id;
         }
-        $sql = $this->var_name . ".var_name = '" . $this->var_name . "' AND (" . implode(' ' . $this->_combine_operator . ' ', $item_id_strings) . ")";
+        $sql = '';
+        if($this->_linked_object_search) {
+            $sql = "(";
+        }
+        $sql .= $this->var_name . ".var_name = '" . $this->var_name . "' AND (" . implode(' ' . $this->_combine_operator . ' ', $item_id_strings) . ")";
+        if($this->_linked_object_search) {
+            $sql .= " OR " . $this->var_name . "_mo.var_name = '" . $this->var_name . "' AND (" . implode(' ' . $this->_combine_operator . ' ', $item_id_strings_linked_search) . "))";
+        }
         return $sql;
     }
 
@@ -92,12 +100,29 @@ class Category implements ConditionInterface
     {
         $joins = [];
         if($this->_linked_object_search) {
+            $joins[] = 'LEFT JOIN pmt2core_media_object_tree_items ' . $this->var_name . '_mo ON pmt2core_media_objects.id = ' . $this->var_name . '_mo.id_media_object';
             $joins[] = 'LEFT JOIN pmt2core_media_object_object_links ON (pmt2core_media_objects.id = pmt2core_media_object_object_links.id_media_object)';
             $joins[] = 'LEFT JOIN pmt2core_media_object_tree_items ' . $this->var_name . ' ON pmt2core_media_object_object_links.id_media_object_link = ' . $this->var_name . '.id_media_object';
         } else {
-            $joins[] = 'LEFT JOIN pmt2core_media_object_tree_items ' . $this->var_name . ' ON pmt2core_media_objects.id = ' . $this->var_name . '.id_media_object';
+            $joins[] = 'INNER JOIN pmt2core_media_object_tree_items ' . $this->var_name . ' ON pmt2core_media_objects.id = ' . $this->var_name . '.id_media_object';
         }
         return implode(' ', $joins);
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getJoinType()
+    {
+        return null;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getSubselectJoinTable()
+    {
+        return null;
     }
 
     /**

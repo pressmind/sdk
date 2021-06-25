@@ -65,6 +65,22 @@ class BookingState implements ConditionInterface
         return 'INNER JOIN pmt2core_touristic_options on pmt2core_media_objects.id = pmt2core_touristic_options.id_media_object';
     }
 
+    /**
+     * @return string|null
+     */
+    public function getJoinType()
+    {
+        return null;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getSubselectJoinTable()
+    {
+        return null;
+    }
+
     public function getAdditionalFields()
     {
         return null;

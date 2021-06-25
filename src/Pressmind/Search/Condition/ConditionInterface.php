@@ -29,6 +29,16 @@ interface ConditionInterface
     /**
      * @return null|string
      */
+    public function getJoinType();
+
+    /**
+     * @return null|string
+     */
+    public function getSubselectJoinTable();
+
+    /**
+     * @return null|string
+     */
     public function getAdditionalFields();
 
     /**

@@ -38,7 +38,7 @@ class Category implements FilterInterface
         $results = $this->_search->getResults(false, true);
         $ids = [];
         foreach ($results as $result) {
-            $ids[] = $result->getId();
+            $ids[] = $result->id;
         }
         /** @var Categorytree[] $all_items */
         $all_items = Categorytree::listAll(['id_tree' => $this->_tree_id, 'id_media_object' => ['IN', implode(",", $ids)]]);

@@ -332,6 +332,7 @@ class Package extends AbstractObject
                 'title' => 'Dates',
                 'name' => 'dates',
                 'type' => 'relation',
+                'prevent_autoload' => true,
                 'relation' => [
                     'type' => 'hasMany',
                     'related_id' => 'id_booking_package',

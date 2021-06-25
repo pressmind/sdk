@@ -167,6 +167,7 @@ abstract class AbstractObject implements SplSubject
         $result = [];
         $order_columns = [];
         $query = "SELECT * FROM " . $this->getDbTableName();
+        $class_name = get_class($this);
 
         if (is_array($where)) {
             $query .= " WHERE ";
@@ -242,21 +243,20 @@ abstract class AbstractObject implements SplSubject
                 Writer::write(get_class($this) . ' loadAll() reading from cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
                 $dataset = json_decode($cache_adapter->get($key));
             } else {
-                $dataset = $this->_db->fetchAll($query, $values);
+                $dataset = $this->_db->fetchAll($query, $values, $class_name);
                 $cache_adapter->add($key, json_encode($dataset));
             }
         } else {
-            $dataset = $this->_db->fetchAll($query, $values);
+            $dataset = $this->_db->fetchAll($query, $values, $class_name);
         }
-        foreach ($dataset as $stdObject) {
-            /**@var AbstractObject $object * */
+        /*foreach ($dataset as $stdObject) {
             $class_name = get_class($this);
             $object = new $class_name(null, $this->_read_relations);
             $object->fromStdClass($stdObject);
             $object->readRelations();
             $result[] = $object;
-        }
-        return $result;
+        }*/
+        return $dataset;
     }
 
     /**
@@ -1039,6 +1039,9 @@ abstract class AbstractObject implements SplSubject
         if(empty($this->$name)) {
             if ($name != '_definitions' && isset($this->_definitions['properties'][$name])) {
                 $property_info = $this->_definitions['properties'][$name];
+                if(isset($property_info['prevent_autoload']) && $property_info['prevent_autoload'] == true) {
+                    //throw new Exception(get_class($this) . '::' . $name . ' needs to be called via get(\'' . $name . '\')');
+                }
                 if ($property_info['type'] == 'relation') {
                     $relation = null;
                     if (!isset($this->$name) || empty($this->$name)) {
@@ -1206,7 +1209,7 @@ abstract class AbstractObject implements SplSubject
     {
         $property_names = [];
         foreach ($this->_definitions['properties'] as $property_name => $property_definition) {
-            if ($property_definition['type'] != 'relation') {
+            if ($property_definition['type'] != 'relation' && $property_definition['type'] != 'computed') {
                 $property_names[] = $property_name;
             }
         }

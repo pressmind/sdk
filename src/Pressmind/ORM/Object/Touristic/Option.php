@@ -6,6 +6,7 @@ use \DateTime;
 use Exception;
 use \Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\Touristic\Housing\Package;
+use Pressmind\ORM\Object\Touristic\Option\Discount;
 
 /**
  * Class Option
@@ -53,6 +54,7 @@ use Pressmind\ORM\Object\Touristic\Housing\Package;
  * @property integer $occupancy_min
  * @property integer $occupancy_max
  * @property integer $occupancy_max_age
+ * @property Discount[] $discounts
  */
 class Option extends AbstractObject
 {
@@ -609,18 +611,8 @@ class Option extends AbstractObject
             'use_earlybird' => [
                 'title' => 'Use_earlybird',
                 'name' => 'use_earlybird',
-                'type' => 'integer',
+                'type' => 'boolean',
                 'required' => false,
-                'validators' => [
-                    [
-                        'name' => 'maxlength',
-                        'params' => 4,
-                    ],
-                    [
-                        'name' => 'unsigned',
-                        'params' => null,
-                    ]
-                ],
                 'filters' => NULL,
             ],
             'request_code' => [
@@ -698,6 +690,19 @@ class Option extends AbstractObject
                         'params' => null,
                     ]
                 ],
+                'filters' => NULL,
+            ],
+            'discounts' => [
+                'title' => 'Discounts',
+                'name' => 'discounts',
+                'type' => 'relation',
+                'relation' => [
+                    'type' => 'hasMany',
+                    'related_id' => 'id_option',
+                    'class' => Discount::class
+                ],
+                'required' => false,
+                'validators' => NULL,
                 'filters' => NULL,
             ],
         ]

@@ -73,6 +73,7 @@ class CheapestPriceSpeed extends AbstractObject
                         'option_occupancy',
                         'option_occupancy_min',
                         'option_occupancy_max',
+                        'duration'
                     ]
                 ],
                 'id_id_media_object_price_total_index' => [

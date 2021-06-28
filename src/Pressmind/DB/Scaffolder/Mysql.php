@@ -112,7 +112,7 @@ class Mysql
                     'columns' => [$fieldName]
                 ];
             }
-            if ($fieldInfo['type'] != 'relation') {
+            if ($fieldInfo['type'] != 'relation' && $fieldInfo['type'] != 'computed') {
                 $additional_sql = array();
                 $null_allowed = '';
                 if (isset($fieldInfo['encrypt']) && $fieldInfo['encrypt'] == true) {

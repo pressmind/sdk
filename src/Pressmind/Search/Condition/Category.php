@@ -44,6 +44,7 @@ class Category implements ConditionInterface
      * @param string $pVarName
      * @param array $pItemIds
      * @param string $pCombineOperator
+     * @param boolean $linkedObjectSearch
      */
     public function __construct($pVarName = null, $pItemIds = null, $pCombineOperator = 'OR', $linkedObjectSearch = false)
     {
@@ -60,21 +61,13 @@ class Category implements ConditionInterface
     {
         $item_id_strings = [];
         $term_counter = 0;
+        $tablename = 'pmt2core_media_object_tree_items';
         foreach ($this->item_ids as $item_id) {
             $term_counter++;
-            $item_id_strings[] = $this->var_name . '.id_item = :' . $this->var_name . $term_counter;
-            $item_id_strings_linked_search[] = $this->var_name . '_mo.id_item = :' . $this->var_name . $term_counter;
+            $item_id_strings[] = $tablename . '.id_item = :' . $this->var_name . $term_counter;
             $this->_values[':' . $this->var_name . $term_counter] = $item_id;
         }
-        $sql = '';
-        if($this->_linked_object_search) {
-            $sql = "(";
-        }
-        $sql .= $this->var_name . ".var_name = '" . $this->var_name . "' AND (" . implode(' ' . $this->_combine_operator . ' ', $item_id_strings) . ")";
-        if($this->_linked_object_search) {
-            $sql .= " OR " . $this->var_name . "_mo.var_name = '" . $this->var_name . "' AND (" . implode(' ' . $this->_combine_operator . ' ', $item_id_strings_linked_search) . "))";
-        }
-        return $sql;
+        return $tablename . ".var_name = '" . $this->var_name . "' AND (" . implode(' ' . $this->_combine_operator . ' ', $item_id_strings) . ")";
     }
 
     /**
@@ -100,11 +93,14 @@ class Category implements ConditionInterface
     {
         $joins = [];
         if($this->_linked_object_search) {
-            $joins[] = 'LEFT JOIN pmt2core_media_object_tree_items ' . $this->var_name . '_mo ON pmt2core_media_objects.id = ' . $this->var_name . '_mo.id_media_object';
-            $joins[] = 'LEFT JOIN pmt2core_media_object_object_links ON (pmt2core_media_objects.id = pmt2core_media_object_object_links.id_media_object)';
-            $joins[] = 'LEFT JOIN pmt2core_media_object_tree_items ' . $this->var_name . ' ON pmt2core_media_object_object_links.id_media_object_link = ' . $this->var_name . '.id_media_object';
+            $joins[] = 'INNER JOIN (SELECT pmt2core_media_object_object_links.id_media_object, pmt2core_media_object_object_links.id_media_object_link FROM pmt2core_media_object_object_links) ' . $this->var_name . '_mo ON ' . $this->var_name . '_mo.id_media_object = pmt2core_media_objects.id';
+            $joins[] = 'INNER JOIN(
+                SELECT pmt2core_media_object_tree_items.id_media_object FROM pmt2core_media_object_tree_items
+                WHERE ###CONDITIONS###
+                GROUP BY pmt2core_media_object_tree_items.id_media_object
+            ) ' . $this->var_name . ' on ' . $this->var_name . '.id_media_object = ' . $this->var_name . '_mo.id_media_object_link';
         } else {
-            $joins[] = 'INNER JOIN pmt2core_media_object_tree_items ' . $this->var_name . ' ON pmt2core_media_objects.id = ' . $this->var_name . '.id_media_object';
+            $joins[] = 'INNER JOIN (SELECT pmt2core_media_object_tree_items.id_media_object FROM pmt2core_media_object_tree_items WHERE ###CONDITIONS### GROUP BY pmt2core_media_object_tree_items.id_media_object) ' . $this->var_name . ' ON pmt2core_media_objects.id = ' . $this->var_name . '.id_media_object';
         }
         return implode(' ', $joins);
     }
@@ -114,7 +110,7 @@ class Category implements ConditionInterface
      */
     public function getJoinType()
     {
-        return null;
+        return 'SUBSELECT';
     }
 
     /**
@@ -122,7 +118,7 @@ class Category implements ConditionInterface
      */
     public function getSubselectJoinTable()
     {
-        return null;
+        return $this->var_name;//'pmt2core_media_object_tree_items';
     }
 
     /**

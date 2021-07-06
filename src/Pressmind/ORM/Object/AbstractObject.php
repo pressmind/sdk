@@ -69,6 +69,11 @@ abstract class AbstractObject implements SplSubject
 
     /**
      * @var bool
+     */
+    protected $_replace_into_on_create = false;
+
+    /**
+     * @var bool
      * @todo necessary?
      */
     protected $_permissions = array(
@@ -453,7 +458,7 @@ abstract class AbstractObject implements SplSubject
      */
     private function _deleteRelations() {
         foreach ($this->_definitions['properties'] as $property_name => $property) {
-            if($property['type'] == 'relation') {
+            if($property['type'] == 'relation' && (!isset($property['relation']['prevent_auto_delete']) || false == $property['relation']['prevent_auto_delete'])) {
                 switch ($property['relation']['type']) {
                     case 'hasMany':
                         $this->_deleteHasManyRelation($property_name);
@@ -680,7 +685,7 @@ abstract class AbstractObject implements SplSubject
                 unset($field_list[$index]);
             }
         }
-        $id = $this->_db->insert($this->getDbTableName(), $values);
+        $id = $this->_db->insert($this->getDbTableName(), $values, $this->_replace_into_on_create);
         if($this->_dont_use_autoincrement_on_primary_key == false) {
             $this->setId($id);
         }

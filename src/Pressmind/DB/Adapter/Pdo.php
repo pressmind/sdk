@@ -118,21 +118,37 @@ class Pdo implements AdapterInterface
     /**
      * @param string $tableName
      * @param array $data
+     * @param boolean $replace_into
      * @return mixed|void
      * @throws Exception
      */
-    public function insert($tableName, $data)
+    public function insert($tableName, $data, $replace_into = true)
     {
+        $database_query_log_enabled = Registry::getInstance()->get('config')['logging']['enable_database_query_logging'] ?? false;
+        if($database_query_log_enabled) {
+            $debug_start_time = microtime(true);
+        }
         $columns = [];
         $values = [];
         $value_replacements = [];
         foreach ($data as $column => $value) {
             $columns[] = $column;
-            $values[] = $value;
-            $value_replacements[] = '?';
+            $values[':' . $column] = $value;
+            $value_replacements[] = ':' . $column;
         }
-        $query = "REPLACE INTO " . $this->table_prefix . $tableName . "(`" . implode('`, `', $columns) . "`) VALUES(" . implode(', ', $value_replacements) . ")";
+        $insert_statement = 'INSERT';
+        if(true === $replace_into) {
+            $insert_statement = 'REPLACE';
+        }
+        $query = $insert_statement . " INTO " . $this->table_prefix . $tableName . "(`" . implode('`, `', $columns) . "`) VALUES(" . implode(', ', $value_replacements) . ")";
         $this->execute($query, $values);
+        if($database_query_log_enabled) {
+            $now = new \DateTime();
+            $logfile = Registry::getInstance()->get('config')['logging']['database_query_log_file'] ?? APPLICATION_PATH . '/logs/db_query_log.txt';
+            $debug_end_time = microtime(true);
+            $debug_query = $insert_statement . " INTO " . $this->table_prefix . $tableName . "(`" . implode('`, `', $columns) . "`) VALUES(" . implode(', ', array_values($values)) . ")";
+            file_put_contents(HelperFunctions::replaceConstantsFromConfig($logfile), $now->format(DATE_ISO8601) . ' - ' . ($debug_end_time - $debug_start_time) . ': ' . $debug_query . "\n", FILE_APPEND);
+        }
         return $this->databaseConnection->lastInsertId();
     }
 
@@ -144,6 +160,10 @@ class Pdo implements AdapterInterface
      */
     public function update($tableName, $data, $where = null)
     {
+        $database_query_log_enabled = Registry::getInstance()->get('config')['logging']['enable_database_query_logging'] ?? false;
+        if($database_query_log_enabled) {
+            $debug_start_time = microtime(true);
+        }
         $columns = [];
         $parameters = [];
         foreach ($data as $column => $value) {
@@ -156,6 +176,12 @@ class Pdo implements AdapterInterface
             $query .= " WHERE " . $where[0];
         }
         $this->execute($query, $parameters);
+        if($database_query_log_enabled) {
+            $now = new \DateTime();
+            $logfile = Registry::getInstance()->get('config')['logging']['database_query_log_file'] ?? APPLICATION_PATH . '/logs/db_query_log.txt';
+            $debug_end_time = microtime(true);
+            file_put_contents(HelperFunctions::replaceConstantsFromConfig($logfile), $now->format(DATE_ISO8601) . ' - ' . ($debug_end_time - $debug_start_time) . ': ' . $query . "\n", FILE_APPEND);
+        }
     }
 
     /**
@@ -165,6 +191,10 @@ class Pdo implements AdapterInterface
      */
     public function delete($tableName, $where = null)
     {
+        $database_query_log_enabled = Registry::getInstance()->get('config')['logging']['enable_database_query_logging'] ?? false;
+        if($database_query_log_enabled) {
+            $debug_start_time = microtime(true);
+        }
         $query = "DELETE FROM " . $this->table_prefix . $tableName;
         $parameters = null;
         if(!is_null($where) && is_array($where)) {
@@ -172,6 +202,12 @@ class Pdo implements AdapterInterface
             $parameters[] = $where[1];
         }
         $this->execute($query, $parameters);
+        if($database_query_log_enabled) {
+            $now = new \DateTime();
+            $logfile = Registry::getInstance()->get('config')['logging']['database_query_log_file'] ?? APPLICATION_PATH . '/logs/db_query_log.txt';
+            $debug_end_time = microtime(true);
+            file_put_contents(HelperFunctions::replaceConstantsFromConfig($logfile), $now->format(DATE_ISO8601) . ' - ' . ($debug_end_time - $debug_start_time) . ': ' . $query . "\n", FILE_APPEND);
+        }
     }
 
     /**

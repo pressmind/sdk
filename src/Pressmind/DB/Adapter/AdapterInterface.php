@@ -35,9 +35,10 @@ interface AdapterInterface
      * Keys of $data array must match the table's column names
      * @param string $tableName
      * @param array $data
+     * @param boolean $replace_into
      * @return mixed
      */
-    public function insert($tableName, $data);
+    public function insert($tableName, $data, $replace_into = true);
 
     /**
      * Updates associated array $data in table $tableName.

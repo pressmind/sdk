@@ -19,9 +19,6 @@ class MediaObject extends AbstractImport
      */
     public function import($data)
     {
-        /**@var Pdo $db**/
-        $db = Registry::getInstance()->get('db');
-
         $media_object = new \Pressmind\ORM\Object\MediaObject();
         $media_object->id = $data->id_media_object;
         $media_object->id_pool = $data->id_pool;
@@ -60,23 +57,15 @@ class MediaObject extends AbstractImport
             $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Creating media object failed: ' . $e->getMessage();
             $this->_errors[] = 'Importer::importMediaObject(' . $media_object->getId() . '):  Creating media object failed: ' . $e->getMessage();
         }
-        $media_object->setReadRelations(true);
-        $media_object->readRelations();
-        $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Deleting CheapestPriceSpeed entries';
-        $db->delete('pmt2core_cheapest_price_speed', ['id_media_object = ?', $media_object->getId()]);
-        $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Inserting CheapestPriceSpeed entries';
-        try {
-            $media_object->insertCheapestPrice();
-        } catch (Exception $e) {
-            $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Creating cheapest price failed: ' . $e->getMessage();
-            $this->_errors[] = 'Importer::importMediaObject(' . $media_object->getId() . '):  Creating cheapest price failed: ' . $e->getMessage();
-        }
-        try {
+        //$media_object->setReadRelations(true);
+        //$media_object->readRelations();
+
+        /*try {
             $media_object->createSearchIndex();
         } catch (Exception $e) {
             $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Creating search index failed: ' . $e->getMessage();
             $this->_errors[] = 'Importer::importMediaObject(' . $media_object->getId() . '):  Creating search index failed: ' . $e->getMessage();
-        }
+        }*/
         $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  CheapestPriceSpeed table updated';
 
         return $media_object;

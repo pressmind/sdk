@@ -58,7 +58,8 @@
                 "origins": [
                     "0"
                 ],
-                "my_content_class_map": {}
+                "my_content_class_map": {},
+                "disable_touristic_data_import": []
             },
             "media_type_custom_import_hooks": {},
             "primary_media_type_ids": null,

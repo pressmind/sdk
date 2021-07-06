@@ -16,6 +16,8 @@ class InsuranceToGroup extends AbstractObject
 {
     protected $_dont_use_autoincrement_on_primary_key = true;
 
+    protected $_replace_into_on_create = true;
+
     protected $_definitions = array(
         'class' => [
             'name' => self::class,

@@ -20,6 +20,8 @@ class Startingpoint extends AbstractObject
 
     protected $_check_variables_for_existence = false;
 
+    protected $_replace_into_on_create = true;
+
     protected $_definitions = array(
         'class' => [
             'name' => self::class,

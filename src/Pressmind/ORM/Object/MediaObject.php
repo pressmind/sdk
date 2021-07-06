@@ -482,7 +482,8 @@ class MediaObject extends AbstractObject
                     'type' => 'hasMany',
                     'related_id' => 'id_media_object',
                     'class' => Package::class,
-                    'filters' => null
+                    'filters' => null,
+                    'prevent_auto_delete' => true
                 ],
                 'required' => false,
                 'validators' => null,
@@ -583,7 +584,6 @@ class MediaObject extends AbstractObject
         if(is_null($language)) {
             $language = $config['data']['languages']['default'];
         }
-        $this->data;
         return HelperFunctions::findObjectInArray($this->data, 'language', $language);
     }
 
@@ -863,9 +863,9 @@ class MediaObject extends AbstractObject
         $result = [];
         foreach ($booking_packages as $booking_package) {
             foreach ($booking_package->dates as $date) {
-                $early_bird_date_discounts = is_null($date->early_bird_discount_group) ? [null] : $date->early_bird_discount_group->items;
                 /** @var Item[] $early_bird_discounts */
-                $early_bird_discounts = array_merge([null], $early_bird_date_discounts);
+                $early_bird_discounts = is_null($date->early_bird_discount_group) ? [null] : $date->early_bird_discount_group->items;
+                //$early_bird_discounts = array_merge([null], $early_bird_date_discounts);
                 /** @var Transport[] $transport_pairs */
                 $transport_pairs = count($date->transports) > 0 ? [] : [null];
                 foreach ($date->transports as $transport) {
@@ -1053,46 +1053,47 @@ class MediaObject extends AbstractObject
             $this->_db->delete('pmt2core_fulltext_search', ['id_media_object = ?', $this->getId()]);
             $complete_fulltext = [];
             $fulltext = [];
-            foreach ($this->data as $data) {
-                $complete_fulltext[$data->language] = [];
+            foreach ($config['data']['languages']['allowed'] as $language) {
+                $data = $this->getDataForLanguage($language);
+                $complete_fulltext[$language] = [];
                 $fulltext[] = [
                     'var_name' => 'code',
-                    'language' => $data->language,
+                    'language' => $language,
                     'id_media_object' => $this->getId(),
                     'fulltext_values' => $this->code
                 ];
                 if (in_array('code', $config['data']['media_types_fulltext_index_fields'][$this->id_object_type])) {
-                    $complete_fulltext[$data->language][] = $this->code;
+                    $complete_fulltext[$language][] = $this->code;
                 }
                 $fulltext[] = [
                     'var_name' => 'name',
-                    'language' => $data->language,
+                    'language' => $language,
                     'id_media_object' => $this->getId(),
                     'fulltext_values' => $this->name
                 ];
                 if (in_array('name', $config['data']['media_types_fulltext_index_fields'][$this->id_object_type])) {
-                    $complete_fulltext[$data->language][] = $this->name;
+                    $complete_fulltext[$language][] = $this->name;
                 }
                 $fulltext[] = [
                     'var_name' => 'tags',
-                    'language' => $data->language,
+                    'language' => $language,
                     'id_media_object' => $this->getId(),
                     'fulltext_values' => $this->tags
                 ];
                 if (in_array('tags', $config['data']['media_types_fulltext_index_fields'][$this->id_object_type])) {
-                    $complete_fulltext[$data->language][] = $this->tags;
+                    $complete_fulltext[$language][] = $this->tags;
                 }
                 foreach ($data->getPropertyDefinitions() as $name => $definition) {
                     $add_to_complete_fulltext = in_array($name, $config['data']['media_types_fulltext_index_fields'][$this->id_object_type]);
                     if ($definition['type'] == 'string') {
                         $fulltext[] = [
                             'var_name' => $name,
-                            'language' => $data->language,
+                            'language' => $language,
                             'id_media_object' => $this->getId(),
                             'fulltext_values' => trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('>', '> ', $data->$name))))
                         ];
                         if ($add_to_complete_fulltext) {
-                            $complete_fulltext[$data->language][] = trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('>', '> ', $data->$name))));
+                            $complete_fulltext[$language][] = trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('>', '> ', $data->$name))));
                         }
                     }
                     if ($definition['type'] == 'relation') {
@@ -1105,12 +1106,12 @@ class MediaObject extends AbstractObject
                         if (count($values) > 0) {
                             $fulltext[] = [
                                 'var_name' => $name,
-                                'language' => $data->language,
+                                'language' => $language,
                                 'id_media_object' => $this->getId(),
                                 'fulltext_values' => implode(' ', $values)
                             ];
                             if ($add_to_complete_fulltext) {
-                                $complete_fulltext[$data->language][] = implode(' ', $values);
+                                $complete_fulltext[$language][] = implode(' ', $values);
                             }
                         }
                     }
@@ -1125,7 +1126,7 @@ class MediaObject extends AbstractObject
                 ];
             }
             foreach ($fulltext as $fulltext_data) {
-                $this->_db->insert('pmt2core_fulltext_search', $fulltext_data);
+                $this->_db->insert('pmt2core_fulltext_search', $fulltext_data, false);
             }
         }
     }

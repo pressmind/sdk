@@ -20,6 +20,7 @@ class FulltextSearch extends AbstractObject
         'database' => [
             'table_name' => 'pmt2core_fulltext_search',
             'primary_key' => 'id',
+            'storage_engine' => 'myisam'
         ],
         'properties' => [
             'id' => [

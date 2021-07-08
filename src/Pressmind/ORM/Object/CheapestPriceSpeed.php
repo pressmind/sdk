@@ -61,11 +61,11 @@ class CheapestPriceSpeed extends AbstractObject
         'database' => [
             'table_name' => 'pmt2core_cheapest_price_speed',
             'primary_key' => 'id',
+            'storage_engine' => 'myisam',
             'indexes' => [
                 'search_filter_index' => [
                     'type' => 'index',
                     'columns' => [
-                        'id',
                         'id_media_object',
                         'price_total',
                         'date_departure',
@@ -76,10 +76,17 @@ class CheapestPriceSpeed extends AbstractObject
                         'duration'
                     ]
                 ],
+                'cheapest_price_index' => [
+                    'type' => 'index',
+                    'columns' => [
+                        'id_media_object',
+                        'price_total',
+                        'date_departure',
+                    ]
+                ],
                 'id_id_media_object_price_total_index' => [
                     'type' => 'index',
                     'columns' => [
-                        'id',
                         'id_media_object',
                         'price_total'
                     ]

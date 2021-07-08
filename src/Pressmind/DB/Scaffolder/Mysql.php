@@ -178,8 +178,9 @@ class Mysql
                 //}
             }
         }
+        $storage_engine = $this->_orm_object->getStorageDefinition('storage_engine');
         if (false == $pAlterTable) {
-            $sql .= ") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci";
+            $sql .= ") ENGINE=" . ($storage_engine ?? 'innodb') . " DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci";
         }
         return $sql;
     }

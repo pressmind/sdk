@@ -213,6 +213,8 @@ class Import
 
         if (is_array($response) && count($response) > 0) {
 
+            $this->_start_time = microtime(true);
+
             $current_object = new ORM\Object\MediaObject($id_media_object, false, true);
 
             $disable_touristic_data_import = (isset($config['data']['touristic']['disable_touristic_data_import']) && in_array($response[0]->id_media_objects_data_type, $config['data']['touristic']['disable_touristic_data_import']));
@@ -223,11 +225,9 @@ class Import
                 }
             }
 
-            //var_dump($disable_touristic_data_import);
-
             $current_object->delete(true);
-            $this->_start_time = microtime(true);
-            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): parsing data', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
+
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): parsing data', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
 
             if (is_a($response[0]->touristic, 'stdClass') && false == $disable_touristic_data_import) {
                 $touristic_data_importer = new TouristicData();
@@ -256,6 +256,8 @@ class Import
                     $this->importMediaObjectsFromArray($touristic_linked_media_object_ids, false);
                 }
             }
+
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): touristic import finished', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
 
             if(is_a($response[0]->touristic->touristic_base, 'stdClass') && true == $disable_touristic_data_import) {
                 $fake_data = new \stdClass();
@@ -304,6 +306,8 @@ class Import
             $media_object_importer = new Import\MediaObject();
             $media_object = $media_object_importer->import($response[0]);
 
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): media object imported', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+
             if(false == $disable_touristic_data_import) {
                 $db = Registry::getInstance()->get('db');
                 $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Deleting CheapestPriceSpeed entries';
@@ -326,7 +330,7 @@ class Import
                 $imported_languages = $media_object_data_importer_result['languages'];
 
                 if(is_array($category_tree_ids) && count($category_tree_ids) > 0) {
-                    $this->_log[] = ' Importer::_importMediaObjectData(' . $id_media_object . '): Importing Category Trees';
+                    $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::_importMediaObjectData(' . $id_media_object . '): Importing Category Trees', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
                     $category_tree_importer = new CategoryTree($category_tree_ids);
                     $category_tree_importer->import();
                 }
@@ -365,9 +369,11 @@ class Import
                 }
             }
 
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): media object data imported', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+
             $my_content_importer_has_run = false;
 
-            if(isset($config['data']['touristic']['my_content_class_map']) && isset($response[0]->my_contents_to_media_object) && is_array($response[0]->my_contents_to_media_object)) {
+            if(false == $disable_touristic_data_import && isset($config['data']['touristic']['my_content_class_map']) && isset($response[0]->my_contents_to_media_object) && is_array($response[0]->my_contents_to_media_object)) {
                 foreach($response[0]->my_contents_to_media_object as $my_content) {
                     if(isset($config['data']['touristic']['my_content_class_map'][$my_content->id_my_content])) {
                         $touristic_class_name = $config['data']['touristic']['my_content_class_map'][$my_content->id_my_content];
@@ -387,7 +393,7 @@ class Import
                 }
             }
 
-            if(isset($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type]) && is_array($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type])  && $my_content_importer_has_run == false) {
+            if(false == $disable_touristic_data_import && isset($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type]) && is_array($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type])  && $my_content_importer_has_run == false) {
                 foreach ($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type] as $custom_import_class_name) {
                     $custom_import_class = new $custom_import_class_name($id_media_object);
                     $custom_import_class->import();

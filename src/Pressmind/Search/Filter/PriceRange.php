@@ -33,8 +33,6 @@ class PriceRange implements FilterInterface
      */
     public function getResult()
     {
-        $min = null;
-        $max = null;
         if(!$this->_search->getCondition(Search\Condition\PriceRange::class)) {
             $this->_search->addCondition('priceRange', new Search\Condition\PriceRange(1, 10000000));
         } else {
@@ -46,27 +44,8 @@ class PriceRange implements FilterInterface
         $this->_search->removeLimits();
         $this->_search->removeSortProperties();
         $this->_search->return_id_only = true;
-        $results = $this->_search->getResults(false, true);
+        $results = $this->_search->getResults(false, false);
 
-        /*$prices = [];
-        foreach ($results as $result) {
-            $cheapest_price_filter = null;
-            if($housing_option_condition = $this->_search->getCondition('\Pressmind\Search\Condition\HousingOption')) {
-                $cheapest_price_filter = new Search\CheapestPrice();
-                $cheapest_price_filter->occupancies = $housing_option_condition->occupancies;
-            }
-            $cheapest_price = null;//$result->getCheapestPrice($cheapest_price_filter);
-            if(!is_null($cheapest_price) && (($min == null || $max == null) || ($min <= $cheapest_price->price_total && $max >= $cheapest_price->price_total))) {
-                $prices[] = $cheapest_price->price_total;
-            }
-        }
-        if(count($prices) > 0) {
-            sort($prices);
-            $min_max_result = new MinMax();
-            $min_max_result->min = $prices[0];
-            $min_max_result->max = $prices[count($prices) - 1];
-            return $min_max_result;
-        }*/
         $ids = [];
         foreach ($results as $result) {
             $ids[] = $result->id;

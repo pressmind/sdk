@@ -49,8 +49,6 @@ class DepartureDate implements FilterInterface
     {
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
-        $earliest_departure_date = null;
-        $latest_departure_date = null;
         /** @var Search\Condition\DateRange $daterange_condition */
         if($daterange_condition = $this->_search->getCondition(Search\Condition\DateRange::class)) {
             $earliest_departure_date = $daterange_condition->dateFrom;
@@ -60,7 +58,7 @@ class DepartureDate implements FilterInterface
             $date_range->to = $latest_departure_date;
             return $date_range;
         } else {
-            $results = $this->_search->getResults(false, true);
+            $results = $this->_search->getResults(false, false);
             $media_object_ids = [];
             foreach ($results as $result) {
                 $media_object_ids[] = $result->id;

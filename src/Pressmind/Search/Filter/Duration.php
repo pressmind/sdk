@@ -33,39 +33,18 @@ class Duration implements FilterInterface
      */
     public function getResult()
     {
-        $min = null;
-        $max = null;
-        $this->_search->removeCondition(Search\Condition\DurationRange::class);
+        if(!$this->_search->getCondition(Search\Condition\DurationRange::class)) {
+            $this->_search->addCondition('durationRange', new Search\Condition\DurationRange(1, 10000000));
+        } else {
+            $new_config = new \stdClass();
+            $new_config->durationFrom = 1;
+            $new_config->durationTo = 10000000;
+            $this->_search->getCondition(Search\Condition\DurationRange::class)->setConfig($new_config);
+        }
         $this->_search->removeLimits();
         $this->_search->removeSortProperties();
         $this->_search->return_id_only = true;
-        $results = $this->_search->getResults(false, true);
-        $durations = [];
-        /*foreach ($results as $result) {
-            foreach ($result->booking_packages as $booking_package) {
-                if(($min == null || $max == null) || ($min <= $booking_package->duration && $max >= $booking_package->duration)) {
-                    $durations[] = $booking_package->duration;
-                }
-            }
-            $cheapest_price_filter = null;
-
-            if($housing_option_condition = $this->_search->getCondition('\Pressmind\Search\Condition\HousingOption')) {
-                $cheapest_price_filter = new Search\CheapestPrice();
-                $cheapest_price_filter->occupancies = $housing_option_condition->occupancies;
-            }
-            $cheapest_price = null;//$result->getCheapestPrice($cheapest_price_filter);
-            if(!is_null($cheapest_price) && (($min == null || $max == null) || ($min <= $cheapest_price->price_total && $max >= $cheapest_price->price_total))) {
-                $durations[] = $cheapest_price->duration;
-            }
-        }
-        if(count($durations) > 0) {
-            sort($durations);
-            $min_max_result = new MinMax();
-            $min_max_result->min = $durations[0];
-            $min_max_result->max = $durations[count($durations) - 1];
-            return $min_max_result;
-        }*/
-
+        $results = $this->_search->getResults(false, false);
         $ids = [];
         foreach ($results as $result) {
             $ids[] = $result->id;

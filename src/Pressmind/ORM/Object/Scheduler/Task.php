@@ -5,6 +5,7 @@ namespace Pressmind\ORM\Object\Scheduler;
 
 
 use DateTime;
+use Error;
 use Exception;
 use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\AbstractObject;
@@ -156,16 +157,39 @@ class Task extends AbstractObject
                     Writer::write('Task "' . $method->name . '" returned: ' . $return, Writer::OUTPUT_FILE, 'scheduler');
                 } catch (Exception $e) {
                     Writer::write('Error while processing task ' . $method->name . ' in job' . $this->name . ': ' . $e->getMessage(), Writer::OUTPUT_FILE, 'scheduler', Writer::TYPE_ERROR);
+                    $this->error_count++;
+                } catch (Error $e) {
+                    Writer::write('Error while processing task ' . $method->name . ' in job' . $this->name . ': ' . $e->getMessage(), Writer::OUTPUT_FILE, 'scheduler', Writer::TYPE_ERROR);
+                    $this->error_count++;
                 }
             }
         } catch (Exception $e) {
             Writer::write('Error while processing job' . $this->name . ': ' . $e->getMessage(), Writer::OUTPUT_FILE, 'scheduler', Writer::TYPE_ERROR);
+            $this->error_count++;
+            $return = $e->getMessage();
+        } catch (Error $e) {
+            Writer::write('Error while processing job' . $this->name . ': ' . $e->getMessage(), Writer::OUTPUT_FILE, 'scheduler', Writer::TYPE_ERROR);
+            $this->error_count++;
             $return = $e->getMessage();
         }
         $this->running = false;
         $this->last_run = new DateTime();
         $this->update();
         return $return;
+    }
+
+    public function failOverCheck()
+    {
+        $schedule = json_decode($this->schedule);
+        $now = new DateTime();
+        $diff = $now->diff($this->last_run);
+        $total_minutes_diff = ($diff->days * 24 * 60) + ($diff->h * 60) + $diff->i;
+        if($total_minutes_diff >= $schedule->max_running_time_in_minutes) {
+            $this->running = false;
+            $this->update();
+            return 'Task is in running state for ' . $total_minutes_diff . ' minutes. Reset running to false';
+        }
+        return false;
     }
 
     /**

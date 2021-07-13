@@ -17,6 +17,7 @@ class Scheduler
     private $_tasks = [];
 
     public function __construct() {
+        $this->_taskFailOverCheck();
         $this->_findTasks();
     }
 
@@ -36,6 +37,16 @@ class Scheduler
             }
         }
         Writer::write('Found ' . count($this->_getTasks()) . ' jobs', Writer::OUTPUT_FILE, 'scheduler');
+    }
+
+    private function _taskFailOverCheck()
+    {
+        /** @var Task $task */
+        foreach (Task::listAll(['active' => 1, 'running' => 1]) as $task) {
+            if($fail_over_message = $task->failOverCheck()) {
+                Writer::write('Failover for task "' . $task->name . '": ' . $fail_over_message, Writer::OUTPUT_FILE, 'scheduler', Writer::TYPE_ERROR);
+            }
+        }
     }
 
     /**

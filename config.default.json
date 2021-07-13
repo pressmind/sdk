@@ -170,7 +170,8 @@
                 "schedule": {
                     "type": "Daily",
                     "time": "Fixed",
-                    "value": "23:30"
+                    "value": "23:30",
+                    "max_running_time_in_minutes": 1440
                 },
                 "methods": [
                     {
@@ -186,7 +187,8 @@
                 "schedule": {
                     "type": "Minutely",
                     "time": "Period",
-                    "value": "5"
+                    "value": "5",
+                    "max_running_time_in_minutes": 1440
                 },
                 "methods": [
                     {

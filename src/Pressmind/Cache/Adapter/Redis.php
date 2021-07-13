@@ -95,7 +95,7 @@ class Redis implements AdapterInterface
             $i++;
             Writer::write($i . ' of ' . $total_keys . ' Checking key ' . $key, WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_INFO);
             $idle_time = $this->_server->object('idletime', $key);
-            $last_idle_time = hGet('pmt2corecacheidletime-' . $this->_prefix, $key);
+            $last_idle_time = $this->_server->hGet('pmt2corecacheidletime-' . $this->_prefix, $key);
             $info = json_decode($this->_server->hGet('pmt2corecacheinfo-' . $this->_prefix, $key));
             $now = new DateTime();
             $cache_date = $this->_server->hGet('pmt2corecachetime-' . $this->_prefix, $key);

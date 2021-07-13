@@ -184,7 +184,8 @@ class Task extends AbstractObject
         $now = new DateTime();
         $diff = $now->diff($this->last_run);
         $total_minutes_diff = ($diff->days * 24 * 60) + ($diff->h * 60) + $diff->i;
-        if($total_minutes_diff >= $schedule->max_running_time_in_minutes) {
+        $max_running_time = (isset($schedule->max_running_time_in_minutes) && !is_null($schedule->max_running_time_in_minutes)) ? $schedule->max_running_time_in_minutes : 1440;
+        if($total_minutes_diff >= $max_running_time) {
             $this->running = false;
             $this->update();
             return 'Task is in running state for ' . $total_minutes_diff . ' minutes. Reset running to false';

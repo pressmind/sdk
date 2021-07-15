@@ -1,14 +1,14 @@
 <?php
 
 
-namespace Pressmind\ORM\Object\Itinerary\Variant\Step\DocumentMediaObject;
+namespace Pressmind\ORM\Object\Itinerary\Step\DocumentMediaObject;
 
 
 use Pressmind\ORM\Object\AbstractObject;
 
 /**
  * Class Derivative
- * @package Pressmind\ORM\Object\Itinerary\Variant\Step\DocumentMediaObject
+ * @package Pressmind\ORM\Object\Itinerary\Step\DocumentMediaObject
  * @property integer $id
  * @property integer $id_document_media_object
  * @property string $name

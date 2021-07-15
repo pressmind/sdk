@@ -1,11 +1,11 @@
 <?php
 
 
-namespace Pressmind\ORM\Object\Itinerary\Variant\Step;
+namespace Pressmind\ORM\Object\Itinerary\Step;
 
 
 use Pressmind\ORM\Object\AbstractObject;
-use Pressmind\ORM\Object\Itinerary\Variant\Step\Section\Content;
+use Pressmind\ORM\Object\Itinerary\Step\Section\Content;
 
 /**
  * Class Section
@@ -65,7 +65,7 @@ class Section extends AbstractObject
                 'validators' => [
                     [
                         'name' => 'maxlength',
-                        'params' => 22,
+                        'params' => 36,
                     ]
                 ],
                 'index' => [
@@ -95,7 +95,12 @@ class Section extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'validators' => null,
-                'filters' => null
+                'filters' => [
+                    [
+                        'name' => 'lowerCase',
+                        'params' => null
+                    ]
+                ]
             ],
             'content' => [
                 'title' => 'content',

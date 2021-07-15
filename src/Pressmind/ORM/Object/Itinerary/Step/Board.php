@@ -1,26 +1,28 @@
 <?php
 
 
-namespace Pressmind\ORM\Object\Itinerary\Variant\Step\Section;
+namespace Pressmind\ORM\Object\Itinerary\Step;
+
 
 use Pressmind\ORM\Object\AbstractObject;
 
 /**
- * Class Content
- * @package Pressmind\ORM\Object\Itinerary\Variant\Step\Section
- * @property $id
- * @property $id_section
- * @property string $headline
- * @property string $description
+ * Class Board
+ * @package Pressmind\ORM\Object\Itinerary\Variant\Step
+ * @property integer $id
+ * @property integer $id_step
+ * @property boolean $breakfast
+ * @property boolean $lunch
+ * @property boolean $dinner
  */
-class Content extends AbstractObject
+class Board extends AbstractObject
 {
     protected $_definitions = [
         'class' => [
             'name' => self::class
         ],
         'database' => [
-            'table_name' => 'pmt2core_itinerary_step_section_contents',
+            'table_name' => 'pmt2core_itinerary_step_boards',
             'primary_key' => 'id'
         ],
         'properties' => [
@@ -32,9 +34,9 @@ class Content extends AbstractObject
                 'validators' => null,
                 'filters' => null
             ],
-            'id_section' => [
-                'title' => 'id_section',
-                'name' => 'id_section',
+            'id_step' => [
+                'title' => 'id_step',
+                'name' => 'id_step',
                 'type' => 'integer',
                 'required' => false,
                 'validators' => [
@@ -48,22 +50,32 @@ class Content extends AbstractObject
                     ]
                 ],
                 'index' => [
-                    'id_section' => 'index'
+                    'id_step' => 'index'
                 ],
-                'filters' => null
+                'filters' => null,
+
             ],
-            'headline' => [
-                'title' => 'headline',
-                'name' => 'headline',
-                'type' => 'string',
+            'breakfast' => [
+                'title' => 'breakfast',
+                'name' => 'breakfast',
+                'type' => 'boolean',
                 'required' => false,
                 'validators' => null,
                 'filters' => null
             ],
-            'description' => [
-                'title' => 'description',
-                'name' => 'description',
-                'type' => 'string',
+            'lunch' => [
+                'title' => 'breakfast',
+                'name' => 'breakfast',
+                'type' => 'boolean',
+                'required' => false,
+                'validators' => null,
+                'filters' => null
+            ]
+            ,
+            'dinner' => [
+                'title' => 'breakfast',
+                'name' => 'breakfast',
+                'type' => 'boolean',
                 'required' => false,
                 'validators' => null,
                 'filters' => null

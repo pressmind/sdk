@@ -5,7 +5,7 @@ namespace Pressmind\ORM\Object\Itinerary;
 
 
 use Pressmind\ORM\Object\AbstractObject;
-use Pressmind\ORM\Object\Itinerary\Variant\Step;
+use Pressmind\ORM\Object\Itinerary\Step;
 
 /**
  * Class Variant

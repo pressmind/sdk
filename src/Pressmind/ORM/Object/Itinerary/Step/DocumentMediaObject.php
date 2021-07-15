@@ -1,7 +1,7 @@
 <?php
 
 
-namespace Pressmind\ORM\Object\Itinerary\Variant\Step;
+namespace Pressmind\ORM\Object\Itinerary\Step;
 
 
 use \Exception;
@@ -9,7 +9,7 @@ use Pressmind\Image\Downloader;
 use Pressmind\Image\Processor\Adapter\WebPicture;
 use Pressmind\Image\Processor\Config;
 use Pressmind\ORM\Object\AbstractObject;
-use Pressmind\ORM\Object\Itinerary\Variant\Step\DocumentMediaObject\Derivative;
+use Pressmind\ORM\Object\Itinerary\Step\DocumentMediaObject\Derivative;
 use Pressmind\Registry;
 
 /**

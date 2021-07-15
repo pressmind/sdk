@@ -1,7 +1,7 @@
 <?php
 
 
-namespace Pressmind\ORM\Object\Itinerary\Variant\Step;
+namespace Pressmind\ORM\Object\Itinerary\Step;
 
 
 use Pressmind\ORM\Object\AbstractObject;

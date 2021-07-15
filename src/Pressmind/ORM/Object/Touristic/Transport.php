@@ -28,6 +28,8 @@ use Pressmind\System\I18n;
  * @property integer $id_starting_point
  * @property DateTime $transport_date_from
  * @property DateTime $transport_date_to
+ * @property integer $age_from
+ * @property integer $age_to
  * @property EarlyBirdDiscountGroup $early_bird_discount_group
  */
 class Transport extends AbstractObject
@@ -307,6 +309,22 @@ class Transport extends AbstractObject
                 'title' => 'Transport_date_to',
                 'name' => 'transport_date_to',
                 'type' => 'datetime',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'age_from' => [
+                'title' => 'Age from',
+                'name' => 'age_from',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'age_to' => [
+                'title' => 'Age to',
+                'name' => 'age_to',
+                'type' => 'integer',
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,

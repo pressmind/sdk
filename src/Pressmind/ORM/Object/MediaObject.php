@@ -6,6 +6,7 @@ use DateTime;
 use Exception;
 use Pressmind\DB\Adapter\AdapterInterface;
 use Pressmind\Log\Writer;
+use Pressmind\ORM\Object\Itinerary\Step;
 use Pressmind\ORM\Object\MediaType\AbstractMediaType;
 use Pressmind\ORM\Object\MediaType\Factory;
 use Pressmind\DB\Adapter\Pdo;
@@ -1157,5 +1158,16 @@ class MediaObject extends AbstractObject
             $filters['type'] = $type;
         }
         return Variant::listAll($filters);
+    }
+
+    /**
+     * @return Step[]
+     * @throws Exception
+     */
+    public function getItinerarySteps() {
+        $filters = [
+            'id_media_object' => $this->getId()
+        ];
+        return Step::listAll($filters);
     }
 }

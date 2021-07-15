@@ -67,12 +67,13 @@ class Info
         '\Touristic\Startingpoint\Option\ZipRange',
         '\Touristic\Transport',
         '\Itinerary\Variant',
-        '\Itinerary\Variant\Step',
-        '\Itinerary\Variant\Step\Geopoint',
-        '\Itinerary\Variant\Step\DocumentMediaObject',
-        '\Itinerary\Variant\Step\DocumentMediaObject\Derivative',
-        '\Itinerary\Variant\Step\Board',
-        '\Itinerary\Variant\Step\Section',
-        '\Itinerary\Variant\Step\Section\Content'
+        '\Itinerary\Step',
+        '\Itinerary\Step\Geopoint',
+        '\Itinerary\Step\DocumentMediaObject',
+        '\Itinerary\Step\DocumentMediaObject\Derivative',
+        '\Itinerary\Step\Board',
+        '\Itinerary\Step\Section',
+        '\Itinerary\Step\Section\Content',
+        '\Itinerary\Step\TextMediaObject'
     ];
 }

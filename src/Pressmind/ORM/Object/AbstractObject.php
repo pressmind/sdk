@@ -941,19 +941,20 @@ abstract class AbstractObject implements SplSubject
         if(empty($value) && (isset($property_info['default_value']) && !is_null($property_info['default_value']))) {
             $value = $property_info['default_value'];
         }
-        if (isset($property_info['validators']) && is_array($property_info['validators'])) {
-            $this->validatePropertyValue($name, $value, $property_info['validators']);
-        }
         try {
             $filter = Filter\Factory::create($property_info['type'], $direction);
             /**
              * it might be that the property has additional filters assigned, so we need to apply them, too.
              */
             if(isset($property_info['filters']) && !empty($property_info['filters'])) {
-                return $this->filterPropertyValue($name, $filter->filterValue($value), $property_info['filters']);
+                $value = $this->filterPropertyValue($name, $filter->filterValue($value), $property_info['filters']);
             } else {
-                return $filter->filterValue($value);
+                $value = $filter->filterValue($value);
             }
+            if (isset($property_info['validators']) && is_array($property_info['validators'])) {
+                $this->validatePropertyValue($name, $value, $property_info['validators']);
+            }
+            return $value;
         } catch (Exception $e) {
             echo $e->getMessage();
             return null;
@@ -1012,13 +1013,11 @@ abstract class AbstractObject implements SplSubject
             foreach ($validatorSpecs as $validatorSpec) {
                 try {
                     $validator = Validator\Factory::create($validatorSpec);
-                    if (!$validator->isValid($value)) {
-                        throw new Exception('Validation for property ' . $name . ' failed for class ' . get_class($this) . ': ' . $validator->getError());
-                    }
-                } catch (Exception $e) {
+                } catch (Exception | Error $e) {
                     throw new Exception('Validator ' . $validatorSpec['name'] . ' could not be created in class ' . get_class($this));
-                } catch (Error $e) {
-                    throw new Exception('Validator ' . $validatorSpec['name'] . ' could not be created in class ' . get_class($this));
+                }
+                if (!$validator->isValid($value)) {
+                    throw new Exception('Validation for property ' . $name . ' failed for class ' . get_class($this) . ': ' . $validator->getError());
                 }
             }
         }

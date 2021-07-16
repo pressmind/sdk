@@ -34,6 +34,8 @@ class DatetimeFilter implements FilterInterface {
                     $pValue = $pValue->date;
                 }
                 $value = DateTime::createFromFormat('Y-m-d H:i:s.000000', $pValue);
+            } else if(preg_match('/[TZ]/', $pValue) == 1) {
+                $value = DateTime::createFromFormat("Y-m-d\TH:i:s.000\Z", $pValue);
             } else {
                 $value = DateTime::createFromFormat('Y-m-d H:i:s', $pValue);
             }

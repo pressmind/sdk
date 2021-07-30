@@ -59,7 +59,7 @@ class DateRange implements ConditionInterface
      */
     public function getJoins()
     {
-        return 'INNER JOIN (SELECT pmt2core_cheapest_price_speed.id_media_object, MIN(pmt2core_cheapest_price_speed.price_total) as cheapest_price_total
+        return 'INNER JOIN (SELECT pmt2core_cheapest_price_speed.id_media_object, MIN(pmt2core_cheapest_price_speed.price_total) as cheapest_price_total, pmt2core_cheapest_price_speed.date_departure
                      FROM pmt2core_cheapest_price_speed
                      WHERE ###CONDITIONS### GROUP BY pmt2core_cheapest_price_speed.id_media_object) cheapest_price_speed on pmt2core_media_objects.id = cheapest_price_speed.id_media_object';
     }

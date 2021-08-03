@@ -148,7 +148,7 @@ class HelperFunctions
                 '_',
                 '',
                 ''),
-            self::replaceLatinSpecialChars(strtolower($human_name))
+            strtolower(self::replaceLatinSpecialChars($human_name))
         );
     }
 

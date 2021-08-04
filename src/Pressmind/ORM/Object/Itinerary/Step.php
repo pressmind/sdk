@@ -3,12 +3,14 @@
 
 namespace Pressmind\ORM\Object\Itinerary;
 
+use Pressmind\HelperFunctions;
 use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\Itinerary\Step\Board;
 use Pressmind\ORM\Object\Itinerary\Step\DocumentMediaObject;
 use Pressmind\ORM\Object\Itinerary\Step\Geopoint;
 use Pressmind\ORM\Object\Itinerary\Step\Section;
 use Pressmind\ORM\Object\Itinerary\Step\TextMediaObject;
+use Pressmind\Registry;
 
 /**
  * Class Step
@@ -176,4 +178,28 @@ class Step extends AbstractObject
             ]
         ]
     ];
+
+    /**
+     * @param null $language
+     * @return Section
+     */
+    public function getSectionForLanguage($language = null) {
+        if(is_null($language)) {
+            $config = Registry::getInstance()->get('config');
+            $language = $config['data']['languages']['default'];
+        }
+        return HelperFunctions::findObjectInArray($this->sections, 'language', $language);
+    }
+
+    /**
+     * @param null $language
+     * @return Section\Content
+     */
+    public function getContentForlanguage($language = null) {
+        if(is_null($language)) {
+            $config = Registry::getInstance()->get('config');
+            $language = $config['data']['languages']['default'];
+        }
+        return $this->getSectionForLanguage($language)->content;
+    }
 }

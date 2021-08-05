@@ -363,7 +363,7 @@ abstract class AbstractObject implements SplSubject
      * @return string
      */
     private function _createCacheKey($id) {
-        return $this->getDbTableName() . '_' . $id;
+        return 'OBJECT_' . $this->getDbTableName() . '_' . $id;
     }
 
     /**
@@ -412,8 +412,9 @@ abstract class AbstractObject implements SplSubject
      */
     public function removeFromCache() {
         $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
-        if($cache_adapter->exists($this->getDbTableName() . '_' . $this->getId())) {
-            $cache_adapter->remove($this->getDbTableName() . '_' . $this->getId());
+        $key = $this->_createCacheKey($this->getId());
+        if($cache_adapter->exists($key)) {
+            $cache_adapter->remove($key);
         }
     }
 

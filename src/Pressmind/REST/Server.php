@@ -186,7 +186,7 @@ class Server
                 unset($parameters[$config['cache']['disable_parameter']['key']]);
                 if($this->_cache_enabled) {
                     $cache_adapter = Factory::create($config['cache']['adapter']['name']);
-                    $key = md5($classname . $method . json_encode($parameters));
+                    $key = 'REST_' . md5($classname . $method . json_encode($parameters));
                     $result = $cache_adapter->get($key);
                     if($result && !$cache_update) {
                         $return = json_decode($result);

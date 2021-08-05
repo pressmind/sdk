@@ -305,6 +305,23 @@ class Picture extends AbstractObject
             return HelperFunctions::replaceConstantsFromConfig($config['image_handling']['http_src']) . '/'  . $this->file_name;
         }
     }
+    /**
+     * @param $derivativeName
+     * @param bool $asHTMLAttributes
+     * @return array|string
+     */
+    public function getSizes($derivativeName, $asHTMLAttributes = true) {
+        $config = Registry::getInstance()->get('config');
+        $width = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'];
+        $height = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'];
+        if(true === $asHTMLAttributes) {
+            return 'width="' .$width . '" height="' . $height . '"';
+        }
+        return [
+            'width' => $width,
+            'height' => $height
+        ];
+    }
 
     /**
      * @param null $derivativeName

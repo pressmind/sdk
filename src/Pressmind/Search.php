@@ -173,7 +173,13 @@ class Search
             $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
             if ($cache_adapter->exists($key)) {
                 Writer::write(get_class($this) . ' exec() reading from cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
-                $db_result = json_decode($cache_adapter->get($key));
+                $cache_contents = json_decode($cache_adapter->get($key));
+                $db_result = [];
+                foreach ($cache_contents as $cache_content) {
+                    $mo = new ORM\Object\MediaObject();
+                    $mo->fromStdClass($cache_content);
+                    $db_result[] = $mo;
+                }
             } else {
                 $db_result = $db->fetchAll($this->_sql, $this->_values, $class_name);
                 Writer::write(get_class($this) . ' exec() writing to cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);

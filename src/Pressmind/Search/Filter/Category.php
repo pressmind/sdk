@@ -53,7 +53,7 @@ class Category implements FilterInterface
                 $list[$item->item->id] = $item->item;
             }
         }
-        usort($list, [get_class($this), "sortItems"]);
+        usort($list, "self::sortItems");
         return $list;
     }
 

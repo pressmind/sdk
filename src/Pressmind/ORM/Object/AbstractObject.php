@@ -65,6 +65,11 @@ abstract class AbstractObject implements SplSubject
     /**
      * @var boolean
      */
+    protected $_is_cached = false;
+
+    /**
+     * @var boolean
+     */
     protected $_read_relations = true;
 
     /**
@@ -355,6 +360,7 @@ abstract class AbstractObject implements SplSubject
         } else {
             $data = $this->addToCache($id);
         }
+        $this->_is_cached = true;
         return $data;
     }
 
@@ -364,6 +370,14 @@ abstract class AbstractObject implements SplSubject
      */
     private function _createCacheKey($id) {
         return 'OBJECT_' . $this->getDbTableName() . '_' . $id;
+    }
+
+    /**
+     * Will return false if Object is not cached, otherwise will return the cache key
+     * @return bool|string
+     */
+    public function isCached() {
+        return $this->_is_cached ? $this->_createCacheKey($this->getId()) : false;
     }
 
     /**

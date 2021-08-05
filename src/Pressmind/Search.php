@@ -168,6 +168,7 @@ class Search
         if (true === $this->return_id_only) {
             $class_name = null;
         }
+        $isCached = false;
         if (Registry::getInstance()->get('config')['cache']['enabled'] && in_array('SEARCH', Registry::getInstance()->get('config')['cache']['types'])) {
             $key = 'SEARCH_' . md5($this->_sql . json_encode($this->_values));
             $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
@@ -190,10 +191,11 @@ class Search
                 $info->parameters = ['sql' => $this->_sql, 'values' => $this->_values];
                 $cache_adapter->add($key, json_encode($db_result), $info);
             }
+            $isCached = $key;
         } else {
             $db_result = $db->fetchAll($this->_sql, $this->_values, $class_name);
         }
-        $result = new Result();
+        $result = new Result($isCached);
         $result->setQuery($this->_sql);
         $result->setValues($this->_values);
         $result->setResultRaw($db_result);
@@ -243,6 +245,11 @@ class Search
             $this->_result = $this->exec();
         }
         return $this->_result->getResult($loadFull);
+    }
+
+    public function isCached()
+    {
+        return $this->_result->isCached();
     }
 
     /**

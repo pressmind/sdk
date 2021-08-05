@@ -29,6 +29,16 @@ class Result
     private $_result = [];
 
     /**
+     * @var boolean|String
+     */
+    private $_isCached;
+
+    public function __construct($isCached = false)
+    {
+        $this->_isCached = $isCached;
+    }
+
+    /**
      * @return MediaObject[]
      * @throws \Exception
      */
@@ -79,5 +89,13 @@ class Result
     public function getValues()
     {
         return $this->_values;
+    }
+
+    /**
+     * @return bool|String
+     */
+    public function isCached()
+    {
+        return $this->_isCached;
     }
 }

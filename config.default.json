@@ -2,6 +2,7 @@
     "development": {
         "server": {
             "document_root": "BASE_PATH/httpdocs",
+            "webserver_http": "http://127.0.0.1",
             "web_server": "Apache2",
             "php_cli_binary" : "php"
         },

@@ -691,7 +691,8 @@ class HelperFunctions
         }
         return [
             'list' => $args_list,
-            'dictionary' => $args_dictionary
+            'dictionary' => $args_dictionary,
+            'help_wanted' => ((count($args_dictionary) == 0 && count($args_list) == 1) || in_array('h', $args_list) || in_array('help', $args_list) || isset($args_dictionary['help']))
         ];
     }
 }

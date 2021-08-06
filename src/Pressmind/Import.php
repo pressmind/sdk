@@ -414,6 +414,11 @@ class Import
             $media_object->readRelations();
             $media_object->createSearchIndex();
 
+            if($config['cache']['enabled'] == true && in_array('OBJECT', $config['cache']['types'])) {
+                $media_object->updateCache($id_media_object);
+                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '):  Cache has been updated', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+            }
+
             unset($response);
             unset($media_object);
 
@@ -551,13 +556,14 @@ class Import
 
     /**
      * @param $ids
+     * @param bool $drop_tables
      * @throws Exception
      */
-    public function importMediaObjectTypes($ids)
+    public function importMediaObjectTypes($ids, $drop_tables = false)
     {
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObjectTypes(' . implode(',' ,$ids) . '): Starting import', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
         $media_object_type_importer = new MediaObjectType($ids);
-        $media_object_type_importer->import();
+        $media_object_type_importer->import($drop_tables);
     }
 
     /**

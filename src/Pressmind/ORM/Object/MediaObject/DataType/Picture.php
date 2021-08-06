@@ -421,7 +421,7 @@ class Picture extends AbstractObject
      * @param $mimetype
      * @throws Exception
      */
-    private function _checkMimetype($mimetype) {
+    protected function _checkMimetype($mimetype) {
         $allowed_mimetypes = [
             'image/jpeg',
             'image/jpg',

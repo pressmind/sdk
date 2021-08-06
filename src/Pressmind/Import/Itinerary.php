@@ -91,8 +91,18 @@ class Itinerary extends AbstractImport implements ImportInterface
                     $section->id_section = $id_section;
                     unset($section->id);
                 }
+                $img_sort = 0;
                 foreach ($step->document_media_objects as &$document_media_object) {
+                    foreach($document_media_object->urls as $key => $url) {
+                        if($key == "web") {
+                            $document_media_object->tmp_url = str_replace('&v=web', '', $url);
+                        }
+                    }
                     unset($document_media_object->urls);
+                    unset($document_media_object->uri);
+                    $document_media_object->download_successful = false;
+                    $document_media_object->sort = $img_sort;
+                    $img_sort++;
                 }
             }
             try {
@@ -141,8 +151,18 @@ class Itinerary extends AbstractImport implements ImportInterface
                 $section->id_section = $id_section;
                 unset($section->id);
             }
+            $img_sort = 0;
             foreach ($step->document_media_objects as &$document_media_object) {
+                foreach($document_media_object->urls as $key => $url) {
+                    if($key == "web") {
+                        $document_media_object->tmp_url = str_replace('&v=web', '', $url);
+                    }
+                }
                 unset($document_media_object->urls);
+                unset($document_media_object->uri);
+                $document_media_object->download_successful = false;
+                $document_media_object->sort = $img_sort;
+                $img_sort++;
             }
 
             $new_step = new Step();

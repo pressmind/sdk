@@ -86,9 +86,10 @@ class ObjectTypeScaffolder
     }
 
     /**
+     * @param boolean $drop_tables
      * @throws Exception
      */
-    public function parse()
+    public function parse($drop_tables = false)
     {
         $conf = Registry::getInstance()->get('config');
         $db = Registry::getInstance()->get('db');
@@ -121,7 +122,7 @@ class ObjectTypeScaffolder
         /** @var AbstractObject $test */
         $test = new $class_name();
         $mysql_scaffolder = new DB\Scaffolder\Mysql($test);
-        $mysql_scaffolder->run();
+        $mysql_scaffolder->run($drop_tables);
         $db->execute("ALTER TABLE " . $test->getDbTableName() . " ROW_FORMAT=DYNAMIC;");
         $this->_insertTags();
         $this->generateObjectInformationFile();

@@ -20,10 +20,11 @@ class MediaObjectType extends AbstractImport implements ImportInterface
     }
 
     /**
+     * @param bool $drop_tables
      * @return mixed
      * @throws Exception
      */
-    public function import()
+    public function import($drop_tables = false)
     {
         $client = new Client();
         $this->_log[] = ' Importer::importMediaObjectTypes(' . implode(',' ,$this->_ids) . '): Starting import';
@@ -33,7 +34,7 @@ class MediaObjectType extends AbstractImport implements ImportInterface
             $this->_log[] = ' Importer::importMediaObjectTypes(' . implode(',' ,$this->_ids) . '): Starting scaffolding for ID: ' . $result->id;
             $table_name = $result->id;
             $scaffolder = new ObjectTypeScaffolder($result, $table_name);
-            $scaffolder->parse();
+            $scaffolder->parse($drop_tables);
             if($scaffolder->hasErrors()) {
                 $this->_errors[] = $scaffolder->getErrors();
             }

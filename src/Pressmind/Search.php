@@ -430,7 +430,7 @@ class Search
             $visibility = null;
         }
         $now = new \DateTime();
-        $validity = " ((pmt2core_media_objects.valid_from IS NULL OR pmt2core_media_objects.valid_from <= '" . $now->format('Y-m-d H:i:00') . "') AND (pmt2core_media_objects.valid_to IS NULL OR pmt2core_media_objects.valid_to >= '" . $now->format('Y-m-d H:i:00') . "')) AND ";
+        $validity = " ((pmt2core_media_objects.valid_from IS NULL OR pmt2core_media_objects.valid_from <= NOW()) AND (pmt2core_media_objects.valid_to IS NULL OR pmt2core_media_objects.valid_to >= NOW())) AND ";
         if($this->hasCondition('Pressmind\Search\Condition\Validity')) {
             $validity = null;
         }

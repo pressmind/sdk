@@ -380,6 +380,15 @@ abstract class AbstractObject implements SplSubject
         return $this->_is_cached ? $this->_createCacheKey($this->getId()) : false;
     }
 
+    public function getCacheInfo() {
+        if ($this->isCached() !== false) {
+            $key = $this->_createCacheKey($this->getId());
+            $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
+            return $cache_adapter->getInfo($key);
+        }
+        return null;
+    }
+
     /**
      * @return mixed
      * @throws Exception

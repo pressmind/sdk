@@ -72,7 +72,15 @@ class Search
      */
     private $_result = null;
 
+    /**
+     * @var bool
+     */
     public $return_id_only = false;
+
+    /**
+     * @var bool
+     */
+    private $_skip_cache = false;
 
     /**
      * Search constructor.
@@ -169,7 +177,7 @@ class Search
             $class_name = null;
         }
         $isCached = false;
-        if (Registry::getInstance()->get('config')['cache']['enabled'] && in_array('SEARCH', Registry::getInstance()->get('config')['cache']['types'])) {
+        if (Registry::getInstance()->get('config')['cache']['enabled'] && in_array('SEARCH', Registry::getInstance()->get('config')['cache']['types']) && $this->_skip_cache == false) {
             $key = 'SEARCH_' . md5($this->_sql . json_encode($this->_values));
             $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
             if ($cache_adapter->exists($key)) {
@@ -208,13 +216,19 @@ class Search
     }
 
     /**
-     * @param \stdClass $params
+     * @param \stdClass|null $params
      */
-    public function updateCache($params)
+    public function updateCache($params = null)
     {
+        $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
+        $key = 'SEARCH_' . md5($params->sql . json_encode($params->values));
+        if(is_null($params)) {
+            $info = $cache_adapter->getInfo($key);
+            if(isset($info['info']) && !empty($info['info'])) {
+                $params = $info['info']->parameters;
+            }
+        }
         try {
-            $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
-            $key = 'SEARCH_' . md5($params->sql . json_encode($params->values));
             /**@var Pdo $db */
             $db = Registry::getInstance()->get('db');
             $db_result = $db->fetchAll($params->sql, (array)$params->values);
@@ -250,6 +264,21 @@ class Search
     public function isCached()
     {
         return $this->_result->isCached();
+    }
+
+    public function getCacheInfo()
+    {
+        if($this->isCached() !== false) {
+            $key = 'SEARCH_' . md5($this->_sql . json_encode($this->_values));
+            $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
+            return $cache_adapter->getInfo($key);
+        }
+        return null;
+    }
+
+    public function disableCache()
+    {
+        $this->_skip_cache = true;
     }
 
     /**

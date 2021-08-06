@@ -79,6 +79,7 @@ class Redis implements AdapterInterface
     public function getInfo($pKey)
     {
         return [
+            'key' => $pKey,
             'info' => json_decode($this->_server->hGet('pmt2corecacheinfo-' . $this->_prefix, 'pmt2core-' . $this->_prefix . '-' . $pKey)),
             'date' => $this->_server->hGet('pmt2corecachetime-' . $this->_prefix, 'pmt2core-' . $this->_prefix . '-' . $pKey)
         ];

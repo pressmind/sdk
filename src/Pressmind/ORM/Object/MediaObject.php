@@ -934,12 +934,10 @@ class MediaObject extends AbstractObject
                             $cheapestPriceSpeed->earlybird_discount = null;
                             $cheapestPriceSpeed->earlybird_discount_date_to = null;
                             $cheapestPriceSpeed->earlybird_discount_f = null;
-                            $cheapestPriceSpeed->earlybird_discount_date_to_f = null;
-                            if($this->_checkEarlyBirdDiscount($early_bird_discount)) {
+                            if($this->_checkEarlyBirdDiscount($early_bird_discount, $date)) {
                                 $cheapestPriceSpeed->earlybird_discount = strtolower($early_bird_discount->type) == 'p' ? $early_bird_discount->discount_value : null;
-                                $cheapestPriceSpeed->earlybird_discount_date_to = strtolower($early_bird_discount->type) == 'p' ? $early_bird_discount->booking_date_to : null;
+                                $cheapestPriceSpeed->earlybird_discount_date_to = $early_bird_discount->booking_date_to;
                                 $cheapestPriceSpeed->earlybird_discount_f = strtolower($early_bird_discount->type) == 'f' ? $early_bird_discount->discount_value : null;
-                                $cheapestPriceSpeed->earlybird_discount_date_to_f = strtolower($early_bird_discount->type) == 'f' ? $early_bird_discount->booking_date_to : null;
                                 $cheapestPriceSpeed->price_total = $cheapestPriceSpeed->price_regular_before_discount + $this->_calculateEarlyBirdDiscount($early_bird_discount, $cheapestPriceSpeed->price_regular_before_discount);
                             }
 
@@ -956,12 +954,13 @@ class MediaObject extends AbstractObject
 
 
     /**
-     * @param Item $early_bird_discount
+     * @param Item $discount
+     * @param Date $date
      * @return false
      */
-    private function _checkEarlyBirdDiscount($discount) {
+    private function _checkEarlyBirdDiscount($discount, $date) {
         $now = new DateTime();
-        if(!is_null($discount) && ($now > $discount->booking_date_from && $now < $discount->booking_date_to)) {
+        if(!is_null($discount) && ($now >= $discount->booking_date_from && $now <= $discount->booking_date_to) && ($date->departure >= $discount->travel_date_from && $date->departure <= $discount->travel_date_to)) {
             return true;
         }
         return false;

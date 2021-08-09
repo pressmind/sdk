@@ -28,13 +28,14 @@ class DatetimeFilter implements FilterInterface {
             }
             /**it might happen that we receive a JSON representation of a PHP DateTime Object, so we need to cover this case ...**/
             if((is_array($pValue) && isset($pValue['date'])) || (is_a($pValue, 'stdClass') && isset($pValue->date))) {
-                if(is_array($pValue)) {
+                if (is_array($pValue)) {
                     $pValue = $pValue['date'];
                 } else {
                     $pValue = $pValue->date;
                 }
                 $value = DateTime::createFromFormat('Y-m-d H:i:s.000000', $pValue);
-            } else if(preg_match('/[TZ]/', $pValue) == 1) {
+            } else if(preg_match('/[TZ]/', $pValue) == 1) { //Cover javascript formatted datetime strings (1970-01-01T14:34:56.414Z)
+                $pValue = preg_replace('/\.[0-9]{3}Z/m', '.000Z', $pValue); // Throw out the milliseconds, we don't need that depth of resolution
                 $value = DateTime::createFromFormat("Y-m-d\TH:i:s.000\Z", $pValue);
             } else {
                 $value = DateTime::createFromFormat('Y-m-d H:i:s', $pValue);

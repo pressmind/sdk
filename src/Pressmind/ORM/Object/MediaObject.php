@@ -5,6 +5,7 @@ namespace Pressmind\ORM\Object;
 use DateTime;
 use Exception;
 use Pressmind\Log\Writer;
+use Pressmind\ORM\Object\Itinerary\Step;
 use Pressmind\ORM\Object\MediaType\AbstractMediaType;
 use Pressmind\ORM\Object\MediaType\Factory;
 use Pressmind\DB\Adapter\Pdo;

@@ -42,9 +42,8 @@ use DateTime;
  * @property integer $state
  * @property string $infotext
  * @property float $earlybird_discount
- * @property DateTime $earlybird_discount_date_to
  * @property float $earlybird_discount_f
- * @property DateTime $earlybird_discount_date_to_f
+ * @property DateTime $earlybird_discount_date_to
  * @property integer $id_option_auto_book
  * @property integer $id_option_required_group
  * @property string $id_start_point_option
@@ -463,14 +462,6 @@ class CheapestPriceSpeed extends AbstractObject
                 'filters' => null,
                 'validators' => null
             ],
-            'earlybird_discount_date_to' => [
-                'name' => 'earlybird_discount_date_to',
-                'title' => 'earlybird_discount_date_to',
-                'type' => 'DateTime',
-                'required' => false,
-                'filters' => null,
-                'validators' => null
-            ],
             'earlybird_discount_f' => [
                 'name' => 'earlybird_discount_f',
                 'title' => 'earlybird_discount_f',
@@ -479,9 +470,9 @@ class CheapestPriceSpeed extends AbstractObject
                 'filters' => null,
                 'validators' => null
             ],
-            'earlybird_discount_date_to_f' => [
-                'name' => 'earlybird_discount_date_to_f',
-                'title' => 'earlybird_discount_date_to_f',
+            'earlybird_discount_date_to' => [
+                'name' => 'earlybird_discount_date_to',
+                'title' => 'earlybird_discount_date_to',
                 'type' => 'DateTime',
                 'required' => false,
                 'filters' => null,

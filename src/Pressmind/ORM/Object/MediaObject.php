@@ -4,9 +4,7 @@ namespace Pressmind\ORM\Object;
 
 use DateTime;
 use Exception;
-use Pressmind\DB\Adapter\AdapterInterface;
 use Pressmind\Log\Writer;
-use Pressmind\ORM\Object\Itinerary\Step;
 use Pressmind\ORM\Object\MediaType\AbstractMediaType;
 use Pressmind\ORM\Object\MediaType\Factory;
 use Pressmind\DB\Adapter\Pdo;
@@ -19,7 +17,6 @@ use Pressmind\ORM\Object\Touristic\Booking\Package;
 use Pressmind\ORM\Object\Touristic\Date;
 use Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup\Item;
 use Pressmind\ORM\Object\Touristic\Insurance\Group;
-use Pressmind\ORM\Object\Touristic\Option;
 use Pressmind\ORM\Object\Touristic\Transport;
 use Pressmind\Registry;
 use Pressmind\Search\CheapestPrice;
@@ -856,17 +853,13 @@ class MediaObject extends AbstractObject
      */
     public function insertCheapestPrice()
     {
-        /** @var AdapterInterface $db */
-        //$db = Registry::getInstance()->get('db');
-        //$db->delete('pmt2core_cheapest_price_speed', ['id_media_object = ?', $this->getId()]);
-
         $booking_packages = $this->booking_packages;
         $result = [];
         foreach ($booking_packages as $booking_package) {
             foreach ($booking_package->dates as $date) {
                 /** @var Item[] $early_bird_discounts */
                 $early_bird_discounts = is_null($date->early_bird_discount_group) ? [null] : $date->early_bird_discount_group->items;
-                //$early_bird_discounts = array_merge([null], $early_bird_date_discounts);
+
                 /** @var Transport[] $transport_pairs */
                 $transport_pairs = count($date->transports) > 0 ? [] : [null];
                 foreach ($date->transports as $transport) {
@@ -891,17 +884,12 @@ class MediaObject extends AbstractObject
                 foreach ($options as $option) {
                     foreach ($transport_pairs as $transport_pair) {
                         foreach ($early_bird_discounts as $early_bird_discount) {
-                            $calculated_early_bird_discount = null;
                             if (!is_null($transport_pair) && isset($transport_pair[1])) {
                                 $transport_price = $transport_pair[1]->price + (isset($transport_pair[2]) ? $transport_pair[2]->price : 0);
                             } else {
                                 $transport_price = null;
                             }
                             $price_option = $option->price;
-                            if (!is_null($early_bird_discount)) {
-                                $calculated_early_bird_discount = $this->_calculateEarlyBirdDiscount($early_bird_discount, $option, $transport_pair, $transport_price);
-                            }
-                            $early_bird_discount_date_to = $date->departure;
 
                             $cheapestPriceSpeed = new CheapestPriceSpeed();
                             $cheapestPriceSpeed->id_media_object = $this->getId();
@@ -928,7 +916,6 @@ class MediaObject extends AbstractObject
                             $cheapestPriceSpeed->price_option_pseudo = $option->price_pseudo;
                             $cheapestPriceSpeed->option_price_due = $option->price_due;
                             $cheapestPriceSpeed->price_regular_before_discount = $option->price + $transport_price;
-                            $cheapestPriceSpeed->price_total = ($price_option + $transport_price) + $calculated_early_bird_discount;
                             $cheapestPriceSpeed->transport_code = !is_null($transport_pair) && isset($transport_pair[1]) ? $transport_pair[1]->code : null;
                             $cheapestPriceSpeed->transport_type = !is_null($transport_pair) && isset($transport_pair[1]) ? $transport_pair[1]->type : null;
                             $cheapestPriceSpeed->transport_1_way = !is_null($transport_pair) && isset($transport_pair[1]) ? $transport_pair[1]->way : null;
@@ -937,15 +924,25 @@ class MediaObject extends AbstractObject
                             $cheapestPriceSpeed->transport_2_description = !is_null($transport_pair) && isset($transport_pair[1]) && isset($transport_pair[2]) ? $transport_pair[2]->description : null;
                             $cheapestPriceSpeed->state = 1;
                             $cheapestPriceSpeed->infotext = null;
-                            $cheapestPriceSpeed->earlybird_discount = $calculated_early_bird_discount;
-                            $cheapestPriceSpeed->earlybird_discount_date_to = $early_bird_discount_date_to;
-                            $cheapestPriceSpeed->earlybird_discount_f = null;
-                            $cheapestPriceSpeed->earlybird_discount_date_to_f = null;
                             $cheapestPriceSpeed->id_option_auto_book = null;
                             $cheapestPriceSpeed->id_option_required_group = null;
                             $cheapestPriceSpeed->id_start_point_option = null;
                             $cheapestPriceSpeed->id_origin = null;
                             $cheapestPriceSpeed->id_startingpoint = null;
+                            $cheapestPriceSpeed->price_total = $cheapestPriceSpeed->price_regular_before_discount;
+
+                            $cheapestPriceSpeed->earlybird_discount = null;
+                            $cheapestPriceSpeed->earlybird_discount_date_to = null;
+                            $cheapestPriceSpeed->earlybird_discount_f = null;
+                            $cheapestPriceSpeed->earlybird_discount_date_to_f = null;
+                            if($this->_checkEarlyBirdDiscount($early_bird_discount)) {
+                                $cheapestPriceSpeed->earlybird_discount = strtolower($early_bird_discount->type) == 'p' ? $early_bird_discount->discount_value : null;
+                                $cheapestPriceSpeed->earlybird_discount_date_to = strtolower($early_bird_discount->type) == 'p' ? $early_bird_discount->booking_date_to : null;
+                                $cheapestPriceSpeed->earlybird_discount_f = strtolower($early_bird_discount->type) == 'f' ? $early_bird_discount->discount_value : null;
+                                $cheapestPriceSpeed->earlybird_discount_date_to_f = strtolower($early_bird_discount->type) == 'f' ? $early_bird_discount->booking_date_to : null;
+                                $cheapestPriceSpeed->price_total = $cheapestPriceSpeed->price_regular_before_discount + $this->_calculateEarlyBirdDiscount($early_bird_discount, $cheapestPriceSpeed->price_regular_before_discount);
+                            }
+
                             $cheapestPriceSpeed->create();
                             $result[] = $cheapestPriceSpeed->toStdClass();
                         }
@@ -957,43 +954,51 @@ class MediaObject extends AbstractObject
         return $result;
     }
 
+
+    /**
+     * @param Item $early_bird_discount
+     * @return false
+     */
+    private function _checkEarlyBirdDiscount($discount) {
+        $now = new DateTime();
+        if(!is_null($discount) && ($now > $discount->booking_date_from && $now < $discount->booking_date_to)) {
+            return true;
+        }
+        return false;
+    }
+
     /**
      * @param Item $discount
-     * @param Option $option
-     * @param Transport[] $transport_pair
-     * @return float
+     * @param float $total_price
+     * @return float|null
      */
-    private function _calculateEarlyBirdDiscount($discount, $option, $transport_pair) {
-        switch ($discount->type) {
-            case 'P':
-                return $this->_calculatePercentageEarlyBirdDiscount($discount, $option, $transport_pair);
-            case 'F':
-                return $this->_calculateFixedEarlyBirdDiscount($discount, $option, $transport_pair);
+    private function _calculateEarlyBirdDiscount($discount, $total_price) {
+        switch (strtolower($discount->type)) {
+            case 'p':
+                return $this->_calculatePercentageEarlyBirdDiscount($discount, $total_price);
+            case 'f':
+                return $this->_calculateFixedEarlyBirdDiscount($discount);
         }
         return null;
     }
 
     /**
      * @param Item $discount
-     * @param Option $option
-     * @param Transport[] $transport_pair
      * @return float
      */
-    private function _calculateFixedEarlyBirdDiscount($discount, $option, $transport_pair)
+    private function _calculateFixedEarlyBirdDiscount($discount)
     {
-        $transport_discount = 0;
-        return ($discount->discount_value + $transport_discount) * -1;
+        return ($discount->discount_value) * -1;
     }
 
     /**
      * @param Item $discount
-     * @param Option $option
-     * @param Transport[] $transport_pair
+     * @param float $total_price
      * @return float
      */
-    private function _calculatePercentageEarlyBirdDiscount($discount, $option, $transport_pair)
+    private function _calculatePercentageEarlyBirdDiscount($discount, $total_price)
     {
-        return bcmul(bcdiv($option->price, 100, 4), $discount->discount_value, 2) * -1;
+        return bcmul(bcdiv($total_price, 100, 4), $discount->discount_value, 2) * -1;
     }
 
     /**

@@ -29,11 +29,14 @@ class Redis implements AdapterInterface
      */
     private $_config;
 
+    private $_ttl = null;
+
     public function __construct()
     {
         $this->_config = Registry::getInstance()->get('config')['cache'];
         $this->_server = new \Redis();
         $this->_server->connect($this->_config['adapter']['config']['host'], $this->_config['adapter']['config']['port']);
+        $this->_ttl = $this->_config['max_idle_time'];
         $this->_prefix = HelperFunctions::replaceConstantsFromConfig($this->_config['key_prefix']);
     }
 
@@ -42,9 +45,12 @@ class Redis implements AdapterInterface
 
     }
 
-    public function flushAll()
+    public function flushAll($category = null)
     {
-        $this->_server->flushAll();
+        $keys = $this->_server->keys('pmt2core-' . $this->_prefix . '-' . $category . '*');
+        foreach ($keys as $key) {
+            $this->remove($key);
+        }
     }
 
     public function add($pKey, $pValue, $info = null)
@@ -52,7 +58,7 @@ class Redis implements AdapterInterface
         $now = new \DateTime();
         $this->_server->hSet('pmt2corecacheinfo-' . $this->_prefix, 'pmt2core-' . $this->_prefix . '-' . $pKey, json_encode($info));
         $this->_server->hSet('pmt2corecachetime-' . $this->_prefix, 'pmt2core-' . $this->_prefix . '-' . $pKey, $now->format(\DateTime::ISO8601));
-        return $this->_server->set('pmt2core-' . $this->_prefix . '-' . $pKey, $pValue);
+        return $this->_server->set('pmt2core-' . $this->_prefix . '-' . $pKey, $pValue, $this->_ttl);
 
     }
 
@@ -68,7 +74,21 @@ class Redis implements AdapterInterface
 
     public function remove($pKey)
     {
+        $this->_server->hDel('pmt2corecacheinfo-' . $this->_prefix, $pKey);
+        $this->_server->hDel('pmt2corecachetime-' . $this->_prefix, $pKey);
+        $this->_server->hDel('pmt2corecacheidletime-' . $this->_prefix, $pKey);
         return $this->_server->del('pmt2core-' . $this->_prefix . '-' . $pKey);
+    }
+
+    public function updateAll($category = null) {
+        $keys = $this->_server->keys('pmt2core-' . $this->_prefix . '-' . $category . '*');
+        foreach ($keys as $key) {
+            $this->update($key);
+        }
+    }
+
+    public function update($pKey) {
+        $info = $this->getInfo($pKey);
     }
 
     public function getKeys()
@@ -81,7 +101,8 @@ class Redis implements AdapterInterface
         return [
             'key' => $pKey,
             'info' => json_decode($this->_server->hGet('pmt2corecacheinfo-' . $this->_prefix, 'pmt2core-' . $this->_prefix . '-' . $pKey)),
-            'date' => $this->_server->hGet('pmt2corecachetime-' . $this->_prefix, 'pmt2core-' . $this->_prefix . '-' . $pKey)
+            'date' => $this->_server->hGet('pmt2corecachetime-' . $this->_prefix, 'pmt2core-' . $this->_prefix . '-' . $pKey),
+            'idle' => $this->_server->hGet('pmt2corecacheidletime-' . $this->_prefix, 'pmt2core-' . $this->_prefix . '-' . $pKey)
         ];
     }
 

@@ -23,7 +23,7 @@ class DatetimeFilter implements FilterInterface {
         try {
             $value = null;
             /**convert simple date string (Y-m-d) to valid datetime string (Y-m-d 00:00:00)**/
-            if(strlen($pValue) == '10' && preg_match('/^(19|20)\d\d[-.](0[1-9]|1[012])[-.](0[1-9]|[12][0-9]|3[01])$/', $pValue) == 1) {
+            if(!is_a($pValue, 'stdClass') && strlen($pValue) == '10' && preg_match('/^(19|20)\d\d[-.](0[1-9]|1[012])[-.](0[1-9]|[12][0-9]|3[01])$/', $pValue) == 1) {
                 $pValue .= ' 00:00:00';
             }
             /**it might happen that we receive a JSON representation of a PHP DateTime Object, so we need to cover this case ...**/

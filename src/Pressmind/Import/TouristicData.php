@@ -7,6 +7,7 @@ namespace Pressmind\Import;
 
 use Exception;
 use Pressmind\ORM\Object\AbstractObject;
+use Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup\Item;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToInsurance;
 
 class TouristicData extends AbstractImport
@@ -20,7 +21,7 @@ class TouristicData extends AbstractImport
         'touristic_dates' => '\Date',
         'touristic_seasonal_periods' => '\SeasonalPeriod',
         'touristic_transports' => '\Transport',
-        'touristic_booking_earlybirds' => '\Booking\Earlybird',
+        'touristic_booking_earlybirds' => '\EarlyBirdDiscountGroup',
         'touristic_housing_packages' => '\Housing\Package',
         'touristic_housing_packages_description_links' => '\Housing\Package\DescriptionLink',
         'touristic_option_descriptions' => '\Option\Description',
@@ -82,6 +83,27 @@ class TouristicData extends AbstractImport
                         $insuranceToinsurance->id_sub_insurance = $touristic_object->id;
                         $insuranceToinsurance->delete();
                         $insuranceToinsurance->create();
+                    }
+                    if($touristic_object_name == 'touristic_booking_earlybirds') {
+                        $items = $touristic_object->scales;
+                        if(!isset($touristic_object->name)) {
+                            $touristic_object->name = $touristic_object->import_code;
+                        }
+                        unset($touristic_object->id_date);
+                        unset($touristic_object->import_code);
+                        unset($touristic_object->scales);
+                        foreach ($items as $item) {
+                            $new_item = new Item();
+                            $item->id_early_bird_discount_group = $touristic_object->id;
+                            unset($item->id_booking_package);
+                            unset($item->id_media_object);
+                            $new_item->fromStdClass($item);
+                            $new_item->create();
+                        }
+                        /*$touristic_object->id_early_bird_discount_group = md5($touristic_object->id_booking_package);
+                        unset($touristic_object->id_booking_package);
+                        unset($touristic_object->id_media_object);*/
+
                     }
                     $class_name = '\Pressmind\ORM\Object\Touristic' . $this->_touristic_object_map[$touristic_object_name];
                     foreach ($touristic_object as $key => $value) {

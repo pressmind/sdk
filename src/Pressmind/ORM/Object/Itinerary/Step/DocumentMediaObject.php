@@ -213,7 +213,7 @@ class DocumentMediaObject extends Picture
         if($retry_counter > 0 && $max_retries >= $retry_counter) {
             Writer::write('ID ' . $this->getId() . ': Retry No. ' . $retry_counter . ' of downloading itinerary image from ' . $download_url, WRITER::OUTPUT_FILE, 'image_processor', Writer::TYPE_INFO);
         }
-        $tmp_file_name = empty($this->file_name) ? $this->id_step . '_' . $this->id_media_object . '.tmp' : $this->file_name;
+        $tmp_file_name = empty($this->file_name) ? 'itinerary_' . $this->id_step . '_' . $this->id_media_object . '.tmp' : $this->file_name;
         if($max_retries >= $retry_counter) {
             try {
                 $storage_file = $downloader->download($download_url, $tmp_file_name);

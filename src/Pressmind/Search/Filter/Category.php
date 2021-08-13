@@ -23,11 +23,14 @@ class Category implements FilterInterface
 
     private $_var_name;
 
-    public function __construct($tree_id = null, $search = null, $var_name = null)
+    private $_linked_object_search;
+
+    public function __construct($tree_id = null, $search = null, $var_name = null, $linked_object_search = false)
     {
         $this->_search = $search;
         $this->_tree_id = $tree_id;
         $this->_var_name = $var_name;
+        $this->_linked_object_search = $linked_object_search;
     }
 
     public function getSearch()
@@ -67,15 +70,22 @@ class Category implements FilterInterface
     }
 
     private function getAllItemsForIds($ids) {
-        //return Categorytree::listAll(['id_tree' => $this->_tree_id, 'id_media_object' => ['IN', implode(",", $ids)]]);
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
-        $query = "SELECT * FROM pmt2core_media_object_tree_items where id_tree = " . $this->_tree_id;
+        $parameters = [
+            'id_tree' => $this->_tree_id,
+        ];
+        $query = "SELECT pmoti.* FROM pmt2core_media_object_tree_items pmoti where pmoti.id_tree = :id_tree";
         if(!is_null($this->_var_name)) {
-            $query .= " AND var_name = '" . $this->_var_name . "'";
+            $query .= " AND pmoti.var_name = :var_name";
+            $parameters['var_name'] = $this->_var_name;
         }
-        $query .= " AND (id_media_object in (" . implode(",", $ids) . ") OR id_media_object in (SELECT id_media_object_link from pmt2core_media_object_object_links WHERE id_media_object in (" . implode(",", $ids) . ")))";
-        return $db->fetchAll($query, null, Categorytree::class);
+        if($this->_linked_object_search == false) {
+            $query .= " AND pmoti.id_media_object in (" . implode(',', $ids) . ")";
+        } else {
+            $query .= " AND pmoti.id_media_object in (SELECT id_media_object_link from pmt2core_media_object_object_links pmool WHERE pmool.id_media_object in (" . implode(',', $ids) . "))";
+        }
+        return $db->fetchAll($query, $parameters, Categorytree::class);
     }
 
     public static function create($tree_id, $search, $var_name = null) {

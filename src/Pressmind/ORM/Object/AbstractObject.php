@@ -419,15 +419,22 @@ abstract class AbstractObject implements SplSubject
         $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
         Writer::write(get_class($this) . ' updateCache() writing to cache. ID: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
         $this->setReadRelations(true);
-        $this->_readFromDb($id);
-        $info = new stdClass();
-        $info->type = 'OBJECT';
-        $info->classname = get_class($this);
-        $info->method = 'addToCache';
-        $info->parameters = ['id' => $id];
-        //$cache_adapter->remove($key);
-        $cache_adapter->add($key, json_encode($this->toStdClass()), $info);
-        return 'Object ' . $key . ' added to cache';
+        $data = $this->_readFromDb($id);
+        if(!is_null($data)) {
+            $info = new stdClass();
+            $info->type = 'OBJECT';
+            $info->classname = get_class($this);
+            $info->method = 'addToCache';
+            $info->parameters = ['id' => $id];
+            //$cache_adapter->remove($key);
+            $cache_adapter->add($key, json_encode($this->toStdClass()), $info);
+            return 'Object ' . $key . ' added to cache';
+        } else {
+            if($cache_adapter->exists($key)) {
+                $cache_adapter->remove($key);
+                return 'Key ' . $key . ' deleted from cache. no media object data has been found in db';
+            }
+        }
     }
 
     /**
@@ -1114,6 +1121,13 @@ abstract class AbstractObject implements SplSubject
             /**@var $relation_object AbstractObject* */
             $relation_object = new $relation_class_name($this->$relation_object_id_name, $this->_read_relations);
             if(!empty($relation_object->getId())) {
+                if (isset($property_info['relation']['filters']) && is_array($property_info['relation']['filters'])) {
+                    foreach ($property_info['relation']['filters'] as $filter_name => $filter_value) {
+                        if($relation_object->$filter_name != $filter_value) {
+                            return null;
+                        }
+                    }
+                }
                 return $relation_object;
             }
         }

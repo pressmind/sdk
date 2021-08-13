@@ -6,6 +6,7 @@ namespace Pressmind\Search\Filter;
 
 use Exception;
 use Pressmind\DB\Adapter\Pdo;
+use Pressmind\HelperFunctions;
 use Pressmind\ORM\Object\CategoryTree\Item;
 use Pressmind\ORM\Object\MediaObject\DataType\Categorytree;
 use Pressmind\Registry;
@@ -39,10 +40,12 @@ class Category implements FilterInterface
     }
 
     /**
+     * Possible values for $order_by: sort, name, code
+     * @param string $order_by
      * @return Item[]
      * @throws Exception
      */
-    public function getResult() {
+    public function getResult($order_by = 'sort') {
         $results = $this->_search->getResults(false, true);
         $ids = [];
         foreach ($results as $result) {
@@ -56,7 +59,7 @@ class Category implements FilterInterface
                 $list[$item->item->id] = $item->item;
             }
         }
-        usort($list, "self::sortItems");
+        usort($list, "self::sortItems" . ucfirst(strtolower($order_by)));
         return $list;
     }
 
@@ -65,10 +68,33 @@ class Category implements FilterInterface
      * @param Item $b
      * @return mixed
      */
-    private static function sortItems($a, $b) {
+    private static function sortItemsSort($a, $b) {
         return $a->sort - $b->sort;
     }
 
+    /**
+     * @param Item $a
+     * @param Item $b
+     * @return mixed
+     */
+    private static function sortItemsName($a, $b) {
+        return strcmp(HelperFunctions::replaceLatinSpecialChars($a->name), HelperFunctions::replaceLatinSpecialChars($b->name));
+    }
+
+    /**
+     * @param Item $a
+     * @param Item $b
+     * @return mixed
+     */
+    private static function sortItemsCode($a, $b) {
+        return strcmp(HelperFunctions::replaceLatinSpecialChars($a->code), HelperFunctions::replaceLatinSpecialChars($b->code));
+    }
+
+    /**
+     * @param array $ids
+     * @return array|void
+     * @throws Exception
+     */
     private function getAllItemsForIds($ids) {
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
@@ -88,8 +114,8 @@ class Category implements FilterInterface
         return $db->fetchAll($query, $parameters, Categorytree::class);
     }
 
-    public static function create($tree_id, $search, $var_name = null) {
-        return new self($tree_id, $search, $var_name);
+    public static function create($tree_id, $search, $var_name = null, $linked_object_search = false) {
+        return new self($tree_id, $search, $var_name, $linked_object_search);
     }
 
     public function setSearch($search) {

@@ -59,6 +59,7 @@ class Info
         '\Touristic\Option',
         '\Touristic\Option\Description',
         '\Touristic\Option\Discount',
+        '\Touristic\Option\Discount\Scale',
         '\Touristic\Pickupservice',
         '\Touristic\Pickupservice\Option',
         '\Touristic\SeasonalPeriod',

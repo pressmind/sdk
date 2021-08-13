@@ -54,7 +54,7 @@ use Pressmind\ORM\Object\Touristic\Option\Discount;
  * @property integer $occupancy_min
  * @property integer $occupancy_max
  * @property integer $occupancy_max_age
- * @property Discount[] $discounts
+ * @property Discount $discount
  */
 class Option extends AbstractObject
 {
@@ -148,6 +148,22 @@ class Option extends AbstractObject
                 'filters' => NULL,
                 'index' => [
                     'id_transport' => 'index'
+                ]
+            ],
+            'id_touristic_option_discount' => [
+                'title' => 'id_touristic_option_discount',
+                'name' => 'id_touristic_option_discount',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ],
+                ],
+                'filters' => NULL,
+                'index' => [
+                    'id_touristic_option_discount' => 'index'
                 ]
             ],
             'type' => [
@@ -692,14 +708,15 @@ class Option extends AbstractObject
                 ],
                 'filters' => NULL,
             ],
-            'discounts' => [
-                'title' => 'Discounts',
-                'name' => 'discounts',
+            'discount' => [
+                'title' => 'Discount',
+                'name' => 'discount',
                 'type' => 'relation',
                 'relation' => [
-                    'type' => 'hasMany',
-                    'related_id' => 'id_option',
-                    'class' => Discount::class
+                    'type' => 'hasOne',
+                    'related_id' => 'id_touristic_option_discount',
+                    'class' => Discount::class,
+                    'filters' => ['active' => 1]
                 ],
                 'required' => false,
                 'validators' => NULL,

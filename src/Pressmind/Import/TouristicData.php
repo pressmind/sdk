@@ -8,7 +8,9 @@ namespace Pressmind\Import;
 use Exception;
 use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup\Item;
+use Pressmind\ORM\Object\Touristic\Housing\Package;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToInsurance;
+use Pressmind\ORM\Object\Touristic\Option\Discount;
 
 class TouristicData extends AbstractImport
 {
@@ -34,6 +36,7 @@ class TouristicData extends AbstractImport
         'touristic_insurances' => '\Insurance',
         'touristic_additional_insurances' => '\Insurance',
         'touristic_insurances_price_tables' => '\Insurance\PriceTable',
+        'touristic_option_discounts' => '\Option\Discount'
     ];
 
     /**@var array**/
@@ -50,7 +53,10 @@ class TouristicData extends AbstractImport
         ],
         'touristic_transports' => [
             'id_early_bird' => 'id_early_bird_discount_group'
-        ]
+        ],
+        'touristic_options' => [
+            'id_touristic_option_discounts' => 'id_touristic_option_discount'
+        ],
     ];
 
     /**
@@ -104,6 +110,9 @@ class TouristicData extends AbstractImport
                         unset($touristic_object->id_booking_package);
                         unset($touristic_object->id_media_object);*/
 
+                    }
+                    if($touristic_object_name == 'touristic_option_discounts') {
+                        unset($touristic_object->import_code);
                     }
                     $class_name = '\Pressmind\ORM\Object\Touristic' . $this->_touristic_object_map[$touristic_object_name];
                     foreach ($touristic_object as $key => $value) {

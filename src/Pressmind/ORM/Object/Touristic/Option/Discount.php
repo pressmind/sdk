@@ -3,12 +3,22 @@
 
 namespace Pressmind\ORM\Object\Touristic\Option;
 
-
 use Pressmind\ORM\Object\AbstractObject;
+use Pressmind\ORM\Object\Touristic\Option\Discount\Scale;
 
+/**
+ * Class Discount
+ * @package Pressmind\ORM\Object\Touristic\Option
+ * @property string $id
+ * @property string $name
+ * @property boolean $active
+ * @property Scale[] $scales
+ */
 class Discount extends AbstractObject
 {
     protected $_dont_use_autoincrement_on_primary_key = true;
+
+    protected $_replace_into_on_create = true;
 
     protected $_definitions = [
         'class' => [
@@ -32,131 +42,40 @@ class Discount extends AbstractObject
                 ],
                 'filters' => NULL,
             ],
-            'id_option' => [
-                'title' => 'Id_booking_package',
-                'name' => 'id_booking_package',
+            'name' => [
+                'title' => 'Name',
+                'name' => 'name',
                 'type' => 'string',
                 'required' => true,
                 'validators' => [
                     [
                         'name' => 'maxlength',
-                        'params' => 32,
-                    ],
-                ],
-                'filters' => NULL,
-                'index' => [
-                    'id_option' => 'index'
-                ]
-            ],
-            'id_booking_package' => [
-                'title' => 'Id_booking_package',
-                'name' => 'id_booking_package',
-                'type' => 'string',
-                'required' => true,
-                'validators' => [
-                    [
-                        'name' => 'maxlength',
-                        'params' => 32,
-                    ],
-                ],
-                'filters' => NULL,
-                'index' => [
-                    'id_booking_package' => 'index'
-                ]
-            ],
-            'id_media_object' => [
-                'title' => 'Id_media_object',
-                'name' => 'id_media_object',
-                'type' => 'integer',
-                'required' => true,
-                'validators' => [
-                    [
-                        'name' => 'maxlength',
-                        'params' => 22,
-                    ],
-                    [
-                        'name' => 'unsigned',
-                        'params' => null,
-                    ]
-                ],
-                'filters' => NULL,
-                'index' => [
-                    'id_media_object' => 'index'
-                ]
-            ],
-            'type' => [
-                'title' => 'Type',
-                'name' => 'type',
-                'type' => 'string',
-                'required' => true,
-                'validators' => [
-                    [
-                        'name' => 'inarray',
-                        'params' => [
-                            'P',
-                            'F'
-                        ],
+                        'params' => 255,
                     ],
                 ],
                 'filters' => NULL,
             ],
-            'value' => [
-                'title' => 'Value',
-                'name' => 'value',
-                'type' => 'float',
+            'active' => [
+                'title' => 'ID',
+                'name' => 'id',
+                'type' => 'boolean',
                 'required' => true,
                 'validators' => null,
                 'filters' => NULL,
             ],
-            'age_from' => [
-                'title' => 'Age From',
-                'name' => 'age_from',
-                'type' => 'integer',
-                'required' => true,
-                'validators' => [
-                    [
-                        'name' => 'maxlength',
-                        'params' => 3,
-                    ],
-                    [
-                        'name' => 'unsigned',
-                        'params' => null,
-                    ]
+            'scales' => [
+                'title' => 'Scales',
+                'name' => 'scales',
+                'type' => 'relation',
+                'relation' => [
+                    'type' => 'hasMany',
+                    'related_id' => 'id_touristic_option_discount',
+                    'class' => Scale::class,
+                    'filters' => null
                 ],
-                'filters' => NULL
-            ],
-            'age_to' => [
-                'title' => 'Age To',
-                'name' => 'age_to',
-                'type' => 'integer',
-                'required' => true,
-                'validators' => [
-                    [
-                        'name' => 'maxlength',
-                        'params' => 3,
-                    ],
-                    [
-                        'name' => 'unsigned',
-                        'params' => null,
-                    ]
-                ],
-                'filters' => NULL
-            ],
-            'valid_from' => [
-                'title' => 'Valid From',
-                'name' => 'valid_from',
-                'type' => 'datetime',
-                'required' => true,
+                'required' => false,
                 'validators' => null,
-                'filters' => NULL
-            ],
-            'valid_to' => [
-                'title' => 'Valid From',
-                'name' => 'valid_from',
-                'type' => 'datetime',
-                'required' => true,
-                'validators' => null,
-                'filters' => NULL
+                'filters' => null
             ],
         ]
     ];

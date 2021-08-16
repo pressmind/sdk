@@ -91,7 +91,7 @@ class TouristicData extends AbstractImport
                         $insuranceToinsurance->create();
                     }
                     if($touristic_object_name == 'touristic_booking_earlybirds') {
-                        $items = $touristic_object->scales;
+                        $items = (isset($touristic_object->scales) && is_array($touristic_object->scales)) ? $touristic_object->scales : [];
                         if(!isset($touristic_object->name)) {
                             $touristic_object->name = $touristic_object->import_code;
                         }

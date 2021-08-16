@@ -40,13 +40,15 @@ class Itinerary extends AbstractImport implements ImportInterface
             $this->_errors[] = $e->getMessage();
             return;
         }
-        switch ($response->result->type) {
-            case 'itinerary_to_touristic':
-                $this->_importVariants($response->result->variants, $id_media_object);
-                break;
-            case 'itinerary_dateless':
-                $this->_importSteps($response->result->steps, $id_media_object);
-                break;
+        if(!empty($response->result)) {
+            switch ($response->result->type) {
+                case 'itinerary_to_touristic':
+                    $this->_importVariants($response->result->variants, $id_media_object);
+                    break;
+                case 'itinerary_dateless':
+                    $this->_importSteps($response->result->steps, $id_media_object);
+                    break;
+            }
         }
     }
 

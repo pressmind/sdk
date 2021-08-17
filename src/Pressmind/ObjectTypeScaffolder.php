@@ -43,6 +43,7 @@ class ObjectTypeScaffolder
         'date' => 'datetime',
         'plaintext' => 'longtext',
         'wysiwyg' => 'longtext',
+        'qrcode' => 'longtext',
         'picture' => 'relation',
         'objectlink' => 'relation',
         'file' => 'relation',

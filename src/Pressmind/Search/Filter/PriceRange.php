@@ -52,10 +52,11 @@ class PriceRange implements FilterInterface
         }
         if(!empty($result)) {
             $db = Registry::getInstance()->get('db');
-            $minmaxResult = $db->fetchRow("SELECT MIN(price_total) as minPrice, MAX(price_total) as maxPrice FROM pmt2core_cheapest_price_speed WHERE id_media_object IN(" . implode(',', $ids) . ") AND price_total > 0 AND date_departure > '2021-06-22 00:00:00' AND (2 BETWEEN option_occupancy_min AND option_occupancy_max)");
+            $minmaxResult = $db->fetchALL("SELECT id_media_object, MIN(price_total) as minPrice FROM pmt2core_cheapest_price_speed WHERE id_media_object IN(" . implode(',', $ids) . ") AND price_total > 0 AND date_departure >= NOW() AND (2 BETWEEN option_occupancy_min AND option_occupancy_max) GROUP BY id_media_object ORDER BY minPrice");
             $minmax = new MinMax();
-            $minmax->min = $minmaxResult->minPrice;
-            $minmax->max = $minmaxResult->maxPrice;
+            $minmax->min = reset($minmaxResult)->minPrice;
+            $minmax->max = end($minmaxResult)->minPrice;
+
             return $minmax;
         }
         return new MinMax();

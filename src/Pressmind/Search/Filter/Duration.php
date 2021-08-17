@@ -51,7 +51,7 @@ class Duration implements FilterInterface
         }
         if(!empty($ids)) {
             $db = Registry::getInstance()->get('db');
-            $minmaxResult = $db->fetchRow("SELECT MIN(duration) as minDuration, MAX(duration) as maxDuration FROM pmt2core_cheapest_price_speed WHERE id_media_object IN(" . implode(',', $ids) . ") AND price_total > 0 AND date_departure > '2021-06-22 00:00:00' AND (2 BETWEEN option_occupancy_min AND option_occupancy_max)");
+            $minmaxResult = $db->fetchRow("SELECT MIN(duration) as minDuration, MAX(duration) as maxDuration FROM pmt2core_cheapest_price_speed WHERE id_media_object IN(" . implode(',', $ids) . ") AND price_total > 0 AND date_departure > NOW() AND (2 BETWEEN option_occupancy_min AND option_occupancy_max)");
             $minmax = new MinMax();
             $minmax->min = $minmaxResult->minDuration;
             $minmax->max = $minmaxResult->maxDuration;

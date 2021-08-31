@@ -51,16 +51,30 @@ class Category implements FilterInterface
         foreach ($results as $result) {
             $ids[] = $result->id;
         }
-        /** @var Categorytree[] $all_items */
-        $all_items = $this->getAllItemsForIds($ids);
-        $list = [];
+        return $this->buildTree($this->getAllItemsForIds($ids, $order_by));
+        /*$list = [];
         foreach ($all_items as $item) {
             if($item->item->id_parent == null) {
                 $list[$item->item->id] = $item->item;
             }
         }
         usort($list, "self::sortItems" . ucfirst(strtolower($order_by)));
-        return $list;
+        return $all_items;*/
+    }
+
+    private function buildTree(array $elements, $parentId = null) {
+        $branch = array();
+
+        foreach ($elements as $element) {
+            if ($element->id_parent == $parentId) {
+                $children = $this->buildTree($elements, $element->id);
+                if ($children) {
+                    $element->children = $children;
+                }
+                $branch[] = $element;
+            }
+        }
+        return $branch;
     }
 
     /**
@@ -95,13 +109,13 @@ class Category implements FilterInterface
      * @return array|void
      * @throws Exception
      */
-    private function getAllItemsForIds($ids) {
+    private function getAllItemsForIds($ids, $order_by) {
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
         $parameters = [
             'id_tree' => $this->_tree_id,
         ];
-        $query = "SELECT pmoti.* FROM pmt2core_media_object_tree_items pmoti where pmoti.id_tree = :id_tree";
+        $query = "SELECT pcti.* FROM pmt2core_media_object_tree_items pmoti INNER JOIN pmt2core_category_tree_items pcti ON pcti.id = pmoti.id_item where pmoti.id_tree = :id_tree";
         if(!is_null($this->_var_name)) {
             $query .= " AND pmoti.var_name = :var_name";
             $parameters['var_name'] = $this->_var_name;
@@ -111,7 +125,8 @@ class Category implements FilterInterface
         } else {
             $query .= " AND pmoti.id_media_object in (SELECT id_media_object_link from pmt2core_media_object_object_links pmool WHERE pmool.id_media_object in (" . implode(',', $ids) . "))";
         }
-        return $db->fetchAll($query, $parameters, Categorytree::class);
+        $query .= ' GROUP BY pcti.id ORDER BY pcti.' . $order_by;
+        return $db->fetchAll($query, $parameters);
     }
 
     public static function create($tree_id, $search, $var_name = null, $linked_object_search = false) {

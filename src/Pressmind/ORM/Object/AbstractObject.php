@@ -1092,6 +1092,20 @@ abstract class AbstractObject implements SplSubject
                         $this->$name = $relation;
                     }
                 }
+                if ($property_info['type'] == 'computed') {
+                    if (!isset($this->$name) || empty($this->$name)) {
+                        if(isset($property_info['computed']) && is_array($property_info['computed'])) {
+                            if(isset($property_info['computed']['getter']['function'])) {
+                                if(is_array($property_info['computed']['getter']['parameters'])) {
+                                    $this->$name = call_user_func_array([$this, $property_info['computed']['getter']['function']], $property_info['computed']['getter']['parameters']);
+                                } else {
+                                    $this->$name = call_user_func([$this, $property_info['computed']['getter']['function']]);
+                                }
+                            }
+
+                        }
+                    }
+                }
             } else if ($name != '_definitions' || $this->_check_variables_for_existence == false) {
                 return '### ' . $name . ' does not exist in object type ' . $this->_definitions['class']['name'].' ###';
             }

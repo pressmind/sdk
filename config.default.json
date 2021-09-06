@@ -4,7 +4,8 @@
             "document_root": "BASE_PATH/httpdocs",
             "webserver_http": "http://127.0.0.1",
             "web_server": "Apache2",
-            "php_cli_binary" : "php"
+            "php_cli_binary" : "php",
+            "timezone": "Europe/Berlin"
         },
         "database": {
             "username": "",
@@ -109,6 +110,7 @@
             "types": [
                 "REST",
                 "SEARCH",
+                "SEARCH_FILTER",
                 "OBJECT"
             ],
             "update_frequency": 3600,

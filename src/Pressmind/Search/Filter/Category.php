@@ -26,12 +26,20 @@ class Category implements FilterInterface
 
     private $_linked_object_search;
 
+    private $_sql;
+
+    private $_values;
+
+    private $_cache_enabled;
+
     public function __construct($tree_id = null, $search = null, $var_name = null, $linked_object_search = false)
     {
+        $config = Registry::getInstance()->get('config');
         $this->_search = $search;
         $this->_tree_id = $tree_id;
         $this->_var_name = $var_name;
         $this->_linked_object_search = $linked_object_search;
+        $this->_cache_enabled = $config['cache']['enabled'] && in_array('SEARCH_FILTER', $config['cache']['types']);
     }
 
     public function getSearch()
@@ -52,14 +60,6 @@ class Category implements FilterInterface
             $ids[] = $result->id;
         }
         return $this->buildTree($this->getAllItemsForIds($ids, $order_by));
-        /*$list = [];
-        foreach ($all_items as $item) {
-            if($item->item->id_parent == null) {
-                $list[$item->item->id] = $item->item;
-            }
-        }
-        usort($list, "self::sortItems" . ucfirst(strtolower($order_by)));
-        return $all_items;*/
     }
 
     private function buildTree(array $elements, $parentId = null) {
@@ -112,21 +112,42 @@ class Category implements FilterInterface
     private function getAllItemsForIds($ids, $order_by) {
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
-        $parameters = [
+        $this->_values = [
             'id_tree' => $this->_tree_id,
         ];
-        $query = "SELECT pcti.* FROM pmt2core_media_object_tree_items pmoti INNER JOIN pmt2core_category_tree_items pcti ON pcti.id = pmoti.id_item where pmoti.id_tree = :id_tree";
+        $this->_sql = "SELECT pcti.* FROM pmt2core_media_object_tree_items pmoti INNER JOIN pmt2core_category_tree_items pcti ON pcti.id = pmoti.id_item where pmoti.id_tree = :id_tree";
         if(!is_null($this->_var_name)) {
-            $query .= " AND pmoti.var_name = :var_name";
-            $parameters['var_name'] = $this->_var_name;
+            $this->_sql .= " AND pmoti.var_name = :var_name";
+            $this->_values['var_name'] = $this->_var_name;
         }
         if($this->_linked_object_search == false) {
-            $query .= " AND pmoti.id_media_object in (" . implode(',', $ids) . ")";
+            $this->_sql .= " AND pmoti.id_media_object in (" . implode(',', $ids) . ")";
         } else {
-            $query .= " AND pmoti.id_media_object in (SELECT id_media_object_link from pmt2core_media_object_object_links pmool WHERE pmool.id_media_object in (" . implode(',', $ids) . "))";
+            $this->_sql .= " AND pmoti.id_media_object in (SELECT id_media_object_link from pmt2core_media_object_object_links pmool WHERE pmool.id_media_object in (" . implode(',', $ids) . "))";
         }
-        $query .= ' GROUP BY pcti.id ORDER BY pcti.' . $order_by;
-        return $db->fetchAll($query, $parameters);
+        $this->_sql .= ' GROUP BY pcti.id ORDER BY pcti.' . $order_by;
+        if($this->_cache_enabled) {
+            $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
+            $key = 'SEARCH_FILTER_CATEGORY_' . md5($this->_sql . implode('', $this->_values));
+            if($cache_adapter->exists($key)) {
+                return json_decode($cache_adapter->get($key));
+            } else {
+                $info = [
+                    'type' => 'SEARCH_FILTER',
+                    'method' => 'updateCache',
+                    'classname' => self::class,
+                    'parameters' => [
+                        'sql' => $this->_sql,
+                        'values' => $this->_values
+                    ]
+                ];
+                $data = $db->fetchAll($this->_sql, $this->_values);
+                $cache_adapter->add($key, json_encode($data), $info);
+                return $data;
+            }
+        } else {
+            return $db->fetchAll($this->_sql, $this->_values);
+        }
     }
 
     public static function create($tree_id, $search, $var_name = null, $linked_object_search = false) {

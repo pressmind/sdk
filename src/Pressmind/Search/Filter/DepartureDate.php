@@ -19,10 +19,17 @@ class DepartureDate implements FilterInterface
      */
     private $_search;
 
+    private $_sql;
+
+    private $_values;
+
+    private $_cache_enabled;
 
     public function __construct($search = null)
     {
+        $config = Registry::getInstance()->get('config');
         $this->setSearch($search);
+        $this->_cache_enabled = $config['cache']['enabled'] && in_array('SEARCH_FILTER', $config['cache']['types']);
     }
 
     /**
@@ -64,7 +71,7 @@ class DepartureDate implements FilterInterface
                 $media_object_ids[] = $result->id;
             }
             $query = [];
-            $query[] = "SELECT date_departure from pmt2core_cheapest_price_speed WHERE id_media_object in(" . implode(',', $media_object_ids) . ")";
+            $query[] = "SELECT min(date_departure) as earliest_date_departure, max(date_departure) as latest_date_departure from pmt2core_cheapest_price_speed WHERE id_media_object in(" . implode(',', $media_object_ids) . ")";
             /** @var Search\Condition\HousingOption $housing_option_condition */
             if($housing_option_condition = $this->_search->getCondition('\Pressmind\Search\Condition\HousingOption')) {
                 $cheapest_price_filter = new Search\CheapestPrice();
@@ -73,9 +80,35 @@ class DepartureDate implements FilterInterface
                     $query[] = "AND (" . $occupancy . " BETWEEN option_occupancy_min AND option_occupancy_max OR option_occupancy = " . $occupancy. ")";
                 }
             }
-            $query[] = "ORDER BY date_departure ASC";
-            $dates = $db->fetchAll(implode(' ', $query));
-            if (count($dates) > 0) {
+            //$query[] = "ORDER BY date_departure ASC";
+            $this->_sql = implode(' ', $query);
+            $this->_values = [];
+            if($this->_cache_enabled) {
+                $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
+                $key = 'SEARCH_FILTER_DEPARTUREDATE_' . md5($this->_sql . implode('', $this->_values));
+                if($cache_adapter->exists($key)) {
+                    $dates = json_decode($cache_adapter->get($key));
+                } else {
+                    $info = [
+                        'type' => 'SEARCH_FILTER',
+                        'method' => 'updateCache',
+                        'classname' => self::class,
+                        'parameters' => [
+                            'sql' => $this->_sql,
+                            'values' => $this->_values
+                        ]
+                    ];
+                    $dates = $db->fetchRow($this->_sql, $this->_values);
+                    $cache_adapter->add($key, json_encode($dates), $info);
+                }
+            } else {
+                $dates = $db->fetchRow($this->_sql, $this->_values);
+            }
+            $date_range = new DateRange();
+            $date_range->from = new \DateTime($dates->earliest_date_departure);
+            $date_range->to = new \DateTime($dates->latest_date_departure);
+            return $date_range;
+            /*if (count($dates) > 0) {
                 $counter = count($dates) - 1;
                 $earliest_departure_date = \DateTime::createFromFormat('Y-m-d H:i:s', $dates[0]->date_departure);
                 $latest_departure_date = \DateTime::createFromFormat('Y-m-d H:i:s', $dates[$counter]->date_departure);
@@ -83,7 +116,7 @@ class DepartureDate implements FilterInterface
                 $date_range->from = $earliest_departure_date;
                 $date_range->to = $latest_departure_date;
                 return $date_range;
-            }
+            }*/
         }
         return null;
     }

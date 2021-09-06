@@ -16,10 +16,17 @@ class PriceRange implements FilterInterface
      */
     private $_search;
 
+    private $_sql;
+
+    private $_values;
+
+    private $_cache_enabled;
 
     public function __construct($search = null)
     {
+        $config = Registry::getInstance()->get('config');
         $this->_search = $search;
+        $this->_cache_enabled = $config['cache']['enabled'] && in_array('SEARCH_FILTER', $config['cache']['types']);
     }
 
     public function getSearch()
@@ -52,7 +59,29 @@ class PriceRange implements FilterInterface
         }
         if(!empty($result)) {
             $db = Registry::getInstance()->get('db');
-            $minmaxResult = $db->fetchALL("SELECT id_media_object, MIN(price_total) as minPrice FROM pmt2core_cheapest_price_speed WHERE id_media_object IN(" . implode(',', $ids) . ") AND price_total > 0 AND date_departure >= NOW() AND (2 BETWEEN option_occupancy_min AND option_occupancy_max) GROUP BY id_media_object ORDER BY minPrice");
+            $this->_values = [];
+            $this->_sql = "SELECT id_media_object, MIN(price_total) as minPrice FROM pmt2core_cheapest_price_speed WHERE id_media_object IN(" . implode(',', $ids) . ") AND price_total > 0 AND date_departure >= NOW() AND (2 BETWEEN option_occupancy_min AND option_occupancy_max) GROUP BY id_media_object ORDER BY minPrice";
+            if($this->_cache_enabled) {
+                $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
+                $key = 'SEARCH_FILTER_PRICERANGE_' . md5($this->_sql . implode('', $this->_values));
+                if($cache_adapter->exists($key)) {
+                    $minmaxResult = json_decode($cache_adapter->get($key));
+                } else {
+                    $info = [
+                        'type' => 'SEARCH_FILTER',
+                        'method' => 'updateCache',
+                        'classname' => self::class,
+                        'parameters' => [
+                            'sql' => $this->_sql,
+                            'values' => $this->_values
+                        ]
+                    ];
+                    $minmaxResult = $db->fetchAll($this->_sql, $this->_values);
+                    $cache_adapter->add($key, json_encode($minmaxResult), $info);
+                }
+            } else {
+                $minmaxResult = $db->fetchALL($this->_sql, $this->_values);
+            }
             $minmax = new MinMax();
             $minmax->min = reset($minmaxResult)->minPrice;
             $minmax->max = end($minmaxResult)->minPrice;

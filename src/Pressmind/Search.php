@@ -157,9 +157,28 @@ class Search
         $db = Registry::getInstance()->get('db');
         $total_count = 0;
         if(!is_null($this->_paginator)) {
-            $this->_concatSql(true);
-            $total_count_result = $db->fetchRow($this->_sql, $this->_values);
-            $total_count = $total_count_result->total_rows;
+            if(false == $disablePaginator) {
+                $this->_concatSql(true);
+                if (Registry::getInstance()->get('config')['cache']['enabled'] && in_array('SEARCH', Registry::getInstance()->get('config')['cache']['types']) && $this->_skip_cache == false) {
+                    $key = $this->generateCacheKey('_COUNT');
+                    $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
+                    if ($cache_adapter->exists($key)) {
+                        $total_count = $cache_adapter->get($key);
+                    } else {
+                        $total_count_result = $db->fetchRow($this->_sql, $this->_values);
+                        $total_count = $total_count_result->total_rows;
+                        $info = new \stdClass();
+                        $info->type = 'SEARCH_COUNT';
+                        $info->classname = self::class;
+                        $info->method = 'updateCache';
+                        $info->parameters = ['sql' => $this->_sql, 'values' => $this->_values];
+                        $cache_adapter->add($key, $total_count, $info);
+                    }
+                } else {
+                    $total_count_result = $db->fetchRow($this->_sql, $this->_values);
+                    $total_count = $total_count_result->total_rows;
+                }
+            }
             if(!empty($this->_limits)) {
                 if($this->_limits['length'] <= $total_count) {
                     $total_count = $this->_limits['length'];
@@ -178,7 +197,7 @@ class Search
         }
         $isCached = false;
         if (Registry::getInstance()->get('config')['cache']['enabled'] && in_array('SEARCH', Registry::getInstance()->get('config')['cache']['types']) && $this->_skip_cache == false) {
-            $key = 'SEARCH_' . md5($this->_sql . json_encode($this->_values));
+            $key = $this->generateCacheKey();
             $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
             if ($cache_adapter->exists($key)) {
                 Writer::write(get_class($this) . ' exec() reading from cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
@@ -216,36 +235,6 @@ class Search
     }
 
     /**
-     * @param \stdClass|null $params
-     */
-    public function updateCache($params = null)
-    {
-        $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
-        $key = 'SEARCH_' . md5($params->sql . json_encode($params->values));
-        if(is_null($params)) {
-            $info = $cache_adapter->getInfo($key);
-            if(isset($info['info']) && !empty($info['info'])) {
-                $params = $info['info']->parameters;
-            }
-        }
-        try {
-            /**@var Pdo $db */
-            $db = Registry::getInstance()->get('db');
-            $db_result = $db->fetchAll($params->sql, (array)$params->values);
-            $info = new \stdClass();
-            $info->type = 'SEARCH';
-            $info->classname = self::class;
-            $info->method = 'updateCache';
-            $info->parameters = ['sql' => $params->sql, 'values' => $params->values];
-            Writer::write(get_class($this) . ' exec() writing to cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
-            $cache_adapter->add($key, json_encode($db_result), $info);
-            return $key . ': ' . $params->sql;
-        } catch (Exception $e) {
-            return $e->getMessage();
-        }
-    }
-
-    /**
      * @param boolean $loadFull
      * @return ORM\Object\MediaObject[]
      * @throws Exception
@@ -261,15 +250,26 @@ class Search
         return $this->_result->getResult($loadFull);
     }
 
+    /**
+     * @param string $add
+     * @return string
+     */
+    public function generateCacheKey($add = '')
+    {
+        return 'SEARCH' . $add . '_' . md5($this->_sql . json_encode($this->_values));
+    }
+
     public function isCached()
     {
         return $this->_result->isCached();
     }
 
-    public function getCacheInfo()
+    public function getCacheInfo($key = null)
     {
         if($this->isCached() !== false) {
-            $key = 'SEARCH_' . md5($this->_sql . json_encode($this->_values));
+            if(is_null($key)) {
+                $key = $this->generateCacheKey();
+            }
             $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
             return $cache_adapter->getInfo($key);
         }
@@ -279,6 +279,38 @@ class Search
     public function disableCache()
     {
         $this->_skip_cache = true;
+    }
+
+    /**
+     * @param \stdClass|null $params
+     */
+    public function updateCache($key = null)
+    {
+        $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
+        if(is_null($key)) {
+            $key = $this->generateCacheKey();
+        }
+        $info = $this->getCacheInfo($key);
+        $params = isset($info['info']) && !empty($info['info']->parameters) ? $info['info']->parameters : null;
+
+        if(!is_null($params)) {
+            try {
+                /**@var Pdo $db */
+                $db = Registry::getInstance()->get('db');
+                $db_result = $db->fetchAll($params->sql, (array)$params->values);
+                $info = new \stdClass();
+                $info->type = 'SEARCH';
+                $info->classname = self::class;
+                $info->method = 'updateCache';
+                $info->parameters = ['sql' => $params->sql, 'values' => $params->values];
+                Writer::write(get_class($this) . ' exec() writing to cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
+                $cache_adapter->add($key, json_encode($db_result), $info);
+                return $key . ': ' . $params->sql;
+            } catch (Exception $e) {
+                return $e->getMessage();
+            }
+        }
+        return null;
     }
 
     /**
@@ -429,7 +461,6 @@ class Search
         if($this->hasCondition('Pressmind\Search\Condition\Visibility') || $this->hasCondition('Pressmind\Search\Condition\DataView')) {
             $visibility = null;
         }
-        $now = new \DateTime();
         $validity = " ((pmt2core_media_objects.valid_from IS NULL OR pmt2core_media_objects.valid_from <= NOW()) AND (pmt2core_media_objects.valid_to IS NULL OR pmt2core_media_objects.valid_to >= NOW())) AND ";
         if($this->hasCondition('Pressmind\Search\Condition\Validity')) {
             $validity = null;

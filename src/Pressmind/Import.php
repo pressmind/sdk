@@ -135,8 +135,8 @@ class Import
         $params['numItems'] = $numItems;
         $response = $this->_client->sendRequest('Text', 'search', $params);
         $tmp_import_folder = str_replace('APPLICATION_PATH', APPLICATION_PATH, $config['tmp_dir']) . DIRECTORY_SEPARATOR . $this->_tmp_import_folder;
-        if(!is_dir($tmp_import_folder)) {
-            mkdir($tmp_import_folder);
+        if(!file_exists($tmp_import_folder)) {
+            @mkdir($tmp_import_folder, 0770, true);
         }
         foreach ($response->result as $item) {
             file_put_contents($tmp_import_folder . DIRECTORY_SEPARATOR . $item->id_media_object, print_r($item, true));

@@ -86,7 +86,63 @@
                 ],
                 "default": "de"
             },
-            "preview_url": "/detail.php?id={{id_media_object}}&preview={{preview}}"
+            "preview_url": "/detail.php?id={{id_media_object}}&preview={{preview}}",
+            "search_mongodb": {
+                "database": {
+                    "uri": "mongodb+srv://",
+                    "db": ""
+                },
+                "search": {
+                    "build_for": {
+                        "123" : [
+                            {
+                                "language": "de",
+                                "origin": 0
+                            }
+                        ]
+                    },
+                    "code_delimiter": ",",
+                    "categories": {
+                        "123": {
+                            "zielgebiet_default": null,
+                            "reiseart_default": null,
+                            "sterne_default": "unterkunftsverknuepfung_default"
+                        }
+                    },
+                    "descriptions": {
+                        "123": {
+                            "name": {
+                                "as": "headline",
+                                "filter": "\\Custom\\Filter::strip"
+                            },
+                            "subline_default": {
+                                "as": "subline",
+                                "filter": "\\Custom\\Filter::strip"
+                            },
+                            "bilder_default": {
+                                "as": "bilder"
+                            }
+                        }
+                    },
+                    "touristic": {
+                        "departure_offset_from": 14,
+                        "departure_offset_to": 365,
+                        "match_valid_from_to": false,
+                        "occupancies": [
+                            2
+                        ],
+                        "occupancy_additional": [
+                            1,
+                            2
+                        ],
+                        "duration_ranges": [
+                            [1,3],
+                            [4,7],
+                            [8,99]
+                        ]
+                    }
+                }
+            }
         },
         "cache": {
             "enabled": false,

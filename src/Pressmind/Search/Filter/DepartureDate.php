@@ -104,6 +104,9 @@ class DepartureDate implements FilterInterface
             } else {
                 $dates = $db->fetchRow($this->_sql, $this->_values);
             }
+            if(is_null($dates)){
+                return null;
+            }
             $date_range = new DateRange();
             $date_range->from = new \DateTime($dates->earliest_date_departure);
             $date_range->to = new \DateTime($dates->latest_date_departure);

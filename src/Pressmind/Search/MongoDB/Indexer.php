@@ -47,6 +47,7 @@ class Indexer
                 }
                 $collection_name = 'best_price_search_based_' . $build_info['language'] . '_origin_' . $build_info['origin'];
                 $this->db->dropCollection($collection_name);
+                $this->db->createCollection($collection_name);
                 $collection = $this->db->$collection_name;
                 $collection->insertMany($searchObjects);
             }

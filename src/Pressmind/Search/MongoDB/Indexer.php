@@ -36,6 +36,25 @@ class Indexer
         $this->db = $client->$db_name;
     }
 
+    /**
+     * sets a index to a collection
+     * @param $collection_name
+     * @param $key
+     * @throws \MongoDB\Driver\Exception\Exception
+     */
+    public function createCollectionIndex($collection_name, $key){
+        $manager = new \MongoDB\Driver\Manager($this->_config['database']['uri']);
+        $command = new \MongoDB\Driver\Command([
+            "createIndexes" => $collection_name,
+            "indexes"       => [[
+                "name" => $key."_index",
+                "key"  => [$key => 1],
+                "ns"   => $this->_config['database']['db'].".".$collection_name,
+            ]],
+        ]);
+        $manager->executeCommand($this->_config['database']['db'], $command);
+    }
+
     public function createIndexes()
     {
         foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
@@ -48,6 +67,7 @@ class Indexer
                 $collection_name = 'best_price_search_based_' . $build_info['language'] . '_origin_' . $build_info['origin'];
                 $this->db->dropCollection($collection_name);
                 $this->db->createCollection($collection_name);
+                $this->createCollectionIndex($collection_name, 'fulltext');
                 $collection = $this->db->$collection_name;
                 $collection->insertMany($searchObjects);
             }

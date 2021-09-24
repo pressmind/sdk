@@ -64,7 +64,7 @@ class Indexer
                 foreach ($mediaObjects as $mediaObject) {
                     $searchObjects[] = $this->createIndex($mediaObject->id, $build_info['language'], $build_info['origin']);
                 }
-                $collection_name = 'best_price_search_based_' . $build_info['language'] . '_origin_' . $build_info['origin'];
+                $collection_name = 'best_price_search_based_' . (!empty($build_info['language']) ? $build_info['language'].'_' : '') . 'origin_' . $build_info['origin'];
                 $this->db->dropCollection($collection_name);
                 $this->db->createCollection($collection_name);
                 $this->createCollectionIndex($collection_name, 'fulltext');
@@ -85,6 +85,7 @@ class Indexer
         $searchObject->_id = $this->mediaObject->id;
         $searchObject->id_object_type = $this->mediaObject->id_object_type;
         $searchObject->id_media_object = $this->mediaObject->id;
+        $searchObject->url = $this->mediaObject->getPrettyUrl($language);
         $searchObject->code = array_filter(array_map('trim', explode(',', $this->mediaObject->code)));;
         $searchObject->description = $this->_mapDescriptions($language);
         $searchObject->categories = $this->_mapCategories($language);
@@ -94,7 +95,7 @@ class Indexer
         $searchObject->dates_per_month = $this->_createDatesPerMonth($origin);
         $searchObject->possible_durations = $this->_createPossibleDurations($origin);
         $now = new \DateTime();
-        $searchObject->lastModified = $now->format(DATE_ISO8601);
+        $searchObject->last_modified_date = $now->format(DATE_ISO8601);
         if(is_array($searchObject->prices) && count($searchObject->prices) > 0) {
             $searchObject->best_price_meta = $searchObject->prices[0];
         }
@@ -282,16 +283,21 @@ class Indexer
      * @return string|null
      * @throws \Exception
      */
-    private function _createFulltext($language)
+    private function _createFulltext($language = null)
     {
         $fulltext = [];
 
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
 
-        $query = "SELECT fulltext_values from pmt2core_fulltext_search WHERE id_media_object = ? AND language = ? AND var_name = ?";
+        $query = "SELECT fulltext_values from pmt2core_fulltext_search WHERE id_media_object = ? AND var_name = ?";
+        $param = [$this->mediaObject->id, 'fulltext'];
+        if(!empty($language)) {
+            $query .= " AND language = ?";
+            $param[] = $language;
+        }
 
-        $result = $db->fetchRow($query, [$this->mediaObject->id, $language, 'fulltext']);
+        $result = $db->fetchRow($query, $param);
 
         return !is_null($result) ? $result->fulltext_values : null;
     }

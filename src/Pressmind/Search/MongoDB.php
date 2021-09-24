@@ -139,10 +139,10 @@ class MongoDB extends AbstractSearch
         $this->setReturnFiltersOnly($returnFiltersOnly);
         $client = new \MongoDB\Client($this->_db_uri);
         $db_name = $this->_db_name;
-        $collection_name = 'best_price_search_based_' . $this->_language . '_origin_' . $this->_origin;
+        $collection_name = 'best_price_search_based_' . (!empty($build_info['language']) ? $build_info['language'].'_' : '') . 'origin_' . $build_info['origin'];
         $db = $client->$db_name;
         $collection = $db->$collection_name;
-        $result = $collection->aggregate($this->_buildQuery())->toArray()[0];
+        $result = $collection->aggregate($this->buildQuery())->toArray()[0];
         $this->_addLog('getResult(): query completed');
         return $result;
     }
@@ -150,7 +150,7 @@ class MongoDB extends AbstractSearch
     /**
      * @return array
      */
-    private function _buildQuery()
+    public function buildQuery()
     {
         $this->_addLog('_buildQuery(): building query based on conditions');
         $query['$and'] = [];
@@ -261,6 +261,7 @@ class MongoDB extends AbstractSearch
                     ]
                 ]
             ];
+            
 
             $addFields2 = [
                 '$addFields' => [

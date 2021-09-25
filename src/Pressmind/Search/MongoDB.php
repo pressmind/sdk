@@ -70,6 +70,9 @@ class MongoDB extends AbstractSearch
         $this->_db_uri = $config['data']['search_mongodb']['database']['uri'];
         $this->_db_name = $config['data']['search_mongodb']['database']['db'];
         $this->_origin = $origin;
+        if(is_null($language)) {
+           // $this->_language = $config['data']['languages']['default'];
+        }
     }
 
     private function _addLog($text) {
@@ -183,12 +186,15 @@ class MongoDB extends AbstractSearch
                             '$match' => [
                                 'id_media_object' => [
                                     '$exists' => true
+                                ],
+                                'prices' => [
+                                    '$exists' => true
                                 ]
                             ],
                         ],
                         [
                             '$sort' => [
-                                'prices.' . $this->_sort[0] => strtolower($this->_sort[1]) == 'asc' ? 1 : -1
+                                'prices.' . array_key_first($this->_sort) => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
                             ]
                         ]
                     ],
@@ -198,6 +204,11 @@ class MongoDB extends AbstractSearch
                         ],
                         [
                             '$sortByCount' => '$categories'
+                        ],
+                        [
+                            '$sort' => [
+                                '_id.name' => 1
+                            ]
                         ]
                     ]
                 ]
@@ -252,7 +263,7 @@ class MongoDB extends AbstractSearch
                         ],
                         [
                             '$sort' => [
-                                'prices.' . $this->_sort[0] => strtolower($this->_sort[1]) == 'asc' ? 1 : -1
+                                'prices.' . array_key_first($this->_sort) => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
                             ]
                         ]
                     ]

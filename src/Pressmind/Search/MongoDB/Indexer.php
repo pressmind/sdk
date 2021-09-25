@@ -121,9 +121,14 @@ class Indexer
             }
             if(isset($item_info['filter']) && !empty ($item_info['filter'])) {
                 try {
-                    $value = call_user_func($item_info['filter'], $value);
+                    $params = [$value];
+                    if(!empty($item_info['params']) && is_array($item_info['params'])){
+                        $params = array_merge($params, $item_info['params']);
+                    }
+                    $value = call_user_func_array($item_info['filter'], $params);
                 } catch (\Exception $e) {
-                    $value = 'Error in filter function ' .  $item_info['filter'] . ': ' . $e->getMessage();
+                    echo 'Error in filter function ' .  $item_info['filter'] . ': ' . $e->getMessage();
+                    exit; // @TODO
                 }
             }
             $description[$item_info['as']] = $value;
@@ -251,13 +256,14 @@ class Indexer
                 $result = $db->fetchRow($query, $values);
 
                 if(!is_null($result)) {
-                    $date_departure = !is_null($result->date_departure) ? \DateTime::createFromFormat('Y-m-d H:i:s', $result->date_departure)->format(DATE_RFC3339_EXTENDED) : null;
-                    $date_arrival = !is_null($result->date_arrival) ? \DateTime::createFromFormat('Y-m-d H:i:s', $result->date_arrival)->format(DATE_RFC3339_EXTENDED) : null;
-                    $result->date_departure = $date_departure;
-                    $result->date_arrival = $date_arrival;
+                    $result->date_departure = !is_null($result->date_departure) ? \DateTime::createFromFormat('Y-m-d H:i:s', $result->date_departure)->format(DATE_RFC3339_EXTENDED) : null;
+                    $result->date_arrival = !is_null($result->date_arrival) ? \DateTime::createFromFormat('Y-m-d H:i:s', $result->date_arrival)->format(DATE_RFC3339_EXTENDED) : null;
+                    $result->departure_range_from = !is_null($result->departure_range_from) ? \DateTime::createFromFormat('Y-m-d H:i:s', $result->departure_range_from)->format(DATE_RFC3339_EXTENDED) : null;
+                    $result->departure_range_to = !is_null($result->departure_range_to) ? \DateTime::createFromFormat('Y-m-d H:i:s', $result->departure_range_to)->format(DATE_RFC3339_EXTENDED) : null;
                     $result->occupancy = intval($result->occupancy);
                     $result->duration = intval($result->duration);
                     $result->price_total = intval($result->price_total);
+                    $result->price_regular_before_discount = intval($result->price_regular_before_discount);
                     $result->earlybird_discount = intval($result->earlybird_discount);
                     $result->earlybird_discount_f = intval($result->earlybird_discount_f);
                     $prices[] = $result;
@@ -325,7 +331,14 @@ class Indexer
 
         $config = $this->_config['search']['touristic'];
 
-        $query = "SELECT date_format(date_departure, '%Y') as year, date_format(date_departure, '%m') as month FROM pmt2core_cheapest_price_speed WHERE (date_departure BETWEEN DATE_ADD(NOW(), INTERVAL :departure_offset_from DAY) AND DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY)) AND id_media_object = :id_media_object AND id_origin = :id_origin GROUP BY year, month ORDER BY month";
+        $query = "SELECT date_format(date_departure, '%Y') as year, 
+                         date_format(date_departure, '%c') as month 
+                  FROM pmt2core_cheapest_price_speed 
+                  WHERE (date_departure BETWEEN DATE_ADD(NOW(), 
+                        INTERVAL :departure_offset_from DAY) AND DATE_ADD(NOW(), 
+                        INTERVAL :departure_offset_to DAY)) 
+                  AND id_media_object = :id_media_object AND id_origin = :id_origin 
+                  GROUP BY year, month ORDER BY month";
 
         $values = [
             ':id_media_object' => $this->mediaObject->id,
@@ -351,8 +364,13 @@ class Indexer
                 //$max_days = cal_days_in_month(CAL_GREGORIAN, $month, $year);
                 $date = new \DateTime($year . '-' . $month . '-01');
                 $max_days = $date->format('t');
-                $query = "SELECT date_departure, date_arrival, option_occupancy_min, option_occupancy_max, option_occupancy, duration, price_total, price_regular_before_discount, earlybird_discount, earlybird_discount_f, earlybird_discount_date_to FROM pmt2core_cheapest_price_speed WHERE (date_departure BETWEEN :departure_from AND :departure_to) AND id_media_object = :id_media_object AND id_origin = :id_origin AND option_occupancy = 2 ORDER BY price_total LIMIT 0,5";
-                //echo $query;
+                $query = "SELECT date_departure, date_arrival, option_occupancy_min, option_occupancy_max, option_occupancy, duration, 
+                                 price_total, price_regular_before_discount, earlybird_discount, 
+                                 earlybird_discount_f, earlybird_discount_date_to 
+                          FROM pmt2core_cheapest_price_speed 
+                          WHERE (date_departure BETWEEN :departure_from AND :departure_to) 
+                          AND id_media_object = :id_media_object AND id_origin = :id_origin 
+                          AND option_occupancy = 2 ORDER BY date_departure LIMIT 0,5";
                 $values = [
                     ':id_media_object' => $this->mediaObject->id,
                     ':id_origin' => $origin,

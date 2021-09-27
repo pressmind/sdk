@@ -10,10 +10,13 @@ class MediaObject
     private $_id_media_object;
 
     /**
-     * @param integer $idMediaObject
+     * @param array|int|string $idMediaObject
      */
     public function __construct($idMediaObject)
     {
+        if(!is_array($idMediaObject)){
+            $idMediaObject = [(int)$idMediaObject];
+        }
         $this->_id_media_object = $idMediaObject;
     }
 
@@ -21,7 +24,9 @@ class MediaObject
     {
         if($type == '$match') {
             return [
-                'id_media_object' => $this->_id_media_object
+                'id_media_object' => [
+                    '$in' => $this->_id_media_object
+                ]
             ];
         }
         return null;

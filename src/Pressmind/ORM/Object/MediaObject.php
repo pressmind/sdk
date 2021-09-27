@@ -21,6 +21,7 @@ use Pressmind\ORM\Object\Touristic\Insurance\Group;
 use Pressmind\ORM\Object\Touristic\Transport;
 use Pressmind\Registry;
 use Pressmind\Search\CheapestPrice;
+use Pressmind\Search\MongoDB\Indexer;
 use Pressmind\ValueObject\MediaObject\Result\GetByPrettyUrl;
 use Pressmind\ValueObject\MediaObject\Result\GetPrettyUrls;
 
@@ -1047,6 +1048,42 @@ class MediaObject extends AbstractObject
             return($data->$column_name);
         }
         return null;
+    }
+
+    /**
+     * @param boolean $deleteRelations
+     * @throws Exception
+     */
+    public function delete($deleteRelations = false)
+    {
+        $this->_db->delete($this->getDbTableName(), [$this->getDbPrimaryKey() . " = ?", $this->getId()]);
+        if(true === $deleteRelations){
+            $this->_deleteRelations();
+        }
+        $this->removeFromCache();
+        $this->deleteMongoDBIndex();
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function deleteMongoDBIndex(){
+        $config = Registry::getInstance()->get('config');
+        if($config['data']['search_mongodb']['enabled'] === true) {
+            $Indexer = new Indexer();
+            $Indexer->deleteMediaObject($this->getId());
+        }
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function createMongoDBIndex(){
+        $config = Registry::getInstance()->get('config');
+        if($config['data']['search_mongodb']['enabled'] === true) {
+            $Indexer = new Indexer();
+            $Indexer->upsertMediaObject($this->getId());
+        }
     }
 
     /**

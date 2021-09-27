@@ -28,8 +28,14 @@ class Indexer
      */
     private $_config;
 
+    /**
+     * @var array
+     */
+    private $_allowed_visibilities;
+
     public function __construct() {
         $this->_config = Registry::getInstance()->get('config')['data']['search_mongodb'];
+        $this->_allowed_visibilities = Registry::getInstance()->get('config')['data']['media_types_allowed_visibilities'];
         $uri = $this->_config['database']['uri'];
         $db_name = $this->_config['database']['db'];
         $client = new \MongoDB\Client($uri);
@@ -58,13 +64,14 @@ class Indexer
     public function createIndexes()
     {
         foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
-            $mediaObjects = MediaObject::listAll(['id_object_type' => $id_object_type]);
+            // @TODO check visibility bevaivor
+            $mediaObjects = MediaObject::listAll(['id_object_type' => $id_object_type, 'visibility' => ['in' => array_values($this->_allowed_visibilities[$id_object_type])]]);
             foreach ($build_infos as $build_info) {
                 $searchObjects = [];
                 foreach ($mediaObjects as $mediaObject) {
                     $searchObjects[] = $this->createIndex($mediaObject->id, $build_info['language'], $build_info['origin']);
                 }
-                $collection_name = 'best_price_search_based_' . (!empty($build_info['language']) ? $build_info['language'].'_' : '') . 'origin_' . $build_info['origin'];
+                $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
                 $this->db->dropCollection($collection_name);
                 $this->db->createCollection($collection_name, ['collation' => [ 'locale' => 'de' ]]);
                 $this->createCollectionIndex($collection_name, 'fulltext');
@@ -72,6 +79,74 @@ class Indexer
                 $collection->insertMany($searchObjects);
             }
         }
+    }
+
+    /**
+     * @param string|int|array $id_media_objects
+     * @throws \Exception
+     */
+    public function upsertMediaObject($id_media_objects)
+    {
+        if(!is_array($id_media_objects)){
+            $id_media_objects = [$id_media_objects];
+        }
+        $mediaObjects = MediaObject::listAll(['id' => ['in', implode(',', $id_media_objects)]]);
+        $ids = [];
+        foreach($mediaObjects as $mediaObject){
+            if(!in_array($mediaObject->visibility, $this->_allowed_visibilities[$mediaObject->id_object_type])){
+                continue;
+            }
+            foreach ($this->_config['search']['build_for'][$mediaObject->id_object_type] as $build_info) {
+                $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
+                $collection = $this->db->$collection_name;
+                $document = $this->createIndex($mediaObject->id, $build_info['language'], $build_info['origin']);
+                $collection->updateOne(['_id' => $mediaObject->id], ['$set' => $document], ['upsert' => true]);
+                $ids[] = $mediaObject->id;
+            }
+        }
+        // remove the possible delta to aware the consistent
+        foreach($id_media_objects as $id_media_object){
+            if(in_array($id_media_object, $ids)){
+                continue;
+            }
+            foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
+                foreach ($build_infos as $build_info) {
+                    $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
+                    $collection = $this->db->$collection_name;
+                    $collection->deleteOne(['_id' => $id_media_object]);
+                }
+            }
+        }
+    }
+
+
+    /**
+     * @param string|int|array $id_media_object
+     * @throws \Exception
+     */
+    public function deleteMediaObject($id_media_objects)
+    {
+        if(!is_array($id_media_objects)){
+            $id_media_objects = array_map('intval', explode(',', $id_media_objects));
+        }
+        foreach($id_media_objects as $id_media_object){
+            foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
+                foreach ($build_infos as $build_info) {
+                    $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
+                    $collection = $this->db->$collection_name;
+                    $collection->deleteOne(['_id' => $id_media_object]);
+                }
+            }
+        }
+    }
+
+    /**
+     * @param int $origin
+     * @param string $language
+     * @return string
+     */
+    public function getCollectionName($origin = 0, $language = null){
+        return 'best_price_search_based_' . (!empty($language) ? $language.'_' : '') . 'origin_' . $origin;
     }
 
     /**
@@ -332,13 +407,13 @@ class Indexer
         $config = $this->_config['search']['touristic'];
 
         $query = "SELECT date_format(date_departure, '%Y') as year, 
-                         date_format(date_departure, '%c') as month 
-                  FROM pmt2core_cheapest_price_speed 
-                  WHERE (date_departure BETWEEN DATE_ADD(NOW(), 
+                        date_format(date_departure, '%c') as month 
+                    FROM pmt2core_cheapest_price_speed 
+                    WHERE (date_departure BETWEEN DATE_ADD(NOW(), 
                         INTERVAL :departure_offset_from DAY) AND DATE_ADD(NOW(), 
-                        INTERVAL :departure_offset_to DAY)) 
-                  AND id_media_object = :id_media_object AND id_origin = :id_origin 
-                  GROUP BY year, month ORDER BY month";
+                      INTERVAL :departure_offset_to DAY)) 
+                    AND id_media_object = :id_media_object AND id_origin = :id_origin 
+                    GROUP BY year, month ORDER BY month";
 
         $values = [
             ':id_media_object' => $this->mediaObject->id,
@@ -365,12 +440,13 @@ class Indexer
                 $date = new \DateTime($year . '-' . $month . '-01');
                 $max_days = $date->format('t');
                 $query = "SELECT date_departure, date_arrival, option_occupancy_min, option_occupancy_max, option_occupancy, duration, 
-                                 price_total, price_regular_before_discount, earlybird_discount, 
-                                 earlybird_discount_f, earlybird_discount_date_to 
-                          FROM pmt2core_cheapest_price_speed 
-                          WHERE (date_departure BETWEEN :departure_from AND :departure_to) 
+                        price_total, price_regular_before_discount, earlybird_discount, 
+                        earlybird_discount_f, earlybird_discount_date_to 
+                            FROM pmt2core_cheapest_price_speed 
+                        WHERE (date_departure BETWEEN :departure_from AND :departure_to) 
                           AND id_media_object = :id_media_object AND id_origin = :id_origin 
                           AND option_occupancy = 2 ORDER BY date_departure LIMIT 0,5";
+                //echo $query;
                 $values = [
                     ':id_media_object' => $this->mediaObject->id,
                     ':id_origin' => $origin,

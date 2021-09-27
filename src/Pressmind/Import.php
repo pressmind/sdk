@@ -413,7 +413,8 @@ class Import
             $media_object->setReadRelations(true);
             $media_object->readRelations();
             $media_object->createSearchIndex();
-
+            $media_object->createMongoDBIndex();
+            
             if($config['cache']['enabled'] == true && in_array('OBJECT', $config['cache']['types'])) {
                 $media_object->updateCache($id_media_object);
                 $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '):  Cache has been updated', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);

@@ -192,11 +192,6 @@ class MongoDB extends AbstractSearch
                                 ]
                             ],
                         ],
-                        [
-                            '$sort' => [
-                                'prices.' . array_key_first($this->_sort) => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
-                            ]
-                        ]
                     ],
                     'categoriesGrouped' => [
                         [
@@ -222,6 +217,12 @@ class MongoDB extends AbstractSearch
                     'maxDuration' => [
                         '$max' => '$prices.prices.duration'
                     ],
+                    'minDeparture' => [
+                        '$min' => '$prices.prices.date_departure'
+                    ],
+                    'maxDeparture' => [
+                        '$max' => '$prices.prices.date_departure'
+                    ],
                     'minPrice' => [
                         '$min' => '$prices.prices.price_total'
                     ],
@@ -239,6 +240,8 @@ class MongoDB extends AbstractSearch
                     'documents' => 1,
                     'minDuration' => 1,
                     'maxDuration' => 1,
+                    'minDeparture' => 1,
+                    'maxDeparture' => 1,
                     'minPrice' => 1,
                     'maxPrice' => 1,
                     'total' => 1,
@@ -260,11 +263,6 @@ class MongoDB extends AbstractSearch
                                     '$exists' => true
                                 ]
                             ],
-                        ],
-                        [
-                            '$sort' => [
-                                'prices.' . array_key_first($this->_sort) => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
-                            ]
                         ]
                     ]
                 ]
@@ -283,6 +281,21 @@ class MongoDB extends AbstractSearch
                 '$project' => [
                     'documents' => 1,
                     'total' => 1
+                ]
+            ];
+        }
+
+
+        if(array_key_first($this->_sort) == 'rand'){
+            $facet['$facet']['documents'][] = [
+                '$sample' => [
+                    'size' => $this->_paginator->getPageSize()
+                ]
+            ];
+        }else{
+            $facet['$facet']['documents'][] = [
+                '$sort' => [
+                    'prices.' . array_key_first($this->_sort) => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
                 ]
             ];
         }

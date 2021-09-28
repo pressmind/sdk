@@ -88,6 +88,7 @@
             },
             "preview_url": "/detail.php?id={{id_media_object}}&preview={{preview}}",
             "search_mongodb": {
+                "enabled": false,
                 "database": {
                     "uri": "mongodb+srv://",
                     "db": ""
@@ -120,10 +121,16 @@
                                 "filter": "\\Custom\\Filter::strip"
                             },
                             "bilder_default": {
-                                "as": "bilder"
+                                "as": "image",
+                                "filter": "\\Custom\\Filter::firstPicture",
+                                "params" : [
+                                    "teaser"
+                                ]
                             }
                         }
                     },
+                    "five_dates_per_month_list": false,
+                    "possible_duration_list": false,
                     "touristic": {
                         "departure_offset_from": 14,
                         "departure_offset_to": 365,

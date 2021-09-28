@@ -21,6 +21,7 @@ use Pressmind\ORM\Object\Route;
 use Pressmind\REST\Client;
 use \DirectoryIterator;
 use \Exception;
+use Pressmind\Search\MongoDB\Indexer;
 
 /**
  * Class Importer
@@ -413,8 +414,13 @@ class Import
             $media_object->setReadRelations(true);
             $media_object->readRelations();
             $media_object->createSearchIndex();
-            $media_object->createMongoDBIndex();
-            
+            try {
+                $media_object->createMongoDBIndex();
+            }catch(Exception $e){
+                $this->_log[] = 'Error during creating MongoDBIndex: ' . $e->getMessage();
+                $this->_errors[] = 'Error during creating MongoDBIndex: ' . $e->getMessage();
+            }
+
             if($config['cache']['enabled'] == true && in_array('OBJECT', $config['cache']['types'])) {
                 $media_object->updateCache($id_media_object);
                 $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '):  Cache has been updated', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);

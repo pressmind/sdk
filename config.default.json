@@ -107,21 +107,25 @@
                         "123": {
                             "zielgebiet_default": null,
                             "reiseart_default": null,
-                            "sterne_default": "unterkunftsverknuepfung_default"
+                            "sterne_default": {
+                                "from" : "unterkuenfte_default"
+                            }
                         }
                     },
                     "descriptions": {
                         "123": {
-                            "name": {
-                                "as": "headline",
+                            "headline": {
+                                "field" : "name",
+                                "from": null,
                                 "filter": "\\Custom\\Filter::strip"
                             },
-                            "subline_default": {
-                                "as": "subline",
+                            "subline": {
+                                "field": "subline_default",
+                                "from" : "unterkuenfte_default",
                                 "filter": "\\Custom\\Filter::strip"
                             },
-                            "bilder_default": {
-                                "as": "image",
+                            "images": {
+                                "field": "bilder_default",
                                 "filter": "\\Custom\\Filter::firstPicture",
                                 "params" : [
                                     "teaser"

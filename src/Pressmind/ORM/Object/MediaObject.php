@@ -1056,12 +1056,17 @@ class MediaObject extends AbstractObject
      */
     public function delete($deleteRelations = false)
     {
+        $config = Registry::getInstance()->get('config');
         $this->_db->delete($this->getDbTableName(), [$this->getDbPrimaryKey() . " = ?", $this->getId()]);
         if(true === $deleteRelations){
             $this->_deleteRelations();
         }
-        $this->removeFromCache();
-        $this->deleteMongoDBIndex();
+        if($config['data']['cache']['enabled'] === true) {
+            $this->removeFromCache();
+        }
+        if($config['data']['search_mongodb']['enabled'] === true) {
+            $this->deleteMongoDBIndex();
+        }
     }
 
     /**

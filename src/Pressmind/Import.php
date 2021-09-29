@@ -415,6 +415,7 @@ class Import
             $media_object->readRelations();
             $media_object->createSearchIndex();
             try {
+                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '):  updating mongodb index', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
                 $media_object->createMongoDBIndex();
             }catch(Exception $e){
                 $this->_log[] = 'Error during creating MongoDBIndex: ' . $e->getMessage();

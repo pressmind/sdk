@@ -48,37 +48,103 @@ class Indexer
      * @param $key
      * @throws \MongoDB\Driver\Exception\Exception
      */
-    public function createCollectionIndex($collection_name, $key){
-        $manager = new \MongoDB\Driver\Manager($this->_config['database']['uri']);
-        $command = new \MongoDB\Driver\Command([
-            "createIndexes" => $collection_name,
-            "indexes"       => [[
-                "name" => $key."_index",
-                "key"  => [$key => 1],
-                "ns"   => $this->_config['database']['db'].".".$collection_name,
-            ]],
-        ]);
-        $manager->executeCommand($this->_config['database']['db'], $command);
+    public function createCollectionIndex($collection_name){
+        
+        $this->db->$collection_name->createIndex( ['prices.price_total' => 1]);
+        $this->db->$collection_name->createIndex( ['prices.price_total' => -1]);
+        $this->db->$collection_name->createIndex( ['prices.date_departure' => 1]);
+        $this->db->$collection_name->createIndex( ['prices.date_departure' => -1]);
+        $this->db->$collection_name->createIndex( ['prices.duration' => 1]);
+        $this->db->$collection_name->createIndex( ['prices.occupancy' => 1]);
+        $this->db->$collection_name->createIndex( ['prices.occupancy_additional' => 1]);
+        $this->db->$collection_name->createIndex( ['prices.price_total' => 1, 'prices.duration' => 1, 'prices.occupancy' => 1]);
+        $this->db->$collection_name->createIndex( ['categories.it_item' => 1]);
+        $this->db->$collection_name->createIndex( ['categories.name' => 1]);
+        $this->db->$collection_name->createIndex( ['categories.it_item' => 1, 'categories.field_name' => 1]);
+        $this->db->$collection_name->createIndex( ['id_media_object' => 1], ['unique' => 1]);
+        $this->db->$collection_name->createIndex( ['fulltext' => 'text'], ['default_language' => 'german', 'collation' => ['locale' => 'simple']]);
     }
 
     public function createIndexes()
     {
         foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
-            // @TODO check visibility bevaivor
-            $mediaObjects = MediaObject::listAll(['id_object_type' => $id_object_type, 'visibility' => ['in' => array_values($this->_allowed_visibilities[$id_object_type])]]);
+            
+            // @TODO visibility options fehlen hier.
+            // 'visibility' => ['in' => implode(',', array_values($this->_allowed_visibilities[$id_object_type]))]
+            $mediaObjects = MediaObject::listAll(['id_object_type' => $id_object_type]);
             foreach ($build_infos as $build_info) {
                 $searchObjects = [];
                 foreach ($mediaObjects as $mediaObject) {
-                    $searchObjects[] = $this->createIndex($mediaObject->id, $build_info['language'], $build_info['origin']);
+                    echo $mediaObject->id."\n";
+                    $index = $this->createIndex($mediaObject->id, $build_info['language'], $build_info['origin']);
+                    if($index === false){
+                        continue;
+                    }
+                    $searchObjects[] = $index;
                 }
                 $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
-                $this->db->dropCollection($collection_name);
-                $this->db->createCollection($collection_name, ['collation' => [ 'locale' => 'de' ]]);
-                $this->createCollectionIndex($collection_name, 'fulltext');
+                $this->createCollectionIfNotExists($collection_name);
+                $this->flushCollection($collection_name); // @TODO remove flush, change against update and remove orphans flow
                 $collection = $this->db->$collection_name;
                 $collection->insertMany($searchObjects);
             }
         }
+    }
+
+
+    public function createCollectionIfNotExists($collection_name)
+    {
+        foreach($this->db->listCollections() as $collection){
+            if($collection['name'] == $collection_name){
+                echo "exists\n";
+                return true;
+            }else{
+                $this->db->createCollection($collection_name, ['collation' => [ 'locale' => 'de' ]]);
+                $this->createCollectionIndex($collection_name);
+                echo "created\n";
+                return true;
+            }
+        }
+    }
+
+    public function createCollectionsIfNotExists()
+    {
+        foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
+            foreach ($build_infos as $build_info) {
+                $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
+                $this->createCollectionIfNotExists($collection_name);
+            }
+        }
+    }
+
+
+    /**
+     * Create the required indexes for each collection
+     * @throws \MongoDB\Driver\Exception\Exception
+     */
+    public function createCollectionIndexes()
+    {
+        foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
+            foreach ($build_infos as $build_info) {
+                $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
+                $this->createCollectionIndex($collection_name);
+            }
+        }
+    }
+
+    public function flushCollections()
+    {
+        foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
+            foreach ($build_infos as $build_info) {
+                $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
+                $this->flushCollection($collection_name);
+            }
+        }
+    }
+
+    public function flushCollection($collection_name)
+    {
+        $this->db->$collection_name->deleteMany([]);
     }
 
     /**
@@ -91,6 +157,7 @@ class Indexer
             $id_media_objects = [$id_media_objects];
         }
         $mediaObjects = MediaObject::listAll(['id' => ['in', implode(',', $id_media_objects)]]);
+
         $ids = [];
         foreach($mediaObjects as $mediaObject){
             if(!in_array($mediaObject->visibility, $this->_allowed_visibilities[$mediaObject->id_object_type])){
@@ -100,10 +167,14 @@ class Indexer
                 $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
                 $collection = $this->db->$collection_name;
                 $document = $this->createIndex($mediaObject->id, $build_info['language'], $build_info['origin']);
+                if($document === false){
+                    continue;
+                }
                 $collection->updateOne(['_id' => $mediaObject->id], ['$set' => $document], ['upsert' => true]);
                 $ids[] = $mediaObject->id;
             }
         }
+
         // remove the possible delta to aware the consistent
         foreach($id_media_objects as $id_media_object){
             if(in_array($id_media_object, $ids)){
@@ -149,6 +220,7 @@ class Indexer
         return 'best_price_search_based_' . (!empty($language) ? $language.'_' : '') . 'origin_' . $origin;
     }
 
+
     /**
      * @param integer $idMediaObject
      * @throws \Exception
@@ -167,12 +239,24 @@ class Indexer
         $searchObject->prices = $this->_aggregatePrices($origin);
         $searchObject->fulltext = $this->_createFulltext($language);
         $searchObject->departure_date_count = $this->_createDepartureDateCount($origin);
-        $searchObject->dates_per_month = $this->_createDatesPerMonth($origin);
-        $searchObject->possible_durations = $this->_createPossibleDurations($origin);
+
+        //$searchObject->dates_per_month = null;
+        if(!empty($this->_config['search']['five_dates_per_month_list'])){
+            $searchObject->dates_per_month = $this->_createDatesPerMonth($origin);
+        }
+
+        //$searchObject->possible_durations = null;
+        if(!empty($this->_config['search']['possible_duration_list'])){
+            $searchObject->possible_durations = $this->_createPossibleDurations($origin);
+        }
         $now = new \DateTime();
         $searchObject->last_modified_date = $now->format(DATE_ISO8601);
         if(is_array($searchObject->prices) && count($searchObject->prices) > 0) {
             $searchObject->best_price_meta = $searchObject->prices[0];
+        }
+
+        if(empty($searchObject->prices)){
+            return false;
         }
 
         return json_decode(json_encode($searchObject));
@@ -187,12 +271,28 @@ class Indexer
         $description = [];
         $description_map = $this->_config['search']['descriptions'][$this->mediaObject->id_object_type];
 
-        foreach ($description_map as $item_name => $item_info) {
+        foreach ($description_map as $index_name => $item_info) {
             $value = null;
-            if($item_name == 'name') {
-                $value = $this->mediaObject->name;
+            if(!empty($item_info['from'])){
+                if(empty($data->{$item_info['from']})){
+                    break;
+                }
+                foreach ($data->{$item_info['from']} as $objectlink) {
+                    $linkedObject = new MediaObject($objectlink->id_media_object_link);
+                    $linkedObjectData = $linkedObject->getDataForLanguage($language);
+                    if($item_info['field'] == 'name') {
+                        $value = $linkedObject->name;
+                    }else{
+                        $value = $linkedObjectData->{$item_info['field']};
+                    }
+                    break;
+                }
             } else {
-                $value = $data->$item_name;
+                if($item_info['field'] == 'name') {
+                    $value = $this->mediaObject->name;
+                }else{
+                    $value = $data->{$item_info['field']};
+                }
             }
             if(isset($item_info['filter']) && !empty ($item_info['filter'])) {
                 try {
@@ -206,7 +306,7 @@ class Indexer
                     exit; // @TODO
                 }
             }
-            $description[$item_info['as']] = $value;
+            $description[$index_name] = $value;
         }
 
         return $description;
@@ -221,7 +321,7 @@ class Indexer
         $data = $this->mediaObject->getDataForLanguage($language)->toStdClass();
 
         foreach ($categories_map as $varName => $additionalInfo) {
-            if(is_null($additionalInfo)) {
+            if(empty($additionalInfo)) {
                 $level = 0;
                 if(is_array($data->$varName)) {
                     foreach ($data->$varName as $treeitem) {
@@ -239,7 +339,7 @@ class Indexer
                     }
                 }
             } else {
-                foreach ($this->_mapCategoriesFromObjectLinks($additionalInfo, $varName, $language) as $linkedCategory) {
+                foreach ($this->_mapCategoriesFromObjectLinks($additionalInfo['from'], $varName, $language) as $linkedCategory) {
                     $categories[] = $linkedCategory;
                 }
             }

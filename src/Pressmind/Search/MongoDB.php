@@ -139,7 +139,9 @@ class MongoDB extends AbstractSearch
         $this->setReturnFiltersOnly($returnFiltersOnly);
         $client = new \MongoDB\Client($this->_db_uri);
         $db_name = $this->_db_name;
+
         $collection_name = 'best_price_search_based_' . (!empty($this->_language) ? $this->_language.'_' : '') . 'origin_' . $this->_origin;
+
         $db = $client->$db_name;
         $collection = $db->$collection_name;
         $result = $collection->aggregate($this->buildQuery())->toArray()[0];
@@ -168,6 +170,7 @@ class MongoDB extends AbstractSearch
         $addFields = ['$addFields' => ['prices' => ['$first' => ['$filter' => ['input' => '$prices', 'cond' => ['$and' => []]]]]]];
         $addFields['$addFields']['prices']['$first']['$filter']['cond']['$and'] = $addFieldsConditions;
 
+        $unset = ['$unset' => ['fulltext']];
         if(true == $this->_get_filters || true == $this->_return_filters_only) {
             $facet = [
                 '$facet' => [
@@ -176,11 +179,12 @@ class MongoDB extends AbstractSearch
                             '$unwind' => '$prices'
                         ]
                     ],
+                    /*
                     'categoriesUnwound' => [
                         [
                             '$unwind' => '$categories'
                         ]
-                    ],
+                    ],*/
                     'documents' => [
                         [
                             '$match' => [
@@ -208,6 +212,7 @@ class MongoDB extends AbstractSearch
                     ]
                 ]
             ];
+
 
             $addFields2 = [
                 '$addFields' => [
@@ -324,11 +329,21 @@ class MongoDB extends AbstractSearch
 
         return [
             $match,
+            $unset,
             $sort,
             $addFields,
             $facet,
             $addFields2,
             $project
         ];
+    }
+
+
+    /**
+     * @return false|string
+     */
+    public function buildQueryAsJson($getFilters = true){
+        $this->setGetFilters($getFilters);
+        return json_encode($this->buildQuery());
     }
 }

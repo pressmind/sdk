@@ -160,7 +160,8 @@ class Indexer
 
         $ids = [];
         foreach($mediaObjects as $mediaObject){
-            if(!in_array($mediaObject->visibility, $this->_allowed_visibilities[$mediaObject->id_object_type])){
+            if(!in_array($mediaObject->visibility, $this->_allowed_visibilities[$mediaObject->id_object_type]) ||
+                empty($this->_config['search']['build_for'][$mediaObject->id_object_type])){
                 continue;
             }
             foreach ($this->_config['search']['build_for'][$mediaObject->id_object_type] as $build_info) {

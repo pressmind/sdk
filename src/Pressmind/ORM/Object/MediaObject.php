@@ -1050,24 +1050,27 @@ class MediaObject extends AbstractObject
         return null;
     }
 
+
     /**
      * @param boolean $deleteRelations
      * @throws Exception
      */
-    public function delete($deleteRelations = false)
-    {
-        $config = Registry::getInstance()->get('config');
-        $this->_db->delete($this->getDbTableName(), [$this->getDbPrimaryKey() . " = ?", $this->getId()]);
-        if(true === $deleteRelations){
-            $this->_deleteRelations();
-        }
-        if($config['data']['cache']['enabled'] === true) {
-            $this->removeFromCache();
-        }
-        if($config['data']['search_mongodb']['enabled'] === true) {
-            $this->deleteMongoDBIndex();
-        }
-    }
+    /*
+   public function delete($deleteRelations = false)
+   {
+       $config = Registry::getInstance()->get('config');
+       $this->_db->delete($this->getDbTableName(), [$this->getDbPrimaryKey() . " = ?", $this->getId()]);
+       if(true === $deleteRelations){
+           $this->_deleteRelations();
+       }
+       if($config['cache']['enabled'] === true) {
+           $this->removeFromCache();
+       }
+       if($config['data']['search_mongodb']['enabled'] === true) {
+           $this->deleteMongoDBIndex();
+       }
+   }
+   */
 
     /**
      * @throws Exception

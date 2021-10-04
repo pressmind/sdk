@@ -96,12 +96,10 @@ class Indexer
     {
         foreach($this->db->listCollections() as $collection){
             if($collection['name'] == $collection_name){
-                echo "exists\n";
                 return true;
             }else{
                 $this->db->createCollection($collection_name, ['collation' => [ 'locale' => 'de' ]]);
                 $this->createCollectionIndex($collection_name);
-                echo "created\n";
                 return true;
             }
         }

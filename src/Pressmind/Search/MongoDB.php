@@ -139,9 +139,7 @@ class MongoDB extends AbstractSearch
         $this->setReturnFiltersOnly($returnFiltersOnly);
         $client = new \MongoDB\Client($this->_db_uri);
         $db_name = $this->_db_name;
-
         $collection_name = 'best_price_search_based_' . (!empty($this->_language) ? $this->_language.'_' : '') . 'origin_' . $this->_origin;
-
         $db = $client->$db_name;
         $collection = $db->$collection_name;
         $result = $collection->aggregate($this->buildQuery())->toArray()[0];
@@ -166,7 +164,6 @@ class MongoDB extends AbstractSearch
             }
         }
         $match = ['$match' => $query];
-        $sort = ['$sort' => ['prices.price_total' => 1]];
         $addFields = ['$addFields' => ['prices' => ['$first' => ['$filter' => ['input' => '$prices', 'cond' => ['$and' => []]]]]]];
         $addFields['$addFields']['prices']['$first']['$filter']['cond']['$and'] = $addFieldsConditions;
 
@@ -292,18 +289,18 @@ class MongoDB extends AbstractSearch
 
 
         if(array_key_first($this->_sort) == 'rand'){
-            $facet['$facet']['documents'][] = [
-                '$sample' => [
-                    'size' => $this->_paginator->getPageSize()
+            $sort = ['$sample' => [
+                'size' =>   $this->_paginator->getPageSize()
                 ]
             ];
         }else{
-            $facet['$facet']['documents'][] = [
-                '$sort' => [
-                    'prices.' . array_key_first($this->_sort) => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
-                ]
+            $sort = ['$sort' => [
+                        'prices.' . array_key_first($this->_sort) => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
+                    ]
             ];
         }
+        $facet['$facet']['documents'][] = $sort;
+
 
         if(!is_null($this->_paginator) && is_a($this->_paginator, \Pressmind\Search\Paginator::class)) {
             $addFields2['$addFields']['currentPage'] = $this->_paginator->getCurrentPage();

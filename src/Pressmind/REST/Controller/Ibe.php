@@ -85,14 +85,16 @@ class Ibe
             if (isset($this->parameters['params']['idhp'])) {
                 $housing_packages = [$booking->getHousingPackage($this->parameters['params']['idhp'])->toStdClass()];
             } else {
-                $housing_packages = $booking->getBookingPackage()->housing_packages;
+                /** @TODO: Check if loading up a full Haousing\Package Object really is necessary*/
+                $housing_packages = [];
+                $housing_packages_list = $booking->getBookingPackage()->housing_packages;
+                foreach ($housing_packages_list as $housing_package) {
+                    $housing_packages[] = new Package($housing_package->id, true);
+                }
             }
         } else if($booking->booking_package->price_mix == 'date_transport') {
             $housing_package = new Package();
             $housing_package->name = !empty($booking_package->name) ? $booking_package->name : $result['product']['title'];
-            /*if(isset($this->parameters['params']['ido'])) {
-                $option_id = $this->parameters['params']['ido'];
-            }*/
             $option = [];
             foreach ($result['transports'] as $transport) {
                 if(key_exists($transport->id, $predefined_options)) {

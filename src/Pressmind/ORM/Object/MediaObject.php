@@ -1088,7 +1088,7 @@ class MediaObject extends AbstractObject
      */
     public function createMongoDBIndex(){
         $config = Registry::getInstance()->get('config');
-        if($config['data']['search_mongodb']['enabled'] === true) {
+        if(isset($config['data']['search_mongodb']['enabled']) && $config['data']['search_mongodb']['enabled'] === true) {
             $Indexer = new Indexer();
             $Indexer->upsertMediaObject($this->getId());
         }

@@ -50,7 +50,8 @@ class S3 implements ProviderInterface
                 'Bucket' => $bucket->name,
                 'Key' => $file->name,
                 'Body' => $file->content,
-                'ContentType' => $file->getMimetype()
+                'ContentType' => $file->getMimetype(),
+                'ACL' => 'public-read'
             ]);
         } catch (S3Exception $e) {
             Writer::write($e->getMessage(), Writer::OUTPUT_FILE, $this->_log_file_name, Writer::TYPE_ERROR);

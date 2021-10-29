@@ -311,6 +311,41 @@ class Indexer
         return $description;
     }
 
+
+    private function categoriesTreeToList($Item, $var_name, $level = 0, $path_str = '', $path_ids = ''){
+
+        $output = array();
+        $path_str .= ','.$Item->name;
+        $path_ids .= ','.$Item->id;
+        $path_str = trim($path_str, ',');
+        $path_ids = trim($path_ids, ',');
+
+        $stdItem = new \stdClass();
+        $stdItem->id_item = $Item->id;
+        $stdItem->name = $Item->name;
+        $stdItem->id_tree = $Item->id_tree;
+        $stdItem->id_parent = $Item->id_parent;
+        $stdItem->field_name = $var_name;
+        $stdItem->level = $level;
+        $stdItem->path_str = $path_str;
+        $stdItem->path_ids = $path_ids;
+
+        if(!empty($Item->children) && is_array($Item->children)) {
+            $output[] = $stdItem;
+            $level++;
+            foreach($Item->children as $child){
+                $output = array_merge($output, (array)$this->categoriesTreeToList($child, $var_name, $level, $path_str, $path_ids));
+            }
+        } else {
+                $output[] = (array)$stdItem;
+        }
+    
+        return $output;
+
+    }
+
+
+
     /**
      * @return array
      */
@@ -321,20 +356,17 @@ class Indexer
 
         foreach ($categories_map as $varName => $additionalInfo) {
             if(empty($additionalInfo)) {
-                $level = 0;
                 if(is_array($data->$varName)) {
+
+                    //print_r($data->reisethema_reisemerkmal_default);
+                    //exit;
+
+
                     foreach ($data->$varName as $treeitem) {
-                        $categories[] = [
-                            'id_item' => $treeitem->item->id,
-                            'id_tree' => $treeitem->item->id_tree,
-                            'id_parent' => $treeitem->item->id_parent,
-                            'field_name' => $varName,
-                            'name' => $treeitem->item->name,
-                            'path_str' => null,
-                            'path_ids' => null,
-                            'level' => $level
-                        ];
-                        $level++;
+                        echo $this->mediaObject->id." ".$varName." ".$treeitem->item->name."\n";
+                        $level = $this->getTreeDepth($data->$varName, $treeitem->id_item);
+                        echo "level ".$level."\n";
+                        $categories = array_merge($categories, $this->categoriesTreeToList($treeitem->item, $varName));
                     }
                 }
             } else {
@@ -343,8 +375,21 @@ class Indexer
                 }
             }
         }
-
+        
         return $categories;
+    }
+
+    public function getTreeDepth($serialized_list, $id, $level = 0){
+
+
+        foreach($serialized_list as $item){
+
+            if($item->item->id == $id && !empty($item->item->id_parent)){
+                $level++;
+                return $this->getTreeDepth($serialized_list, $item->item->id_parent, $level);
+            }
+        }
+        return $level;
     }
 
     /**
@@ -358,22 +403,13 @@ class Indexer
         $categories = [];
 
         foreach ($data->$varName as $objectlink) {
+
             $linkedObject = new MediaObject($objectlink->id_media_object_link);
             $linkedObjectData = $linkedObject->getDataForLanguage($language);
-            $level = 0;
             if(!is_null($linkedObjectData) && is_array($linkedObjectData->$categoryVarName)) {
                 foreach ($linkedObjectData->$categoryVarName as $treeitem) {
-                    $categories[] = [
-                        'id_item' => $treeitem->item->id,
-                        'id_tree' => $treeitem->item->id_tree,
-                        'id_parent' => $treeitem->item->id_parent,
-                        'field_name' => $categoryVarName,
-                        'name' => $treeitem->item->name,
-                        'path_str' => null,
-                        'path_ids' => null,
-                        'level' => $level
-                    ];
-                    $level++;
+                    //echo $objectlink->id_media_object_link." ".$categoryVarName."\n";
+                    $categories = array_merge($categories, $this->categoriesTreeToList($treeitem->item, $categoryVarName));
                 }
             }
         }

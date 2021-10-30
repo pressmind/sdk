@@ -312,40 +312,6 @@ class Indexer
     }
 
 
-    private function categoriesTreeToList($Item, $var_name, $level = 0, $path_str = '', $path_ids = ''){
-
-        $output = array();
-        $path_str .= ','.$Item->name;
-        $path_ids .= ','.$Item->id;
-        $path_str = trim($path_str, ',');
-        $path_ids = trim($path_ids, ',');
-
-        $stdItem = new \stdClass();
-        $stdItem->id_item = $Item->id;
-        $stdItem->name = $Item->name;
-        $stdItem->id_tree = $Item->id_tree;
-        $stdItem->id_parent = $Item->id_parent;
-        $stdItem->field_name = $var_name;
-        $stdItem->level = $level;
-        $stdItem->path_str = $path_str;
-        $stdItem->path_ids = $path_ids;
-
-        if(!empty($Item->children) && is_array($Item->children)) {
-            $output[] = $stdItem;
-            $level++;
-            foreach($Item->children as $child){
-                $output = array_merge($output, (array)$this->categoriesTreeToList($child, $var_name, $level, $path_str, $path_ids));
-            }
-        } else {
-                $output[] = (array)$stdItem;
-        }
-    
-        return $output;
-
-    }
-
-
-
     /**
      * @return array
      */
@@ -357,16 +323,19 @@ class Indexer
         foreach ($categories_map as $varName => $additionalInfo) {
             if(empty($additionalInfo)) {
                 if(is_array($data->$varName)) {
-
-                    //print_r($data->reisethema_reisemerkmal_default);
-                    //exit;
-
-
                     foreach ($data->$varName as $treeitem) {
-                        echo $this->mediaObject->id." ".$varName." ".$treeitem->item->name."\n";
-                        $level = $this->getTreeDepth($data->$varName, $treeitem->id_item);
-                        echo "level ".$level."\n";
-                        $categories = array_merge($categories, $this->categoriesTreeToList($treeitem->item, $varName));
+                        $stdItem = new \stdClass();
+                        $stdItem->id_item = $treeitem->item->id;
+                        $stdItem->name = $treeitem->item->name;
+                        $stdItem->id_tree = $treeitem->item->id_tree;
+                        $stdItem->id_parent = $treeitem->item->id_parent;
+                        $stdItem->field_name = $varName;
+                        $stdItem->level = $this->getTreeDepth($data->$varName, $treeitem->id_item);
+                        $stdItem->path_str = $this->getTreePath($data->$varName, $treeitem->id_item, 'name');
+                        krsort($stdItem->path_str);
+                        $stdItem->path_ids =$this->getTreePath($data->$varName, $treeitem->id_item, 'id');
+                        krsort($stdItem->path_ids);
+                        $categories[] = (array)$stdItem;
                     }
                 }
             } else {
@@ -375,21 +344,40 @@ class Indexer
                 }
             }
         }
-        
         return $categories;
     }
 
+    /**
+     * @param array $serialized_list
+     * @param string $id
+     * @param int $level
+     * @return int
+     */
     public function getTreeDepth($serialized_list, $id, $level = 0){
-
-
         foreach($serialized_list as $item){
-
             if($item->item->id == $id && !empty($item->item->id_parent)){
                 $level++;
                 return $this->getTreeDepth($serialized_list, $item->item->id_parent, $level);
             }
         }
         return $level;
+    }
+
+    /**
+     * @param array $serialized_list
+     * @param string $id
+     * @param string $key
+     * @param array $path
+     * @return array
+     */
+    public function getTreePath($serialized_list, $id, $key, $path = []){
+        foreach($serialized_list as $item){
+            if($item->item->id == $id){
+                $path[] = $item->item->{$key};
+                return $this->getTreePath($serialized_list, $item->item->id_parent, $key, $path);
+            }
+        }
+        return $path;
     }
 
     /**
@@ -401,19 +389,26 @@ class Indexer
     private function _mapCategoriesFromObjectLinks($varName, $categoryVarName, $language) {
         $data = $this->mediaObject->getDataForLanguage($language);
         $categories = [];
-
         foreach ($data->$varName as $objectlink) {
-
             $linkedObject = new MediaObject($objectlink->id_media_object_link);
             $linkedObjectData = $linkedObject->getDataForLanguage($language);
             if(!is_null($linkedObjectData) && is_array($linkedObjectData->$categoryVarName)) {
                 foreach ($linkedObjectData->$categoryVarName as $treeitem) {
-                    //echo $objectlink->id_media_object_link." ".$categoryVarName."\n";
-                    $categories = array_merge($categories, $this->categoriesTreeToList($treeitem->item, $categoryVarName));
+                    $stdItem = new \stdClass();
+                    $stdItem->id_item = $treeitem->item->id;
+                    $stdItem->name = $treeitem->item->name;
+                    $stdItem->id_tree = $treeitem->item->id_tree;
+                    $stdItem->id_parent = $treeitem->item->id_parent;
+                    $stdItem->field_name = $categoryVarName;
+                    $stdItem->level = $this->getTreeDepth($linkedObjectData->$categoryVarName, $treeitem->id_item);
+                    $stdItem->path_str = $this->getTreePath($linkedObjectData->$categoryVarName, $treeitem->id_item, 'name');
+                    krsort($stdItem->path_str);
+                    $stdItem->path_ids =$this->getTreePath($linkedObjectData->$categoryVarName, $treeitem->id_item, 'id');
+                    krsort($stdItem->path_ids);
+                    $categories[] = (array)$stdItem;
                 }
             }
         }
-
         return $categories;
     }
 
@@ -501,21 +496,27 @@ class Indexer
      */
     private function _createFulltext($language = null)
     {
-        $fulltext = [];
-
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
-
         $query = "SELECT fulltext_values from pmt2core_fulltext_search WHERE id_media_object = ? AND var_name = ?";
         $param = [$this->mediaObject->id, 'fulltext'];
         if(!empty($language)) {
             $query .= " AND language = ?";
             $param[] = $language;
         }
-
         $result = $db->fetchRow($query, $param);
-
-        return !is_null($result) ? $result->fulltext_values : null;
+        $fulltext = !is_null($result) ? $result->fulltext_values : '';
+        $query = "select fl.fulltext_values from pmt2core_media_object_object_links ol
+                    left join pmt2core_fulltext_search fl on (fl.id_media_object = ol.id_media_object_link)
+                    where ol.id_media_object = ? and fl.var_name = ?";
+        $param = [$this->mediaObject->id, 'fulltext'];
+        if(!empty($language)) {
+            $query .= " AND fl.language = ?";
+            $param[] = $language;
+        }
+        $result = $db->fetchRow($query, $param);
+        $fulltext_object_links = !is_null($result) ? $result->fulltext_values : '';
+        return trim($fulltext.' '.$fulltext_object_links);
     }
 
     /**
@@ -538,9 +539,7 @@ class Indexer
     {
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
-
         $config = $this->_config['search']['touristic'];
-
         $query = "SELECT date_format(date_departure, '%Y') as year, 
                         date_format(date_departure, '%c') as month 
                     FROM pmt2core_cheapest_price_speed 
@@ -548,15 +547,13 @@ class Indexer
                         INTERVAL :departure_offset_from DAY) AND DATE_ADD(NOW(), 
                       INTERVAL :departure_offset_to DAY)) 
                     AND id_media_object = :id_media_object AND id_origin = :id_origin 
-                    GROUP BY year, month ORDER BY month";
-
+                    GROUP BY year, month ORDER BY year ASC, month ASC";
         $values = [
             ':id_media_object' => $this->mediaObject->id,
             ':id_origin' => $origin,
             ':departure_offset_from' => $config['departure_offset_from'],
             ':departure_offset_to' => $config['departure_offset_to']
         ];
-
         $result = $db->fetchAll($query, $values);
         $years = [];
         if (is_array($result)) {
@@ -581,7 +578,6 @@ class Indexer
                         WHERE (date_departure BETWEEN :departure_from AND :departure_to) 
                           AND id_media_object = :id_media_object AND id_origin = :id_origin 
                           AND option_occupancy = 2 ORDER BY date_departure LIMIT 0,5";
-                //echo $query;
                 $values = [
                     ':id_media_object' => $this->mediaObject->id,
                     ':id_origin' => $origin,

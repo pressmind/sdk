@@ -142,18 +142,55 @@ class Ibe
             $housing_packages[] = $housing_package;
         }
 
-        $result['debug'] = $booking;
+        $starting_points_limit = 10;
+        if(!is_null($settings)) {
+            if(isset($settings['steps']['starting_points']['pagination_page_size']['value'])) {
+                $starting_points_limit = $settings['steps']['starting_points']['pagination_page_size']['value'];
+            }
+        }
+
+        //$result['debug'] = $settings['steps']['starting_points']['pagination_page_size']['value'];
         $result['housing_packages'] = $housing_packages;
         $result['insurances'] = $insurances;
-        $result['starting_points'] = $this->_getStartingPointOptionsForId($booking->getDate()->id_starting_point, 0, 10);
-        $result['exit_points'] = $this->_getExitPointOptionsForId($booking->getDate()->id_starting_point, 0, 10);
+        $result['starting_points'] = $this->_getStartingPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit);
+        $result['exit_points'] = $this->_getExitPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit);
         $result['extras'] = $extras;
         $result['has_pickup_services'] = $booking->hasPickServices();
         $result['has_starting_points'] = $booking->hasStartingPoints();
         $result['id_ibe'] = $booking->getBookingPackage()->ibe_type;
         $result['code_ibe'] = is_null($booking->getHousingPackage()) ? null : $booking->getHousingPackage()->code_ibe;
+        $result['product_type_ibe'] = $booking->getBookingPackage()->product_type_ibe;
 
         return ['success' => true, 'data' => $result];
+    }
+
+    public function pressmind_ib3_v2_get_exit_point($params) {
+        $this->parameters = $params['data'];
+        $id_starting_point = $this->parameters['id_starting_point'] ?? null;
+        $starting_point_option_code = $this->parameters['starting_point_option_code'] ?? null;
+        $exit_point = null;
+        $optionObject = new \Pressmind\ORM\Object\Touristic\Startingpoint\Option();
+        $exit_point_result = $optionObject->listAll(['id_startingpoint' => $id_starting_point, '`exit`' => 1, 'code' => $starting_point_option_code]);
+        if(is_array($exit_point_result) && count($exit_point_result) > 0) {
+            $exit_point = $exit_point_result[0];
+        }
+        return ['exit_point' => $exit_point];
+    }
+
+    public function pressmind_ib3_v2_get_starting_point_options($params) {
+        $this->parameters = $params['data'];
+        $id_starting_point = $this->parameters['id_starting_point'];
+        $limit = $this->parameters['limit'] != null ? $this->parameters['limit'] : 10;
+        $start = isset($this->parameters['start']) ? $this->parameters['start'] : 0;
+        $zip = isset($this->parameters['zip']) ? $this->parameters['zip'] : null;
+        //return $zip;
+        //return $start;
+        $radius = isset($this->parameters['radius']) ? $this->parameters['radius'] : null;
+        if(!is_null($zip)) {
+            return ['success' => true, 'data' => $this->_getZipRangeStartingPoints($id_starting_point, $zip, $radius, $start, $limit)];
+        } else {
+            return ['success' => true, 'data' => $this->_getStartingPointOptionsForId($id_starting_point, $start, $limit)];
+        }
     }
 
     /**
@@ -239,35 +276,6 @@ class Ibe
         $total_exit_point_options = $optionObject->listAll(['id_startingpoint' => $id_starting_point, '`exit`' => 1]);
         $limited_exit_point_options = $optionObject->listAll(['id_startingpoint' => $id_starting_point, '`exit`' => 1], ['zip' => 'ASC'], [$start, $limit]);
         return array('total' => count($total_exit_point_options), 'exit_point_options' => $limited_exit_point_options);
-    }
-
-    public function pressmind_ib3_v2_get_exit_point($params) {
-        $this->parameters = $params['data'];
-        $id_starting_point = $this->parameters['id_starting_point'] ?? null;
-        $starting_point_option_code = $this->parameters['starting_point_option_code'] ?? null;
-        $exit_point = null;
-        $optionObject = new \Pressmind\ORM\Object\Touristic\Startingpoint\Option();
-        $exit_point_result = $optionObject->listAll(['id_startingpoint' => $id_starting_point, '`exit`' => 1, 'code' => $starting_point_option_code]);
-        if(is_array($exit_point_result) && count($exit_point_result) > 0) {
-            $exit_point = $exit_point_result[0];
-        }
-        return ['exit_point' => $exit_point];
-    }
-
-    public function pressmind_ib3_v2_get_starting_point_options($params) {
-        $this->parameters = $params['data'];
-        $id_starting_point = $this->parameters['id_starting_point'];
-        $limit = $this->parameters['limit'] != null ? $this->parameters['limit'] : 10;
-        $start = isset($this->parameters['start']) ? $this->parameters['start'] : 0;
-        $zip = isset($this->parameters['zip']) ? $this->parameters['zip'] : null;
-        //return $zip;
-        //return $start;
-        $radius = isset($this->parameters['radius']) ? $this->parameters['radius'] : null;
-        if(!is_null($zip)) {
-            return ['success' => true, 'data' => $this->_getZipRangeStartingPoints($id_starting_point, $zip, $radius, $start, $limit)];
-        } else {
-            return ['success' => true, 'data' => $this->_getStartingPointOptionsForId($id_starting_point, $start, $limit)];
-        }
     }
 
     private function _getZipRangeStartingPoints($id_starting_point, $zip, $radius, $start = 0 ,$limit = 10)

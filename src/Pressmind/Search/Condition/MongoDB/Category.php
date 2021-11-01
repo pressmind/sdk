@@ -27,11 +27,11 @@ class Category
                 'categories.field_name' => $this->_varName,
             ];
             if (count($this->_categoryIds) > 1) {
-                $foo = [];
+                $ids = [];
                 foreach ($this->_categoryIds as $categoryId) {
-                    $foo[] = ['categories.id_item' => $categoryId];
+                    $ids[] = ['categories.id_item' => $categoryId];
                 }
-                $query['$' . strtolower($this->_combineOperator)] = $foo;
+                $query['$' . strtolower($this->_combineOperator)] = $ids;
             } else {
                 $query['categories.id_item'] = $this->_categoryIds[0];
             }

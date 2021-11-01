@@ -67,28 +67,15 @@ class Indexer
 
     public function createIndexes()
     {
+        $ids = [];
         foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
-            
-            // @TODO visibility options fehlen hier.
-            // 'visibility' => ['in' => implode(',', array_values($this->_allowed_visibilities[$id_object_type]))]
             $mediaObjects = MediaObject::listAll(['id_object_type' => $id_object_type]);
-            foreach ($build_infos as $build_info) {
-                $searchObjects = [];
-                foreach ($mediaObjects as $mediaObject) {
-                    echo $mediaObject->id."\n";
-                    $index = $this->createIndex($mediaObject->id, $build_info['language'], $build_info['origin']);
-                    if($index === false){
-                        continue;
-                    }
-                    $searchObjects[] = $index;
-                }
-                $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
-                $this->createCollectionIfNotExists($collection_name);
-                $this->flushCollection($collection_name); // @TODO remove flush, change against update and remove orphans flow
-                $collection = $this->db->$collection_name;
-                $collection->insertMany($searchObjects);
+            foreach ($mediaObjects as $mediaObject) {
+                echo $mediaObject->id."\n";
+                $ids[] = $mediaObject->id;
             }
         }
+        $this->upsertMediaObject($ids);
     }
 
 
@@ -164,6 +151,7 @@ class Indexer
             }
             foreach ($this->_config['search']['build_for'][$mediaObject->id_object_type] as $build_info) {
                 $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
+                $this->createCollectionIndex($collection_name); // TODO might not the best place todo this..
                 $collection = $this->db->$collection_name;
                 $document = $this->createIndex($mediaObject->id, $build_info['language'], $build_info['origin']);
                 if($document === false){
@@ -339,8 +327,10 @@ class Indexer
                     }
                 }
             } else {
-                foreach ($this->_mapCategoriesFromObjectLinks($additionalInfo['from'], $varName, $language) as $linkedCategory) {
-                    $categories[] = $linkedCategory;
+                if(!empty($additionalInfo['from'])) {
+                    foreach ($this->_mapCategoriesFromObjectLinks($additionalInfo['from'], $varName, $language) as $linkedCategory) {
+                        $categories[] = $linkedCategory;
+                    }
                 }
             }
         }
@@ -389,23 +379,25 @@ class Indexer
     private function _mapCategoriesFromObjectLinks($varName, $categoryVarName, $language) {
         $data = $this->mediaObject->getDataForLanguage($language);
         $categories = [];
-        foreach ($data->$varName as $objectlink) {
-            $linkedObject = new MediaObject($objectlink->id_media_object_link);
-            $linkedObjectData = $linkedObject->getDataForLanguage($language);
-            if(!is_null($linkedObjectData) && is_array($linkedObjectData->$categoryVarName)) {
-                foreach ($linkedObjectData->$categoryVarName as $treeitem) {
-                    $stdItem = new \stdClass();
-                    $stdItem->id_item = $treeitem->item->id;
-                    $stdItem->name = $treeitem->item->name;
-                    $stdItem->id_tree = $treeitem->item->id_tree;
-                    $stdItem->id_parent = $treeitem->item->id_parent;
-                    $stdItem->field_name = $categoryVarName;
-                    $stdItem->level = $this->getTreeDepth($linkedObjectData->$categoryVarName, $treeitem->id_item);
-                    $stdItem->path_str = $this->getTreePath($linkedObjectData->$categoryVarName, $treeitem->id_item, 'name');
-                    krsort($stdItem->path_str);
-                    $stdItem->path_ids =$this->getTreePath($linkedObjectData->$categoryVarName, $treeitem->id_item, 'id');
-                    krsort($stdItem->path_ids);
-                    $categories[] = (array)$stdItem;
+        if(is_array()){
+            foreach ($data->$varName as $objectlink) {
+                $linkedObject = new MediaObject($objectlink->id_media_object_link);
+                $linkedObjectData = $linkedObject->getDataForLanguage($language);
+                if(!is_null($linkedObjectData) && is_array($linkedObjectData->$categoryVarName)) {
+                    foreach ($linkedObjectData->$categoryVarName as $treeitem) {
+                        $stdItem = new \stdClass();
+                        $stdItem->id_item = $treeitem->item->id;
+                        $stdItem->name = $treeitem->item->name;
+                        $stdItem->id_tree = $treeitem->item->id_tree;
+                        $stdItem->id_parent = $treeitem->item->id_parent;
+                        $stdItem->field_name = $categoryVarName;
+                        $stdItem->level = $this->getTreeDepth($linkedObjectData->$categoryVarName, $treeitem->id_item);
+                        $stdItem->path_str = $this->getTreePath($linkedObjectData->$categoryVarName, $treeitem->id_item, 'name');
+                        krsort($stdItem->path_str);
+                        $stdItem->path_ids =$this->getTreePath($linkedObjectData->$categoryVarName, $treeitem->id_item, 'id');
+                        krsort($stdItem->path_ids);
+                        $categories[] = (array)$stdItem;
+                    }
                 }
             }
         }

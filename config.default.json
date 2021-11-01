@@ -3,7 +3,6 @@
         "server": {
             "document_root": "BASE_PATH/httpdocs",
             "webserver_http": "http://127.0.0.1",
-            "web_server": "Apache2",
             "php_cli_binary" : "php",
             "timezone": "Europe/Berlin"
         },
@@ -124,12 +123,17 @@
                                 "from" : "unterkuenfte_default",
                                 "filter": "\\Custom\\Filter::strip"
                             },
+                            "destination": {
+                                "field": "zielgebiet_default",
+                                "from" : "unterkuenfte_default",
+                                "filter": "\\Custom\\Filter::lastTreeItemAsString"
+                            },
                             "images": {
                                 "field": "bilder_default",
                                 "filter": "\\Custom\\Filter::firstPicture",
-                                "params" : [
-                                    "teaser"
-                                ]
+                                "params" : {
+                                    "derivative" : "teaser"
+                                }
                             }
                         }
                     },
@@ -140,7 +144,7 @@
                         "departure_offset_to": 365,
                         "match_valid_from_to": false,
                         "occupancies": [
-                            2
+                            1,2,3,4,5,6
                         ],
                         "occupancy_additional": [
                             1,

@@ -379,7 +379,7 @@ class Indexer
     private function _mapCategoriesFromObjectLinks($varName, $categoryVarName, $language) {
         $data = $this->mediaObject->getDataForLanguage($language);
         $categories = [];
-        if(is_array()){
+        if(is_array($data->$varName)){
             foreach ($data->$varName as $objectlink) {
                 $linkedObject = new MediaObject($objectlink->id_media_object_link);
                 $linkedObjectData = $linkedObject->getDataForLanguage($language);

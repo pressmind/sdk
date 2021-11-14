@@ -47,6 +47,16 @@ class Ibe
                 }
             }
         }
+        $services_box_title = null;
+        $services_box_content = null;
+        if(!empty(strip_tags($mediaObject->getValueByTagName('pressmind-ib3.services-box-content')))){
+            $services_box_content = $mediaObject->getValueByTagName('pressmind-ib3.services-box-content');
+            if(!empty(strip_tags($mediaObject->getValueByTagName('pressmind-ib3.services-box-title')))){
+                $services_box_title = strip_tags($mediaObject->getValueByTagName('pressmind-ib3.services-box-title'));
+            }else{
+                $services_box_title = 'Leistungen';
+            }
+        }
         $result['date'] = $booking->getDate();
         $result['product'] = [
             'title' => !empty($mediaObject->getValueByTagName('pressmind-ib3.headline')) ? strip_tags($mediaObject->getValueByTagName('pressmind-ib3.headline')) : $mediaObject->name,
@@ -58,8 +68,8 @@ class Ibe
             'destination' => array('name' => $destination_name, 'code' => $destination_code),
             'hotel_trust_text' => !empty($mediaObject->getValueByTagName('pressmind-ib3.hotel-trust-text')) ? $mediaObject->getValueByTagName('pressmind-ib3.hotel-trust-text') : null,
             'trustbox_text' => !empty($mediaObject->getValueByTagName('pressmind-ib3.trustbox-text')) ? $mediaObject->getValueByTagName('pressmind-ib3.trustbox-text') : null,
-            'services_box_title' => !empty($mediaObject->getValueByTagName('pressmind-ib3.services-box-title')) ? $mediaObject->getValueByTagName('pressmind-ib3.services-box-title') : null,
-            'services_box_content' => !empty($mediaObject->getValueByTagName('pressmind-ib3.services-box-content')) ? $mediaObject->getValueByTagName('pressmind-ib3.services-box-content') : null,
+            'services_box_title' => $services_box_title,
+            'services_box_content' => $services_box_content,
             'duration' => $booking->getBookingPackage()->duration,
             'transport_type' => 'BUS',
             'price_mix' => $booking->getBookingPackage()->price_mix,

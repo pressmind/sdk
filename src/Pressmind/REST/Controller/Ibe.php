@@ -57,7 +57,8 @@ class Ibe
                 $services_box_title = 'Leistungen';
             }
         }
-        $result['date'] = $booking->getDate();
+        $date = $booking->getDate();
+        $result['date'] = $date;
         $result['product'] = [
             'title' => !empty($mediaObject->getValueByTagName('pressmind-ib3.headline')) ? strip_tags($mediaObject->getValueByTagName('pressmind-ib3.headline')) : $mediaObject->name,
             'subtitle' => '',
@@ -76,7 +77,7 @@ class Ibe
         ];
 
         $result['transports'] = $booking->getTransports();
-        $extras = $booking->getAllAvailableExtras();
+        $extras = $booking->getAllAvailableExtras($date->departure, $date->arrival);
         $insurances = $booking->getInsurances();
 
         $predefined_options = [];

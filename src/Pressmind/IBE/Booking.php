@@ -289,15 +289,27 @@ class Booking
         return $has_starting_points;
     }
 
+
     /**
+     * @param \DateTime $reservation_date_from
+     * @param \DateTime $reservation_date_to
      * @return Option[]
      * @throws Exception
      */
-    public function getAllAvailableExtras() {
+    public function getAllAvailableExtras($reservation_date_from = null, $reservation_date_to = null) {
         $extras = $this->getBookingPackage()->extras;
         $tickets = $this->getBookingPackage()->tickets;
         $sightseeings = $this->getBookingPackage()->sightseeings;
         $all_extras = array_merge($sightseeings, array_merge($extras, $tickets));
-        return $all_extras;
+        $valid_extras = [];
+        foreach ($all_extras as $extra){
+            if(empty($extra->reservation_date_from) || empty($extra->reservation_date_to) ||
+                empty($reservation_date_from) || empty($reservation_date_to) ||
+                ($extra->reservation_date_from->format('Ymd') == $reservation_date_from->format('Ymd') && $extra->reservation_date_to->format('Ymd') == $reservation_date_to->format('Ymd'))
+            ){
+                $valid_extras[] = $extra;
+            }
+        }
+        return $valid_extras;
     }
 }

@@ -27,7 +27,7 @@ class Ibe
         $result = [];
         $image_info = null;
         $images = $mediaObject->getValueByTagName('pressmind-ib3.teaser-image');
-        if(!is_null($images)) {
+        if(!empty($images[0])) {
             $image = $images[0];
             $image_info['uri'] = substr($image->getUri('teaser'), 0, 4) == 'http' ? $image->getUri('teaser') : WEBSERVER_HTTP . $image->getUri('teaser');
             $image_info['caption'] = $image->caption;

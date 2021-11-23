@@ -644,7 +644,7 @@ class MediaObject extends AbstractObject
      */
     public function getCheapestPrice($filters = null)
     {
-        $CheapestPrice = $this->getCheapestPrices($filters, [0,1]);
+        $CheapestPrice = $this->getCheapestPrices($filters, ['price_total' => 'ASC', 'date_departure' => 'ASC'], [0,1]);
         return empty($CheapestPrice[0]) ? null : $CheapestPrice[0];
     }
 
@@ -653,10 +653,10 @@ class MediaObject extends AbstractObject
      * @return CheapestPriceSpeed[]
      * @throws Exception
      */
-    public function getCheapestPrices($filters = null, $limit = null)
+    public function getCheapestPrices($filters = null, $order = ['price_total' => 'ASC', 'date_departure' => 'ASC'], $limit = null)
     {
         $now = new DateTime();
-        $where = "id_media_object = " . $this->getId() . " AND price_total > 0 AND date_departure > '" . $now->format('Y-m-d 00:00:00') . "'";
+        $where = "id_media_object = " . $this->getId()." AND price_total > 0";
         $occupancy_filter_is_set = false;
         if(!is_null($filters)) {
             if(!is_null($filters->duration_from) && !is_null($filters->duration_to)) {
@@ -664,17 +664,19 @@ class MediaObject extends AbstractObject
             }
             if(!is_null($filters->date_from) && !is_null($filters->date_to)) {
                 $where .= " AND date_departure BETWEEN '" . $filters->date_from->format('Y-m-d 00:00:00') . "' AND '" . $filters->date_to->format('Y-m-d 23:59:59') . "'";
+            }else{
+                $where .= " AND date_departure > '" . $now->format('Y-m-d 00:00:00') . "'";
             }
             if(!is_null($filters->price_from) && !is_null($filters->price_to)) {
                 $where .= ' AND price_total BETWEEN ' . $filters->price_from . ' AND ' . $filters->price_to;
             }
             if(!is_null($filters->occupancies)) {
                 $where .= ' AND (';
-                $foo = [];
+                $im = [];
                 foreach ($filters->occupancies as $occupancy) {
-                    $foo[] = '(' . $occupancy . ' BETWEEN option_occupancy_min AND option_occupancy_max) OR option_occupancy = ' . $occupancy;
+                    $im[] = '(' . $occupancy . ' BETWEEN option_occupancy_min AND option_occupancy_max) OR option_occupancy = ' . $occupancy;
                 }
-                $where .= implode(') OR (', $foo) .  ')';
+                $where .= implode(') OR (', $im) .  ')';
                 $occupancy_filter_is_set = true;
             }
             if(!is_null($filters->id_option)) {
@@ -689,18 +691,17 @@ class MediaObject extends AbstractObject
             if(!is_null($filters->id_housing_package)) {
                 $where .= ' AND id_housing_package = ' . $filters->id_housing_package;
             }
-            //echo $where;
         }
-        if(!$occupancy_filter_is_set) {
-            $cheapest_prices = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 2', ['price_total' => 'ASC', 'date_departure' => 'ASC'], $limit);
+        if(!$occupancy_filter_is_set && $filters->occupancies_disable_fallback === false) {
+            $cheapest_prices = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 2', $order, $limit);
             if (empty($cheapest_prices)) {
-                $cheapest_prices = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 1', ['price_total' => 'ASC', 'date_departure' => 'ASC'], $limit);
+                $cheapest_prices = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 1', $order, $limit);
             }
             if (empty($cheapest_prices)) {
-                $cheapest_prices = CheapestPriceSpeed::listAll($where, ['price_total' => 'ASC', 'date_departure' => 'ASC'], $limit);
+                $cheapest_prices = CheapestPriceSpeed::listAll($where, $order, $limit);
             }
         } else {
-            $cheapest_prices = CheapestPriceSpeed::listAll($where, ['price_total' => 'ASC', 'date_departure' => 'ASC'], $limit);
+            $cheapest_prices = CheapestPriceSpeed::listAll($where, $order, $limit);
         }
         return $cheapest_prices;
     }

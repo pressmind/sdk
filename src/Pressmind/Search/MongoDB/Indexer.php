@@ -260,10 +260,7 @@ class Indexer
 
         foreach ($description_map as $index_name => $item_info) {
             $value = null;
-            if(!empty($item_info['from'])){
-                if(empty($data->{$item_info['from']})){
-                    break;
-                }
+            if(!empty($item_info['from']) && !empty($data->{$item_info['from']})){
                 foreach ($data->{$item_info['from']} as $objectlink) {
                     $linkedObject = new MediaObject($objectlink->id_media_object_link);
                     $linkedObjectData = $linkedObject->getDataForLanguage($language);
@@ -428,6 +425,7 @@ class Indexer
                 earlybird_discount, 
                 earlybird_discount_f, 
                 earlybird_discount_date_to, 
+                option_board_type, 
                 DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY) as departure_range_from, 
                 DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY) as departure_range_to 
                 FROM pmt2core_cheapest_price_speed 
@@ -463,6 +461,7 @@ class Indexer
                     $result->price_regular_before_discount = intval($result->price_regular_before_discount);
                     $result->earlybird_discount = intval($result->earlybird_discount);
                     $result->earlybird_discount_f = intval($result->earlybird_discount_f);
+                    $result->option_board_type = $result->option_board_type;
                     $prices[] = $result;
                 }
             }

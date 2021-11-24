@@ -692,7 +692,7 @@ class MediaObject extends AbstractObject
                 $where .= ' AND id_housing_package = ' . $filters->id_housing_package;
             }
         }
-        if(!$occupancy_filter_is_set && $filters->occupancies_disable_fallback === false) {
+        if(!$occupancy_filter_is_set && isset($filters->occupancies_disable_fallback) && $filters->occupancies_disable_fallback === false) {
             $cheapest_prices = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 2', $order, $limit);
             if (empty($cheapest_prices)) {
                 $cheapest_prices = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 1', $order, $limit);

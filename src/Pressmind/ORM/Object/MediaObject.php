@@ -885,6 +885,7 @@ class MediaObject extends AbstractObject
                     $options = $date->getTickets();
                 }
                 foreach ($options as $option) {
+                    $housing_package = $option->getHousingPackage();
                     foreach ($transport_pairs as $transport_pair) {
                         foreach ($early_bird_discounts as $early_bird_discount) {
                             if (!is_null($transport_pair) && isset($transport_pair[1])) {
@@ -945,7 +946,7 @@ class MediaObject extends AbstractObject
                             }
 
                             $cheapestPriceSpeed->date_code_ibe = $date->code_ibe;
-                            $cheapestPriceSpeed->housing_package_code_ibe = null;
+                            $cheapestPriceSpeed->housing_package_code_ibe = $housing_package->code_ibe;
                             $cheapestPriceSpeed->option_code_ibe = $option->code_ibe;
                             $cheapestPriceSpeed->option_code_ibe_board_type = $option->code_ibe_board_type;
                             $cheapestPriceSpeed->option_code_ibe_board_type_category = $option->code_ibe_board_type_category;

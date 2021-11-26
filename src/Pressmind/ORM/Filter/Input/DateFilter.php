@@ -35,6 +35,7 @@ class DateFilter implements FilterInterface {
                     $pValue = $matches[0];
                 }
                 $value = DateTime::createFromFormat('Y-m-d', $pValue);
+                $value->setTime(0,0,0,0); // correct the datetime object to zero
             }
             return $value;
         } catch (Exception $e) {

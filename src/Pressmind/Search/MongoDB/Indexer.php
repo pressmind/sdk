@@ -264,10 +264,13 @@ class Indexer
                 foreach ($data->{$item_info['from']} as $objectlink) {
                     $linkedObject = new MediaObject($objectlink->id_media_object_link);
                     $linkedObjectData = $linkedObject->getDataForLanguage($language);
+                    if(empty($item_info['field']) === true){
+                        break;
+                    }
                     if($item_info['field'] == 'name') {
                         $value = $linkedObject->name;
                     }else{
-                        $value = $linkedObjectData->{$item_info['field']};
+                        $value = !empty($linkedObjectData->{$item_info['field']}) ? $linkedObjectData->{$item_info['field']} : null;
                     }
                     break;
                 }
@@ -275,7 +278,7 @@ class Indexer
                 if($item_info['field'] == 'name') {
                     $value = $this->mediaObject->name;
                 }else{
-                    $value = $data->{$item_info['field']};
+                    $value = !empty($data->{$item_info['field']}) ? $data->{$item_info['field']} : null;
                 }
             }
             if(isset($item_info['filter']) && !empty ($item_info['filter'])) {
@@ -531,8 +534,8 @@ class Indexer
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
         $config = $this->_config['search']['touristic'];
-        $query = "SELECT date_format(date_departure, '%Y') as year, 
-                        date_format(date_departure, '%c') as month 
+        $query = "SELECT cast(date_format(date_departure, '%Y') as SIGNED) as year, 
+                         cast(date_format(date_departure, '%c') as SIGNED) as month 
                     FROM pmt2core_cheapest_price_speed 
                     WHERE (date_departure BETWEEN DATE_ADD(NOW(), 
                         INTERVAL :departure_offset_from DAY) AND DATE_ADD(NOW(), 

@@ -944,6 +944,22 @@ class MediaObject extends AbstractObject
                                 $cheapestPriceSpeed->price_total = $cheapestPriceSpeed->price_regular_before_discount + $this->_calculateEarlyBirdDiscount($early_bird_discount, $cheapestPriceSpeed->price_regular_before_discount);
                             }
 
+                            $cheapestPriceSpeed->date_code_ibe = $date->code_ibe;
+                            $cheapestPriceSpeed->housing_package_code_ibe = null;
+                            $cheapestPriceSpeed->option_code_ibe = $option->code_ibe;
+                            $cheapestPriceSpeed->option_code_ibe_board_type = $option->code_ibe_board_type;
+                            $cheapestPriceSpeed->option_code_ibe_board_type_category = $option->code_ibe_board_type_category;
+                            $cheapestPriceSpeed->option_code_ibe_category = $option->code_ibe_category;
+                            $cheapestPriceSpeed->option_request_code = $option->request_code;
+                            $cheapestPriceSpeed->transport_1_code_ibe = !is_null($transport_pair) && isset($transport_pair[1]) ? $transport_pair[1]->code_ibe : null;
+                            $cheapestPriceSpeed->transport_2_code_ibe = !is_null($transport_pair) && isset($transport_pair[1]) && isset($transport_pair[2]) ? $transport_pair[2]->code_ibe : null;
+                            $cheapestPriceSpeed->startingpoint_code_ibe = null;
+                            $cheapestPriceSpeed->booking_package_ibe_type = $booking_package->ibe_type;
+                            $cheapestPriceSpeed->booking_package_product_type_ibe = $booking_package->product_type_ibe;
+                            $cheapestPriceSpeed->booking_package_type_of_travel = $booking_package->type_of_travel;
+                            $cheapestPriceSpeed->booking_package_variant_code = $booking_package->variant_code;
+                            $cheapestPriceSpeed->booking_package_request_code = $booking_package->request_code;
+
                             $cheapestPriceSpeed->create();
                             $result[] = $cheapestPriceSpeed->toStdClass();
                         }

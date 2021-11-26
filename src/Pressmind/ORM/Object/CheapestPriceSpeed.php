@@ -527,7 +527,127 @@ class CheapestPriceSpeed extends AbstractObject
                         'params' => 32,
                     ]
                 ]
-            ]
+            ],
+            'date_code_ibe' => [
+                'name' => 'date_code_ibe',
+                'title' => 'date_code_ibe',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'housing_package_code_ibe' => [
+                'name' => 'housing_package_code_ibe',
+                'title' => 'housing_package_code_ibe',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'option_code_ibe' => [
+                'name' => 'option_code_ibe',
+                'title' => 'option_code_ibe',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'option_code_ibe_board_type' => [
+                'name' => 'option_code_ibe_board_type',
+                'title' => 'option_code_ibe_board_type',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'option_code_ibe_board_type_category' => [
+                'name' => 'code_ibe_board_type_category',
+                'title' => 'code_ibe_board_type_category',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'option_code_ibe_category' => [
+                'name' => 'code_ibe_category',
+                'title' => 'code_ibe_category',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'option_request_code' => [
+                'name' => 'code_ibe_category',
+                'title' => 'code_ibe_category',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'transport_1_code_ibe' => [
+                'name' => 'option_code_ibe',
+                'title' => 'option_code_ibe',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'transport_2_code_ibe' => [
+                'name' => 'option_code_ibe',
+                'title' => 'option_code_ibe',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'startingpoint_code_ibe' => [
+                'name' => 'option_code_ibe',
+                'title' => 'option_code_ibe',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'booking_package_ibe_type' => [
+                'name' => 'booking_package_ibe_type',
+                'title' => 'booking_package_ibe_type',
+                'type' => 'integer',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'booking_package_product_type_ibe' => [
+                'name' => 'booking_package_ibe_type',
+                'title' => 'booking_package_ibe_type',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'booking_package_type_of_travel' => [
+                'name' => 'booking_package_type_of_travel',
+                'title' => 'booking_package_type_of_travel',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'booking_package_variant_code' => [
+                'name' => 'booking_package_variant_code',
+                'title' => 'booking_package_variant_code',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'booking_package_request_code' => [
+                'name' => 'booking_package_request_code',
+                'title' => 'booking_package_request_code',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
         ]
     ];
 

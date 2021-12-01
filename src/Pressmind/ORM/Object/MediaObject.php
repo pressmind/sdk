@@ -670,7 +670,7 @@ class MediaObject extends AbstractObject
             if(!is_null($filters->price_from) && !is_null($filters->price_to)) {
                 $where .= ' AND price_total BETWEEN ' . $filters->price_from . ' AND ' . $filters->price_to;
             }
-            if(!is_null($filters->occupancies)) {
+            if(!empty($filters->occupancies)) {
                 $where .= ' AND (';
                 $im = [];
                 foreach ($filters->occupancies as $occupancy) {
@@ -858,8 +858,12 @@ class MediaObject extends AbstractObject
     {
         $booking_packages = $this->booking_packages;
         $result = [];
+        $now = new DateTime();
         foreach ($booking_packages as $booking_package) {
             foreach ($booking_package->dates as $date) {
+                if($date->departure < $now){ // don't index departures in the past
+                    continue;
+                }
                 /** @var Item[] $early_bird_discounts */
                 $early_bird_discounts = is_null($date->early_bird_discount_group) ? [null] : $date->early_bird_discount_group->items;
 

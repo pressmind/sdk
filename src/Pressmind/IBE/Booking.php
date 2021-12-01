@@ -302,10 +302,13 @@ class Booking
         $sightseeings = $this->getBookingPackage()->sightseeings;
         $all_extras = array_merge($sightseeings, array_merge($extras, $tickets));
         $valid_extras = [];
+
+        // @TODO is the saison key missing here and whats about the relation to the reservation date?
         foreach ($all_extras as $extra){
             if(empty($extra->reservation_date_from) || empty($extra->reservation_date_to) ||
                 empty($reservation_date_from) || empty($reservation_date_to) ||
-                ($extra->reservation_date_from->format('Ymd') == $reservation_date_from->format('Ymd') && $extra->reservation_date_to->format('Ymd') == $reservation_date_to->format('Ymd'))
+                ($extra->reservation_date_from->format('Ymd') == $reservation_date_from->format('Ymd') &&
+                    $extra->reservation_date_to->format('Ymd') == $reservation_date_to->format('Ymd'))
             ){
                 $valid_extras[] = $extra;
             }

@@ -8,7 +8,7 @@ class CheapestPrice
 {
     public $duration_from = null;
     public $duration_to = null;
-    public $occupancies = null;
+    public $occupancies = [];
     public $occupancies_disable_fallback = false;
     public $date_from = null;
     public $date_to = null;

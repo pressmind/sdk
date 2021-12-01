@@ -12,7 +12,9 @@ class Occupancy
         if(!is_array($occupancies)) {
             $occupancies = [$occupancies];
         }
-        $this->_occupancies = $occupancies;
+
+        // we add "null" to the occupancy to match even price_mixes that have no necessary occupancy
+        $this->_occupancies = array_merge([null], $occupancies);
     }
 
     public function getQuery($type = '$match')

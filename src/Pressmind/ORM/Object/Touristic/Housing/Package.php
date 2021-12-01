@@ -134,7 +134,7 @@ class Package extends AbstractObject
                 'filters' => NULL,
             ],
             'code_ibe' => [
-                'title' => 'Code_ibe',
+                'title' => 'code_ibe',
                 'name' => 'code_ibe',
                 'type' => 'string',
                 'required' => false,

@@ -96,7 +96,7 @@ class Ibe
             if (isset($this->parameters['params']['idhp'])) {
                 $housing_packages = [$booking->getHousingPackage($this->parameters['params']['idhp'])->toStdClass()];
             } else {
-                /** @TODO: Check if loading up a full Haousing\Package Object really is necessary*/
+                /** @TODO: Check if loading up a full Housing\Package Object really is necessary*/
                 $housing_packages = [];
                 $housing_packages_list = $booking->getBookingPackage()->housing_packages;
                 foreach ($housing_packages_list as $housing_package) {
@@ -131,6 +131,7 @@ class Ibe
         } else {
             $housing_package = new Package();
             $housing_package->name = !empty($booking_package->name) ? $booking_package->name : $result['product']['title'];
+            $housing_package->code_ibe = null;
             $options = [];
             foreach ($extras as $key => $extra) {
                 $extra->occupancy_min = $extra->min_pax > 0 ? $extra->min_pax : 1;

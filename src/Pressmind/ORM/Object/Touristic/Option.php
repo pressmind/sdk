@@ -731,6 +731,6 @@ class Option extends AbstractObject
      */
     public function getHousingPackage() {
         $housing_packages = Package::listAll(['id' => $this->id_housing_package]);
-        return $housing_packages[0];
+        return !empty($housing_packages[0]) ? $housing_packages[0] : null;
     }
 }

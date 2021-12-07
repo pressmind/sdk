@@ -25,7 +25,7 @@ use Pressmind\System\I18n;
  * @property string $required_group
  * @property string $transport_group
  * @property string $description_long
- * @property integer $id_starting_point
+ * @property string $id_starting_point
  * @property DateTime $transport_date_from
  * @property DateTime $transport_date_to
  * @property integer $age_from
@@ -287,12 +287,12 @@ class Transport extends AbstractObject
             'id_starting_point' => [
                 'title' => 'Id_starting_point',
                 'name' => 'id_starting_point',
-                'type' => 'integer',
+                'type' => 'string',
                 'required' => false,
                 'validators' => [
                     [
                         'name' => 'maxlength',
-                        'params' => 11,
+                        'params' => 32,
                     ],
                 ],
                 'filters' => NULL,

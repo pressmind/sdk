@@ -561,48 +561,48 @@ class CheapestPriceSpeed extends AbstractObject
                 'validators' => null
             ],
             'option_code_ibe_board_type_category' => [
-                'name' => 'code_ibe_board_type_category',
-                'title' => 'code_ibe_board_type_category',
+                'name' => 'option_code_ibe_board_type_category',
+                'title' => 'option_code_ibe_board_type_category',
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
                 'validators' => null
             ],
             'option_code_ibe_category' => [
-                'name' => 'code_ibe_category',
-                'title' => 'code_ibe_category',
+                'name' => 'option_code_ibe_category',
+                'title' => 'option_code_ibe_category',
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
                 'validators' => null
             ],
             'option_request_code' => [
-                'name' => 'code_ibe_category',
-                'title' => 'code_ibe_category',
+                'name' => 'option_request_code',
+                'title' => 'option_request_code',
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
                 'validators' => null
             ],
             'transport_1_code_ibe' => [
-                'name' => 'option_code_ibe',
-                'title' => 'option_code_ibe',
+                'name' => 'transport_1_code_ibe',
+                'title' => 'transport_1_code_ibe',
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
                 'validators' => null
             ],
             'transport_2_code_ibe' => [
-                'name' => 'option_code_ibe',
-                'title' => 'option_code_ibe',
+                'name' => 'transport_2_code_ibe',
+                'title' => 'transport_2_code_ibe',
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
                 'validators' => null
             ],
             'startingpoint_code_ibe' => [
-                'name' => 'option_code_ibe',
-                'title' => 'option_code_ibe',
+                'name' => 'startingpoint_code_ibe',
+                'title' => 'startingpoint_code_ibe',
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
@@ -617,8 +617,8 @@ class CheapestPriceSpeed extends AbstractObject
                 'validators' => null
             ],
             'booking_package_product_type_ibe' => [
-                'name' => 'booking_package_ibe_type',
-                'title' => 'booking_package_ibe_type',
+                'name' => 'booking_package_product_type_ibe',
+                'title' => 'booking_package_product_type_ibe',
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,

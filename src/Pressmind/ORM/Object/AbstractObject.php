@@ -490,12 +490,15 @@ abstract class AbstractObject implements SplSubject
     private function _deleteRelations() {
         foreach ($this->_definitions['properties'] as $property_name => $property) {
             if($property['type'] == 'relation' && (!isset($property['relation']['prevent_auto_delete']) || false == $property['relation']['prevent_auto_delete'])) {
-                switch ($property['relation']['type']) {
-                    case 'hasMany':
+                switch (strtolower($property['relation']['type'])) {
+                    case 'hasmany':
                         $this->_deleteHasManyRelation($property_name);
                         break;
-                    case 'belongsTo':
+                    case 'belongsto':
                         $this->_deleteBelongsToRelation($property_name);
+                        break;
+                    case 'manytomany':
+                        $this->_unbindManyToManyRelation($property);
                         break;
                 }
             }
@@ -528,29 +531,8 @@ abstract class AbstractObject implements SplSubject
         }
     }
 
-
-    /**
-     * @param bool $deleteRelations
-     */
-    private function _deleteHasManyRelations($deleteRelations = false)
-    {
-        foreach ($this->_definitions['properties'] as $property_name => $property) {
-            if($property['type'] == 'relation' && $property['relation']['type'] == 'hasMany') {
-                foreach ($this->$property_name as $relation) {
-                    $relation->delete($deleteRelations);
-                }
-            }
-        }
-    }
-
-    private function _deleteHasOneRelations()
-    {
-
-    }
-
-    private function _deleteManyToManyRelations()
-    {
-
+    private function _unbindManyToManyRelation($property) {
+        $this->_db->delete($property['relation']['relation_table'], [$property['relation']['related_id'] . " = ?", $this->getId()]);
     }
 
     /**

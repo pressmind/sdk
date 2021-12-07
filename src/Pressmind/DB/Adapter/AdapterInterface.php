@@ -59,6 +59,13 @@ interface AdapterInterface
     public function delete($tableName, $where = null);
 
     /**
+     * Truncates all data in database table
+     * @param string $tableName
+     * @return mixed
+     */
+    public function truncate($tableName);
+
+    /**
      * @return string
      */
     public function getTablePrefix();

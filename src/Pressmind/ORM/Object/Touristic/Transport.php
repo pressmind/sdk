@@ -341,6 +341,19 @@ class Transport extends AbstractObject
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,
+            ],
+            'starting_points' => [
+                'title' => 'Starting Points',
+                'name' => 'starting_points',
+                'type' => 'relation',
+                'relation' => [
+                    'type' => 'hasOne',
+                    'related_id' => 'id_starting_point',
+                    'class' => Startingpoint::class,
+                ],
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
             ]
         ]
     );

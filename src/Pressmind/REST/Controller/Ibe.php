@@ -77,6 +77,7 @@ class Ibe
         ];
 
         $result['transports'] = $booking->getTransports();
+        $result['transport_pairs'] = $this->_parseTransportPairs($result['transports']);
         $extras = $booking->getAllAvailableExtras($date->departure, $date->arrival);
         $insurances = $booking->getInsurances();
 
@@ -164,8 +165,16 @@ class Ibe
         //$result['debug'] = $settings['steps']['starting_points']['pagination_page_size']['value'];
         $result['housing_packages'] = $housing_packages;
         $result['insurances'] = $insurances;
-        $result['starting_points'] = $this->_getStartingPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit);
-        $result['exit_points'] = $this->_getExitPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit);
+        $result['starting_points'] = [];
+        $result['exit_points'] = [];
+        if(!empty($booking->getDate()->id_starting_point)){
+            // this way is soon deprecated, because its even better to use the startingpoint from the transport instead from the date
+            $result['starting_points'] = $this->_getStartingPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit);
+            $result['exit_points'] = $this->_getExitPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit);
+        }elseif(!empty($result['transport_pairs'])){
+            $result['starting_points'] = $this->_getStartingPointOptionsForId(array_values($result['transport_pairs'])[0]['outward_transport']->id_starting_point, 0, $starting_points_limit);
+            $result['exit_points'] = $this->_getExitPointOptionsForId(array_values($result['transport_pairs'])[0]['return_transport']->id_starting_point, 0, $starting_points_limit);
+        }
         $result['extras'] = $extras;
         $result['has_pickup_services'] = $booking->hasPickServices();
         $result['has_starting_points'] = $booking->hasStartingPoints();
@@ -174,6 +183,34 @@ class Ibe
         $result['product_type_ibe'] = $booking->getBookingPackage()->product_type_ibe;
 
         return ['success' => true, 'data' => $result];
+    }
+
+    private function _parseTransportPairs($transports)
+    {
+        $transports_outwards = [];
+        $transports_return = [];
+        foreach ($transports as $transport) {
+            if($transport->way == 1){
+                $transports_outwards[] = $transport;
+            }else{
+                $transports_return[] = $transport;
+            }
+        }
+
+        $transport_pairs = [];
+        foreach ($transports_outwards as $transport) {
+            foreach ($transports_return as $transport_return) {
+                $code = uniqid();
+                $transport_pairs[$code]['outward_transport'] = $transport;
+                $transport_pairs[$code]['return_transport'] = $transport_return;
+            }
+        }
+
+        // so, we have now some valid transport pairs, BUT: we deliver only the fst pair,
+        // this is even necessary to avoid a big complexity ux round trip
+        array_splice($transport_pairs, 1);
+
+        return $transport_pairs;
     }
 
     public function pressmind_ib3_v2_get_exit_point($params) {
@@ -276,17 +313,26 @@ class Ibe
      */
     private function _getStartingPointOptionsForId($id_starting_point, $start = 0 ,$limit = 10)
     {
+        if(is_array($id_starting_point)){
+            $id_starting_point = implode(',', $id_starting_point);
+        }
+
         $optionObject = new Option();
-        $total_starting_point_options = $optionObject->listAll('`id_startingpoint` = ' . $id_starting_point . ' AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0');
-        $limited_starting_point_options = $optionObject->listAll('`id_startingpoint` = ' . $id_starting_point . ' AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0', ['zip' => 'ASC'], [$start, $limit]);
+        $total_starting_point_options = $optionObject->listAll('`id_startingpoint` in( ' . $id_starting_point . ') AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0');
+        $limited_starting_point_options = $optionObject->listAll('`id_startingpoint` in( ' . $id_starting_point . ') AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0', ['zip' => 'ASC'], [$start, $limit]);
         return array('total' => count($total_starting_point_options), 'starting_point_options' => $limited_starting_point_options);
     }
 
     private function _getExitPointOptionsForId($id_starting_point, $start = 0 ,$limit = 10)
     {
+
+        if(is_array($id_starting_point)){
+            $id_starting_point = implode(',', $id_starting_point);
+        }
         $optionObject = new Option();
-        $total_exit_point_options = $optionObject->listAll(['id_startingpoint' => $id_starting_point, '`exit`' => 1]);
-        $limited_exit_point_options = $optionObject->listAll(['id_startingpoint' => $id_starting_point, '`exit`' => 1], ['zip' => 'ASC'], [$start, $limit]);
+
+        $total_exit_point_options = $optionObject->listAll('`id_startingpoint` in( ' . $id_starting_point . ') AND (`exit` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0');
+        $limited_exit_point_options = $optionObject->listAll('`id_startingpoint` in( ' . $id_starting_point . ') AND (`exit` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0', ['zip' => 'ASC'], [$start, $limit]);
         return array('total' => count($total_exit_point_options), 'exit_point_options' => $limited_exit_point_options);
     }
 
@@ -304,6 +350,21 @@ class Ibe
         return array('total' => 0, 'starting_point_options' => null);
     }
 
+    /**
+     * @param $transports
+     * @parame int $way enum (1,2)
+     * @return array
+     */
+    private function _getStartingPointToTransports($transports, $way = 1)
+    {
+        $map = [];
+        foreach($transports as $transport){
+            if(empty($transport->id_starting_point) || $transport->way !== $way) continue;
+            $map[$transport->id_starting_point]['id_starting_point'] = $transport->id_starting_point;
+            $map[$transport->id_starting_point]['valid_transports'][] = $transport->id;
+        }
+        return $map;
+    }
 
 }
 

@@ -217,7 +217,7 @@ class Option extends AbstractObject
             'exit_time' => [
                 'title' => 'Exit_time',
                 'name' => 'exit_time',
-                'type' => 'datetime',
+                'type' => 'time',
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,

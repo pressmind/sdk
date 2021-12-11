@@ -88,6 +88,7 @@ class Booking
         $this->id_option =  isset($data['params']['ido']) ? $data['params']['ido'] : null;
         $this->id_transport_way_1 =  isset($data['params']['idt1']) ? $data['params']['idt1'] : null;
         $this->id_transport_way_2 =  isset($data['params']['idt2']) ? $data['params']['idt2'] : null;
+        $this->transport_type =  isset($data['params']['tt']) ? $data['params']['tt'] : null;
         $this->request_type =  isset($data['params']['t']) ? $data['params']['t'] : null;
         $this->settings = isset($data['settings']) ? $data['settings'] : null;
     }
@@ -237,6 +238,7 @@ class Booking
     }
 
     /**
+     * @TODO add booking state
      * @param null $pIdDate
      * @return Transport[]
      * @throws Exception
@@ -244,15 +246,16 @@ class Booking
     public function getTransports($pIdDate = null)
     {
         $transports = array();
-        if(!is_null($this->id_transport_way_1) && !is_null($this->id_transport_way_2)) {
-            foreach ($this->getDate($pIdDate)->transports as $transport) {
-                if(($transport->id == $this->id_transport_way_1 || $transport->id == $this->id_transport_way_2)) {
+        foreach ($this->getDate($pIdDate)->transports as $transport) {
+            if($transport->type == $this->transport_type){
+                if(!is_null($this->id_transport_way_1) && !is_null($this->id_transport_way_2)) {
+                    if(($transport->id == $this->id_transport_way_1 || $transport->id == $this->id_transport_way_2)) {
+                        $transports[] = $transport;
+                    }
+                }else{
                     $transports[] = $transport;
                 }
             }
-        } else {
-            $date = $this->getDate($pIdDate);
-            $transports = $date->transports;
         }
         return $transports;
     }
@@ -286,6 +289,15 @@ class Booking
                 }
             }
         }
+
+        if(!is_null($this->getTransports())) {
+            foreach ($this->getTransports() as $transport) {
+                if (empty($transport->id_starting_point) == false) {
+                    $has_starting_points = true;
+                }
+            }
+        }
+
         return $has_starting_points;
     }
 

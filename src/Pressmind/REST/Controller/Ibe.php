@@ -21,6 +21,10 @@ class Ibe
     public function pressmind_ib3_v2_get_touristic_object($params)
     {
         $this->parameters = $params['data'];
+        if(empty($this->parameters['params']['imo']) || empty($this->parameters['params']['idbp']) || empty($this->parameters['params']['idd'])){
+            return ['success' => false, 'msg' => 'error: parameters are missing imo, idbp, idd', 'data' => null];
+        }
+
         $settings = isset($this->parameters['settings']) ? $this->parameters['settings'] : null;
         $booking = new Booking($this->parameters);
         $mediaObject = new MediaObject($this->parameters['params']['imo']);
@@ -79,7 +83,7 @@ class Ibe
         $result['transports'] = $booking->getTransports();
         $result['transport_pairs'] = $this->_parseTransportPairs($result['transports']);
         $extras = $booking->getAllAvailableExtras($date->departure, $date->arrival);
-        $insurances = $booking->getInsurances();
+        $result['insurances'] = $booking->getInsurances();
 
         $predefined_options = [];
 
@@ -164,7 +168,6 @@ class Ibe
 
         //$result['debug'] = $settings['steps']['starting_points']['pagination_page_size']['value'];
         $result['housing_packages'] = $housing_packages;
-        $result['insurances'] = $insurances;
         $result['starting_points'] = [];
         $result['exit_points'] = [];
         if(!empty($booking->getDate()->id_starting_point)){

@@ -278,15 +278,22 @@ class Picture extends AbstractObject
     /**
      * @param string $derivativeName
      * @param boolean $force_webp
+     * @param string $sectionName (the pressmind image "cropping/cutting"-name)
      * @return string
      */
-    public function getUri($derivativeName = null, $force_webp = false) {
+    public function getUri($derivativeName = null, $force_webp = false, $sectionName = null) {
         $config = Registry::getInstance()->get('config');
         if($this->download_successful == false) {
             return $this->getTmpUri($derivativeName);
         }
         if(is_null($derivativeName)) {
             return HelperFunctions::replaceConstantsFromConfig($config['image_handling']['http_src']) . '/'  . $this->file_name;
+        }
+        if(!is_null($sectionName)){
+            $section = $this->getSection($sectionName);
+            if(!is_null($section)){
+                return $section->getUri($derivativeName, $force_webp);
+            }
         }
         if($derivative = $this->hasDerivative($derivativeName)) {
             $uri = HelperFunctions::replaceConstantsFromConfig($config['image_handling']['http_src']) . '/' . $derivative->file_name;

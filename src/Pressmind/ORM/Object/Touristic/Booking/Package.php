@@ -431,7 +431,15 @@ class Package extends AbstractObject
                 'required' => false,
                 'validators' => null,
                 'filters' => null
-            ]
+            ],
+            'created' => [
+                'title' => 'created',
+                'name' => 'created',
+                'type' => 'datetime',
+                'required' => false,
+                'validators' => null,
+                'filters' => null
+            ],
         ]
     ];
 

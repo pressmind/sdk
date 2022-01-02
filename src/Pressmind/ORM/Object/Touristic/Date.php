@@ -387,20 +387,34 @@ class Date extends AbstractObject
     }
 
     /**
-     * @param array $state (0 = kein Status, 1 = Gesperrt, 2 = Anfrage, 3 = Buchbar)
+     * @param array $state_filter
+     * @param array $ids
+     * @param array $types
+     * @return array
      */
-    public function getTransportPairs($state = [0,2,3]){
-
-        if(!empty($state)){
-            foreach($this->transports as $transport){
-                if(in_array($transport->state, $state)){
-                    $valid_transports[] = $transport;
-                }
+    public function getTransports($state_filter = [0,2,3], $ids = [], $types = []){
+        $valid_transports = [];
+        foreach($this->transports as $transport){
+            if(
+                (in_array($transport->state, $state_filter) || count($state_filter) == 0) AND
+                (in_array($transport->getId(), $ids) || count($ids) == 0) AND
+                (in_array($transport->type, $types) || count($types) == 0)
+            ){
+                $valid_transports[] = $transport;
             }
-        }else{
-            $valid_transports = $this->transports;
         }
+        return $valid_transports;
+    }
 
+    /**
+     * @param array $state_filter (0 = kein Status, 1 = Gesperrt, 2 = Anfrage, 3 = Buchbar)
+     * @param array $ids
+     * @param array $types
+     * @param int $max_pairs
+     * @return array
+     */
+    public function getTransportPairs($state_filter = [0,2,3], $ids = [], $types = [], $max_pairs = null){
+        $valid_transports = $this->getTransports($state_filter, $ids, $types);
         $transport_pairs = [];
         $transports_without_groups = [];
         $transports_with_groups = [];
@@ -422,7 +436,6 @@ class Date extends AbstractObject
             $transport_pairs = array_merge($transport_pairs, $this->_collectPairs($transports));
         }
 
-
         // mix transport that are grouped
         $transports_by_group = [];
         foreach($transports_with_groups as $transport){
@@ -431,35 +444,33 @@ class Date extends AbstractObject
         foreach($transports_by_group as $transports){
             $transport_pairs = array_merge($transport_pairs, $this->_collectPairs($transports));
         }
-
+        if(is_int($max_pairs)){
+            array_splice($transport_pairs, $max_pairs);
+        }
         return $transport_pairs;
-
     }
 
     private function _collectPairs($transports){
         $transport_pairs = [];
 
-            $transports_outwards = [];
-            $transports_return = [];
-            foreach ($transports as $transport) {
-                if($transport->way == 1){
-                    $transports_outwards[] = $transport;
-                }else{
-                    $transports_return[] = $transport;
-                }
+        $transports_outwards = [];
+        $transports_return = [];
+        foreach ($transports as $transport) {
+            if($transport->way == 1){
+                $transports_outwards[] = $transport;
+            }else{
+                $transports_return[] = $transport;
             }
-
-            foreach ($transports_outwards as $transport) {
-                foreach ($transports_return as $transport_return) {
-                    $code = uniqid();
-                    $transport_pairs[$code]['way1'] = $transport;
-                    $transport_pairs[$code]['way2'] = $transport_return;
-                }
+        }
+        $i = 0;
+        foreach ($transports_outwards as $transport) {
+            foreach ($transports_return as $transport_return) {
+                $transport_pairs[$i]['way1'] = $transport;
+                $transport_pairs[$i]['way2'] = $transport_return;
+                $i++;
             }
-
-
+        }
         return $transport_pairs;
-
     }
 
 }

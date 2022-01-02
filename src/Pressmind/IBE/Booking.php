@@ -238,7 +238,7 @@ class Booking
     }
 
     /**
-     * @TODO add booking state
+     * @deprecated
      * @param null $pIdDate
      * @return Transport[]
      * @throws Exception

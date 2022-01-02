@@ -62,7 +62,32 @@ class Ibe
             }
         }
         $date = $booking->getDate();
-        $result['date'] = $date;
+        $clean_date = $date->toStdClass();
+        unset($clean_date->transports); // @TODO we have to clean up, the payload is fullblown with duplicated stuff
+        $result['date'] = $clean_date;
+        // @TODO, wenn need only one transport pair! there is no need to deliver other transports
+        //$result['transports'] = $date->getTransports([0,2,3], array_filter([$booking->id_transport_way_1, $booking->id_transport_way_2]), array_filter([$booking->transport_type]));
+        $result['transport_pairs'] = $date->getTransportPairs([0,2,3], array_filter([$booking->id_transport_way_1, $booking->id_transport_way_2]), array_filter([$booking->transport_type]), 1);
+
+        $starting_points_limit = 10;
+        if(!is_null($settings)) {
+            if(isset($settings['steps']['starting_points']['pagination_page_size']['value'])) {
+                $starting_points_limit = $settings['steps']['starting_points']['pagination_page_size']['value'];
+            }
+        }
+        $result['starting_points'] = [];
+        $result['exit_points'] = [];
+        if(!empty($booking->getDate()->id_starting_point)){
+            // this way is soon deprecated, because its even better to use the startingpoint from the transport instead from the date
+            $result['starting_points'] = $this->_getStartingPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit);
+            $result['exit_points'] = $this->_getExitPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit);
+        }elseif(!empty($result['transport_pairs'])){
+            $result['starting_points'] = $this->_getStartingPointOptionsForId(array_values($result['transport_pairs'])[0]['way1']->id_starting_point, 0, $starting_points_limit);
+            $result['exit_points'] = $this->_getExitPointOptionsForId(array_values($result['transport_pairs'])[0]['way2']->id_starting_point, 0, $starting_points_limit);
+        }
+        $result['has_pickup_services'] = $booking->hasPickServices();
+        $result['has_starting_points'] = $booking->hasStartingPoints();
+
         $result['product'] = [
             'title' => !empty($mediaObject->getValueByTagName('pressmind-ib3.headline')) ? strip_tags($mediaObject->getValueByTagName('pressmind-ib3.headline')) : $mediaObject->name,
             'subtitle' => '',
@@ -80,8 +105,6 @@ class Ibe
             'price_mix' => $booking->getBookingPackage()->price_mix,
         ];
 
-        $result['transports'] = $booking->getTransports();
-        $result['transport_pairs'] = $this->_parseTransportPairs($result['transports']);
         $extras = $booking->getAllAvailableExtras($date->departure, $date->arrival);
         $result['insurances'] = $booking->getInsurances();
 
@@ -159,28 +182,11 @@ class Ibe
             $housing_packages[] = $housing_package;
         }
 
-        $starting_points_limit = 10;
-        if(!is_null($settings)) {
-            if(isset($settings['steps']['starting_points']['pagination_page_size']['value'])) {
-                $starting_points_limit = $settings['steps']['starting_points']['pagination_page_size']['value'];
-            }
-        }
+
 
         //$result['debug'] = $settings['steps']['starting_points']['pagination_page_size']['value'];
         $result['housing_packages'] = $housing_packages;
-        $result['starting_points'] = [];
-        $result['exit_points'] = [];
-        if(!empty($booking->getDate()->id_starting_point)){
-            // this way is soon deprecated, because its even better to use the startingpoint from the transport instead from the date
-            $result['starting_points'] = $this->_getStartingPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit);
-            $result['exit_points'] = $this->_getExitPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit);
-        }elseif(!empty($result['transport_pairs'])){
-            $result['starting_points'] = $this->_getStartingPointOptionsForId(array_values($result['transport_pairs'])[0]['outward_transport']->id_starting_point, 0, $starting_points_limit);
-            $result['exit_points'] = $this->_getExitPointOptionsForId(array_values($result['transport_pairs'])[0]['return_transport']->id_starting_point, 0, $starting_points_limit);
-        }
         $result['extras'] = $extras;
-        $result['has_pickup_services'] = $booking->hasPickServices();
-        $result['has_starting_points'] = $booking->hasStartingPoints();
         $result['id_ibe'] = $booking->getBookingPackage()->ibe_type;
         $result['code_ibe'] = is_null($booking->getHousingPackage()) ? null : $booking->getHousingPackage()->code_ibe;
         $result['product_type_ibe'] = $booking->getBookingPackage()->product_type_ibe;
@@ -188,8 +194,14 @@ class Ibe
         return ['success' => true, 'data' => $result];
     }
 
+    /**
+     * @deprecated will be removed soon
+     * @param $transports
+     * @return array
+     */
     private function _parseTransportPairs($transports)
     {
+
         $transports_outwards = [];
         $transports_return = [];
         foreach ($transports as $transport) {
@@ -246,11 +258,13 @@ class Ibe
     }
 
     /**
+     * @deprecated will be removed soon
      * @return array
      * @throws Exception
      */
     public function pressmind_ib3_get_touristic_object($params)
     {
+        return 'deprecated endpoint';
         $this->parameters = $params['data'];
         $booking = new Booking($this->parameters);
         $mediaObject = new MediaObject($this->parameters['params']['imo']);

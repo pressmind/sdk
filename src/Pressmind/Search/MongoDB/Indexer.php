@@ -431,6 +431,7 @@ class Indexer
                 earlybird_discount_date_to, 
                 option_board_type, 
                 price_mix,
+                transport_type,
                 DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY) as departure_range_from, 
                 DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY) as departure_range_to 
                 FROM pmt2core_cheapest_price_speed 
@@ -469,6 +470,7 @@ class Indexer
                     $result->earlybird_discount_f = intval($result->earlybird_discount_f);
                     $result->option_board_type = $result->option_board_type;
                     $result->price_mix = $result->price_mix;
+                    $result->transport_type = $result->transport_type;
                     $prices[] = $result;
                 }
             }
@@ -488,6 +490,7 @@ class Indexer
                 earlybird_discount_date_to, 
                 option_board_type, 
                 price_mix,
+                transport_type,
                 DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY) as departure_range_from, 
                 DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY) as departure_range_to 
                 FROM pmt2core_cheapest_price_speed 
@@ -524,6 +527,7 @@ class Indexer
                     $result->earlybird_discount = intval($result->earlybird_discount);
                     $result->earlybird_discount_f = intval($result->earlybird_discount_f);
                     $result->option_board_type = $result->option_board_type;
+                    $result->transport_type = $result->transport_type;
                     $result->price_mix = $result->price_mix;
                     $prices[] = $result;
                 }
@@ -629,8 +633,9 @@ class Indexer
                         earlybird_discount_f, earlybird_discount_date_to 
                             FROM pmt2core_cheapest_price_speed 
                         WHERE (date_departure BETWEEN :departure_from AND :departure_to) 
-                          AND id_media_object = :id_media_object AND id_origin = :id_origin 
-                          AND option_occupancy = 2 ORDER BY date_departure LIMIT 0,5";
+                          AND id_media_object = :id_media_object AND id_origin = :id_origin
+                          AND ((option_occupancy = 2 AND price_mix = 'date_housing') OR (price_mix != 'date_housing'))
+                          GROUP BY date_departure, duration ORDER BY date_departure LIMIT 0,5";
                 $values = [
                     ':id_media_object' => $this->mediaObject->id,
                     ':id_origin' => $origin,
@@ -639,9 +644,12 @@ class Indexer
                 ];
                 $result = $db->fetchAll($query, $values);
                 $object->five_dates_in_month = $result;
-                $count_query = "SELECT count(id) as count FROM pmt2core_cheapest_price_speed WHERE (date_departure BETWEEN :departure_from AND :departure_to) AND id_media_object = :id_media_object AND id_origin = :id_origin AND option_occupancy = 2 ORDER BY price_total LIMIT 0,5";
-                $count_result = $db->fetchRow($count_query, $values);
-                $object->dates_total = $count_result->count;
+                $count_query = "select count(*) as count from (SELECT distinct date_departure FROM pmt2core_cheapest_price_speed
+                                WHERE (date_departure BETWEEN :departure_from AND :departure_to) 
+                                AND id_media_object = :id_media_object AND id_origin = :id_origin 
+                                AND ((option_occupancy = 2 AND price_mix = 'date_housing') OR (price_mix != 'date_housing'))) t";
+                $result = $db->fetchRow($count_query, $values);
+                $object->dates_total = $result->count;
                 $objects[] = $object;
             }
         }

@@ -49,6 +49,24 @@ use DateTime;
  * @property string $id_start_point_option
  * @property integer $id_origin
  * @property string $id_startingpoint
+ * @property string $date_code_ibe
+ * @property string $housing_package_code_ibe
+ * @property string $housing_package_name
+ * @property string $housing_package_code
+ * @property string $option_code_ibe
+ * @property string $option_code_ibe_board_type
+ * @property string $option_code_ibe_board_type_category
+ * @property string $option_code_ibe_category
+ * @property string $option_request_code
+ * @property string $transport_1_code_ibe
+ * @property string $transport_2_code_ibe
+ * @property string $startingpoint_code_ibe
+ * @property string $booking_package_ibe_type
+ * @property string $booking_package_product_type_ibe
+ * @property string $booking_package_type_of_travel
+ * @property string $booking_package_variant_code
+ * @property string $booking_package_request_code
+ * @property string $booking_package_name
  */
 class CheapestPriceSpeed extends AbstractObject
 {
@@ -643,6 +661,30 @@ class CheapestPriceSpeed extends AbstractObject
             'booking_package_request_code' => [
                 'name' => 'booking_package_request_code',
                 'title' => 'booking_package_request_code',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'booking_package_name' => [
+                'name' => 'booking_package_name',
+                'title' => 'booking_package_name',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'housing_package_code' => [
+                'name' => 'housing_package_code',
+                'title' => 'housing_package_code',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'housing_package_name' => [
+                'name' => 'housing_package_name',
+                'title' => 'housing_package_name',
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,

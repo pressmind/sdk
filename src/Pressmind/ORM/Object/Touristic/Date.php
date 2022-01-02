@@ -385,4 +385,81 @@ class Date extends AbstractObject
         }
         return $tickets;
     }
+
+    /**
+     * @param array $state (0 = kein Status, 1 = Gesperrt, 2 = Anfrage, 3 = Buchbar)
+     */
+    public function getTransportPairs($state = [0,2,3]){
+
+        if(!empty($state)){
+            foreach($this->transports as $transport){
+                if(in_array($transport->state, $state)){
+                    $valid_transports[] = $transport;
+                }
+            }
+        }else{
+            $valid_transports = $this->transports;
+        }
+
+        $transport_pairs = [];
+        $transports_without_groups = [];
+        $transports_with_groups = [];
+        foreach($valid_transports as $transport){
+            if(empty($transport->transport_group)){
+                $transports_without_groups[] = $transport;
+            }else{
+                $transports_with_groups[] = $transport;
+            }
+        }
+
+        // mix transports that are not grouped
+        // don't mix transport types, so we reduce this fst.
+        $transports_by_type = [];
+        foreach($transports_without_groups as $transport){
+            $transports_by_type[trim($transport->type)][] = $transport;
+        }
+        foreach($transports_by_type as $transports){
+            $transport_pairs = array_merge($transport_pairs, $this->_collectPairs($transports));
+        }
+
+
+        // mix transport that are grouped
+        $transports_by_group = [];
+        foreach($transports_with_groups as $transport){
+            $transports_by_group[trim($transport->transport_group)][] = $transport;
+        }
+        foreach($transports_by_group as $transports){
+            $transport_pairs = array_merge($transport_pairs, $this->_collectPairs($transports));
+        }
+
+        return $transport_pairs;
+
+    }
+
+    private function _collectPairs($transports){
+        $transport_pairs = [];
+
+            $transports_outwards = [];
+            $transports_return = [];
+            foreach ($transports as $transport) {
+                if($transport->way == 1){
+                    $transports_outwards[] = $transport;
+                }else{
+                    $transports_return[] = $transport;
+                }
+            }
+
+            foreach ($transports_outwards as $transport) {
+                foreach ($transports_return as $transport_return) {
+                    $code = uniqid();
+                    $transport_pairs[$code]['way1'] = $transport;
+                    $transport_pairs[$code]['way2'] = $transport_return;
+                }
+            }
+
+
+        return $transport_pairs;
+
+    }
+
 }

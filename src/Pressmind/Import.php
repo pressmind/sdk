@@ -492,9 +492,9 @@ class Import
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
         $query = "SELECT id FROM pmt2core_media_objects";
-        $conf = Registry::getInstance()->get('config');
-        if(isset($conf['data']['primary_media_type_ids']) && !empty($conf['data']['primary_media_type_ids'])) {
-            $query = "SELECT id FROM pmt2core_media_objects WHERE id_object_type IN (" . implode(',', $conf['data']['primary_media_type_ids']) . ")";
+        $config = Registry::getInstance()->get('config');
+        if(isset($config['data']['primary_media_type_ids']) && !empty($config['data']['primary_media_type_ids'])) {
+            $query = "SELECT id FROM pmt2core_media_objects WHERE id_object_type IN (" . implode(',', $config['data']['primary_media_type_ids']) . ")";
         }
         $existing_media_objects = $db->fetchAll($query);
         foreach($existing_media_objects as $media_object) {
@@ -502,8 +502,13 @@ class Import
                 $media_object_to_remove = new MediaObject($media_object->id);
                 $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Found Orphan: ' . $media_object->id . ' -> deleting ...', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
                 try {
+                    if(isset($config['data']['search_mongodb']['enabled']) && $config['data']['search_mongodb']['enabled'] === true) {
+                        $Indexer = new Indexer();
+                        $Indexer->deleteMediaObject($media_object->id);
+                        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Orphan: ' . $media_object->id . ' deleted from mongodb index', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+                    }
                     $media_object_to_remove->delete(true);
-                    $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Orphan: ' . $media_object->id . ' deleted', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+                    $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Orphan: ' . $media_object->id . ' deleted from mysql', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
                 } catch (Exception $e) {
                     $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Deletion of Orphan ' . $media_object->id . ' failed: ' . $e->getMessage(), Writer::OUTPUT_FILE, 'import', Writer::TYPE_ERROR);
                     $this->_errors[] = 'Deletion of Orphan ' . $media_object->id . '): failed: ' . $e->getMessage();

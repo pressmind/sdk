@@ -139,6 +139,19 @@ class Transport extends AbstractObject
                 ],
                 'filters' => NULL,
             ],
+            'airline' => [
+                'title' => 'airline',
+                'name' => 'airline',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
             'description' => [
                 'title' => 'Description',
                 'name' => 'description',

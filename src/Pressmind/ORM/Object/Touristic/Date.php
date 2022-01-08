@@ -390,7 +390,7 @@ class Date extends AbstractObject
      * @param array $state_filter
      * @param array $ids
      * @param array $types
-     * @return array
+     * @return Transport[]
      */
     public function getTransports($state_filter = [0,2,3], $ids = [], $types = []){
         $valid_transports = [];
@@ -416,9 +416,27 @@ class Date extends AbstractObject
     public function getTransportPairs($state_filter = [0,2,3], $ids = [], $types = [], $max_pairs = null){
         $valid_transports = $this->getTransports($state_filter, $ids, $types);
         $transport_pairs = [];
+
+        // some transports can contain more than one groups, this multiple groups are marked with the "#"-sign
+        // so we extract them first. e.g. transport_group = "Bus1#Flug1", common real world cases are one-way cruise-routes
+        $extracted_transports = [];
+        foreach($valid_transports as $transport){
+            if(empty($transport->transport_group)){
+                $extracted_transports[] = $transport;
+            }else{
+                $p = explode('#', $transport->transport_group);
+                foreach($p as $t){
+                    $tn = $transport->toStdClass();
+                    $tn->transport_group = trim($t);
+                    $newTransport = new Transport();
+                    $newTransport->fromStdClass($tn);
+                    $extracted_transports[] = $newTransport;
+                }
+            }
+        }
         $transports_without_groups = [];
         $transports_with_groups = [];
-        foreach($valid_transports as $transport){
+        foreach($extracted_transports as $transport){
             if(empty($transport->transport_group)){
                 $transports_without_groups[] = $transport;
             }else{

@@ -67,7 +67,15 @@ class Ibe
         $result['date'] = $clean_date;
         // @TODO, wenn need only one transport pair! there is no need to deliver other transports
         //$result['transports'] = $date->getTransports([0,2,3], array_filter([$booking->id_transport_way_1, $booking->id_transport_way_2]), array_filter([$booking->transport_type]));
-        $result['transport_pairs'] = $date->getTransportPairs([0,2,3], array_filter([$booking->id_transport_way_1, $booking->id_transport_way_2]), array_filter([$booking->transport_type]), 1);
+
+        $use_transport_types = [];
+        $use_ways = [];
+        if(empty($booking->id_transport_way_1) || $booking->id_transport_way_2){
+            $use_transport_types = array_filter([$booking->transport_type]);
+        }else{
+            $use_ways = array_filter([$booking->id_transport_way_1, $booking->id_transport_way_2]);
+        }
+        $result['transport_pairs'] = $date->getTransportPairs([0,2,3], $use_ways, $use_transport_types, 1);
 
         $starting_points_limit = 10;
         if(!is_null($settings)) {
@@ -101,7 +109,7 @@ class Ibe
             'services_box_title' => $services_box_title,
             'services_box_content' => $services_box_content,
             'duration' => $booking->getBookingPackage()->duration,
-            'transport_type' => 'BUS',
+            'transport_type' => !empty($booking->transport_type) ? $booking->transport_type : null,
             'price_mix' => $booking->getBookingPackage()->price_mix,
         ];
 

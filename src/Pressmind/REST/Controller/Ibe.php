@@ -70,7 +70,7 @@ class Ibe
 
         $use_transport_types = [];
         $use_ways = [];
-        if(empty($booking->id_transport_way_1) || $booking->id_transport_way_2){
+        if(empty($booking->id_transport_way_1) || empty($booking->id_transport_way_2)){
             $use_transport_types = array_filter([$booking->transport_type]);
         }else{
             $use_ways = array_filter([$booking->id_transport_way_1, $booking->id_transport_way_2]);

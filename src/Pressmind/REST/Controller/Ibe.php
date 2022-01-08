@@ -90,8 +90,8 @@ class Ibe
             $result['starting_points'] = $this->_getStartingPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit);
             $result['exit_points'] = $this->_getExitPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit);
         }elseif(!empty($result['transport_pairs'])){
-            $result['starting_points'] = $this->_getStartingPointOptionsForId($result['transport_pairs'][0]->way1->id_starting_point, 0, $starting_points_limit);
-            $result['exit_points'] = $this->_getExitPointOptionsForId($result['transport_pairs'][0]->way2->id_starting_point, 0, $starting_points_limit);
+            $result['starting_points'] = $this->_getStartingPointOptionsForId($result['transport_pairs'][0]['way1']->id_starting_point, 0, $starting_points_limit);
+            $result['exit_points'] = $this->_getExitPointOptionsForId($result['transport_pairs'][0]['way2']->id_starting_point, 0, $starting_points_limit);
         }
         $result['has_pickup_services'] = $booking->hasPickServices();
         $result['has_starting_points'] = $booking->hasStartingPoints();
@@ -339,12 +339,12 @@ class Ibe
     private function _getStartingPointOptionsForId($id_starting_point, $start = 0 ,$limit = 10)
     {
         if(is_array($id_starting_point)){
-            $id_starting_point = implode(',', $id_starting_point);
+            $id_starting_point = implode(',"', $id_starting_point);
         }
 
         $optionObject = new Option();
-        $total_starting_point_options = $optionObject->listAll('`id_startingpoint` in( ' . $id_starting_point . ') AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0');
-        $limited_starting_point_options = $optionObject->listAll('`id_startingpoint` in( ' . $id_starting_point . ') AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0', ['zip' => 'ASC'], [$start, $limit]);
+        $total_starting_point_options = $optionObject->listAll('`id_startingpoint` in( "' . $id_starting_point . '") AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0');
+        $limited_starting_point_options = $optionObject->listAll('`id_startingpoint` in( "' . $id_starting_point . '") AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0', ['zip' => 'ASC'], [$start, $limit]);
         return array('total' => count($total_starting_point_options), 'starting_point_options' => $limited_starting_point_options);
     }
 
@@ -352,12 +352,12 @@ class Ibe
     {
 
         if(is_array($id_starting_point)){
-            $id_starting_point = implode(',', $id_starting_point);
+            $id_starting_point = implode(',"', $id_starting_point);
         }
         $optionObject = new Option();
 
-        $total_exit_point_options = $optionObject->listAll('`id_startingpoint` in( ' . $id_starting_point . ') AND (`exit` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0');
-        $limited_exit_point_options = $optionObject->listAll('`id_startingpoint` in( ' . $id_starting_point . ') AND (`exit` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0', ['zip' => 'ASC'], [$start, $limit]);
+        $total_exit_point_options = $optionObject->listAll('`id_startingpoint` in( "' . $id_starting_point . '") AND (`exit` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0');
+        $limited_exit_point_options = $optionObject->listAll('`id_startingpoint` in( "' . $id_starting_point . '") AND (`exit` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0', ['zip' => 'ASC'], [$start, $limit]);
         return array('total' => count($total_exit_point_options), 'exit_point_options' => $limited_exit_point_options);
     }
 

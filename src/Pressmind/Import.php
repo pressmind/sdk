@@ -406,14 +406,14 @@ class Import
                         Writer::write($error, WRITER::OUTPUT_FILE, 'custom_import_hook', WRITER::TYPE_ERROR);
                     }
                     if(count($custom_import_class->getErrors()) > 0) {
-                        $this->_errors[] = count($custom_import_class->getErrors()). 'errors in custom import hook. See log "custom_import_hook" for details';
+                        $this->_errors[] = count($custom_import_class->getErrors()). ' errors in custom import hook. See log "custom_import_hook" for details';
                     }
                     if(method_exists($custom_import_class, 'getWarnings')){
                         foreach ($custom_import_class->getWarnings() as $warning) {
                             Writer::write($warning, WRITER::OUTPUT_FILE, 'custom_import_hook', WRITER::TYPE_WARNING);
                         }
                         if(count($custom_import_class->getWarnings()) > 0) {
-                            $this->_errors[] = count($custom_import_class->getWarnings()). 'warnings in custom import hook. See log "custom_import_hook" for details';
+                            $this->_errors[] = count($custom_import_class->getWarnings()). ' warnings in custom import hook. See log "custom_import_hook" for details';
                         }
                     }
                 }

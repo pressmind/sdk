@@ -39,6 +39,8 @@ use DateTime;
  * @property integer $transport_2_way
  * @property string $transport_1_description
  * @property string $transport_2_description
+ * @property string $transport_1_airline
+ * @property string $transport_2_airline
  * @property integer $state
  * @property string $infotext
  * @property float $earlybird_discount
@@ -451,6 +453,22 @@ class CheapestPriceSpeed extends AbstractObject
             'transport_2_description' => [
                 'name' => 'transport_2_description',
                 'title' => 'transport_2_description',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'transport_1_airline' => [
+                'name' => 'transport_1_airline',
+                'title' => 'transport_1_airline',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'transport_2_airline' => [
+                'name' => 'transport_2_airline',
+                'title' => 'transport_2_airline',
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,

@@ -34,6 +34,7 @@ use Pressmind\ORM\Object\Touristic\SeasonalPeriod;
  * @property string $variant_code
  * @property string $request_code
  * @property string $destination_airport
+ * @property datetime $created
  * @property Pickupservice $pickupservice
  * @property Insurance\Group $insurance_group
  * @property Date[] $dates

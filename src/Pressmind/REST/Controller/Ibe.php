@@ -96,6 +96,11 @@ class Ibe
         $result['has_pickup_services'] = $booking->hasPickServices();
         $result['has_starting_points'] = $booking->hasStartingPoints();
 
+        $result['has_seatplan'] = false;
+        if(!empty($result['transport_pairs'])){
+            $result['has_seatplan'] = !empty($result['transport_pairs'][0]['way1']->seatplan_required) || !empty($result['transport_pairs'][0]['way2']->seatplan_required);
+        }
+
         $result['product'] = [
             'title' => !empty($mediaObject->getValueByTagName('pressmind-ib3.headline')) ? strip_tags($mediaObject->getValueByTagName('pressmind-ib3.headline')) : $mediaObject->name,
             'subtitle' => '',

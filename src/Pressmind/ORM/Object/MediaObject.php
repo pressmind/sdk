@@ -634,7 +634,7 @@ class MediaObject extends AbstractObject
     public static function getByCode($code)
     {
         $object = new self();
-        return $object->loadAll('code = ' . $code);
+        return $object->loadAll('code = "' . $code.'"');
     }
 
     /**

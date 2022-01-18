@@ -451,12 +451,12 @@ abstract class AbstractObject implements SplSubject
     /**
      * @throws Exception
      */
-    public function readRelations()
+    public function readRelations($exclude = [])
     {
         $this->_write_log('readRelations()');
         if(true === $this->_read_relations) {
             foreach ($this->_definitions['properties'] as $property_name => $property) {
-                if($property['type'] == 'relation') {
+                if($property['type'] == 'relation' && !in_array($property_name, $exclude)) {
                     $this->__get($property_name);
                 }
             }

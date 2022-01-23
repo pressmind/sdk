@@ -83,7 +83,7 @@ class Item extends AbstractObject
                 'title' => 'Booking_date_from',
                 'name' => 'booking_date_from',
                 'type' => 'datetime',
-                'required' => true,
+                'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,
             ],

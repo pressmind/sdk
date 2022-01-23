@@ -271,6 +271,23 @@ class Ibe
     }
 
     /**
+     * @param $params
+     * @return array
+     * @throws Exception
+     */
+    public function getCheapestPrice($params) {
+        $this->parameters = $params['data'];
+        if(empty($this->parameters['id_cheapest_price']) ){
+            return ['success' => false, 'msg' => 'error: parameters are missing: id_cheapest_price', 'data' => null, 'params' => $this->parameters];
+        }
+        $CheapestPriceSpeed = new \Pressmind\ORM\Object\CheapestPriceSpeed($this->parameters['id_cheapest_price']);
+        if($CheapestPriceSpeed->isValid()){
+            return ['success' => true, 'data' => $CheapestPriceSpeed->toStdClass()];
+        }
+        return ['success' => true, 'data' => null];
+    }
+
+    /**
      * @deprecated will be removed soon
      * @return array
      * @throws Exception

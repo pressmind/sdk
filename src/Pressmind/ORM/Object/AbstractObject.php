@@ -165,6 +165,16 @@ abstract class AbstractObject implements SplSubject
     }
 
     /**
+     * @return bool
+     */
+    public function isValid(){
+        if (is_null($this->getId())) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * @param string|array $where
      * @param array $order
      * @param array $limit

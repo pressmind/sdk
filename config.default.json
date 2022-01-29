@@ -60,7 +60,8 @@
                     "0"
                 ],
                 "my_content_class_map": {},
-                "disable_touristic_data_import": []
+                "disable_touristic_data_import": [],
+                "generate_single_room_index" : true
             },
             "media_type_custom_import_hooks": {},
             "primary_media_type_ids": null,

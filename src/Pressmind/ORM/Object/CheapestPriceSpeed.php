@@ -69,6 +69,7 @@ use DateTime;
  * @property string $booking_package_variant_code
  * @property string $booking_package_request_code
  * @property string $booking_package_name
+ * @property string $diff_to_single_room
  */
 class CheapestPriceSpeed extends AbstractObject
 {
@@ -708,6 +709,14 @@ class CheapestPriceSpeed extends AbstractObject
                 'filters' => null,
                 'validators' => null
             ],
+            'diff_to_single_room' => [
+                'name' => 'diff_to_single_room',
+                'title' => 'diff_to_single_room',
+                'type' => 'float',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
         ]
     ];
 
@@ -738,4 +747,32 @@ class CheapestPriceSpeed extends AbstractObject
         $object = new self();
         return array($object->getLowestPrice(), $object->getHighestPrice());
     }
+
+    /**
+     * generates the single room price index, on an existing price index
+     * @param $id_media_object
+     */
+    public function generateSingleRoomIndex($id_media_object){
+        $items = $this->_db->fetchAll("select * from (
+                                                    select round((select price_total from pmt2core_cheapest_price_speed
+                                                        where
+                                                            date_departure = s1.date_departure and
+                                                            duration = s1.duration and
+                                                            option_board_type <=> s1.option_board_type  and
+                                                            transport_type <=> s1.transport_type and
+                                                            id_housing_package = s1.id_housing_package and
+                                                            id_booking_package = s1.id_booking_package and
+                                                            id_media_object = s1.id_media_object and
+                                                            option_occupancy = 1
+                                                            order by price_total asc
+                                                        limit 1
+                                                        ) - s1.price_total ) as diff_to_single_room, id
+                                                    from pmt2core_cheapest_price_speed s1
+                                                    where s1.option_occupancy = 2 and id_media_object = ".$id_media_object.")
+                                                         as t where diff_to_single_room is not null");
+        foreach($items as $item){
+            $this->_db->update('pmt2core_cheapest_price_speed', ['diff_to_single_room' => $item->diff_to_single_room],['id = ?', $item->id]);
+        }
+    }
+
 }

@@ -346,11 +346,17 @@ class MongoDB extends AbstractSearch
                 'size' =>   $this->_paginator->getPageSize()
                 ]
             ];
-        }else{
+        }elseif(array_key_first($this->_sort) == 'price_total'){
             $sort = ['$sort' => [
-                        'prices.' . array_key_first($this->_sort) => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
+                        'prices.price_total' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
                     ]
             ];
+        }elseif(array_key_first($this->_sort) == 'date_departure'){
+
+            $addFieldsForDepatureSort = ['$addFields' => ['fst_date_departure' => ['$first' => '$prices.date_departures']]];
+            $stages[] = $addFieldsForDepatureSort;
+
+            $sort = ['$sort' => ['fst_date_departure' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1]];
         }
         $facetStage['$facet']['documents'][] = $sort;
         $stages[] = $facetStage;

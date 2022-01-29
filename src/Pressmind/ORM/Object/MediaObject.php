@@ -981,9 +981,13 @@ class MediaObject extends AbstractObject
 
             }
         }
+        $config = Registry::getInstance()->get('config');
+        if(!empty($config['data']['touristic']['generate_single_room_index'])) {
+            $cheapestPriceSpeed = new CheapestPriceSpeed();
+            $cheapestPriceSpeed->generateSingleRoomIndex($this->getId());
+        }
         return $result;
     }
-
 
     /**
      * @param Item $discount

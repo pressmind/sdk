@@ -14,17 +14,18 @@ class PriceRange
         $this->_priceTo = intval($priceTo);
     }
 
-    public function getQuery($type = '$match')
+    /**
+     * @return string
+     */
+    public function getType(){
+        return (new \ReflectionClass($this))->getShortName();
+    }
+
+    public function getQuery($type = 'first_match')
     {
-        if($type == '$match') {
-            return [
-                'prices' => [
-                    '$elemMatch' => [
-                        'price_total' => ['$gte' => $this->_priceFrom, '$lte' => $this->_priceTo]
-                    ]
-                ]
-            ];
-        } else if($type == '$addFields') {
+        if($type == 'first_match') {
+            return ['prices' => ['$elemMatch' => ['price_total' => ['$gte' => $this->_priceFrom, '$lte' => $this->_priceTo]]]];
+        } else if($type == 'prices_filter') {
             return [
                 ['$gte' => ['$$this.price_total', $this->_priceFrom]],
                 ['$lte' => ['$$this.price_total', $this->_priceTo]],

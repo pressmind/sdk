@@ -20,9 +20,16 @@ class Category
         $this->_combineOperator = $combineOperator;
     }
 
-    public function getQuery($type = '$match')
+    /**
+     * @return string
+     */
+    public function getType(){
+        return (new \ReflectionClass($this))->getShortName();
+    }
+
+    public function getQuery($type = 'first_match')
     {
-        if($type == '$match') {
+        if($type == 'first_match') {
             $query = [
                 'categories.field_name' => $this->_varName,
             ];

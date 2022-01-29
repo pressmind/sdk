@@ -17,9 +17,16 @@ class Code
         $this->_combineOperator = $combineOperator;
     }
 
-    public function getQuery($type = '$match')
+    /**
+     * @return string
+     */
+    public function getType(){
+        return (new \ReflectionClass($this))->getShortName();
+    }
+
+    public function getQuery($type = 'first_match')
     {
-        if($type == '$match') {
+        if($type == 'first_match') {
             if (count($this->_codes) > 1) {
                 $foo = [];
                 foreach ($this->_codes as $code) {

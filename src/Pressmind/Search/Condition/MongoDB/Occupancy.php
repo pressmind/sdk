@@ -17,9 +17,16 @@ class Occupancy
         $this->_occupancies = array_merge([null], $occupancies);
     }
 
-    public function getQuery($type = '$match')
+    /**
+     * @return string
+     */
+    public function getType(){
+        return (new \ReflectionClass($this))->getShortName();
+    }
+
+    public function getQuery($type = 'first_match')
     {
-        if($type == '$match') {
+        if($type == 'first_match') {
             /*if (count($this->_occupancies) > 1) {
                 $foo = [];
                 foreach ($this->_occupancies as $occupancy) {
@@ -29,14 +36,8 @@ class Occupancy
             } else {
                 $query['occupancy'] = $this->_occupancies[0];
             }*/
-            $query = ['prices' => [
-                '$elemMatch' => [
-                    'occupancy' => ['$in' => $this->_occupancies]
-                ]
-            ]];
-            return $query;
-        } else if($type == '$addFields')
-        {
+            return ['prices' => ['$elemMatch' => ['occupancy' => ['$in' => $this->_occupancies]]]];
+        } else if($type == 'prices_filter') {
             return [
                 ['$in' => ['$$this.occupancy', $this->_occupancies]]
             ];

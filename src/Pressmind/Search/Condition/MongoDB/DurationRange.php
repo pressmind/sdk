@@ -14,17 +14,18 @@ class DurationRange
         $this->_durationTo = intval($durationTo);
     }
 
-    public function getQuery($type = '$match')
+    /**
+     * @return string
+     */
+    public function getType(){
+        return (new \ReflectionClass($this))->getShortName();
+    }
+
+    public function getQuery($type = 'first_match')
     {
-        if($type == '$match') {
-            return [
-                'prices' => [
-                    '$elemMatch' => [
-                        'duration' => ['$gte' => $this->_durationFrom, '$lte' => $this->_durationTo]
-                    ]
-                ]
-            ];
-        } else if($type == '$addFields') {
+        if($type == 'first_match') {
+            return ['prices' => ['$elemMatch' => [['duration' => ['$gte' => $this->_durationFrom, '$lte' => $this->_durationTo]]]]];
+        } else if($type == 'prices_filter') {
             return [
                 ['$gte' => ['$$this.duration', $this->_durationFrom]],
                 ['$lte' => ['$$this.duration', $this->_durationTo]],

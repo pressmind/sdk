@@ -14,7 +14,7 @@ class MongoDB extends AbstractSearch
     /**
      * @var array
      */
-    private $_conditions;
+    private $_conditions = [];
 
     /**
      * @var Paginator|null
@@ -105,6 +105,45 @@ class MongoDB extends AbstractSearch
     }
 
     /**
+     * @param string $type
+     * @return array
+     */
+    public function getConditionByType($type){
+        foreach($this->_conditions as $condition){
+            if(strtolower($condition->getType()) == strtolower($type)){
+                return $condition;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param string $type
+     * @return bool
+     */
+    public function hasCondition($type){
+        foreach($this->_conditions as $condition){
+            if(strtolower($condition->getType()) == strtolower($type)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+    /**
+     * @return array
+     */
+    public function listConditions(){
+        $output = [];
+        foreach($this->_conditions as $condition){
+            $output[] = $condition->getType();
+        }
+        return $output;
+    }
+
+
+    /**
      * @param Paginator $paginator
      */
     public function setPaginator($paginator) {
@@ -147,51 +186,70 @@ class MongoDB extends AbstractSearch
         return $result;
     }
 
+
     /**
      * @return array
      */
     public function buildQuery()
     {
-        $this->_addLog('_buildQuery(): building query based on conditions');
-        $query['$and'] = [];
+        $stages = [];
+
+        // stage 1 first_match
+        $elemMatchPrices = [];
+        $andQuery['$and'] = [];
+        foreach ($this->_conditions as $condition_name => $condition) {
+            $andQuery['$and'][]  = $condition->getQuery('first_match');
+        }
+
+        if(!empty($andQuery['$and'])){
+            $stages[] = ['$match' => $andQuery];
+        }
+
+        // stage 2, remove unneccessary data
+        $stages[] = ['$unset' => ['fulltext']];
+
+        // stage 3, filter prices array (by occuppancy, pricerange, durationrange)
         $addFieldsConditions = [];
-        foreach ($this->_conditions as $condition) {
+        $prices_filter = ['$addFields' => ['prices' => ['$first' => ['$filter' => ['input' => '$prices', 'cond' => ['$and' => []]]]]]];
+        $prices_filter_cleanup = ['$addFields' => ['prices' => ['$filter' => ['input' => '$prices', 'cond' => ['$and' => []]]]]];
+        foreach ($this->_conditions as $condition_name => $condition) {
             $query['$and'][] = $condition->getQuery();
-            if(is_array($condition->getQuery('$addFields'))) {
-                foreach ($condition->getQuery('$addFields') as $addFieldsCondition) {
+            if(is_array($condition->getQuery('prices_filter'))) {
+                foreach ($condition->getQuery('prices_filter') as $addFieldsCondition) {
                     $addFieldsConditions[] = $addFieldsCondition;
                 }
             }
         }
-        $match = ['$match' => $query];
-        $addFields = ['$addFields' => ['prices' => ['$first' => ['$filter' => ['input' => '$prices', 'cond' => ['$and' => []]]]]]];
-        $addFields['$addFields']['prices']['$first']['$filter']['cond']['$and'] = $addFieldsConditions;
+        $prices_filter['$addFields']['prices']['$first']['$filter']['cond']['$and'] = $addFieldsConditions;
+        $prices_filter_cleanup['$addFields']['prices']['$filter']['cond']['$and'] = $addFieldsConditions;
 
-        $unset = ['$unset' => ['fulltext']];
-        if(true == $this->_get_filters || true == $this->_return_filters_only) {
-            $facet = [
+
+        // stage 4-x, filter by departure dates
+        $departure_range_filter = [];
+        if($this->hasCondition('DateRange')){
+            $stages[] = $prices_filter_cleanup;
+            $condition = $this->getConditionByType('DateRange');
+            $stages = array_merge($stages, $condition->getQuery('departure_filter'));
+        }
+        $stages[] = $prices_filter;
+
+        // stage n, build the filter stages
+        if($this->_get_filters === true || $this->_return_filters_only === true) {
+            $facetStage = [
                 '$facet' => [
                     'prices' => [
                         [
                             '$unwind' => '$prices'
                         ]
                     ],
-                    /*
-                    'categoriesUnwound' => [
-                        [
-                            '$unwind' => '$categories'
-                        ]
-                    ],*/
                     'documents' => [
                         [
                             '$match' => [
-                                'id_media_object' => [
-                                    '$exists' => true
-                                ],
                                 'prices' => [
                                     '$exists' => true
                                 ]
                             ],
+
                         ],
                     ],
                     'categoriesGrouped' => [
@@ -210,8 +268,7 @@ class MongoDB extends AbstractSearch
                 ]
             ];
 
-
-            $addFields2 = [
+            $addFieldsStage = [
                 '$addFields' => [
                     'minDuration' => [
                         '$min' => '$prices.prices.duration'
@@ -220,10 +277,10 @@ class MongoDB extends AbstractSearch
                         '$max' => '$prices.prices.duration'
                     ],
                     'minDeparture' => [
-                        '$min' => '$prices.prices.date_departure'
+                        '$first' => [ '$min' => '$prices.prices.date_departures']
                     ],
                     'maxDeparture' => [
-                        '$max' => '$prices.prices.date_departure'
+                        '$first' => ['$max' => '$prices.prices.date_departures']
                     ],
                     'minPrice' => [
                         '$min' => '$prices.prices.price_total'
@@ -250,8 +307,8 @@ class MongoDB extends AbstractSearch
                     'categoriesGrouped' => 1
                 ]
             ];
-        } else  {
-            $facet = [
+        } else { // stage n, if we don't need the filter, we use just the required methods
+            $facetStage = [
                 '$facet' => [
                     'prices' => [
                         [
@@ -261,7 +318,7 @@ class MongoDB extends AbstractSearch
                     'documents' => [
                         [
                             '$match' => [
-                                'id_media_object' => [
+                                'prices' => [
                                     '$exists' => true
                                 ]
                             ],
@@ -269,25 +326,21 @@ class MongoDB extends AbstractSearch
                     ]
                 ]
             ];
-            
-
-            $addFields2 = [
+            $addFieldsStage = [
                 '$addFields' => [
                     'total' => [
                         '$size' => '$documents'
                     ]
                 ]
             ];
-
             $project = [
                 '$project' => [
-                    'documents' => 1,
                     'total' => 1
                 ]
             ];
         }
 
-
+        // stage n, sort stages
         if(array_key_first($this->_sort) == 'rand'){
             $sort = ['$sample' => [
                 'size' =>   $this->_paginator->getPageSize()
@@ -299,11 +352,11 @@ class MongoDB extends AbstractSearch
                     ]
             ];
         }
-        $facet['$facet']['documents'][] = $sort;
-
+        $facetStage['$facet']['documents'][] = $sort;
+        $stages[] = $facetStage;
 
         if(!is_null($this->_paginator) && is_a($this->_paginator, \Pressmind\Search\Paginator::class)) {
-            $addFields2['$addFields']['currentPage'] = $this->_paginator->getCurrentPage();
+            $addFieldsStage['$addFields']['currentPage'] = $this->_paginator->getCurrentPage();
             $project['$project']['documents'] = [
                 '$slice' => [
                     '$documents',
@@ -321,18 +374,9 @@ class MongoDB extends AbstractSearch
                 ]
             ];
         }
-
-        $this->_addLog('_buildQuery(): query build');
-
-        return [
-            $match,
-            $unset,
-            $sort,
-            $addFields,
-            $facet,
-            $addFields2,
-            $project
-        ];
+        $stages[] = $addFieldsStage;
+        $stages[] = $project;
+        return $stages;
     }
 
 

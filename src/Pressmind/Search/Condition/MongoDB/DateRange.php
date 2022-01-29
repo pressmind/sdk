@@ -26,20 +26,72 @@ class DateRange
         $this->_dateTo = $dateTo;
     }
 
-    public function getQuery($type = '$match')
+    /**
+     * @return string
+     */
+    public function getType(){
+        return (new \ReflectionClass($this))->getShortName();
+    }
+
+    public function getQuery($type = 'first_match')
     {
-        if($type == '$match') {
+        if($type == 'first_match') {
+            return ['prices' => ['$elemMatch' => ['date_departures' => ['$gte' => $this->_dateFrom->format(DATE_RFC3339_EXTENDED), '$lte' => $this->_dateTo->format(DATE_RFC3339_EXTENDED)]]]];
+        } else if($type == 'departure_filter') {
             return [
-                'prices' => [
-                    '$elemMatch' => [
-                        'date_departure' => ['$gte' => $this->_dateFrom->format(DATE_RFC3339_EXTENDED), '$lte' => $this->_dateTo->format(DATE_RFC3339_EXTENDED)]
-                    ]
+                [
+                    '$addFields' =>
+                        [
+                            'prices' => [
+                                '$filter' => [
+                                    'input' => [
+                                        '$map' => [
+                                            'input' => '$prices',
+                                            'as' => 'prices',
+                                            'in' => [
+                                                '$mergeObjects' => [
+                                                    '$$prices',
+                                                    [
+                                                        'date_departures' => [
+                                                            '$filter' => [
+                                                                'input' => '$$prices.date_departures',
+                                                                'as' => 'a2',
+                                                                'cond' => [
+                                                                    '$and' => [
+                                                                        [
+                                                                            '$gte' => [
+                                                                                '$$a2',
+                                                                                $this->_dateFrom->format(DATE_RFC3339_EXTENDED)
+                                                                            ]
+                                                                        ],
+                                                                        [
+                                                                            '$lte' => [
+                                                                                '$$a2',
+                                                                                $this->_dateTo->format(DATE_RFC3339_EXTENDED)
+                                                                            ]
+                                                                        ]
+                                                                    ]
+                                                                ]
+                                                            ]
+                                                        ]
+                                                    ]
+                                                ]
+                                            ]
+                                        ]
+                                    ],
+                                    'as' => 'a3',
+                                    'cond' => [
+                                        '$gt' => [
+                                            [
+                                                '$size' => '$$a3.date_departures'
+                                            ],
+                                            0
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ]
                 ]
-            ];
-        } else if($type == '$addFields') {
-            return [
-                ['$gte' => ['$$this.date_departure', $this->_dateFrom->format(DATE_RFC3339_EXTENDED)]],
-                ['$lte' => ['$$this.date_departure', $this->_dateTo->format(DATE_RFC3339_EXTENDED)]],
             ];
         }
         return null;

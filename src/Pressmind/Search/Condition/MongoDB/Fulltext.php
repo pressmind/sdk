@@ -17,9 +17,16 @@ class Fulltext
         $this->_searchString = $searchString;
     }
 
-    public function getQuery($type = '$match')
+    /**
+     * @return string
+     */
+    public function getType(){
+        return (new \ReflectionClass($this))->getShortName();
+    }
+
+    public function getQuery($type = 'first_match')
     {
-        if($type == '$match') {
+        if($type == 'first_match') {
             return [
                 '$text' => [
                     '$search' => $this->_searchString

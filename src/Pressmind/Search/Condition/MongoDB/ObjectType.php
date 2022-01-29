@@ -17,12 +17,17 @@ class ObjectType
         $this->_id_object_type = $idObjectType;
     }
 
-    public function getQuery($type = '$match')
+    /**
+     * @return string
+     */
+    public function getType(){
+        return (new \ReflectionClass($this))->getShortName();
+    }
+
+    public function getQuery($type = 'first_match')
     {
-        if($type == '$match') {
-            return [
-                'id_object_type' => $this->_id_object_type
-            ];
+        if($type == 'first_match') {
+            return ['id_object_type' => $this->_id_object_type];
         }
         return null;
     }

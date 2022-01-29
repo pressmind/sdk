@@ -418,12 +418,10 @@ class Indexer
         // price mix date_housing
         foreach ($config['occupancies'] as $occupancy) {
             foreach ($config['duration_ranges'] as $duration_range) {
-
                 $query = "SELECT 
                 option_occupancy as occupancy, 
-                date_departure, 
-                date_arrival, 
-                duration, 
+                group_concat(date_departure) as date_departures,
+                max(duration) as duration, 
                 price_total, 
                 price_regular_before_discount, 
                 earlybird_discount, 
@@ -431,9 +429,7 @@ class Indexer
                 earlybird_discount_date_to, 
                 option_board_type, 
                 price_mix,
-                transport_type,
-                DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY) as departure_range_from, 
-                DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY) as departure_range_to 
+                transport_type
                 FROM pmt2core_cheapest_price_speed 
                 WHERE 
                 id_media_object = :id_media_object 
@@ -442,9 +438,9 @@ class Indexer
                   AND(duration BETWEEN :duration_range_from AND :duration_range_to) 
                   AND (option_occupancy = :occupancy ) 
                   AND price_mix = 'date_housing'
-                  AND (date_departure BETWEEN DATE_ADD(NOW(), INTERVAL :departure_offset_from DAY) AND DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY)) 
-                GROUP BY price_total ORDER BY price_total";
-
+                  AND (date_departure BETWEEN DATE_ADD(NOW(), INTERVAL :departure_offset_from DAY) 
+                  AND DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY)) 
+                 GROUP BY price_total ORDER BY price_total";
                 $values = [
                     ':id_media_object' => $this->mediaObject->id,
                     ':id_origin' => $origin,
@@ -454,35 +450,40 @@ class Indexer
                     ':departure_offset_from' => $config['departure_offset_from'],
                     ':departure_offset_to' => $config['departure_offset_to']
                 ];
-
-                $result = $db->fetchRow($query, $values);
-
-                if(!is_null($result)) {
-                    $result->date_departure = !is_null($result->date_departure) ? \DateTime::createFromFormat('Y-m-d H:i:s', $result->date_departure)->format(DATE_RFC3339_EXTENDED) : null;
-                    $result->date_arrival = !is_null($result->date_arrival) ? \DateTime::createFromFormat('Y-m-d H:i:s', $result->date_arrival)->format(DATE_RFC3339_EXTENDED) : null;
-                    $result->departure_range_from = !is_null($result->departure_range_from) ? \DateTime::createFromFormat('Y-m-d H:i:s', $result->departure_range_from)->format(DATE_RFC3339_EXTENDED) : null;
-                    $result->departure_range_to = !is_null($result->departure_range_to) ? \DateTime::createFromFormat('Y-m-d H:i:s', $result->departure_range_to)->format(DATE_RFC3339_EXTENDED) : null;
-                    $result->occupancy = intval($result->occupancy);
-                    $result->duration = intval($result->duration);
-                    $result->price_total = intval($result->price_total);
-                    $result->price_regular_before_discount = intval($result->price_regular_before_discount);
-                    $result->earlybird_discount = intval($result->earlybird_discount);
-                    $result->earlybird_discount_f = intval($result->earlybird_discount_f);
-                    $result->option_board_type = $result->option_board_type;
-                    $result->price_mix = $result->price_mix;
-                    $result->transport_type = $result->transport_type;
-                    $prices[] = $result;
+                $results = $db->fetchAll($query, $values);
+                if(!is_null($results)) {
+                    foreach($results as $result){
+                        $date_departures = array_unique(explode(',', $result->date_departures));
+                        asort($date_departures);
+                        $formatted_date_departures = [];
+                        foreach ($date_departures as $k => $date_departure){
+                            $date = \DateTime::createFromFormat('Y-m-d H:i:s', $date_departure);
+                            if(empty($date)){
+                               echo 'error: date is not valid'; // check group_concat max size see bootstrap.php
+                               break(1);
+                            }
+                            $formatted_date_departures[] = $date->format(DATE_RFC3339_EXTENDED);
+                        }
+                        $result->date_departures = $formatted_date_departures;
+                        $result->occupancy = intval($result->occupancy);
+                        $result->duration = intval($result->duration);
+                        $result->price_total = intval($result->price_total);
+                        $result->price_regular_before_discount = intval($result->price_regular_before_discount);
+                        $result->earlybird_discount = intval($result->earlybird_discount);
+                        $result->earlybird_discount_f = intval($result->earlybird_discount_f);
+                        $prices[] = $result;
+                    }
                 }
             }
         }
 
-        // price mix NOT date_housing, this price_mix type doesn't have a occupancy!
+
+        // price mixes NOT date_housing, this price_mix type doesn't have a occupancy!
         foreach ($config['duration_ranges'] as $duration_range) {
                 $query = "SELECT 
                 option_occupancy as occupancy, 
-                date_departure, 
-                date_arrival, 
-                duration, 
+                group_concat(date_departure) as date_departures,
+                max(duration) as duration, 
                 price_total, 
                 price_regular_before_discount, 
                 earlybird_discount, 
@@ -490,9 +491,7 @@ class Indexer
                 earlybird_discount_date_to, 
                 option_board_type, 
                 price_mix,
-                transport_type,
-                DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY) as departure_range_from, 
-                DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY) as departure_range_to 
+                transport_type
                 FROM pmt2core_cheapest_price_speed 
                 WHERE 
                 id_media_object = :id_media_object 
@@ -500,9 +499,9 @@ class Indexer
                   AND (earlybird_discount = 0 OR earlybird_discount_date_to >= NOW()) 
                   AND(duration BETWEEN :duration_range_from AND :duration_range_to) 
                   AND price_mix != 'date_housing'
-                  AND (date_departure BETWEEN DATE_ADD(NOW(), INTERVAL :departure_offset_from DAY) AND DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY)) 
+                  AND (date_departure BETWEEN DATE_ADD(NOW(), INTERVAL :departure_offset_from DAY) 
+                  AND DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY)) 
                 GROUP BY price_total ORDER BY price_total";
-
                 $values = [
                     ':id_media_object' => $this->mediaObject->id,
                     ':id_origin' => $origin,
@@ -511,25 +510,29 @@ class Indexer
                     ':departure_offset_from' => $config['departure_offset_from'],
                     ':departure_offset_to' => $config['departure_offset_to']
                 ];
-
-           
-                $result = $db->fetchRow($query, $values);
-
-                if(!is_null($result)) {
-                    $result->date_departure = !is_null($result->date_departure) ? \DateTime::createFromFormat('Y-m-d H:i:s', $result->date_departure)->format(DATE_RFC3339_EXTENDED) : null;
-                    $result->date_arrival = !is_null($result->date_arrival) ? \DateTime::createFromFormat('Y-m-d H:i:s', $result->date_arrival)->format(DATE_RFC3339_EXTENDED) : null;
-                    $result->departure_range_from = !is_null($result->departure_range_from) ? \DateTime::createFromFormat('Y-m-d H:i:s', $result->departure_range_from)->format(DATE_RFC3339_EXTENDED) : null;
-                    $result->departure_range_to = !is_null($result->departure_range_to) ? \DateTime::createFromFormat('Y-m-d H:i:s', $result->departure_range_to)->format(DATE_RFC3339_EXTENDED) : null;
-                    $result->occupancy = null;
-                    $result->duration = intval($result->duration);
-                    $result->price_total = intval($result->price_total);
-                    $result->price_regular_before_discount = intval($result->price_regular_before_discount);
-                    $result->earlybird_discount = intval($result->earlybird_discount);
-                    $result->earlybird_discount_f = intval($result->earlybird_discount_f);
-                    $result->option_board_type = $result->option_board_type;
-                    $result->transport_type = $result->transport_type;
-                    $result->price_mix = $result->price_mix;
-                    $prices[] = $result;
+                $results = $db->fetchAll($query, $values);
+                if(!is_null($results)) {
+                    foreach($results as $result){
+                        $date_departures = array_unique(explode(',', $result->date_departures));
+                        asort($date_departures);
+                        $formatted_date_departures = [];
+                        foreach ($date_departures as $k => $date_departure){
+                            $date = \DateTime::createFromFormat('Y-m-d H:i:s', $date_departure);
+                            if(empty($date)){
+                                echo 'error: date is not valid';
+                                break(1);
+                            }
+                            $formatted_date_departures[] = $date->format(DATE_RFC3339_EXTENDED);
+                        }
+                        $result->date_departures = $formatted_date_departures;
+                        $result->occupancy = null;
+                        $result->duration = intval($result->duration);
+                        $result->price_total = intval($result->price_total);
+                        $result->price_regular_before_discount = intval($result->price_regular_before_discount);
+                        $result->earlybird_discount = intval($result->earlybird_discount);
+                        $result->earlybird_discount_f = intval($result->earlybird_discount_f);
+                        $prices[] = $result;
+                    }
                 }
         }
 

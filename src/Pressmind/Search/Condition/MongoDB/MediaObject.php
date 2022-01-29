@@ -20,9 +20,16 @@ class MediaObject
         $this->_id_media_object = $idMediaObject;
     }
 
-    public function getQuery($type = '$match')
+    /**
+     * @return string
+     */
+    public function getType(){
+        return (new \ReflectionClass($this))->getShortName();
+    }
+
+    public function getQuery($type = 'first_match')
     {
-        if($type == '$match') {
+        if($type == 'first_match') {
             return [
                 'id_media_object' => [
                     '$in' => $this->_id_media_object

@@ -284,7 +284,7 @@ class Picture extends AbstractObject
     public function getUri($derivativeName = null, $force_webp = false, $sectionName = null) {
         $config = Registry::getInstance()->get('config');
         if($this->download_successful == false) {
-            return $this->getTmpUri($derivativeName);
+            return $this->getTmpUri($derivativeName, $sectionName);
         }
         if(is_null($derivativeName)) {
             return HelperFunctions::replaceConstantsFromConfig($config['image_handling']['http_src']) . '/'  . $this->file_name;
@@ -331,15 +331,23 @@ class Picture extends AbstractObject
     }
 
     /**
-     * @param null $derivativeName
+     * @param string $derivativeName
+     * @param string $sectionName
      * @return string
      */
-    public function getTmpUri($derivativeName = null)
+    public function getTmpUri($derivativeName = null, $sectionName = null)
     {
         $height = null;
         $config = Registry::getInstance()->get('config');
+        $tmp_url = $this->tmp_url;
+        if(!is_null($sectionName)){
+            $section = $this->getSection($sectionName);
+            if(!is_null($section)){
+                $tmp_url = $section->tmp_url;
+            }
+        }
         $parsed_query = [];
-        $parsed_url = parse_url($this->tmp_url);
+        $parsed_url = parse_url($tmp_url);
         parse_str($parsed_url['query'], $parsed_query);
         if(!is_null($derivativeName)) {
             if($parsed_query['w'] != $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'] ||

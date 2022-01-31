@@ -50,7 +50,7 @@ class Picture implements MapperInterface
                         $mapped_section_object->section_name = HelperFunctions::human_to_machine($picture_section->name);
                         //$mapped_section_object->uri = isset($object->uri) ? $object->uri : '';
                         $mapped_section_object->tmp_url = $picture_section->link;
-                        $mapped_section_object->file_name = $pIdMediaObject . '_' . $object->id_media_object . '_' . HelperFunctions::human_to_machine($picture_section->name) . '.' . $path_info['extension'];
+                        $mapped_section_object->file_name = $pIdMediaObject . '_' . $object->id_media_object . '_' . HelperFunctions::human_to_machine($picture_section->name) .'_'.md5($picture_section->link).'.' . $path_info['extension'];
                         $mapped_section_object->width = round($picture_section->img_width);
                         $mapped_section_object->height = round($picture_section->img_height);
                         $mapped_section_object->file_size = null;

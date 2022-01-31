@@ -203,7 +203,7 @@ class Section extends Picture
         if($max_retries >= $retry_counter) {
             try {
                 $storage_file = $downloader->download($download_url, $this->file_name);
-                $new_file_name = $this->id_media_object . '_' . $query['id'] . '_' . $this->section_name . '.' . HelperFunctions::getExtensionFromMimeType($storage_file->getMimetype());
+                $new_file_name = $this->id_media_object . '_' . $query['id'] . '_' . $this->section_name . '_'.md5($this->tmp_url). '.' . HelperFunctions::getExtensionFromMimeType($storage_file->getMimetype());
                 $this->download_successful = true;
                 $this->mime_type = $storage_file->getMimetype();
                 $storage_file->name = $new_file_name;

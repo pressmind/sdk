@@ -342,6 +342,24 @@ class Picture extends AbstractObject
         $parsed_url = parse_url($this->tmp_url);
         parse_str($parsed_url['query'], $parsed_query);
         if(!is_null($derivativeName)) {
+            if($parsed_query['w'] != $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'] ||
+                $parsed_query['h'] != $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height']
+            ){
+                $w_ratio = $parsed_query['w'] / $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'];
+                $h_ratio = $parsed_query['h'] / $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'];
+                if(!empty($parsed_query['cw'])){
+                    $parsed_query['cw'] = $parsed_query['cw'] / $w_ratio;
+                }
+                if(!empty($parsed_query['ch'])){
+                    $parsed_query['ch'] = $parsed_query['ch'] / $h_ratio;
+                }
+                if(!empty($parsed_query['cx'])){
+                    $parsed_query['cx'] = $parsed_query['cx'] / $w_ratio;
+                }
+                if(!empty($parsed_query['cy'])){
+                    $parsed_query['cy'] = $parsed_query['cy'] / $h_ratio;
+                }
+            }
             $parsed_query['w'] = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'];
             $parsed_query['h'] = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'];
         }

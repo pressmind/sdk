@@ -346,7 +346,11 @@ class Picture extends AbstractObject
                 $parsed_query['h'] != $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height']
             ){
                 $w_ratio = $parsed_query['w'] / $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'];
-                $h_ratio = $parsed_query['h'] / $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'];
+                if(!empty($parsed_query['h'])){
+                    $h_ratio = $parsed_query['h'] / $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height']; // @TODO not exists
+                }else{
+                    $h_ratio = $w_ratio;
+                }
                 if(!empty($parsed_query['cw'])){
                     $parsed_query['cw'] = $parsed_query['cw'] / $w_ratio;
                 }

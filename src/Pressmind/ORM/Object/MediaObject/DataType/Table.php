@@ -3,6 +3,7 @@
 namespace Pressmind\ORM\Object\MediaObject\DataType;
 use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\MediaObject\DataType\Table\Row;
+use Pressmind\Registry;
 
 /**
  * Class Table
@@ -121,4 +122,81 @@ class Table extends AbstractObject
             ]
         ]
     ];
+
+    /**
+     * @return array
+     */
+    public function get(){
+        $db = Registry::getInstance()->get('db');
+        $sql = 'select r.sort as row,
+                   c.sort as col,
+                   colspan,
+                   style,
+                   width,
+                   height,
+                   text
+            from pmt2core_media_object_table_rows r
+            left join pmt2core_media_object_table_row_columns c on (r.id = c.id_table_row)
+            where r.id_table = ? order by r.sort asc, c.sort asc';
+        $values = [$this->id];
+        $result = $db->fetchAll($sql, $values);
+        $table = [];
+        foreach($result as $v){
+            $table[$v->row][$v->col] = $v;
+        }
+        return $table;
+    }
+
+    /**
+     * @param string $table_class
+     * @param bool $fst_row_is_thead
+     * @param false $use_width
+     * @param false $use_height
+     * @return string
+     */
+    public function asHTML($table_class = 'table table-hover', $fst_row_is_thead = true, $use_width = false, $use_height = false){
+        $rows = $this->get();
+        if(empty($rows)){
+            return null;
+        }
+        $html = '<table';
+        if(!empty($table_class)){
+            $html .= ' class="'.$table_class.'"';
+        }
+        $html .= '/>';
+        if($fst_row_is_thead){
+            $html .= '<thead>';
+        }else{
+            $html .= '<tbody>';
+        }
+        foreach ($rows as $row => $cols){
+                $html .= '<tr>';
+            foreach ($cols as $col) {
+                $html .= $fst_row_is_thead && $row == 1 ? '<th' : '<td';
+                if(!empty($col->colspan) && $col->colspan != 1){
+                    $html .= ' colspan="'.$col->colspan.'"';
+                }
+                $styles = [];
+                if($use_width){
+                    $styles[] = 'width:'.$col->width.'px';
+                }
+                if($use_height) {
+                    $styles[] = 'height:' . $col->height . 'px';
+                }
+                if(!empty($styles)){
+                    $html .= ' style="'.implode(';', $styles);
+                }
+                $html .= '>';
+                $html .= $col->text;
+                $html .= $fst_row_is_thead && $row == 1 ? '</th>' : '</td>';
+            }
+            $html .= '</tr>';
+            if($fst_row_is_thead && $row == 1){
+                $html .= '</thead><tbody>';
+            }
+        }
+        $html .= '</tbody>';
+        $html .= '</table>';
+        return $html;
+    }
 }

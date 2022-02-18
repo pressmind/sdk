@@ -137,11 +137,19 @@ class Ibe
             if (isset($this->parameters['params']['idhp'])) {
                 $housing_packages = [$booking->getHousingPackage($this->parameters['params']['idhp'])->toStdClass()];
             } else {
-                /** @TODO: Check if loading up a full Housing\Package Object really is necessary*/
                 $housing_packages = [];
                 $housing_packages_list = $booking->getBookingPackage()->housing_packages;
                 foreach ($housing_packages_list as $housing_package) {
-                    $housing_packages[] = new Package($housing_package->id, true);
+                    $package = new Package($housing_package->id, true);
+                    $valid_options = [];
+                    foreach($package->options as $option){
+                        $current_saison = trim($option->season);
+                        if(in_array($current_saison, [$date->season, '-']) || empty($option->season)){
+                            $valid_options[] = $option;
+                        }
+                    }
+                    $package->options = $valid_options;
+                    $housing_packages[] = $package;
                 }
             }
         } else if($booking->booking_package->price_mix == 'date_transport') {

@@ -124,4 +124,90 @@ class Key_value extends AbstractObject
         ]
 
     ];
+
+    /**
+     * @param string $table_class
+     * @param bool $fst_row_is_thead
+     * @param array $head_cols
+     * <code>
+     * // Example of $head_cols
+     * [
+     *      [
+     *         'value' => 'headline 1',
+     *         'class' => 'red'
+     *      ],
+     *      [
+     *         'value' => 'headline 2',
+     *         'class' => 'red'
+     *      ],
+     * ]
+     * </code>
+     * @return string
+     */
+    public function asHTML($table_class = 'table table-hover', $fst_row_is_thead = true, $head_cols = []){
+        $data = $this->toStdClass();
+        $rows = $data->rows;
+
+        if(empty($data->rows)){
+            return null;
+        }
+        $html = '<table';
+        if(!empty($table_class)){
+            $html .= ' class="'.$table_class.'"';
+        }
+        $html .= '/>';
+        if($fst_row_is_thead){
+            $html .= '<thead>';
+        }else{
+            $html .= '<tbody>';
+        }
+
+        if(!empty($head_cols)){
+            $max_columns = count($data->rows[0]->columns);
+            array_splice($head_cols, $max_columns);
+            $head_row = new \stdClass();
+            $head_row->columns = $head_cols ;
+            $data->rows = array_merge([$head_row], $data->rows);
+        }
+        foreach ($data->rows as $row => $cols){
+            $html .= '<tr>';
+            foreach ($cols->columns as $col) {
+                $col = (array)$col;
+                $html .= $fst_row_is_thead && $row == 0 ? '<th' : '<td';
+                $classes = [];
+                if(!empty($col['var_name'])){
+                    $classes[] = $col['var_name'];
+                }
+                if(!empty($col['class'])){
+                    $classes[] = $col['class'];
+                }
+                if(!empty($classes)){
+                    $html .= ' class="'.implode(" ", $classes).'"';
+                }
+                $html .= '>';
+                if(!empty($col['datatype'])){
+                    if($col['datatype'] == 'string'){
+                        $html .= $col['value_string'];
+                    }elseif($col['datatype'] == 'integer'){
+                        $html .= $col['value_integer'];
+                    }elseif($col['datatype'] == 'float'){
+                        $html .= $col['value_float'];
+                    }elseif($col['datatype'] == 'datetime'){
+                        $html .= $col['value_datetime'];
+                    }
+                }else{
+                    $html .= $col['value'];
+                }
+
+                $html .= $fst_row_is_thead && $row == 1 ? '</th>' : '</td>';
+            }
+            $html .= '</tr>';
+            if($fst_row_is_thead && $row == 1){
+                $html .= '</thead><tbody>';
+            }
+        }
+        $html .= '</tbody>';
+        $html .= '</table>';
+        return $html;
+    }
 }

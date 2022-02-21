@@ -24,7 +24,7 @@ class DurationRange
     public function getQuery($type = 'first_match')
     {
         if($type == 'first_match') {
-            return ['prices' => ['$elemMatch' => [['duration' => ['$gte' => $this->_durationFrom, '$lte' => $this->_durationTo]]]]];
+            return ['prices' => ['$elemMatch' => ['duration' => ['$gte' => $this->_durationFrom, '$lte' => $this->_durationTo]]]];
         } else if($type == 'prices_filter') {
             return [
                 ['$gte' => ['$$this.duration', $this->_durationFrom]],

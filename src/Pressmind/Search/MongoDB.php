@@ -2,6 +2,8 @@
 
 namespace Pressmind\Search;
 
+use Pressmind\Cache\Adapter\Factory;
+use Pressmind\Log\Writer;
 use Pressmind\Registry;
 
 class MongoDB extends AbstractSearch
@@ -55,6 +57,11 @@ class MongoDB extends AbstractSearch
      * @var boolean
      */
     private $_return_filters_only;
+
+    /**
+     * @var bool
+     */
+    private $_skip_cache = false;
 
     /**
      * @param array $conditions
@@ -171,9 +178,23 @@ class MongoDB extends AbstractSearch
      * @param boolean $returnFiltersOnly
      * @return mixed
      */
-    public function getResult($getFilters = false, $returnFiltersOnly = false)
+    public function getResult($getFilters = false, $returnFiltersOnly = false, $ttl = 0)
     {
         $this->_addLog('getResult(): starting query');
+        if (!empty($ttl) && Registry::getInstance()->get('config')['cache']['enabled'] && in_array('MONGODB', Registry::getInstance()->get('config')['cache']['types']) && $this->_skip_cache == false) {
+            $key = $this->generateCacheKey();
+            $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
+            $key_exists = false;
+            if ($cache_adapter->exists($key)) {
+                $key_exists = true;
+                Writer::write(get_class($this) . ' exec() reading from cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
+                $cache_contents = json_decode($cache_adapter->get($key));
+
+            }
+            if(!empty($cache_contents) && $key_exists === true){
+                return $cache_contents;
+            }
+        }
         $this->setGetFilters($getFilters);
         $this->setReturnFiltersOnly($returnFiltersOnly);
         $client = new \MongoDB\Client($this->_db_uri);
@@ -182,8 +203,53 @@ class MongoDB extends AbstractSearch
         $db = $client->$db_name;
         $collection = $db->$collection_name;
         $result = $collection->aggregate($this->buildQuery())->toArray()[0];
+        if (!empty($ttl) && Registry::getInstance()->get('config')['cache']['enabled'] && in_array('MONGODB', Registry::getInstance()->get('config')['cache']['types']) && $this->_skip_cache == false) {
+            Writer::write(get_class($this) . ' exec() writing to cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
+            $info = new \stdClass();
+            $info->type = 'MONGODB';
+            $info->classname = self::class;
+            $info->method = 'updateCache';
+            $info->parameters = ['aggregate' => $this->buildQuery()];
+            $cache_adapter->add($key, json_encode($result), $info, $ttl);
+        }
+
         $this->_addLog('getResult(): query completed');
         return $result;
+    }
+
+    /**
+     * @param null $key
+     * @return string|null
+     * @throws \Exception
+     */
+    public function updateCache($key = null){
+        $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
+        if(is_null($key)) {
+            $key = $this->generateCacheKey();
+        }
+        $info = $this->getCacheInfo($key);
+        $params = isset($info['info']) && !empty($info['info']->parameters) ? $info['info']->parameters : null;
+        if(!is_null($params)) {
+            try {
+                $client = new \MongoDB\Client($this->_db_uri);
+                $db_name = $this->_db_name;
+                $collection_name = 'best_price_search_based_' . (!empty($this->_language) ? $this->_language.'_' : '') . 'origin_' . $this->_origin;
+                $db = $client->$db_name;
+                $collection = $db->$collection_name;
+                $result = $collection->aggregate($params->aggregate)->toArray()[0];
+                $info = new \stdClass();
+                $info->type = 'MONGODB';
+                $info->classname = self::class;
+                $info->method = 'updateCache';
+                $info->parameters = ['aggregate' => $params->aggregate];
+                Writer::write(get_class($this) . ' exec() writing to cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
+                $cache_adapter->add($key, json_encode($result), $info);
+                return $key . ': ' . $params->aggregate;
+            } catch (Exception $e) {
+                return $e->getMessage();
+            }
+        }
+        return null;
     }
 
 
@@ -392,5 +458,14 @@ class MongoDB extends AbstractSearch
     public function buildQueryAsJson($getFilters = true){
         $this->setGetFilters($getFilters);
         return json_encode($this->buildQuery());
+    }
+
+    /**
+     * @param string $add
+     * @return string
+     */
+    public function generateCacheKey($add = '')
+    {
+        return 'MONGODB_' . $add . '_' . md5(serialize($this->buildQuery()));
     }
 }

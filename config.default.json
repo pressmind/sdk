@@ -183,7 +183,8 @@
                 "REST",
                 "SEARCH",
                 "SEARCH_FILTER",
-                "OBJECT"
+                "OBJECT",
+                "MONGODB"
             ],
             "update_frequency": 3600,
             "max_idle_time": 86400

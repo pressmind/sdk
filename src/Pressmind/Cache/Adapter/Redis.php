@@ -53,12 +53,12 @@ class Redis implements AdapterInterface
         }
     }
 
-    public function add($pKey, $pValue, $info = null)
+    public function add($pKey, $pValue, $info = null, $ttl = null)
     {
         $now = new \DateTime();
         $this->_server->hSet('pmt2corecacheinfo-' . $this->_prefix, 'pmt2core-' . $this->_prefix . '-' . $pKey, json_encode($info));
         $this->_server->hSet('pmt2corecachetime-' . $this->_prefix, 'pmt2core-' . $this->_prefix . '-' . $pKey, $now->format(\DateTime::ISO8601));
-        return $this->_server->set('pmt2core-' . $this->_prefix . '-' . $pKey, $pValue, $this->_ttl);
+        return $this->_server->set('pmt2core-' . $this->_prefix . '-' . $pKey, $pValue, is_null($ttl) ? $this->_ttl : $ttl);
 
     }
 

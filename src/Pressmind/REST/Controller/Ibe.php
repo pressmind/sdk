@@ -183,6 +183,13 @@ class Ibe
             $housing_package->code_ibe = null;
             $options = [];
             foreach ($extras as $key => $extra) {
+                $current_saison = trim($extra->season);
+                if(!empty($current_saison)){
+                    if(!in_array($current_saison, [$date->season, '-'])){
+                        unset($extras[$key]);
+                        continue;
+                    }
+                }
                 $extra->occupancy_min = $extra->min_pax > 0 ? $extra->min_pax : 1;
                 $extra->occupancy_max = $extra->max_pax > 0 ? $extra->max_pax : 10;
                 $extra->occupancy = (isset($predefined_options[$extra->id]) && $predefined_options[$extra->id] > $extra->occupancy_min) ? $predefined_options[$extra->id] : $extra->occupancy_min;

@@ -5,16 +5,19 @@ namespace Pressmind\Search\Condition\MongoDB;
 class ObjectType
 {
     /**
-     * @var integer
+     * @var mixed  integer, integer[]
      */
-    private $_id_object_type;
+    private $_id_object_types;
 
     /**
      * @param integer $idObjectType
      */
-    public function __construct($idObjectType)
+    public function __construct($idObjectTypes)
     {
-        $this->_id_object_type = $idObjectType;
+        if(is_array($idObjectTypes) && count($idObjectTypes) == 1){
+            $this->_id_object_types = $idObjectTypes[0]; // prevents $in search if not necessary
+        }
+        $this->_id_object_types = $idObjectTypes;
     }
 
     /**
@@ -27,7 +30,11 @@ class ObjectType
     public function getQuery($type = 'first_match')
     {
         if($type == 'first_match') {
-            return ['id_object_type' => $this->_id_object_type];
+            if(is_array($this->_id_object_types)){
+                return ['id_object_type' => ['$in' => $this->_id_object_types]];
+            }else{
+                return ['id_object_type' => $this->_id_object_types];
+            }
         }
         return null;
     }

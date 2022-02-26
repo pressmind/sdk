@@ -102,6 +102,8 @@ class ObjectType implements ConditionInterface
                             $mediaObjectType[] = $media_object_type_id;
                         }
                     }
+                }else{
+                    $mediaObjectType[] = $media_object_type;
                 }
             }
         }

@@ -256,8 +256,10 @@ class Indexer
     {
         $data = $this->mediaObject->getDataForLanguage($language)->toStdClass();
         $description = [];
+        if(empty($this->_config['search']['descriptions'][$this->mediaObject->id_object_type])){
+            return $description;
+        }
         $description_map = $this->_config['search']['descriptions'][$this->mediaObject->id_object_type];
-
         foreach ($description_map as $index_name => $item_info) {
             $value = null;
             if(!empty($item_info['from']) && !empty($data->{$item_info['from']})){

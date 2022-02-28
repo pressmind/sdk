@@ -18,6 +18,7 @@ use Pressmind\ORM\Object\Touristic\Booking\Package;
 use Pressmind\ORM\Object\Touristic\Date;
 use Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup\Item;
 use Pressmind\ORM\Object\Touristic\Insurance\Group;
+use Pressmind\ORM\Object\Touristic\Option;
 use Pressmind\ORM\Object\Touristic\Transport;
 use Pressmind\Registry;
 use Pressmind\Search\CheapestPrice;
@@ -890,6 +891,12 @@ class MediaObject extends AbstractObject
                 }
                 if($booking_package->price_mix == 'date_ticket') {
                     $options = $date->getTickets();
+                }
+                if($booking_package->price_mix == 'date_transport') {
+                    $tmpOption = new Option();
+                    $tmpOption->name = '';
+                    $tmpOption->price = 0;
+                    $options[] = $tmpOption;
                 }
                 foreach ($options as $option) {
                     $housing_package = $option->getHousingPackage();

@@ -82,6 +82,13 @@ class Import
     }
 
     /**
+     * @return array
+     */
+    public function getImportedIds(){
+        return $this->_imported_ids;
+    }
+
+    /**
      * @param integer|null $id_pool
      * @param array|null $allowed_object_types
      * @param array|null $allowed_visibilities
@@ -182,6 +189,7 @@ class Import
     {
         foreach ($media_object_ids as $media_object_id) {
             $this->importMediaObject($media_object_id, $import_linked_objects);
+            $this->_imported_ids[] = $media_object_id;
         }
     }
 
@@ -419,6 +427,11 @@ class Import
                 }
             }
 
+            if($config['cache']['enabled'] == true && in_array('OBJECT', $config['cache']['types'])) {
+                $media_object->updateCache($id_media_object);
+                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '):  Cache has been updated', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+            }
+
             /**@TODO make creating search index more effective, complete reload of the media object is absolutely unnecessary**/
             $media_object->setReadRelations(true);
             $media_object->readRelations();
@@ -433,11 +446,7 @@ class Import
                 }
             }
 
-            if($config['cache']['enabled'] == true && in_array('OBJECT', $config['cache']['types'])) {
-                $media_object->updateCache($id_media_object);
-                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '):  Cache has been updated', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
-            }
-
+            
             unset($response);
             unset($media_object);
 

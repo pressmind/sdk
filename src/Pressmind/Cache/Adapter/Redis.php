@@ -47,7 +47,7 @@ class Redis implements AdapterInterface
 
     public function flushAll($category = null)
     {
-        $keys = $this->_server->keys('pmt2core-' . $this->_prefix . '-' . $category . '*');
+        $keys = $this->_server->keys('pm:' . $this->_prefix . ':' . $category . '*');
         foreach ($keys as $key) {
             $this->remove($key);
         }
@@ -56,32 +56,32 @@ class Redis implements AdapterInterface
     public function add($pKey, $pValue, $info = null, $ttl = null)
     {
         $now = new \DateTime();
-        $this->_server->hSet('pmt2corecacheinfo-' . $this->_prefix, 'pmt2core-' . $this->_prefix . '-' . $pKey, json_encode($info));
-        $this->_server->hSet('pmt2corecachetime-' . $this->_prefix, 'pmt2core-' . $this->_prefix . '-' . $pKey, $now->format(\DateTime::ISO8601));
-        return $this->_server->set('pmt2core-' . $this->_prefix . '-' . $pKey, $pValue, is_null($ttl) ? $this->_ttl : $ttl);
+        $this->_server->hSet('pm:' . $this->_prefix.':info', 'pm:' . $this->_prefix . ':' . $pKey, json_encode($info));
+        $this->_server->hSet('pm:' . $this->_prefix.':time', 'pm:' . $this->_prefix . ':' . $pKey, $now->format(\DateTime::ISO8601));
+        return $this->_server->set('pm:' . $this->_prefix . ':' . $pKey, $pValue, is_null($ttl) ? $this->_ttl : $ttl);
 
     }
 
     public function get($pKey)
     {
-        return $this->_server->get('pmt2core-' . $this->_prefix . '-' . $pKey);
+        return $this->_server->get('pm:' . $this->_prefix . ':' . $pKey);
     }
 
     public function exists($pKey)
     {
-        return $this->_server->exists('pmt2core-' . $this->_prefix . '-' . $pKey);
+        return $this->_server->exists('pm:' . $this->_prefix . ':' . $pKey);
     }
 
     public function remove($pKey)
     {
-        $this->_server->hDel('pmt2corecacheinfo-' . $this->_prefix, $pKey);
-        $this->_server->hDel('pmt2corecachetime-' . $this->_prefix, $pKey);
-        $this->_server->hDel('pmt2corecacheidletime-' . $this->_prefix, $pKey);
-        return $this->_server->del('pmt2core-' . $this->_prefix . '-' . $pKey);
+        $this->_server->hDel('pm:' . $this->_prefix.':info', $pKey);
+        $this->_server->hDel('pm:' . $this->_prefix.':time', $pKey);
+        $this->_server->hDel('pm:' . $this->_prefix.':idletime', $pKey);
+        return $this->_server->del('pm:' . $this->_prefix . ':' . $pKey);
     }
 
     public function updateAll($category = null) {
-        $keys = $this->_server->keys('pmt2core-' . $this->_prefix . '-' . $category . '*');
+        $keys = $this->_server->keys('pm:' . $this->_prefix . ':' . $category . '*');
         foreach ($keys as $key) {
             $this->update($key);
         }
@@ -93,22 +93,22 @@ class Redis implements AdapterInterface
 
     public function getKeys()
     {
-        return $this->_server->keys('pmt2core-' . $this->_prefix . '-*');
+        return $this->_server->keys('pm:' . $this->_prefix . ':*');
     }
 
     public function getInfo($pKey)
     {
         return [
             'key' => $pKey,
-            'info' => json_decode($this->_server->hGet('pmt2corecacheinfo-' . $this->_prefix, 'pmt2core-' . $this->_prefix . '-' . $pKey)),
-            'date' => $this->_server->hGet('pmt2corecachetime-' . $this->_prefix, 'pmt2core-' . $this->_prefix . '-' . $pKey),
-            'idle' => $this->_server->hGet('pmt2corecacheidletime-' . $this->_prefix, 'pmt2core-' . $this->_prefix . '-' . $pKey)
+            'info' => json_decode($this->_server->hGet('pm:' . $this->_prefix.':info', 'pm:' . $this->_prefix . ':' . $pKey)),
+            'date' => $this->_server->hGet('pm:' . $this->_prefix.':time', 'pm:' . $this->_prefix . ':' . $pKey),
+            'idle' => $this->_server->hGet('pm:' . $this->_prefix.':idletime', 'pm:' . $this->_prefix . ':' . $pKey)
         ];
     }
 
     public function cleanUp()
     {
-        $keys = $this->_server->keys('pmt2core-' . $this->_prefix . '-*');
+        $keys = $this->_server->keys('pm:' . $this->_prefix . ':*');
         $total_keys = count($keys);
         Writer::write('Found ' . $total_keys . ' keys in cache', WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
         $error = false;
@@ -117,10 +117,10 @@ class Redis implements AdapterInterface
             $i++;
             Writer::write($i . ' of ' . $total_keys . ' Checking key ' . $key, WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_INFO);
             $idle_time = $this->_server->object('idletime', $key);
-            $last_idle_time = $this->_server->hGet('pmt2corecacheidletime-' . $this->_prefix, $key);
-            $info = json_decode($this->_server->hGet('pmt2corecacheinfo-' . $this->_prefix, $key));
+            $last_idle_time = $this->_server->hGet('pm:' . $this->_prefix.':idletime', $key);
+            $info = json_decode($this->_server->hGet('pm:' . $this->_prefix.':info', $key));
             $now = new DateTime();
-            $cache_date = $this->_server->hGet('pmt2corecachetime-' . $this->_prefix, $key);
+            $cache_date = $this->_server->hGet('pm:' . $this->_prefix.':time', $key);
             $date = DateTime::createFromFormat(DateTime::ISO8601, $cache_date);
             $age = $now->getTimestamp() - $date->getTimestamp();
             if($idle_time - $last_idle_time > 0) {
@@ -131,9 +131,9 @@ class Redis implements AdapterInterface
             if($idle_time >= $this->_config['max_idle_time'] || $age >= $this->_config['update_frequency']) {
                 Writer::write('Deleting key ' . $key, WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_INFO);
                 $this->_server->del($key);
-                $this->_server->hDel('pmt2corecacheinfo-' . $this->_prefix, $key);
-                $this->_server->hDel('pmt2corecachetime-' . $this->_prefix, $key);
-                $this->_server->hDel('pmt2corecacheidletime-' . $this->_prefix, $key);
+                $this->_server->hDel('pm:' . $this->_prefix.':info', $key);
+                $this->_server->hDel('pm:' . $this->_prefix.':time', $key);
+                $this->_server->hDel('pm:' . $this->_prefix.':idletime', $key);
             }
             if($age >= $this->_config['update_frequency'] && $idle_time < $this->_config['max_idle_time'] && is_a($info, 'stdClass')) {
                 Writer::write('Updating key ' . $key . ' due to update frequency', WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_INFO);
@@ -161,7 +161,7 @@ class Redis implements AdapterInterface
                     Writer::write('Failed Updating key ' . $key . ': ' . $e->getMessage(), WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_ERROR);
                     $error = true;
                 }
-                $this->_server->hSet('pmt2corecacheidletime-' . $this->_prefix, $key, $idle_time);
+                $this->_server->hSet('pm:' . $this->_prefix.':idletime', $key, $idle_time);
             }
         }
         if($error == true) {

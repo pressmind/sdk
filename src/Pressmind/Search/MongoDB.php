@@ -466,6 +466,6 @@ class MongoDB extends AbstractSearch
      */
     public function generateCacheKey($add = '')
     {
-        return 'MONGODB_' . $add . '_' . md5(serialize($this->buildQuery()));
+        return 'MONGODB:' . $add . md5(serialize($this->buildQuery()));
     }
 }

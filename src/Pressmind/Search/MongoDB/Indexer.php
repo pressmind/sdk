@@ -215,7 +215,7 @@ class Indexer
     public function createIndex($idMediaObject, $language, $origin)
     {
         $searchObject = new \stdClass();
-        $this->mediaObject = new MediaObject($idMediaObject);
+        $this->mediaObject = new MediaObject($idMediaObject, true, true);
         $searchObject->_id = $this->mediaObject->id;
         $searchObject->id_object_type = $this->mediaObject->id_object_type;
         $searchObject->id_media_object = $this->mediaObject->id;

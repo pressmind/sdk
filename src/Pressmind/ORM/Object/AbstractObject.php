@@ -183,6 +183,7 @@ abstract class AbstractObject implements SplSubject
      */
     public function loadAll($where = null, $order = null, $limit = null)
     {
+        $registry = Registry::getInstance();
         $values = [];
         $result = [];
         $order_columns = [];
@@ -256,8 +257,8 @@ abstract class AbstractObject implements SplSubject
             $query .= ' LIMIT ' . $limit[0] . ', ' . $limit[1];
         }
 
-        if($this->_cache_enabled) {
-            $key = md5($query . json_encode($values));
+        if($registry->get('config')['cache']['enabled'] && in_array('QUERY', $registry->get('config')['cache']['types']) && $this->_use_cache) {
+            $key = 'QUERY:'.md5($query . json_encode($values));
             $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
             if($cache_adapter->exists($key)) {
                 Writer::write(get_class($this) . ' loadAll() reading from cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
@@ -379,7 +380,7 @@ abstract class AbstractObject implements SplSubject
      * @return string
      */
     private function _createCacheKey($id) {
-        return 'OBJECT_' . $this->getDbTableName() . '_' . $id;
+        return 'OBJECT:' . $this->getDbTableName() . ':' . $id;
     }
 
     /**

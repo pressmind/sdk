@@ -756,7 +756,7 @@ class MediaObject extends AbstractObject
         $url = implode($separator, $url_array);
         $prefix = $config['data']['media_types_pretty_url'][$this->id_object_type]['prefix'] ?? '/';
         $suffix = $config['data']['media_types_pretty_url'][$this->id_object_type]['suffix'] ?? '';
-        $final_url = $prefix . preg_replace('/\W+/', '-', $url) . $suffix;
+        $final_url = $prefix . trim(preg_replace('/\W+/', '-', $url), '-') . $suffix;
         if($strategy == 'unique' || $strategy == 'count-up') {
             if($this->_doesRouteExist($final_url)) {
                 if($strategy == 'unique') {
@@ -764,7 +764,7 @@ class MediaObject extends AbstractObject
                 }
                 if($strategy == 'count-up') {
                     for ($i = 1; $i < 1000; $i++) {
-                        $check_url = $prefix . preg_replace('/\W+/', '-', $url) . '-' . str_pad($i, 3, '0', STR_PAD_LEFT) . $suffix;
+                        $check_url = $prefix . trim(preg_replace('/\W+/', '-', $url), '-') . '-' . str_pad($i, 3, '0', STR_PAD_LEFT) . $suffix;
                         if ($this->_doesRouteExist($check_url) == false) {
                             $final_url = $check_url;
                             break;
@@ -834,6 +834,14 @@ class MediaObject extends AbstractObject
      */
     public static function getByPrettyUrl($route, $id_object_type = null, $language = null, $visibility = null)
     {
+        if(Registry::getInstance()->get('config')['cache']['enabled'] && in_array('URL', Registry::getInstance()->get('config')['cache']['types'])){
+            $key = 'URL:'.implode(':', array_filter([$id_object_type, $language, $visibility, str_replace('/', ':', trim($route,'/'))]));
+            $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
+            if($cache_adapter->exists($key)) {
+                return json_decode($cache_adapter->get($key));
+            }
+        }
+
         if(is_null($language)) {
             $config = Registry::getInstance()->get('config');
             $language = $config['data']['languages']['default'];
@@ -854,6 +862,9 @@ class MediaObject extends AbstractObject
             $values[] = $visibility;
         }
         $result = $db->fetchAll(implode(' ', $sql), $values, GetByPrettyUrl::class);
+        if(Registry::getInstance()->get('config')['cache']['enabled'] && in_array('URL', Registry::getInstance()->get('config')['cache']['types'])) {
+            $cache_adapter->add($key, json_encode($result), $result);
+        }
         return $result;
     }
 
@@ -1262,5 +1273,13 @@ class MediaObject extends AbstractObject
             'id_media_object' => $this->getId()
         ];
         return Step::listAll($filters);
+    }
+
+    /**
+     * @return bool
+     */
+    public function isAPrimaryType(){
+        $config = Registry::getInstance()->get('config');
+        return in_array($this->id_object_type, $config['data']['primary_media_type_ids']);
     }
 }

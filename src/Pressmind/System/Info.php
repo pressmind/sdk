@@ -70,6 +70,7 @@ class Info
         '\Itinerary\Variant',
         '\Itinerary\Step',
         '\Itinerary\Step\Geopoint',
+        '\Itinerary\Step\Port',
         '\Itinerary\Step\DocumentMediaObject',
         '\Itinerary\Step\DocumentMediaObject\Derivative',
         '\Itinerary\Step\Board',

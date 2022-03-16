@@ -8,6 +8,7 @@ use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\Itinerary\Step\Board;
 use Pressmind\ORM\Object\Itinerary\Step\DocumentMediaObject;
 use Pressmind\ORM\Object\Itinerary\Step\Geopoint;
+use Pressmind\ORM\Object\Itinerary\Step\Port;
 use Pressmind\ORM\Object\Itinerary\Step\Section;
 use Pressmind\ORM\Object\Itinerary\Step\TextMediaObject;
 use Pressmind\Registry;
@@ -22,6 +23,7 @@ use Pressmind\Registry;
  * @property Section[] $sections
  * @property Board[] $board
  * @property Geopoint[] $geopoints
+ * @property Port[] $ports
  * @property DocumentMediaObject[] $document_media_objects
  * @property TextMediaObject[] $text_media_objects
  */
@@ -146,6 +148,21 @@ class Step extends AbstractObject
                 'validators' => null,
                 'filters' => null
             ],
+            'ports' => [
+                'title' => 'ports',
+                'name' => 'ports',
+                'type' => 'relation',
+                'relation' => [
+                    'type' => 'hasMany',
+                    'related_id' => 'id_step',
+                    'class' => Port::class,
+                    'filters' => null,
+                    'on_save_related_properties' => ['id' => 'id_step']
+                ],
+                'required' => false,
+                'validators' => null,
+                'filters' => null
+            ],
             'document_media_objects' => [
                 'title' => 'document_media_objects',
                 'name' => 'document_media_objects',
@@ -175,7 +192,7 @@ class Step extends AbstractObject
                 'required' => false,
                 'validators' => null,
                 'filters' => null
-            ]
+            ],
         ]
     ];
 

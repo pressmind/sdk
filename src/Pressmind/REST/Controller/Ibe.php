@@ -118,7 +118,7 @@ class Ibe
             'price_mix' => $booking->getBookingPackage()->price_mix,
         ];
 
-        $extras = $booking->getAllAvailableExtras($date->departure, $date->arrival);
+        $extras = $booking->getAllAvailableExtras($date->departure, $date->arrival, $date->season);
         $result['insurances'] = $booking->getInsurances();
 
         $predefined_options = [];

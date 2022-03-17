@@ -305,18 +305,33 @@ class Booking
     /**
      * @param \DateTime $reservation_date_from
      * @param \DateTime $reservation_date_to
+     * @param string $season
      * @return Option[]
      * @throws Exception
      */
-    public function getAllAvailableExtras($reservation_date_from = null, $reservation_date_to = null) {
+    public function getAllAvailableExtras($reservation_date_from = null, $reservation_date_to = null, $season = null) {
         $extras = $this->getBookingPackage()->extras;
         $tickets = $this->getBookingPackage()->tickets;
         $sightseeings = $this->getBookingPackage()->sightseeings;
         $all_extras = array_merge($sightseeings, array_merge($extras, $tickets));
         $valid_extras = [];
-
-        // @TODO is the saison key missing here and whats about the relation to the reservation date?
+        if($season == '-'){
+            $season = null;
+        }
         foreach ($all_extras as $extra){
+            if($extra->season == '-'){
+                $extra->season = null;
+            }
+            if(!empty($extra->reservation_date_from) && !empty($extra->reservation_date_to)){
+                if($extra->reservation_date_from->format('Ymd') == $reservation_date_from->format('Ymd') &&
+                   $extra->reservation_date_to->format('Ymd') == $reservation_date_to->format('Ymd')
+                ){
+                    $valid_extras[] = $extra;
+                }
+            }elseif($extra->season == $season || empty($extra->season)){
+                $valid_extras[] = $extra;
+            }
+            /* @TODO old but good.. remove soon
             if(empty($extra->reservation_date_from) || empty($extra->reservation_date_to) ||
                 empty($reservation_date_from) || empty($reservation_date_to) ||
                 ($extra->reservation_date_from->format('Ymd') == $reservation_date_from->format('Ymd') &&
@@ -324,6 +339,7 @@ class Booking
             ){
                 $valid_extras[] = $extra;
             }
+            */
         }
         return $valid_extras;
     }

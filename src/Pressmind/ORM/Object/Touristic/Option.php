@@ -180,6 +180,7 @@ class Option extends AbstractObject
                             'sightseeing',
                             'ticket',
                             'transport_extra',
+                            'dummy', // used as little joker... for example in price_mix date_transport context
                         ],
                     ],
                 ],

@@ -155,27 +155,20 @@ class Ibe
         } else if($booking->booking_package->price_mix == 'date_transport') {
             $housing_package = new Package();
             $housing_package->name = !empty($booking_package->name) ? $booking_package->name : $result['product']['title'];
-            $option = [];
-            foreach ($result['transports'] as $transport) {
-                if(key_exists($transport->id, $predefined_options)) {
-                    $option = new \Pressmind\ORM\Object\Touristic\Option();
-                    $option->id = $transport->id;
-                    $option->name = null;
-                    $option->description_long = $transport->description_long;
-                    $option->code_ibe = $transport->code_ibe;
-                    $option->code = $transport->code;
-                    $option->max_pax = 10;
-                    $option->min_pax = 1;
-                    $option->occupancy_max = 10;
-                    $option->occupancy_min = 1;
-                    $option->occupancy = isset($predefined_options[$transport->id]) ? $predefined_options[$transport->id] : 1;
-                    $option->price = $transport->price;
-                    $option->price_due = 'person_stay';
-                    $transport->price = 0;
-                }
-            }
-            $options = [$option];
-            $housing_package->options = $options;
+            $option = new \Pressmind\ORM\Object\Touristic\Option();
+            $option->id = uniqid();
+            $option->name = 'Teilnahmegebühr';
+            $option->max_pax = 10;
+            $option->min_pax = 1;
+            $option->type = 'dummy';
+            $option->occupancy_max = 10;
+            $option->occupancy_min = 1;
+            $option->occupancy = 1;
+            $option->quota = 15;
+            $option->price_due = 'person_stay';
+            $option->price = $result['transport_pairs'][0]['way1']->price + $result['transport_pairs'][0]['way2']->price;
+            $result['transport_pairs'][0]['way1']->price = $result['transport_pairs'][0]['way2']->price = 0;
+            $housing_package->options = [$option];
             $housing_packages[] = $housing_package;
         } else {
             $housing_package = new Package();

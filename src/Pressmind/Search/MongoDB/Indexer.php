@@ -3,6 +3,7 @@
 namespace Pressmind\Search\MongoDB;
 
 use Pressmind\DB\Adapter\Pdo;
+use Pressmind\HelperFunctions;
 use Pressmind\ORM\Object\MediaObject;
 use Pressmind\Registry;
 
@@ -63,6 +64,7 @@ class Indexer
         $this->db->$collection_name->createIndex( ['categories.it_item' => 1, 'categories.field_name' => 1]);
         $this->db->$collection_name->createIndex( ['id_media_object' => 1], ['unique' => 1]);
         $this->db->$collection_name->createIndex( ['fulltext' => 'text'], ['default_language' => 'german', 'collation' => ['locale' => 'simple']]);
+        $this->db->$collection_name->createIndex( ['groups' => 1]);
     }
 
     public function createIndexes()
@@ -223,6 +225,7 @@ class Indexer
         $searchObject->code = array_filter(array_map('trim', explode(',', $this->mediaObject->code)));;
         $searchObject->description = $this->_mapDescriptions($language);
         $searchObject->categories = $this->_mapCategories($language);
+        $searchObject->groups = $this->_mapGroups($language);
         $searchObject->prices = $this->_aggregatePrices($origin);
         $searchObject->fulltext = $this->_createFulltext($language);
         $searchObject->departure_date_count = $this->_createDepartureDateCount($origin);
@@ -301,6 +304,40 @@ class Indexer
         return $description;
     }
 
+    private function _mapGroups($language)
+    {
+        $data = $this->mediaObject->getDataForLanguage($language)->toStdClass();
+        $groups = [];
+        if(empty($this->_config['search']['groups'][$this->mediaObject->id_object_type])){
+            return $groups;
+        }
+        $group_map = $this->_config['search']['groups'][$this->mediaObject->id_object_type];
+
+        if(empty($group_map['field'])){
+            echo 'Error: field must be set (if you plan to use groups!)';
+            exit; // @TODO
+        }
+        $field_name = $group_map['field'];
+        if(empty($data->$field_name)){
+            return $groups;
+        }
+        if(is_array($data->$field_name)){
+            foreach ($data->$field_name as $treeitem) {
+                $groups[] = HelperFunctions::human_to_machine($treeitem->item->name);
+            }
+        }
+        try {
+            $params = [$groups, $this->mediaObject];
+            if(!empty($group_map['params']) && is_array($group_map['params'])){
+                $params = array_merge($params, $group_map['params']);
+            }
+            $groups = call_user_func_array($group_map['filter'], $params);
+        } catch (\Exception $e) {
+            echo 'Error in filter function ' .  $group_map['filter'] . ': ' . $e->getMessage();
+            exit; // @TODO
+        }
+        return $groups;
+    }
 
     /**
      * @return array

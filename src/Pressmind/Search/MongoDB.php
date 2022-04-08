@@ -178,7 +178,7 @@ class MongoDB extends AbstractSearch
      * @param boolean $returnFiltersOnly
      * @return mixed
      */
-    public function getResult($getFilters = false, $returnFiltersOnly = false, $ttl = 0)
+    public function getResult($getFilters = false, $returnFiltersOnly = false, $ttl = 0, $output = null)
     {
         $this->_addLog('getResult(): starting query');
         if (!empty($ttl) && Registry::getInstance()->get('config')['cache']['enabled'] && in_array('MONGODB', Registry::getInstance()->get('config')['cache']['types']) && $this->_skip_cache == false) {
@@ -202,14 +202,14 @@ class MongoDB extends AbstractSearch
         $collection_name = 'best_price_search_based_' . (!empty($this->_language) ? $this->_language.'_' : '') . 'origin_' . $this->_origin;
         $db = $client->$db_name;
         $collection = $db->$collection_name;
-        $result = $collection->aggregate($this->buildQuery())->toArray()[0];
+        $result = $collection->aggregate($this->buildQuery($output))->toArray()[0];
         if (!empty($ttl) && Registry::getInstance()->get('config')['cache']['enabled'] && in_array('MONGODB', Registry::getInstance()->get('config')['cache']['types']) && $this->_skip_cache == false) {
             Writer::write(get_class($this) . ' exec() writing to cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
             $info = new \stdClass();
             $info->type = 'MONGODB';
             $info->classname = self::class;
             $info->method = 'updateCache';
-            $info->parameters = ['aggregate' => $this->buildQuery()];
+            $info->parameters = ['aggregate' => $this->buildQuery($output)];
             $cache_adapter->add($key, json_encode($result), $info, $ttl);
         }
 
@@ -256,7 +256,7 @@ class MongoDB extends AbstractSearch
     /**
      * @return array
      */
-    public function buildQuery()
+    public function buildQuery($output = null)
     {
         $stages = [];
 
@@ -298,6 +298,11 @@ class MongoDB extends AbstractSearch
             $stages = array_merge($stages, $condition->getQuery('departure_filter'));
         }
         $stages[] = $prices_filter;
+
+        // stage n - output as date_list
+        if($output == 'date_list'){
+            $stages[] = ['$unwind' => ['path' => '$prices.date_departures']];
+        }
 
         // stage n, build the filter stages
         if($this->_get_filters === true || $this->_return_filters_only === true) {
@@ -342,12 +347,6 @@ class MongoDB extends AbstractSearch
                     'maxDuration' => [
                         '$max' => '$prices.prices.duration'
                     ],
-                    'minDeparture' => [
-                        '$first' => [ '$min' => '$prices.prices.date_departures']
-                    ],
-                    'maxDeparture' => [
-                        '$first' => ['$max' => '$prices.prices.date_departures']
-                    ],
                     'minPrice' => [
                         '$min' => '$prices.prices.price_total'
                     ],
@@ -359,6 +358,22 @@ class MongoDB extends AbstractSearch
                     ]
                 ]
             ];
+
+            if($output == 'date_list'){
+                $addFieldsStage['$addFields']['minDeparture'] = [
+                    '$min' => '$prices.prices.date_departures'
+                ];
+                $addFieldsStage['$addFields']['maxDeparture'] = [
+                   '$max' => '$prices.prices.date_departures'
+                ];
+            }else{
+                $addFieldsStage['$addFields']['minDeparture'] = [
+                    '$first' => [ '$min' => '$prices.prices.date_departures']
+                ];
+                $addFieldsStage['$addFields']['maxDeparture'] = [
+                    '$first' => [ '$max' => '$prices.prices.date_departures']
+                ];
+            }
 
             $project = [
                 '$project' => [
@@ -418,11 +433,13 @@ class MongoDB extends AbstractSearch
                     ]
             ];
         }elseif(array_key_first($this->_sort) == 'date_departure'){
-
-            $addFieldsForDepatureSort = ['$addFields' => ['fst_date_departure' => ['$first' => '$prices.date_departures']]];
-            $stages[] = $addFieldsForDepatureSort;
-
-            $sort = ['$sort' => ['fst_date_departure' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1]];
+            if($output == 'date_list'){
+                $sort = ['$sort' => ['prices.date_departures' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1]];
+            }else{
+                $addFieldsForDepatureSort = ['$addFields' => ['fst_date_departure' => ['$first' => '$prices.date_departures']]];
+                $stages[] = $addFieldsForDepatureSort;
+                $sort = ['$sort' => ['fst_date_departure' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1]];
+            }
         }
         $facetStage['$facet']['documents'][] = $sort;
         $stages[] = $facetStage;

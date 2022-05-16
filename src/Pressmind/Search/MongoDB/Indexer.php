@@ -5,6 +5,7 @@ namespace Pressmind\Search\MongoDB;
 use Pressmind\DB\Adapter\Pdo;
 use Pressmind\HelperFunctions;
 use Pressmind\ORM\Object\MediaObject;
+use Pressmind\ORM\Object\Touristic\Date;
 use Pressmind\Registry;
 
 class Indexer
@@ -34,9 +35,15 @@ class Indexer
      */
     private $_allowed_visibilities;
 
+    /**
+     * @var array
+     */
+    private $_allowed_fulltext_fields;
+
     public function __construct() {
         $this->_config = Registry::getInstance()->get('config')['data']['search_mongodb'];
         $this->_allowed_visibilities = Registry::getInstance()->get('config')['data']['media_types_allowed_visibilities'];
+        $this->_allowed_fulltext_fields = Registry::getInstance()->get('config')['data']['media_types_fulltext_index_fields'];
         $uri = $this->_config['database']['uri'];
         $db_name = $this->_config['database']['db'];
         $client = new \MongoDB\Client($uri);
@@ -229,6 +236,8 @@ class Indexer
         $searchObject->prices = $this->_aggregatePrices($origin);
         $searchObject->fulltext = $this->_createFulltext($language);
         $searchObject->departure_date_count = $this->_createDepartureDateCount($origin);
+        $searchObject->valid_from = !is_null($this->mediaObject->valid_from) ?  $this->mediaObject->valid_from->format(DATE_RFC3339_EXTENDED) : null;
+        $searchObject->valid_to = !is_null($this->mediaObject->valid_to) ? $this->mediaObject->valid_to->format(DATE_RFC3339_EXTENDED) : null;
 
         //$searchObject->dates_per_month = null;
         if(!empty($this->_config['search']['five_dates_per_month_list'])){
@@ -240,7 +249,8 @@ class Indexer
             $searchObject->possible_durations = $this->_createPossibleDurations($origin);
         }
         $now = new \DateTime();
-        $searchObject->last_modified_date = $now->format(DATE_ISO8601);
+        $now->setTimezone(new \DateTimeZone('Europe/Berlin'));
+        $searchObject->last_modified_date = $now->format(DATE_RFC3339_EXTENDED);
         if(is_array($searchObject->prices) && count($searchObject->prices) > 0) {
             $searchObject->best_price_meta = $searchObject->prices[0];
         }
@@ -506,7 +516,7 @@ class Indexer
                         $result->date_departures = $formatted_date_departures;
                         $result->occupancy = intval($result->occupancy);
                         $result->duration = intval($result->duration);
-                        $result->price_total = intval($result->price_total);
+                        $result->price_total = intval($result->price_total); // @TODO pseudo price handling is missing
                         $result->price_regular_before_discount = intval($result->price_regular_before_discount);
                         $result->earlybird_discount = intval($result->earlybird_discount);
                         $result->earlybird_discount_f = intval($result->earlybird_discount_f);
@@ -595,6 +605,7 @@ class Indexer
      */
     private function _createFulltext($language = null)
     {
+        $text = [];
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
         $query = "SELECT fulltext_values from pmt2core_fulltext_search WHERE id_media_object = ? AND var_name = ?";
@@ -603,19 +614,30 @@ class Indexer
             $query .= " AND language = ?";
             $param[] = $language;
         }
-        $result = $db->fetchRow($query, $param);
-        $fulltext = !is_null($result) ? $result->fulltext_values : '';
-        $query = "select fl.fulltext_values from pmt2core_media_object_object_links ol
-                    left join pmt2core_fulltext_search fl on (fl.id_media_object = ol.id_media_object_link)
-                    where ol.id_media_object = ? and fl.var_name = ?";
-        $param = [$this->mediaObject->id, 'fulltext'];
-        if(!empty($language)) {
-            $query .= " AND fl.language = ?";
-            $param[] = $language;
+        $result = $db->fetchAll($query, $param);
+        if (is_array($result)) {
+            foreach($result as $row){
+                $text[] = $row->fulltext_values;
+            }
         }
-        $result = $db->fetchRow($query, $param);
-        $fulltext_object_links = !is_null($result) ? $result->fulltext_values : '';
-        return trim($fulltext.' '.$fulltext_object_links);
+        if(!empty($this->_allowed_fulltext_fields[$this->mediaObject->id_object_type])){
+            $allowed_fields = '"'.implode('","', array_values($this->_allowed_fulltext_fields[$this->mediaObject->id_object_type]) ).'"';
+            $query = 'select fl.fulltext_values from pmt2core_media_object_object_links ol
+                        left join pmt2core_fulltext_search fl on (fl.id_media_object = ol.id_media_object_link)
+                        where ol.id_media_object = ? and fl.var_name = ? and ol.var_name in('.$allowed_fields.')';
+            $param = [$this->mediaObject->id, 'fulltext'];
+            if(!empty($language)) {
+                $query .= " AND fl.language = ?";
+                $param[] = $language;
+            }
+            $result = $db->fetchAll($query, $param);
+            if (is_array($result)) {
+                foreach($result as $row){
+                    $text[] = $row->fulltext_values;
+                }
+            }
+        }
+        return implode(' ', $text);
     }
 
     /**

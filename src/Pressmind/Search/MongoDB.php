@@ -256,7 +256,14 @@ class MongoDB extends AbstractSearch
     /**
      * @return array
      */
-    public function buildQuery($output = null)
+
+    /**
+     * @param null $output
+     * @param false $is_preview
+     * @param \DateTime|null $preview_date
+     * @return array
+     */
+    public function buildQuery($output = null, $is_preview = false, $preview_date = null)
     {
         $stages = [];
 
@@ -269,6 +276,47 @@ class MongoDB extends AbstractSearch
 
         if(!empty($andQuery['$and'])){
             $stages[] = ['$match' => $andQuery];
+        }
+
+        // stage 1.5 only valid objects if its not a preview OR display the a preview of a defined date
+        if($is_preview === false || ($is_preview === true && $preview_date != null)){
+            $preview_date = null;
+            if($preview_date == null){
+                $now = new \DateTime();
+                $now->setTimezone(new \DateTimeZone('Europe/Berlin'));
+            }else{
+                $now = $preview_date;
+            }
+            $stages[] = [
+            '$match' => [
+                '$and' => [
+                    [
+                        '$or' => [
+                            [
+                                'valid_from' => [
+                                    '$lte' => $now->format(DATE_RFC3339_EXTENDED)
+                                ]
+                            ],
+                            [
+                                'valid_from' => null
+                            ]
+                        ]
+                    ],
+                    [
+                        '$or' => [
+                            [
+                                'valid_to' => [
+                                    '$gte' => $now->format(DATE_RFC3339_EXTENDED)
+                                ]
+                            ],
+                            [
+                                'valid_to' => null
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ];
         }
 
         // stage 2, remove unneccessary data

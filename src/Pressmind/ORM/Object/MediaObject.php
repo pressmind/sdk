@@ -645,7 +645,7 @@ class MediaObject extends AbstractObject
      */
     public function getCheapestPrice($filters = null)
     {
-        $CheapestPrice = $this->getCheapestPrices($filters, ['price_total' => 'ASC', 'date_departure' => 'ASC'], [0,1]);
+        $CheapestPrice = $this->getCheapestPrices($filters, ['price_total' => 'ASC', 'duration' => 'DESC', 'date_departure' => 'ASC'], [0,1]);
         return empty($CheapestPrice[0]) ? null : $CheapestPrice[0];
     }
 

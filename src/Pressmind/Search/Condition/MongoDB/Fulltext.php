@@ -14,7 +14,7 @@ class Fulltext
      */
     public function __construct($searchString)
     {
-        $this->_searchString = $searchString;
+        $this->_searchString = trim(str_replace(["\\", '"'], ['', ''], $searchString));
     }
 
     /**
@@ -29,7 +29,7 @@ class Fulltext
         if($type == 'first_match') {
             return [
                 '$text' => [
-                    '$search' => $this->_searchString
+                    '$search' => '"'.$this->_searchString.'"'
                 ]
             ];
         }

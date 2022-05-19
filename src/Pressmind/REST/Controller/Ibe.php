@@ -272,10 +272,11 @@ class Ibe
         //return $zip;
         //return $start;
         $radius = isset($this->parameters['radius']) ? $this->parameters['radius'] : null;
+        $ibe_client = isset($this->parameters['iic']) ? $this->parameters['iic'] : null;
         if(!is_null($zip)) {
-            return ['success' => true, 'data' => $this->_getZipRangeStartingPoints($id_starting_point, $zip, $radius, $start, $limit)];
+            return ['success' => true, 'data' => $this->_getZipRangeStartingPoints($id_starting_point, $zip, $radius, $start, $limit, $ibe_client)];
         } else {
-            return ['success' => true, 'data' => $this->_getStartingPointOptionsForId($id_starting_point, $start, $limit)];
+            return ['success' => true, 'data' => $this->_getStartingPointOptionsForId($id_starting_point, $start, $limit, $ibe_client)];
         }
     }
 
@@ -350,7 +351,7 @@ class Ibe
      * @param int $limit
      * @return array
      */
-    private function _getZipRangeStartingPoints($id_starting_point, $zip, $radius, $start = 0 ,$limit = 10)
+    private function _getZipRangeStartingPoints($id_starting_point, $zip, $radius, $start = 0 ,$limit = 10, $ibe_client = null)
     {
         /*$TouristicObject = new TouristicObject();
         $starting_point_options = [];

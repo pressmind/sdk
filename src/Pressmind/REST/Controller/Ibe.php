@@ -87,14 +87,14 @@ class Ibe
         $result['exit_points'] = [];
         if(!empty($booking->getDate()->id_starting_point)){
             // this way is soon deprecated, because its even better to use the startingpoint from the transport instead from the date
-            $result['starting_points'] = $this->_getStartingPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit);
-            $result['exit_points'] = $this->_getExitPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit);
+            $result['starting_points'] = $this->_getStartingPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit, $this->parameters['params']['iic']);
+            $result['exit_points'] = $this->_getExitPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit, $this->parameters['params']['iic']);
         }elseif(!empty($result['transport_pairs'])){
-            $result['starting_points'] = $this->_getStartingPointOptionsForId($result['transport_pairs'][0]['way1']->id_starting_point, 0, $starting_points_limit);
-            $result['exit_points'] = $this->_getExitPointOptionsForId($result['transport_pairs'][0]['way2']->id_starting_point, 0, $starting_points_limit);
+            $result['starting_points'] = $this->_getStartingPointOptionsForId($result['transport_pairs'][0]['way1']->id_starting_point, 0, $starting_points_limit, $this->parameters['params']['iic']);
+            $result['exit_points'] = $this->_getExitPointOptionsForId($result['transport_pairs'][0]['way2']->id_starting_point, 0, $starting_points_limit, $this->parameters['params']['iic']);
         }
         $result['has_pickup_services'] = $booking->hasPickServices();
-        $result['has_starting_points'] = $booking->hasStartingPoints();
+        $result['has_starting_points'] = $result['starting_points']['total'] > 0;
 
         $result['has_seatplan'] = false;
         if(!empty($result['transport_pairs'])){
@@ -135,6 +135,7 @@ class Ibe
 
         if($booking->getBookingPackage()->price_mix == 'date_housing') {
             if (isset($this->parameters['params']['idhp'])) {
+                // @TODO this not works...
                 $housing_packages = [$booking->getHousingPackage($this->parameters['params']['idhp'])->toStdClass()];
             } else {
                 $housing_packages = [];
@@ -296,101 +297,59 @@ class Ibe
     }
 
     /**
-     * @deprecated will be removed soon
+     * @param $id_starting_point
+     * @param int $start
+     * @param int $limit
+     * @param string $ibe_client
      * @return array
      * @throws Exception
      */
-    public function pressmind_ib3_get_touristic_object($params)
+    private function _getStartingPointOptionsForId($id_starting_point, $start = 0, $limit = 10, $ibe_client = null)
     {
-        return 'deprecated endpoint';
-        $this->parameters = $params['data'];
-        $booking = new Booking($this->parameters);
-        $mediaObject = new MediaObject($this->parameters['params']['imo']);
-        $settings = $this->parameters['settings'];
-        /**@var MediaObject\DataType\Picture $image**/
-        $image_info = [
-            'uri' => null,
-            'caption' => null,
-            'alt' => null
-        ];
-        $image = $mediaObject->getValueByTagName('truetravel.teaser.image')[0];
-        if(!is_null($image)) {
-            $image_info['uri'] = substr($image->getUri('teaser'), 0, 4) == 'http' ? $image->getUri('teaser') : WEBSERVER_HTTP . $image->getUri('teaser');
-            $image_info['caption'] = $image->caption;
-            $image_info['alt'] = $image->alt;
+        if(is_array($id_starting_point)){
+            $id_starting_point = implode(',"', $id_starting_point);
         }
-        $destination_name = null;
-        $destination_code = null;
-        $destinations = $mediaObject->getValueByTagName($settings['general']['destination_tag_name']['value']);
-        if(!is_null($destinations)) {
-            foreach ($destinations as $destination_array) {
-                $destination = new \Pressmind\ORM\Object\CategoryTree\Item($destination_array->id_item);
-                if(!empty($destination->code)) {
-                    $destination_name = $destination->name;
-                    $destination_code = $destination->code;
-                }
-            }
+        $optionObject = new Option();
+        $query = '`id_startingpoint` in( "' . $id_starting_point . '") AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0';
+        if(!empty($ibe_client)){
+            $query .= ' and FIND_IN_SET("'.$ibe_client.'",ibe_clients)';
         }
-        $result = [];
-        $result['booking_package'] = $booking->getBookingPackage();
-        $result['date'] = $booking->getDate();
-        $insurances = $booking->getInsurances();
-        $result['available_insurances'] = $insurances;
-        $result['available_housing_options'] = $booking->getAvailableHousingOptionsForDate();
-        $result['available_transports'] = $booking->getTransports();
-        $result['available_starting_points'] = $this->_getStartingPointOptionsForId($booking->getDate()->id_starting_point, 0, $this->parameters['settings']['steps']['starting_points']['pagination_page_size']['value']);
-        $result['available_exit_points'] = $this->_getExitPointOptionsForId($booking->getDate()->id_starting_point, 0, 10);//$this->_getParameter('settings')['steps']['starting_points']['pagination_page_size']['value']);
-        $result['has_pickup_services'] = $booking->hasPickServices();
-        $result['has_starting_points'] = $booking->hasStartingPoints();
-        $result['available_extras'] = $booking->getAllAvailableExtras();
-        $result['product'] = [
-            'title' => !empty($mediaObject->getValueByTagName('truetravel.headline')) ? strip_tags($mediaObject->getValueByTagName('truetravel.headline')) : $mediaObject->name,
-            'subtitle' => '',
-            'description' => '',
-            'name' => '',
-            'code' => $mediaObject->code,
-            'teaser_image' => $image_info,
-            'destination' => array('name' => $destination_name, 'code' => $destination_code),
-            'hotel_trust_text' => !empty($mediaObject->getValueByTagName('pressmind-ib3.hotel-trust-text')) ? $mediaObject->getValueByTagName('pressmind-ib3.hotel-trust-text') : null,
-            'trustbox_text' => !empty($mediaObject->getValueByTagName('pressmind-ib3.trustbox-text')) ? $mediaObject->getValueByTagName('pressmind-ib3.trustbox-text') : null,
-            'services_box_title' => !empty($mediaObject->getValueByTagName('pressmind-ib3.services-box-title')) ? $mediaObject->getValueByTagName('pressmind-ib3.services-box-title') : null,
-            'services_box_content' => !empty($mediaObject->getValueByTagName('pressmind-ib3.services-box-content')) ? $mediaObject->getValueByTagName('pressmind-ib3.services-box-content') : null
-        ];
-        return $result;
+        $total_starting_point_options = $optionObject->listAll($query);
+        $limited_starting_point_options = $optionObject->listAll($query, ['zip' => 'ASC'], [$start, $limit]);
+        return array('total' => count($total_starting_point_options), 'starting_point_options' => $limited_starting_point_options);
     }
 
     /**
      * @param $id_starting_point
      * @param int $start
      * @param int $limit
+     * @param null $ibe_client
      * @return array
      * @throws Exception
      */
-    private function _getStartingPointOptionsForId($id_starting_point, $start = 0 ,$limit = 10)
+    private function _getExitPointOptionsForId($id_starting_point, $start = 0, $limit = 10, $ibe_client = null)
     {
         if(is_array($id_starting_point)){
             $id_starting_point = implode(',"', $id_starting_point);
         }
-
         $optionObject = new Option();
-        $total_starting_point_options = $optionObject->listAll('`id_startingpoint` in( "' . $id_starting_point . '") AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0');
-        $limited_starting_point_options = $optionObject->listAll('`id_startingpoint` in( "' . $id_starting_point . '") AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0', ['zip' => 'ASC'], [$start, $limit]);
-        return array('total' => count($total_starting_point_options), 'starting_point_options' => $limited_starting_point_options);
-    }
-
-    private function _getExitPointOptionsForId($id_starting_point, $start = 0 ,$limit = 10)
-    {
-
-        if(is_array($id_starting_point)){
-            $id_starting_point = implode(',"', $id_starting_point);
+        $query = '`id_startingpoint` in( "' . $id_starting_point . '") AND (`exit` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0';
+        if(!empty($ibe_client)){
+            $query .= ' and FIND_IN_SET("'.$ibe_client.'",ibe_clients)';
         }
-        $optionObject = new Option();
-
-        $total_exit_point_options = $optionObject->listAll('`id_startingpoint` in( "' . $id_starting_point . '") AND (`exit` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0');
-        $limited_exit_point_options = $optionObject->listAll('`id_startingpoint` in( "' . $id_starting_point . '") AND (`exit` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0', ['zip' => 'ASC'], [$start, $limit]);
+        $total_exit_point_options = $optionObject->listAll($query);
+        $limited_exit_point_options = $optionObject->listAll($query, ['zip' => 'ASC'], [$start, $limit]);
         return array('total' => count($total_exit_point_options), 'exit_point_options' => $limited_exit_point_options);
     }
 
+    /**
+     * @param $id_starting_point
+     * @param $zip
+     * @param $radius
+     * @param int $start
+     * @param int $limit
+     * @return array
+     */
     private function _getZipRangeStartingPoints($id_starting_point, $zip, $radius, $start = 0 ,$limit = 10)
     {
         /*$TouristicObject = new TouristicObject();

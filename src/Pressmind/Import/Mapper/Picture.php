@@ -22,6 +22,9 @@ class Picture implements MapperInterface
         if(is_array($pObject)) {
             $sort = 0;
             foreach ($pObject as $object) {
+                if(empty($object->image->filename)){
+                    continue;
+                }
                 $mapped_object = new stdClass();
                 $mapped_object->sections = [];
                 $mapped_object->id_picture = $object->id_media_object;

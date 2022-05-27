@@ -31,7 +31,7 @@ use Pressmind\ORM\Object\Touristic\Option\Discount;
  * @property integer $order
  * @property integer $booking_type
  * @property string $event
- * @property integer $state
+ * @property integer $state (0 = ausgebucht, 1 = anfrage, 2 = wenig, 3 = buchbar, 4 = buchungsstopp, 5 = ausblenden)
  * @property string $code_ibe
  * @property string $price_due
  * @property string $code_ibe_board_type

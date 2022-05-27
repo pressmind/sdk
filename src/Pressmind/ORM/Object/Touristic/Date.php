@@ -350,12 +350,7 @@ class Date extends AbstractObject
      */
     public function getSightseeings()
     {
-        $sightseeings = [];
-        $sightseeings_list = Option::listAll("id_booking_package = '" . $this->id_booking_package . "' AND type = 'sightseeing' AND season = '" . $this->season . "'");
-        foreach ($sightseeings_list as $sightseeing) {
-            $sightseeings[] = $sightseeing;
-        }
-        return $sightseeings;
+        return $this->getOptions(['sightseeing']);
     }
 
     /**
@@ -364,12 +359,7 @@ class Date extends AbstractObject
      */
     public function getExtras()
     {
-        $extras = [];
-        $extras_list = Option::listAll("id_booking_package = '" . $this->id_booking_package . "' AND type = 'extra' AND season = '" . $this->season . "'");
-        foreach ($extras_list as $extra) {
-            $extras[] = $extra;
-        }
-        return $extras;
+        return $this->getOptions(['extra']);
     }
 
     /**
@@ -378,13 +368,51 @@ class Date extends AbstractObject
      */
     public function getTickets()
     {
-        $tickets = [];
-        $tickets_list = Option::listAll("id_booking_package = '" . $this->id_booking_package . "' AND type = 'ticket' AND season = '" . $this->season . "'");
-        foreach ($tickets_list as $ticket) {
-            $tickets[] = $ticket;
-        }
-        return $tickets;
+        return $this->getOptions(['ticket']);
     }
+
+    /**
+     * @return Option[]
+     * @throws Exception
+     */
+    public function getOptions($types)
+    {
+        $options = [];
+        $options_list = Option::listAll("id_booking_package = '" . $this->id_booking_package . "' 
+                                                AND type in ('".implode("','", $types)."')
+                                                AND (   
+                                                        (          
+                                                        reservation_date_from is not null
+                                                        AND reservation_date_to is not null
+                                                        AND reservation_date_from = '".$this->departure->format('Y-m-d 00:00:00')."'
+                                                        AND reservation_date_to = '".$this->departure->format('Y-m-d 00:00:00')."'
+                                                        ) OR (
+                                                        reservation_date_from is null 
+                                                        AND reservation_date_to is null 
+                                                        AND (season in ('" . $this->season . "','-', '') or season is null)
+                                                        )
+                                                    )
+                                                ");
+        foreach ($options_list as $option) {
+            $options[] = $option;
+        }
+        return $options;
+    }
+
+    /**
+     * @param $price_mix
+     * @return Option[]
+     * @throws Exception
+     */
+    public function getAllOptionsButExcludePriceMixOptions($price_mix){
+        $option_set['date_transport'] = ['ticket', 'sightseeing', 'extra'];
+        $option_set['date_housing'] = ['ticket', 'sightseeing', 'extra'];
+        $option_set['date_extra'] = ['ticket', 'sightseeing',];
+        $option_set['date_ticket'] = ['sightseeing', 'extra'];
+        $option_set['date_sightseeing'] = ['ticket', 'extra'];
+        return isset($option_set[$price_mix]) ? $this->getOptions($option_set[$price_mix]) : [];
+    }
+
 
     /**
      * @param array $state_filter

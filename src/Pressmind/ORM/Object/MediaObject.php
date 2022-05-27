@@ -888,8 +888,6 @@ class MediaObject extends AbstractObject
                 /** @var Transport[] $transport_pairs */
                 $transport_pairs = count($date->transports) > 0 ? $date->getTransportPairs([0,2,3]) : [null];
 
-                // @TODO add startingpoints and required services in this calculation
-
                 $options = [];
                 if($booking_package->price_mix == 'date_housing') {
                     $options = $date->getHousingOptions();
@@ -909,6 +907,35 @@ class MediaObject extends AbstractObject
                     $tmpOption->price = 0;
                     $options[] = $tmpOption;
                 }
+                $included_options_price = 0;
+                $included_options_description = [];
+                $id_included_options = [];
+                $cheapest_options = [];
+                $check_group_validity = [];
+                $option_list = $date->getAllOptionsButExcludePriceMixOptions($booking_package->price_mix);
+                foreach($option_list as $option){
+                    $key = $option->type.'-'.$option->required_group;
+                    if(!empty($option->required_group) && !empty($option->required)){
+                        $check_group_validity[$key]['items_count'] = isset($check_group_validity[$key]['items_count']) ? $check_group_validity[$key]['items_count'] + 1 : 0;
+                        if($option->state == 1 || $option->state == 2 || $option->state == 3){
+                            if(empty($cheapest_options[$key]->price) || $cheapest_options[$key]->price > $option->price){
+                                $cheapest_options[$key] = $option;
+                            }
+                        }else{
+                            $check_group_validity[$key]['items_count_not_valid'] = isset($check_group_validity[$key]['items_count_not_valid']) ? $check_group_validity[$key]['items_count_not_valid'] + 1 : 0;
+                        }
+                    }
+                }
+                foreach($check_group_validity as $k => $v){
+                    if(isset($v['items_count_not_valid']) && ($v['items_count'] - $v['items_count_not_valid'] == 0)){
+                        continue(2);
+                    }
+                }
+                foreach($cheapest_options as $option){
+                    $included_options_price += $option->price;
+                    $included_options_description[] = $option->name;
+                    $id_included_options[] = $option->getId();
+                }
                 foreach ($options as $option) {
                     $housing_package = $option->getHousingPackage();
                     foreach ($transport_pairs as $transport_pair) {
@@ -919,7 +946,6 @@ class MediaObject extends AbstractObject
                                 $transport_price = null;
                             }
                             $price_option = $option->price;
-
                             $cheapestPriceSpeed = new CheapestPriceSpeed();
                             $cheapestPriceSpeed->id_media_object = $this->getId();
                             $cheapestPriceSpeed->id_booking_package = $booking_package->getId();
@@ -944,7 +970,7 @@ class MediaObject extends AbstractObject
                             $cheapestPriceSpeed->price_option = $price_option;
                             $cheapestPriceSpeed->price_option_pseudo = $option->price_pseudo;
                             $cheapestPriceSpeed->option_price_due = $option->price_due;
-                            $cheapestPriceSpeed->price_regular_before_discount = $option->price + $transport_price;
+                            $cheapestPriceSpeed->price_regular_before_discount = $option->price + $transport_price + $included_options_price;
                             $cheapestPriceSpeed->transport_code = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->code : null;
                             $cheapestPriceSpeed->transport_type = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->type : null;
                             $cheapestPriceSpeed->transport_1_way = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->way : null;
@@ -956,12 +982,14 @@ class MediaObject extends AbstractObject
                             $cheapestPriceSpeed->state = 1;
                             $cheapestPriceSpeed->infotext = null;
                             $cheapestPriceSpeed->id_option_auto_book = null;
-                            $cheapestPriceSpeed->id_option_required_group = null;
+                            $cheapestPriceSpeed->id_option_required_group = null;  // @TODO deprecated
+                            $cheapestPriceSpeed->included_options_price = $included_options_price;
+                            $cheapestPriceSpeed->included_options_description = implode(',', $included_options_description);
+                            $cheapestPriceSpeed->id_included_options = implode(',', $id_included_options);
                             $cheapestPriceSpeed->id_start_point_option = null;
                             $cheapestPriceSpeed->id_origin = null;
                             $cheapestPriceSpeed->id_startingpoint = null;
                             $cheapestPriceSpeed->price_total = $cheapestPriceSpeed->price_regular_before_discount;
-
                             $cheapestPriceSpeed->earlybird_discount = null;
                             $cheapestPriceSpeed->earlybird_discount_date_to = null;
                             $cheapestPriceSpeed->earlybird_discount_f = null;

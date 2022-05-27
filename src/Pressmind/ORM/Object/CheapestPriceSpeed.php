@@ -70,6 +70,9 @@ use DateTime;
  * @property string $booking_package_request_code
  * @property string $booking_package_name
  * @property string $diff_to_single_room
+ * @property string $included_options_price
+ * @property string $included_options_description
+ * @property float $id_included_options
  */
 class CheapestPriceSpeed extends AbstractObject
 {
@@ -713,6 +716,30 @@ class CheapestPriceSpeed extends AbstractObject
                 'name' => 'diff_to_single_room',
                 'title' => 'diff_to_single_room',
                 'type' => 'float',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'included_options_price' => [
+                'name' => 'included_options_price',
+                'title' => 'included_options_price',
+                'type' => 'float',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'included_options_description' => [
+                'name' => 'included_options_description',
+                'title' => 'included_options_description',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'id_included_options' => [
+                'name' => 'id_included_options',
+                'title' => 'id_included_options',
+                'type' => 'string',
                 'required' => false,
                 'filters' => null,
                 'validators' => null

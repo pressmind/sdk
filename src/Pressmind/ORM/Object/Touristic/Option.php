@@ -55,6 +55,7 @@ use Pressmind\ORM\Object\Touristic\Option\Discount;
  * @property integer $occupancy_max
  * @property integer $occupancy_max_age
  * @property Discount $discount
+ * @property string $ibe_clients
  */
 class Option extends AbstractObject
 {
@@ -719,6 +720,14 @@ class Option extends AbstractObject
                     'class' => Discount::class,
                     'filters' => ['active' => 1]
                 ],
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'ibe_clients' => [
+                'title' => 'ibe_clients',
+                'name' => 'ibe_clients',
+                'type' => 'string',
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,

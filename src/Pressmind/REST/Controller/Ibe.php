@@ -51,6 +51,18 @@ class Ibe
                 }
             }
         }
+        $travel_type_name = null;
+        $travel_type_code = null;
+        if(isset($settings['general']['travel_type_tag_name']['value'])) {
+            $travel_types = $mediaObject->getValueByTagName($settings['general']['travel_type_tag_name']['value']);
+            if (!is_null($travel_types)) {
+                foreach ($travel_types as $travel_types_array) {
+                    $travel_type = new \Pressmind\ORM\Object\CategoryTree\Item($travel_types_array->id_item);
+                    $travel_type_name = $travel_type->name;
+                    $travel_type_code = $travel_type->code;
+                }
+            }
+        }
         $services_box_title = null;
         $services_box_content = null;
         if(!empty(strip_tags($mediaObject->getValueByTagName('pressmind-ib3.services-box-content')))){
@@ -109,6 +121,7 @@ class Ibe
             'code' => $mediaObject->code,
             'teaser_image' => $image_info,
             'destination' => array('name' => $destination_name, 'code' => $destination_code),
+            'travel_type' => array('name' => $travel_type_name, 'code' => $travel_type_code),
             'hotel_trust_text' => !empty($mediaObject->getValueByTagName('pressmind-ib3.hotel-trust-text')) ? $mediaObject->getValueByTagName('pressmind-ib3.hotel-trust-text') : null,
             'trustbox_text' => !empty($mediaObject->getValueByTagName('pressmind-ib3.trustbox-text')) ? $mediaObject->getValueByTagName('pressmind-ib3.trustbox-text') : null,
             'services_box_title' => $services_box_title,

@@ -298,6 +298,28 @@ class Ibe
     }
 
     /**
+     * @param $params
+     * @return array
+     * @throws Exception
+     */
+    public function getRequestableOffer($params) {
+        $this->parameters = $params['data'];
+        if(empty($this->parameters['id_cheapest_price']) ){
+            return ['success' => false, 'msg' => 'error: parameters are missing: id_cheapest_price', 'data' => null, 'params' => $this->parameters];
+        }
+        $CheapestPriceSpeed = new \Pressmind\ORM\Object\CheapestPriceSpeed($this->parameters['id_cheapest_price']);
+        if($CheapestPriceSpeed->isValid()){
+            $Date = new \Pressmind\ORM\Object\Touristic\Date($CheapestPriceSpeed->id_date);
+            $Options = $Date->getAllOptionsButExcludePriceMixOptions($CheapestPriceSpeed->price_mix);
+            return ['success' => true,
+                'CheapestPriceSpeed' => $CheapestPriceSpeed->toStdClass(),
+                'Options' => $Options
+            ];
+        }
+        return ['success' => true, 'CheapestPriceSpeed' => null, 'Options' => null];
+    }
+
+    /**
      * @param $id_starting_point
      * @param int $start
      * @param int $limit

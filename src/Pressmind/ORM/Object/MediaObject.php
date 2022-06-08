@@ -910,6 +910,7 @@ class MediaObject extends AbstractObject
                 $included_options_price = 0;
                 $included_options_description = [];
                 $id_included_options = [];
+                $code_ibe_included_options = [];
                 $cheapest_options = [];
                 $check_group_validity = [];
                 $option_list = $date->getAllOptionsButExcludePriceMixOptions($booking_package->price_mix);
@@ -935,6 +936,7 @@ class MediaObject extends AbstractObject
                     $included_options_price += $option->price;
                     $included_options_description[] = $option->name;
                     $id_included_options[] = $option->getId();
+                    $code_ibe_included_options[] = $option->code_ibe;
                 }
                 foreach ($options as $option) {
                     $housing_package = $option->getHousingPackage();
@@ -986,6 +988,7 @@ class MediaObject extends AbstractObject
                             $cheapestPriceSpeed->included_options_price = $included_options_price;
                             $cheapestPriceSpeed->included_options_description = implode(',', $included_options_description);
                             $cheapestPriceSpeed->id_included_options = implode(',', $id_included_options);
+                            $cheapestPriceSpeed->code_ibe_included_options = implode(',', $code_ibe_included_options);
                             $cheapestPriceSpeed->id_start_point_option = null;
                             $cheapestPriceSpeed->id_origin = null;
                             $cheapestPriceSpeed->id_startingpoint = null;

@@ -73,6 +73,7 @@ use DateTime;
  * @property string $included_options_price
  * @property string $included_options_description
  * @property float $id_included_options
+ * @property float $code_ibe_included_options
  */
 class CheapestPriceSpeed extends AbstractObject
 {
@@ -739,6 +740,14 @@ class CheapestPriceSpeed extends AbstractObject
             'id_included_options' => [
                 'name' => 'id_included_options',
                 'title' => 'id_included_options',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'code_ibe_included_options' => [
+                'name' => 'code_ibe_included_options',
+                'title' => 'code_ibe_included_options',
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,

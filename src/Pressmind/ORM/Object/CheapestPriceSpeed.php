@@ -15,7 +15,7 @@ use DateTime;
  * @property string $id_option
  * @property string $id_transport_1
  * @property string $id_transport_2
- * @property integer $duration
+ * @property float $duration
  * @property DateTime $date_departure
  * @property DateTime $date_arrival
  * @property string $option_name
@@ -241,7 +241,7 @@ class CheapestPriceSpeed extends AbstractObject
             'duration' => [
                 'name' => 'duration',
                 'title' => 'duration',
-                'type' => 'integer',
+                'type' => 'float',
                 'required' => false,
                 'filters' => null,
                 'validators' => null

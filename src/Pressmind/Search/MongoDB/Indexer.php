@@ -494,7 +494,7 @@ class Indexer
                     ':id_media_object' => $this->mediaObject->id,
                     ':id_origin' => $origin,
                     ':duration_range_from' => $duration_range[0],
-                    ':duration_range_to' => $duration_range[1],
+                    ':duration_range_to' => $duration_range[1].'.9',
                     ':occupancy' => $occupancy,
                     ':departure_offset_from' => $config['departure_offset_from'],
                     ':departure_offset_to' => $config['departure_offset_to']
@@ -515,11 +515,11 @@ class Indexer
                         }
                         $result->date_departures = $formatted_date_departures;
                         $result->occupancy = intval($result->occupancy);
-                        $result->duration = intval($result->duration);
-                        $result->price_total = intval($result->price_total); // @TODO pseudo price handling is missing
-                        $result->price_regular_before_discount = intval($result->price_regular_before_discount);
-                        $result->earlybird_discount = intval($result->earlybird_discount);
-                        $result->earlybird_discount_f = intval($result->earlybird_discount_f);
+                        $result->duration = floatval($result->duration);
+                        $result->price_total = floatval($result->price_total); // @TODO pseudo price handling is missing
+                        $result->price_regular_before_discount = floatval($result->price_regular_before_discount);
+                        $result->earlybird_discount = floatval($result->earlybird_discount);
+                        $result->earlybird_discount_f = floatval($result->earlybird_discount_f);
                         $prices[] = $result;
                     }
                 }
@@ -555,7 +555,7 @@ class Indexer
                     ':id_media_object' => $this->mediaObject->id,
                     ':id_origin' => $origin,
                     ':duration_range_from' => $duration_range[0],
-                    ':duration_range_to' => $duration_range[1],
+                    ':duration_range_to' => $duration_range[1].'.9',
                     ':departure_offset_from' => $config['departure_offset_from'],
                     ':departure_offset_to' => $config['departure_offset_to']
                 ];
@@ -575,11 +575,11 @@ class Indexer
                         }
                         $result->date_departures = $formatted_date_departures;
                         $result->occupancy = null;
-                        $result->duration = intval($result->duration);
-                        $result->price_total = intval($result->price_total);
-                        $result->price_regular_before_discount = intval($result->price_regular_before_discount);
-                        $result->earlybird_discount = intval($result->earlybird_discount);
-                        $result->earlybird_discount_f = intval($result->earlybird_discount_f);
+                        $result->duration = floatval($result->duration);
+                        $result->price_total = floatval($result->price_total);
+                        $result->price_regular_before_discount = floatval($result->price_regular_before_discount);
+                        $result->earlybird_discount = floatval($result->earlybird_discount);
+                        $result->earlybird_discount_f = floatval($result->earlybird_discount_f);
                         $prices[] = $result;
                     }
                 }

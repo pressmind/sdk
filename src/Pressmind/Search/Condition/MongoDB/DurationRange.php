@@ -10,8 +10,8 @@ class DurationRange
 
     public function __construct($durationFrom, $durationTo)
     {
-        $this->_durationFrom = intval($durationFrom);
-        $this->_durationTo = intval($durationTo);
+        $this->_durationFrom = floatval($durationFrom);
+        $this->_durationTo = floatval($durationTo.'.9');
     }
 
     /**

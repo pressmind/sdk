@@ -945,9 +945,16 @@ class MediaObject extends AbstractObject
                             if (!is_null($transport_pair) && isset($transport_pair['way1'])) {
                                 $transport_price = $transport_pair['way1']->price + (isset($transport_pair['way2']) ? $transport_pair['way2']->price : 0);
                             } else {
-                                $transport_price = null;
+                                $transport_price = 0;
                             }
-                            $price_option = $option->price;
+
+                            // zero prices are not allowed in primary options
+                            if(($booking_package->price_mix == 'date_transport' && empty($transport_price)) ||
+                                ($booking_package->price_mix != 'date_transport' && empty($option->price))
+                            ){
+                                continue;
+                            }
+
                             $cheapestPriceSpeed = new CheapestPriceSpeed();
                             $cheapestPriceSpeed->id_media_object = $this->getId();
                             $cheapestPriceSpeed->id_booking_package = $booking_package->getId();
@@ -969,7 +976,7 @@ class MediaObject extends AbstractObject
                             $cheapestPriceSpeed->price_transport_1 = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->price : null;
                             $cheapestPriceSpeed->price_transport_2 = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->price : null;
                             $cheapestPriceSpeed->price_mix = $booking_package->price_mix;
-                            $cheapestPriceSpeed->price_option = $price_option;
+                            $cheapestPriceSpeed->price_option = $option->price;
                             $cheapestPriceSpeed->price_option_pseudo = $option->price_pseudo;
                             $cheapestPriceSpeed->option_price_due = $option->price_due;
                             $cheapestPriceSpeed->price_regular_before_discount = $option->price + $transport_price + $included_options_price;

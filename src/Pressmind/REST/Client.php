@@ -67,20 +67,21 @@ class Client
      * @return stdClass
      * @throws Exception
      */
-    public function sendRequest($controller, $action, $params = null) {
+    public function sendRequest($controller, $action, $params = null)
+    {
         Writer::write('CURL initialized', Writer::OUTPUT_FILE, 'restclient', Writer::TYPE_INFO);
         $ch = curl_init();
-        if(is_array($params)) {
+        if (is_array($params)) {
             $params['cache'] = 0;
         } else {
             $params = ['cache' => 0];
         }
         $get_params = (is_array($params) && count($params) > 0) ? '?' . http_build_query($params) : '';
         $url = $this->_api_endpoint . $this->_api_key;
-        if(!empty($controller)) {
-            $url .=  '/' . $controller;
+        if (!empty($controller)) {
+            $url .= '/' . $controller;
         }
-        if(!empty($action)) {
+        if (!empty($action)) {
             $url .= '/' . $action;
         }
         curl_setopt($ch, CURLOPT_URL, $url . $get_params);
@@ -101,6 +102,14 @@ class Client
         } else {
             Writer::write('Got response from: ' . $this->_api_endpoint . $this->_api_key . '/' . $controller . '/' . $action . $get_params, Writer::OUTPUT_FILE, 'restclient', Writer::TYPE_INFO);
             Writer::write('Parsing response data ...', Writer::OUTPUT_FILE, 'restclient', Writer::TYPE_INFO);
+        }
+        if (defined('PM_SDK_DEBUG') && PM_SDK_DEBUG) {
+            $debug_str = '== DEBUG =='."\n";
+            $debug_str .= $this->_api_user . ":" . $this->_api_password."\n";
+            $debug_str .= $this->_api_endpoint . $this->_api_key . '/' . $controller . '/' . $action . $get_params."\n";
+            $debug_str .= $response."\n";
+            $debug_str .= '== DEBUG END =='."\n";
+            Writer::write($debug_str, Writer::OUTPUT_SCREEN, 'restclient', Writer::TYPE_INFO);
         }
         $json = json_decode($response);
         if(is_null($json)) {

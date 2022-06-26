@@ -24,20 +24,29 @@ class Occupancy
         return (new \ReflectionClass($this))->getShortName();
     }
 
-    public function getQuery($type = 'first_match')
+    public function getQuery($type = 'first_match', $allow_invalid_offers = false)
     {
         if($type == 'first_match') {
-            /*if (count($this->_occupancies) > 1) {
-                $foo = [];
-                foreach ($this->_occupancies as $occupancy) {
-                    $foo[] = ['occupancy' => $occupancy];
-                }
-                $query['$or'] = $foo;
-            } else {
-                $query['occupancy'] = $this->_occupancies[0];
-            }*/
-            return ['prices' => ['$elemMatch' => ['occupancy' => ['$in' => $this->_occupancies]]]];
+            if($allow_invalid_offers === false){
+                return ['prices' => ['$elemMatch' => ['occupancy' => ['$in' => $this->_occupancies]]]];
+            }else{
+                return ['$or' => [
+                    ['prices' => [
+                        '$elemMatch' => [
+                            'occupancy' => [
+                                '$in' => $this->_occupancies
+                            ]
+                        ]
+                    ]], [
+                        'prices.occupancy.0' => [
+                            '$exists' => false
+                        ]
+                    ]
+                ]
+                ];
+            }
         } else if($type == 'prices_filter') {
+            // @TODO: check if this query has an effect to $allow_invalid_offers
             return [
                 ['$in' => ['$$this.occupancy', $this->_occupancies]]
             ];

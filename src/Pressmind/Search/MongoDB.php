@@ -265,6 +265,8 @@ class MongoDB extends AbstractSearch
      */
     public function buildQuery($output = null, $is_preview = false, $preview_date = null)
     {
+        $config = Registry::getInstance()->get('config');
+        $allow_invalid_offers = !empty($config['data']['search_mongodb']['search']['allow_invalid_offers']);
         $stages = [];
 
         // stage zero, lucene atlas search
@@ -278,10 +280,10 @@ class MongoDB extends AbstractSearch
         $elemMatchPrices = [];
         $andQuery['$and'] = [];
         foreach ($this->_conditions as $condition_name => $condition) {
-            if(empty($condition->getQuery('first_match'))){
+            if(empty($condition->getQuery('first_match', $allow_invalid_offers))){
                 continue;
             }
-            $andQuery['$and'][]  = $condition->getQuery('first_match');
+            $andQuery['$and'][]  = $condition->getQuery('first_match', $allow_invalid_offers);
         }
 
         if(!empty($andQuery['$and'])){
@@ -342,8 +344,8 @@ class MongoDB extends AbstractSearch
         $prices_filter_cleanup = ['$addFields' => ['prices' => ['$filter' => ['input' => '$prices', 'cond' => ['$and' => []]]]]];
         foreach ($this->_conditions as $condition_name => $condition) {
             $query['$and'][] = $condition->getQuery();
-            if(is_array($condition->getQuery('prices_filter'))) {
-                foreach ($condition->getQuery('prices_filter') as $addFieldsCondition) {
+            if(is_array($condition->getQuery('prices_filter', $allow_invalid_offers))) {
+                foreach ($condition->getQuery('prices_filter', $allow_invalid_offers) as $addFieldsCondition) {
                     $addFieldsConditions[] = $addFieldsCondition;
                 }
             }
@@ -357,7 +359,7 @@ class MongoDB extends AbstractSearch
         if($this->hasCondition('DateRange')){
             $stages[] = $prices_filter_cleanup;
             $condition = $this->getConditionByType('DateRange');
-            $stages = array_merge($stages, $condition->getQuery('departure_filter'));
+            $stages = array_merge($stages, $condition->getQuery('departure_filter', $allow_invalid_offers));
         }
         $stages[] = $prices_filter;
 
@@ -374,33 +376,33 @@ class MongoDB extends AbstractSearch
                         [
                             '$unwind' => '$prices'
                         ]
-                    ],
-                    'documents' => [
-                        [
-                            '$match' => [
-                                'prices' => [
-                                    '$exists' => true
-                                ]
-                            ],
-
-                        ],
-                    ],
-                    'categoriesGrouped' => [
-                        [
-                            '$unwind' => '$categories'
-                        ],
-                        [
-                            '$sortByCount' => '$categories'
-                        ],
-                        [
-                            '$sort' => [
-                                '_id.name' => 1
-                            ]
-                        ]
                     ]
                 ]
             ];
-
+            if($allow_invalid_offers === false){
+                $facetStage['$facet']['documents'] =  [
+                    [
+                        '$match' => [
+                            'prices' => [
+                                '$exists' => true
+                            ]
+                        ],
+                    ],
+                ];
+            }
+            $facetStage['$facet']['categoriesGrouped'] = [
+                [
+                    '$unwind' => '$categories'
+                ],
+                [
+                    '$sortByCount' => '$categories'
+                ],
+                [
+                    '$sort' => [
+                        '_id.name' => 1
+                    ]
+                ]
+            ];
             $addFieldsStage = [
                 '$addFields' => [
                     'minDuration' => [
@@ -458,17 +460,19 @@ class MongoDB extends AbstractSearch
                             '$unwind' => '$prices'
                         ]
                     ],
-                    'documents' => [
-                        [
-                            '$match' => [
-                                'prices' => [
-                                    '$exists' => true
-                                ]
-                            ],
-                        ]
-                    ]
                 ]
             ];
+            if($allow_invalid_offers === false){
+                $facetStage['$facet']['documents'] =  [
+                    [
+                        '$match' => [
+                            'prices' => [
+                                '$exists' => true
+                            ]
+                        ],
+                    ],
+                ];
+            }
             $addFieldsStage = [
                 '$addFields' => [
                     'total' => [

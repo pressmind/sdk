@@ -255,7 +255,7 @@ class Indexer
             $searchObject->best_price_meta = $searchObject->prices[0];
         }
 
-        if(empty($searchObject->prices)){
+        if(empty($searchObject->prices) && empty($this->_config['search']['allow_invalid_offers'])){
             return false;
         }
 

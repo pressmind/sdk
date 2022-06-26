@@ -140,10 +140,10 @@
                     },
                     "five_dates_per_month_list": false,
                     "possible_duration_list": false,
+                    "allow_invalid_offers" : false,
                     "touristic": {
                         "departure_offset_from": 14,
                         "departure_offset_to": 365,
-                        "match_valid_from_to": false,
                         "occupancies": [
                             1,2,3,4,5,6
                         ],

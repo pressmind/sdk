@@ -267,15 +267,29 @@ class MongoDB extends AbstractSearch
     {
         $stages = [];
 
+        // stage zero, lucene atlas search
+        if($this->hasCondition('AtlasLuceneFulltext')){
+            $condition = $this->getConditionByType('AtlasLuceneFulltext');
+            $stages[] = $condition->getQuery('base');
+            $stages[] = $condition->getQuery('project');
+        }
+
         // stage 1 first_match
         $elemMatchPrices = [];
         $andQuery['$and'] = [];
         foreach ($this->_conditions as $condition_name => $condition) {
+            if(empty($condition->getQuery('first_match'))){
+                continue;
+            }
             $andQuery['$and'][]  = $condition->getQuery('first_match');
         }
 
         if(!empty($andQuery['$and'])){
             $stages[] = ['$match' => $andQuery];
+            if($this->hasCondition('Fulltext')){
+                $condition = $this->getConditionByType('Fulltext');
+                $stages[] = $condition->getQuery('project');
+            }
         }
 
         // stage 1.5 only valid objects if its not a preview OR display the a preview of a defined date
@@ -478,6 +492,11 @@ class MongoDB extends AbstractSearch
         }elseif(array_key_first($this->_sort) == 'price_total'){
             $sort = ['$sort' => [
                         'prices.price_total' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
+                    ]
+            ];
+        }elseif(array_key_first($this->_sort) == 'score'){
+            $sort = ['$sort' => [
+                        'score' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
                     ]
             ];
         }elseif(array_key_first($this->_sort) == 'date_departure'){

@@ -60,6 +60,7 @@ class Server
         $this->_router->addRoute(new Router\Route('redis/getKeyValue', 'GET', '\\Pressmind\\REST\\Controller', 'Redis', 'getKeyValue'));
         $this->_router->addRoute(new Router\Route('redis/getInfo', 'GET', '\\Pressmind\\REST\\Controller', 'Redis', 'getInfo'));
         $this->_router->addRoute(new Router\Route('mediaObject/getByRoute', 'POST', '\\Pressmind\\REST\\Controller', 'MediaObject', 'getByRoute'));
+        $this->_router->addRoute(new Router\Route('mediaObject/getByCode', 'POST', '\\Pressmind\\REST\\Controller', 'MediaObject', 'getByCode'));
         $this->_router->addRoute(new Router\Route('touristic/insurance/calculatePrices', 'GET', '\\Pressmind\\REST\\Controller\\Touristic', 'Insurance', 'calculatePrices'));
         $this->_router->addRoute(new Router\Route('touristic/insurance/calculatePrices', 'POST', '\\Pressmind\\REST\\Controller\\Touristic', 'Insurance', 'calculatePrices'));
         $pieces = (array_map('ucfirst', explode('/', $this->_request->getUri())));

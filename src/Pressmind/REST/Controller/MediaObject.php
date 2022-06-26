@@ -19,8 +19,8 @@ class MediaObject extends AbstractController
         }
     }
 
-    public function getByCode($code)
+    public function getByCode($params)
     {
-        return \Pressmind\ORM\Object\MediaObject::getByCode($code);
+        return \Pressmind\ORM\Object\MediaObject::getByCode($params['code']);
     }
 }

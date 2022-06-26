@@ -20,17 +20,39 @@ class Fulltext
     /**
      * @return string
      */
-    public function getType(){
+    public function getType()
+    {
         return (new \ReflectionClass($this))->getShortName();
     }
 
     public function getQuery($type = 'first_match')
     {
-        if($type == 'first_match') {
+        if ($type == 'first_match') {
             return [
                 '$text' => [
-                    '$search' => '"'.$this->_searchString.'"'
+                    '$search' => '"' . $this->_searchString . '"'
                 ]
+            ];
+        } elseif ($type == 'project') {
+            return ['$project' => [
+                'best_price_meta' => 1,
+                'categories' => 1,
+                'code' => 1,
+                'dates_per_month' => 1,
+                'departure_date_count' => 1,
+                'description' => 1,
+                'groups' => 1,
+                'id_media_object' => 1,
+                'id_object_type' => 1,
+                'last_modified_date' => 1,
+                'prices' => 1,
+                'url' => 1,
+                'valid_from' => 1,
+                'valid_to' => 1,
+                'score' => [
+                    '$meta' => 'textScore'
+                ]
+            ]
             ];
         }
         return null;

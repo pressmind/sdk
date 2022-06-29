@@ -86,8 +86,8 @@ class Booking
         $this->ids_housing_options =  isset($data['params']['iho']) ? $data['params']['iho'] : null;
         $this->id_season =  isset($data['params']['ids']) ? $data['params']['ids'] : null;
         $this->id_option =  isset($data['params']['ido']) ? $data['params']['ido'] : null;
-        $this->id_transport_way_1 =  isset($data['params']['idt1']) ? $data['params']['idt1'] : null;
-        $this->id_transport_way_2 =  isset($data['params']['idt2']) ? $data['params']['idt2'] : null;
+        $this->id_transport_way_1 =  isset($data['params']['idt1']) ? explode(',',$data['params']['idt1']) : null;
+        $this->id_transport_way_2 =  isset($data['params']['idt2']) ? explode(',', $data['params']['idt2']) : null;
         $this->transport_type =  isset($data['params']['tt']) ? $data['params']['tt'] : null;
         $this->request_type =  isset($data['params']['t']) ? $data['params']['t'] : null;
         $this->settings = isset($data['settings']) ? $data['settings'] : null;

@@ -445,6 +445,7 @@ class Date extends AbstractObject
         $valid_transports = $this->getTransports($state_filter, $ids, $types);
         $transport_pairs = [];
 
+        // @TODO
         // some transports can contain more than one groups, this multiple groups are marked with the "#"-sign
         // so we extract them first. e.g. transport_group = "Bus1#Flug1", common real world cases are one-way cruise-routes
         $extracted_transports = [];
@@ -471,7 +472,6 @@ class Date extends AbstractObject
                 $transports_with_groups[] = $transport;
             }
         }
-
         // mix transports that are not grouped
         // don't mix transport types, so we reduce this fst.
         $transports_by_type = [];
@@ -487,11 +487,49 @@ class Date extends AbstractObject
         foreach($transports_with_groups as $transport){
             $transports_by_group[trim($transport->transport_group)][] = $transport;
         }
-        foreach($transports_by_group as $transports){
+        // compress multiple transports to one transport offer (stopover flights, etc)
+        $compressed_group = [];
+        foreach($transports_by_group as $k => $transports){
+            $way_1 = null;
+            $way_2 = null;
+            foreach($transports as $transport){
+                /**
+                 * @var Transport $transport
+                 */
+                /**
+                 * @var Transport $way_1
+                 */
+                /**
+                 * @var Transport $way_2
+                 */
+                if($transport->way == 1){  // @TODO aggregate flight infos, check if the items are in the correct order
+                    if(is_null($way_1)){
+                        $way_1 = $transport->toStdClass();
+                        $way_1->description = $way_1->transport_group;
+                    }else{
+                        $way_1->price += $transport->price;
+                        $way_1->code_ibe .= '#'.$transport->code_ibe;
+                        $way_1->id .= ','.$transport->id;
+                    }
+                }else{
+                    if(is_null($way_2)){
+                        $way_2 = $transport->toStdClass();
+                        $way_2->description = $way_2->transport_group;
+                    }else{
+                        $way_2->price += $transport->price;
+                        $way_2->code_ibe .= '#'.$transport->code_ibe;
+                        $way_2->id .= ','.$transport->id;
+                    }
+                }
+            }
+            $compressed_group[$k][] = $way_1;
+            $compressed_group[$k][] = $way_2;
+        }
+        foreach($compressed_group as $transports){
             $transport_pairs = array_merge($transport_pairs, $this->_collectPairs($transports));
         }
         if(is_int($max_pairs)){
-            array_splice($transport_pairs, $max_pairs);
+           array_splice($transport_pairs, $max_pairs);
         }
         return $transport_pairs;
     }

@@ -85,7 +85,7 @@ class Ibe
         if(empty($booking->id_transport_way_1) || empty($booking->id_transport_way_2)){
             $use_transport_types = array_filter([$booking->transport_type]);
         }else{
-            $use_ways = array_filter([$booking->id_transport_way_1, $booking->id_transport_way_2]);
+            $use_ways = array_filter(array_merge($booking->id_transport_way_1, $booking->id_transport_way_2));
         }
         $result['transport_pairs'] = $date->getTransportPairs([0,2,3], $use_ways, $use_transport_types, 1);
 

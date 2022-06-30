@@ -41,6 +41,12 @@ use DateTime;
  * @property string $transport_2_description
  * @property string $transport_1_airline
  * @property string $transport_2_airline
+ * @property string $transport_1_flight
+ * @property string $transport_2_flight
+ * @property string $transport_1_date_from
+ * @property string $transport_2_date_from
+ * @property string $transport_1_date_to
+ * @property string $transport_2_date_to
  * @property integer $state
  * @property string $infotext
  * @property float $earlybird_discount
@@ -475,6 +481,55 @@ class CheapestPriceSpeed extends AbstractObject
                 'name' => 'transport_2_airline',
                 'title' => 'transport_2_airline',
                 'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'transport_1_flight' => [
+                'name' => 'transport_1_flight',
+                'title' => 'transport_1_flight',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'transport_2_flight' => [
+                'name' => 'transport_2_flight',
+                'title' => 'transport_2_flight',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+
+            'transport_1_date_from' => [
+                'name' => 'transport_1_date_from',
+                'title' => 'transport_1_date_from',
+                'type' => 'DateTime',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'transport_1_date_to' => [
+                'name' => 'transport_1_date_to',
+                'title' => 'transport_1_date_to',
+                'type' => 'DateTime',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'transport_2_date_from' => [
+                'name' => 'transport_2_date_from',
+                'title' => 'transport_2_date_from',
+                'type' => 'DateTime',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'transport_2_date_to' => [
+                'name' => 'transport_2_date_to',
+                'title' => 'transport_2_date_to',
+                'type' => 'DateTime',
                 'required' => false,
                 'filters' => null,
                 'validators' => null

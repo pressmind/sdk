@@ -490,9 +490,15 @@ class Date extends AbstractObject
         // compress multiple transports to one transport offer (stopover flights, etc)
         $compressed_group = [];
         foreach($transports_by_group as $k => $transports){
+            $transports_ordered = [];
+            foreach($transports as $k1 => $transport){
+                $key = ((float)is_null($transport->transport_date_from) ? '0.'.$k1 : $transport->transport_date_from->format('U').'.'.$k1) * 10;
+                $transports_ordered[$key] = $transport;
+            }
+            ksort($transports_ordered, SORT_NUMERIC);
             $way_1 = null;
             $way_2 = null;
-            foreach($transports as $transport){
+            foreach($transports_ordered as $transport){
                 /**
                  * @var Transport $transport
                  */
@@ -502,7 +508,7 @@ class Date extends AbstractObject
                 /**
                  * @var Transport $way_2
                  */
-                if($transport->way == 1){  // @TODO aggregate flight infos, check if the items are in the correct order
+                if($transport->way == 1){
                     if(is_null($way_1)){
                         $way_1 = $transport->toStdClass();
                         $way_1->description = $way_1->transport_group;
@@ -510,6 +516,10 @@ class Date extends AbstractObject
                         $way_1->price += $transport->price;
                         $way_1->code_ibe .= '#'.$transport->code_ibe;
                         $way_1->id .= ','.$transport->id;
+                        $way_1->airline .= ','.$transport->airline;
+                        $way_1->flight .= ','.$transport->flight;
+                        $way_1->code .= ','.$transport->code;
+                        $way_1->transport_date_to = $transport->transport_date_to;
                     }
                 }else{
                     if(is_null($way_2)){
@@ -519,6 +529,10 @@ class Date extends AbstractObject
                         $way_2->price += $transport->price;
                         $way_2->code_ibe .= '#'.$transport->code_ibe;
                         $way_2->id .= ','.$transport->id;
+                        $way_2->airline .= ','.$transport->airline;
+                        $way_2->flight .= ','.$transport->flight;
+                        $way_2->code .= ','.$transport->code;
+                        $way_2->transport_date_to = $transport->transport_date_to;
                     }
                 }
             }

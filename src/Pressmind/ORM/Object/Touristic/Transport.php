@@ -32,6 +32,8 @@ use Pressmind\System\I18n;
  * @property integer $age_to
  * @property EarlyBirdDiscountGroup $early_bird_discount_group
  * @property boolean $seatplan_required
+ * @property string $airline
+ * @property string $flight
  */
 class Transport extends AbstractObject
 {
@@ -373,6 +375,14 @@ class Transport extends AbstractObject
                 'title' => 'seatplan_required',
                 'name' => 'seatplan_required',
                 'type' => 'boolean',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'flight' => [
+                'title' => 'flight',
+                'name' => 'flight',
+                'type' => 'string',
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,

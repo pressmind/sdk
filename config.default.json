@@ -16,7 +16,6 @@
         },
         "rest": {
             "client": {
-                "api_endpoint": "https://webcore.pressmind.net/v2-4/rest/",
                 "api_key": "",
                 "api_user": "",
                 "api_password": ""

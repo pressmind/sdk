@@ -74,6 +74,9 @@ class Ibe
             }
         }
         $date = $booking->getDate();
+        if(empty($date)){
+            return ['success' => false, 'data' => null, 'code' => 'not_found', 'msg' => 'date not found, id: '.$this->parameters['params']['idd']];
+        }
         $clean_date = $date->toStdClass();
         unset($clean_date->transports); // @TODO we have to clean up, the payload is fullblown with duplicated stuff
         $result['date'] = $clean_date;
@@ -95,15 +98,16 @@ class Ibe
                 $starting_points_limit = $settings['steps']['starting_points']['pagination_page_size']['value'];
             }
         }
-        $result['starting_points'] = [];
-        $result['exit_points'] = [];
+
+        $result['starting_points'] = ['total' => 0];
+        $result['exit_points'] = ['total' => 0];
         if(!empty($booking->getDate()->id_starting_point)){
             // this way is soon deprecated, because its even better to use the startingpoint from the transport instead from the date
-            $result['starting_points'] = $this->_getStartingPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit, $this->parameters['params']['iic']);
-            $result['exit_points'] = $this->_getExitPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit, $this->parameters['params']['iic']);
+            $result['starting_points'] = $this->_getStartingPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit, !empty($this->parameters['params']['iic']) ? $this->parameters['params']['iic'] : null);
+            $result['exit_points'] = $this->_getExitPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit, !empty($this->parameters['params']['iic']) ? $this->parameters['params']['iic'] : null);
         }elseif(!empty($result['transport_pairs'])){
-            $result['starting_points'] = $this->_getStartingPointOptionsForId($result['transport_pairs'][0]['way1']->id_starting_point, 0, $starting_points_limit, $this->parameters['params']['iic']);
-            $result['exit_points'] = $this->_getExitPointOptionsForId($result['transport_pairs'][0]['way2']->id_starting_point, 0, $starting_points_limit, $this->parameters['params']['iic']);
+            $result['starting_points'] = $this->_getStartingPointOptionsForId($result['transport_pairs'][0]['way1']->id_starting_point, 0, $starting_points_limit, !empty($this->parameters['params']['iic']) ? $this->parameters['params']['iic'] : null);
+            $result['exit_points'] = $this->_getExitPointOptionsForId($result['transport_pairs'][0]['way2']->id_starting_point, 0, $starting_points_limit, !empty($this->parameters['params']['iic']) ? $this->parameters['params']['iic'] : null);
         }
         $result['has_pickup_services'] = $booking->hasPickServices();
         $result['has_starting_points'] = $result['starting_points']['total'] > 0;

@@ -732,6 +732,14 @@ class Option extends AbstractObject
                 'validators' => NULL,
                 'filters' => NULL,
             ],
+            'agencies' => [
+                'title' => 'agencies',
+                'name' => 'agencies',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
         ]
     );
 

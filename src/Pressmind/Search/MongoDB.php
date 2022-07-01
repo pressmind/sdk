@@ -77,8 +77,10 @@ class MongoDB extends AbstractSearch
         $this->_db_uri = $config['data']['search_mongodb']['database']['uri'];
         $this->_db_name = $config['data']['search_mongodb']['database']['db'];
         $this->_origin = $origin;
-        if(is_null($language)) {
-           // $this->_language = $config['data']['languages']['default'];
+        if(is_null($language) && count($config['data']['languages']['allowed']) > 1) {
+            $this->_language = $config['data']['languages']['default'];
+        }elseif(!is_null($language)){
+            $this->_language = $language;
         }
     }
 
@@ -178,7 +180,7 @@ class MongoDB extends AbstractSearch
      * @param boolean $returnFiltersOnly
      * @return mixed
      */
-    public function getResult($getFilters = false, $returnFiltersOnly = false, $ttl = 0, $output = null)
+    public function getResult($getFilters = false, $returnFiltersOnly = false, $ttl = 0, $output = null, $is_preview = false)
     {
         $this->_addLog('getResult(): starting query');
         if (!empty($ttl) && Registry::getInstance()->get('config')['cache']['enabled'] && in_array('MONGODB', Registry::getInstance()->get('config')['cache']['types']) && $this->_skip_cache == false) {
@@ -202,7 +204,7 @@ class MongoDB extends AbstractSearch
         $collection_name = 'best_price_search_based_' . (!empty($this->_language) ? $this->_language.'_' : '') . 'origin_' . $this->_origin;
         $db = $client->$db_name;
         $collection = $db->$collection_name;
-        $result = $collection->aggregate($this->buildQuery($output))->toArray()[0];
+        $result = $collection->aggregate($this->buildQuery($output, $is_preview))->toArray()[0];
         if (!empty($ttl) && Registry::getInstance()->get('config')['cache']['enabled'] && in_array('MONGODB', Registry::getInstance()->get('config')['cache']['types']) && $this->_skip_cache == false) {
             Writer::write(get_class($this) . ' exec() writing to cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
             $info = new \stdClass();

@@ -101,7 +101,7 @@ class Ibe
 
         $result['starting_points'] = ['total' => 0];
         $result['exit_points'] = ['total' => 0];
-        if(!empty($booking->getDate()->id_starting_point)){
+        if(!empty($booking->getDate()->id_starting_point) && empty($result['transport_pairs'])){
             // this way is soon deprecated, because its even better to use the startingpoint from the transport instead from the date
             $result['starting_points'] = $this->_getStartingPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit, !empty($this->parameters['params']['iic']) ? $this->parameters['params']['iic'] : null);
             $result['exit_points'] = $this->_getExitPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit, !empty($this->parameters['params']['iic']) ? $this->parameters['params']['iic'] : null);

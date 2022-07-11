@@ -719,6 +719,8 @@ class MediaObject extends AbstractObject
      */
     public function buildPrettyUrls($language = null)
     {
+
+        // @TODO umbau auf mehrsprachigkeit.
         $config = Registry::getInstance()->get('config');
         $fields = $config['data']['media_types_pretty_url'][$this->id_object_type]['fields'] ?? ['name'];
         $separator = $config['data']['media_types_pretty_url'][$this->id_object_type]['separator'] ?? '-';
@@ -728,10 +730,11 @@ class MediaObject extends AbstractObject
             if(in_array($field, $this->getPropertyNames())) {
                 $url_array[] = strtolower(HelperFunctions::replaceLatinSpecialChars(trim($this->$field)));
             } else {
-                $object = $this->getDataForLanguage($language);
-                if($object->getPropertyDefinition($field)['type'] == 'string') {
-                    if(!empty($object->$field)) {
-                        $url_array[] = strtolower(HelperFunctions::replaceLatinSpecialChars(trim(strip_tags($object->$field))));
+                $mo = new MediaObject($this->getId());
+                $moc = $mo->getDataForLanguage($language);
+                if($moc->getPropertyDefinition($field)['type'] == 'string') {
+                    if(!empty($moc->$field)) {
+                        $url_array[] = strtolower(HelperFunctions::replaceLatinSpecialChars(trim(strip_tags($moc->$field))));
                     }
                 }
                 /*if($object->getPropertyDefinition($field)['type'] == 'relation') {
@@ -794,10 +797,17 @@ class MediaObject extends AbstractObject
      */
     public function getPrettyUrl($language = null)
     {
-        $routes = $this->routes;
-        $language_prefix = is_null($language) ? null : '/' . $language;
-        if(!empty($routes)) {
-            return $language_prefix . $routes[0]->route;
+        if(!empty($this->routes)) {
+            $route = $this->routes[0]->route;
+            if(!is_null($language)){
+                foreach($this->routes as $v){
+                    if($v->language == $language){
+                        $route = '/' . $language.$v->route;
+                        break;
+                    }
+                }
+            }
+            return $route;
         }
         return null;
     }

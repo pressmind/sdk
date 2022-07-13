@@ -445,7 +445,6 @@ class Date extends AbstractObject
         $valid_transports = $this->getTransports($state_filter, $ids, $types);
         $transport_pairs = [];
 
-        // @TODO
         // some transports can contain more than one groups, this multiple groups are marked with the "#"-sign
         // so we extract them first. e.g. transport_group = "Bus1#Flug1", common real world cases are one-way cruise-routes
         $extracted_transports = [];
@@ -462,6 +461,38 @@ class Date extends AbstractObject
                     $extracted_transports[] = $newTransport;
                 }
             }
+        }
+
+        // remove orphans
+        $c = [];
+        foreach($extracted_transports as $extracted_transport){
+            if(empty($extracted_transport->transport_group)){
+                $extracted_transport->transport_group = 'empty';
+            }
+            if(!isset($c[$extracted_transport->transport_group])){
+                $c[$extracted_transport->transport_group] = [];
+            }
+            if(!isset($c[$extracted_transport->transport_group][$extracted_transport->way])){
+                $c[$extracted_transport->transport_group][$extracted_transport->way] = 1;
+            }else{
+                $c[$extracted_transport->transport_group][$extracted_transport->way]++;
+            }
+        }
+        $invalid_groups = [];
+        foreach($c as $group => $item){
+            if(!isset($item[1]) || !isset($item[2])){
+                $invalid_groups[] = $group;
+            }
+        }
+        if(!empty($invalid_groups)){
+            $extracted_transports_clean = [];
+            foreach($extracted_transports as $extracted_transport){
+                if(!in_array($extracted_transport->transport_group, $invalid_groups)){
+                    $extracted_transport->transport_group = $extracted_transport->transport_group == 'empty' ? null : $extracted_transport->transport_group;
+                    $extracted_transports_clean[] = $extracted_transport;
+                }
+            }
+            $extracted_transports = $extracted_transports_clean;
         }
         $transports_without_groups = [];
         $transports_with_groups = [];

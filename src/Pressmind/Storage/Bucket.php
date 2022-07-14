@@ -50,6 +50,15 @@ class Bucket
         $storageProvider = Factory::create($this->_storage_provider_name);
         return $storageProvider->delete($file, $this);
     }
+    /**
+     * @return true
+     * @throws Exception
+     */
+    public function removeAll()
+    {
+        $storageProvider = Factory::create($this->_storage_provider_name);
+        return $storageProvider->deleteAll($this);
+    }
 
     /**
      * @param $file

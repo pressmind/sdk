@@ -25,6 +25,13 @@ interface ProviderInterface
     public function delete($file, $bucket);
 
     /**
+     * @param Bucket $bucket
+     * @return true
+     * @throws Exception
+     */
+    public function deleteAll($bucket);
+
+    /**
      * @param File $file
      * @param Bucket $bucket
      * @return boolean

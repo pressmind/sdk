@@ -47,6 +47,21 @@ class Filesystem extends AbstractProvider implements ProviderInterface
         return true;
     }
 
+    public function deleteAll($bucket)
+    {
+        $bucket->name = HelperFunctions::replaceConstantsFromConfig($bucket->name);
+        $dir = rtrim($bucket->name , '/');
+        if(empty(trim($bucket->name,'/')) || strlen($dir) < 8){
+            throw new Exception('Path is possible to short ('.$dir.'), stop here for security reasons ');
+        }
+        $dir .= '/*';
+        exec('rm -rf '.$dir, $o, $r);
+        if($r > 0){
+            throw new Exception('deletion failed: '.print_r($o, true));
+        }
+        return true;
+    }
+
     public function bucketExists($bucket)
     {
         $bucket->name = HelperFunctions::replaceConstantsFromConfig($bucket->name);

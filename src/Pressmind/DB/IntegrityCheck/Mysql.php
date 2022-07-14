@@ -38,6 +38,7 @@ class Mysql
         $table = $this->_db->fetchAll('DESCRIBE ' . $this->_object->getDbTableName());
         $database_table_info = [];
         foreach ($table as $field) {
+            $field->Type = preg_replace('/^(bigint|int)(\([0-9]+)\)/', '$1', $field->Type);
             $database_table_info[$field->Field] = $field;
         }
         foreach ($this->_object->getPropertyDefinitions() as $definition) {

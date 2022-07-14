@@ -56,8 +56,8 @@ class Discount extends AbstractObject
                 'filters' => NULL,
             ],
             'active' => [
-                'title' => 'ID',
-                'name' => 'id',
+                'title' => 'active',
+                'name' => 'active',
                 'type' => 'boolean',
                 'required' => true,
                 'validators' => null,

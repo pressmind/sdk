@@ -190,7 +190,7 @@ class File extends AbstractObject
     public function getFile()
     {
         $config = Registry::getInstance()->get('config');
-        $bucket = new Bucket($config['file_handling']['storage']['bucket']);
+        $bucket = new Bucket($config['file_handling']['storage']);
         $file = new \Pressmind\Storage\File($bucket);
         $file->name = $this->file_name;
         return $file;

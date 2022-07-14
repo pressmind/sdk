@@ -16,17 +16,18 @@ class Bucket
     public $name;
 
     private $_config;
-
-    private $_storage_provider_name = null;
+    
+    public $storage = [];
 
     /**
      * Bucket constructor.
-     * @param string $name
+     * @param array $storage
      */
-    public function __construct($name) {
-        $this->name = $name;
+    public function __construct($storage) {
+        $this->name = $storage['bucket'];
         $this->_config = Registry::getInstance()->get('config');
-        $this->_storage_provider_name = $this->_config['file_handling']['storage']['provider'];
+        $this->storage = $storage;
+
     }
 
     /**
@@ -36,7 +37,7 @@ class Bucket
      */
     public function addFile($file)
     {
-        $storageProvider = Factory::create($this->_storage_provider_name);
+        $storageProvider = Factory::create($this->storage);
         return $storageProvider->save($file, $this);
     }
 
@@ -47,7 +48,7 @@ class Bucket
      */
     public function removeFile($file)
     {
-        $storageProvider = Factory::create($this->_storage_provider_name);
+        $storageProvider = Factory::create($this->storage);
         return $storageProvider->delete($file, $this);
     }
     /**
@@ -56,7 +57,7 @@ class Bucket
      */
     public function removeAll()
     {
-        $storageProvider = Factory::create($this->_storage_provider_name);
+        $storageProvider = Factory::create($this->storage);
         return $storageProvider->deleteAll($this);
     }
 
@@ -66,7 +67,7 @@ class Bucket
      */
     public function fileExists($file)
     {
-        $storageProvider = Factory::create($this->_storage_provider_name);
+        $storageProvider = Factory::create($this->storage);
         return $storageProvider->fileExists($file, $this);
     }
 
@@ -77,7 +78,7 @@ class Bucket
      */
     public function readFile($file)
     {
-        $storageProvider = Factory::create($this->_storage_provider_name);
+        $storageProvider = Factory::create($this->storage);
         return $storageProvider->readFile($file, $this);
     }
 
@@ -88,7 +89,7 @@ class Bucket
      */
     public function setFileMode($file)
     {
-        $storageProvider = Factory::create($this->_storage_provider_name);
+        $storageProvider = Factory::create($this->storage);
         return $storageProvider->setFileMode($file, $this);
     }
 
@@ -98,7 +99,7 @@ class Bucket
      * @throws Exception
      */
     public function listFiles() {
-        $storageProvider = Factory::create($this->_storage_provider_name);
+        $storageProvider = Factory::create($this->storage);
         return $storageProvider->listBucket($this);
     }
 }

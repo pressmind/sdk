@@ -37,7 +37,7 @@ class Downloader
     {
         Writer::write('Download of file ' . $targetName . ' from ' . $url . ' requested', WRITER::OUTPUT_FILE, 'image_processor', WRITER::TYPE_INFO);
         $config = Registry::getInstance()->get('config');
-        $bucket = new Bucket($config['image_handling']['storage']['bucket']);
+        $bucket = new Bucket($config['image_handling']['storage']);
         $file = new File($bucket);
         $file->name = $targetName;
         if(!$file->exists() || $forceOverwrite === true) {
@@ -59,9 +59,11 @@ class Downloader
                 $file->content = $raw;
             }
         } else {
-            Writer::write('File ' . $file->name . ' allready exists. Skipping ...', WRITER::OUTPUT_FILE, 'image_processor', WRITER::TYPE_INFO);
+            Writer::write('File ' . $file->name . ' already exists. Skipping ...', WRITER::OUTPUT_FILE, 'image_processor', WRITER::TYPE_INFO);
+            // @TODO this is not performant if all asset are stored on s3 (produces a download request)
             $file->read();
         }
+
         return $file;
     }
 }

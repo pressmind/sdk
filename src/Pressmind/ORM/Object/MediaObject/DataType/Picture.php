@@ -431,20 +431,21 @@ class Picture extends AbstractObject
         $tmp_file_name = empty($this->file_name) ? $this->id_media_object . '_' . $this->id_picture . '.tmp' : $this->file_name;
         if($max_retries >= $retry_counter) {
             try {
+                $new_file_name_without_extension = $this->id_media_object . '_' . $query['id'];
                 $storage_file = $downloader->download($download_url, $tmp_file_name);
                 $mime_type = $storage_file->getMimetype();
                 $this->_checkMimetype($mime_type);
-                $new_file_name = $this->id_media_object . '_' . $query['id'] . '.' . HelperFunctions::getExtensionFromMimeType($storage_file->getMimetype());
+                $new_file_name = $new_file_name_without_extension . '.' . HelperFunctions::getExtensionFromMimeType($storage_file->getMimetype());
+                $storage_file->name = $new_file_name;
+                $storage_file->save();
                 $this->download_successful = true;
                 $this->mime_type = $storage_file->getMimetype();
-                $storage_file->name = $new_file_name;
                 $this->file_name = $new_file_name;
-                $storage_file->save();
                 $this->update();
                 return $storage_file;
             } catch (Exception $e) {
                 $last_error = $e->getMessage();
-                Writer::write('ID ' . $this->getId() . ': Downloading image from ' . $download_url . ' failed at try ' . $retry_counter . '. Error: ' . $last_error, WRITER::OUTPUT_FILE, 'image_processor', Writer::TYPE_ERROR);
+                Writer::write('ID ' . $this->getId() . ': Downloading image from ' . $download_url . ' failed at try ' . $retry_counter . '. Error: ' . $last_error, WRITER::OUTPUT_SCREEN, 'image_processor', Writer::TYPE_ERROR);
                 $this->downloadOriginal(false, ($retry_counter + 1), $last_error);
             } catch (S3Exception $e) {
                 $last_error = $e->getMessage();
@@ -510,7 +511,7 @@ class Picture extends AbstractObject
     public function getFile()
     {
         $config = Registry::getInstance()->get('config');
-        $bucket = new Bucket($config['image_handling']['storage']['bucket']);
+        $bucket = new Bucket($config['image_handling']['storage']);
         $file = new \Pressmind\Storage\File($bucket);
         $file->name = $this->file_name;
         return $file;

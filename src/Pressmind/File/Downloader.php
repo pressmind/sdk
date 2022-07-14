@@ -20,7 +20,7 @@ class Downloader
     public function download($url, $targetName)
     {
         $config = Registry::getInstance()->get('config');
-        $bucket = new Bucket($config['file_handling']['storage']['bucket']);
+        $bucket = new Bucket($config['file_handling']['storage']);
         $file = new File($bucket);
         $file->name = $targetName;
         if (!$file->exists()) {

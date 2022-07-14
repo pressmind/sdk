@@ -26,13 +26,13 @@ class S3 implements ProviderInterface
      */
     private $_log_file_name = 's3_storage';
 
-    public function __construct()
+    public function __construct($storage)
     {
         $config = Registry::getInstance()->get('config');
         $this->_s3_client = new S3Client([
-            'version' => $config['file_handling']['storage']['version'],
-            'region' => $config['file_handling']['storage']['region'],
-            'credentials' => $config['file_handling']['storage']['credentials']
+            'version' => $storage['version'],
+            'region' => $storage['region'],
+            'credentials' => $storage['credentials']
         ]);
     }
 
@@ -76,6 +76,16 @@ class S3 implements ProviderInterface
         }
         return true;
     }
+
+    /**
+     * @TODO
+     * @param Bucket $bucket
+     * @return bool
+     */
+    public function deleteAll($bucket){
+        return true;
+    }
+
 
     /**
      * @param File $file

@@ -9,13 +9,12 @@ use Pressmind\Storage\ProviderInterface;
 class Factory
 {
     /**
-     * @param $providerName
-     * @param File $file
+     * @param array $storage
      * @return ProviderInterface
      */
-    public static function create($providerName) {
-        $class_name = 'Pressmind\Storage\Provider\\' . ucfirst($providerName);
-        $provider = new $class_name();
+    public static function create($storage) {
+        $class_name = 'Pressmind\Storage\Provider\\' . ucfirst($storage['provider']);
+        $provider = new $class_name($storage);
         return $provider;
     }
 }

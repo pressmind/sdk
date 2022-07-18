@@ -488,7 +488,6 @@ class Date extends AbstractObject
             $extracted_transports_clean = [];
             foreach($extracted_transports as $extracted_transport){
                 if(!in_array($extracted_transport->transport_group, $invalid_groups)){
-                    $extracted_transport->transport_group = $extracted_transport->transport_group == 'empty' ? null : $extracted_transport->transport_group;
                     $extracted_transports_clean[] = $extracted_transport;
                 }
             }
@@ -497,6 +496,7 @@ class Date extends AbstractObject
         $transports_without_groups = [];
         $transports_with_groups = [];
         foreach($extracted_transports as $transport){
+            $transport->transport_group = $transport->transport_group == 'empty' ? null : $transport->transport_group;
             if(empty($transport->transport_group)){
                 $transports_without_groups[] = $transport;
             }else{

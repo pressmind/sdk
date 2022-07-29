@@ -151,13 +151,12 @@ class Ibe
         }
 
         if($booking->getBookingPackage()->price_mix == 'date_housing') {
-            if (isset($this->parameters['params']['idhp'])) {
-                // @TODO this not works...
-                $housing_packages = [$booking->getHousingPackage($this->parameters['params']['idhp'])->toStdClass()];
-            } else {
                 $housing_packages = [];
                 $housing_packages_list = $booking->getBookingPackage()->housing_packages;
                 foreach ($housing_packages_list as $housing_package) {
+                    if(!empty($this->parameters['params']['idhp']) && $housing_package->getId() != $this->parameters['params']['idhp']){
+                        continue;
+                    }
                     $package = new Package($housing_package->id, true);
                     $valid_options = [];
                     foreach($package->options as $option){
@@ -169,7 +168,6 @@ class Ibe
                     $package->options = $valid_options;
                     $housing_packages[] = $package;
                 }
-            }
         } else if($booking->booking_package->price_mix == 'date_transport') {
             $housing_package = new Package();
             $housing_package->name = !empty($booking_package->name) ? $booking_package->name : $result['product']['title'];

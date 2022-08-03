@@ -154,7 +154,19 @@ class Package extends AbstractObject
                         'params' => 255,
                     ],
                 ],
-                'filters' => null
+                'filters' => null,
+                'validators' => [
+                    ['name' => 'inarray',
+                        'params' => [
+                            'date_housing',
+                            'date_extra',
+                            'date_sightseeing',
+                            'date_ticket',
+                            'date_transport',
+                            'date_startingpoint'
+                        ],
+                    ],
+                ],
             ],
             'id_pickupservice' => array(
                 'title' => 'Id_pickupservice',
@@ -453,10 +465,10 @@ class Package extends AbstractObject
         $now = new DateTime();
         $where = "id_booking_package = '" . $this->getId() . "' AND price_total > 0 AND date_departure > '" . $now->format('Y-m-d H:i:s') . "'";
         $cheapest_price = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 2', ['price_total' => 'ASC']);
-        if(empty($cheapest_price)) {
+        if (empty($cheapest_price)) {
             $cheapest_price = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 1', ['price_total' => 'ASC']);
         }
-        if(empty($cheapest_price)) {
+        if (empty($cheapest_price)) {
             $cheapest_price = CheapestPriceSpeed::listAll($where, ['price_total' => 'ASC']);
         }
         return $cheapest_price[0];
@@ -468,14 +480,15 @@ class Package extends AbstractObject
      * @return Date[]
      * @throws Exception
      */
-    public function getValidDates($dateFrom = null, $offsetDays = 0) {
+    public function getValidDates($dateFrom = null, $offsetDays = 0)
+    {
         $dates = [];
-        if(is_null($dateFrom)) {
+        if (is_null($dateFrom)) {
             $dateFrom = new DateTime();
             $dateFrom->add(new DateInterval('P' . $offsetDays . 'D'));
         }
         foreach ($this->dates as $date) {
-            if($date->departure > $dateFrom && (count($date->getHousingOptions()) > 0 || $this->duration == 1)) {
+            if ($date->departure > $dateFrom && (count($date->getHousingOptions()) > 0 || $this->duration == 1)) {
                 $dates[] = $date;
             }
         }

@@ -1092,6 +1092,20 @@ class MediaObject extends AbstractObject
     }
 
     /**
+     * @param Item[] $discounts
+     * @param Date $date
+     * @return Item|null
+     */
+    public function getEarlyBirdDiscount($discounts, $date){
+        foreach($discounts as $discount){
+            if($this->_checkEarlyBirdDiscount($discount, $date)){
+                return $discount;
+            }
+        }
+        return null;
+    }
+
+    /**
      * @param Item $discount
      * @return float
      */

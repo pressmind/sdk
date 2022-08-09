@@ -223,6 +223,7 @@ class Ibe
 
         //$result['debug'] = $settings['steps']['starting_points']['pagination_page_size']['value'];
         $result['housing_packages'] = $housing_packages;
+        $result['earlybird'] = $booking->getEarlyBird();
         $result['extras'] = $extras;
         $result['id_ibe'] = $booking->getBookingPackage()->ibe_type;
         $result['code_ibe'] = is_null($booking->getHousingPackage()) ? null : $booking->getHousingPackage()->code_ibe;

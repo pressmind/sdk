@@ -5,6 +5,7 @@ namespace Pressmind\IBE;
 
 
 use Exception;
+use Pressmind\ORM\Object\MediaObject;
 use Pressmind\ORM\Object\Touristic\Booking\Package;
 use Pressmind\ORM\Object\Touristic\Date;
 use Pressmind\ORM\Object\Touristic\Insurance;
@@ -71,6 +72,9 @@ class Booking
      */
     public $settings;
 
+    /**
+     * @var Date
+     */
     public $date = null;
 
     /**
@@ -342,5 +346,13 @@ class Booking
             */
         }
         return $valid_extras;
+    }
+
+    /**
+     * @return \Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup\Item|null
+     */
+    public function getEarlyBird(){
+        $MediaObject = new MediaObject();
+        return $MediaObject->getEarlyBirdDiscount($this->date->early_bird_discount_group->items, $this->date);
     }
 }

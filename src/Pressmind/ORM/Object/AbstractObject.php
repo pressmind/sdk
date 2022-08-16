@@ -494,6 +494,11 @@ abstract class AbstractObject implements SplSubject
             $this->_deleteRelations();
         }
     }
+    
+    public function truncate()
+    {
+        $this->_db->truncate($this->getDbTableName());
+    }
 
     /**
      * @throws Exception

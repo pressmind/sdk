@@ -39,6 +39,10 @@ use DateTime;
  * @property integer $transport_2_way
  * @property string $transport_1_description
  * @property string $transport_2_description
+ * @property string $transport_1_airport
+ * @property string $transport_1_airport_name
+ * @property string $transport_2_airport
+ * @property string $transport_2_airport_name
  * @property string $transport_1_airline
  * @property string $transport_2_airline
  * @property string $transport_1_flight
@@ -464,6 +468,54 @@ class CheapestPriceSpeed extends AbstractObject
             'transport_2_description' => [
                 'name' => 'transport_2_description',
                 'title' => 'transport_2_description',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'transport_1_airport' => [
+                'name' => 'transport_1_airport',
+                'title' => 'transport_1_airport',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 3,
+                    ]
+                ],
+                'index' => [
+                    'id_date' => 'index'
+                ]
+            ],
+            'transport_1_airport_name' => [
+                'name' => 'transport_1_airport_name',
+                'title' => 'transport_1_airport_name',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'transport_2_airport' => [
+                'name' => 'transport_2_airport',
+                'title' => 'transport_2_airport',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 3,
+                    ]
+                ],
+                'index' => [
+                    'id_date' => 'index'
+                ]
+            ],
+            'transport_2_airport_name' => [
+                'name' => 'transport_2_airport_name',
+                'title' => 'transport_2_airport_name',
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,

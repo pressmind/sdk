@@ -9,13 +9,8 @@ namespace Pressmind\ORM\Object;
  * @property string $city
  * @property string $country
  * @property string $iata
- * @property string $icao
  * @property float $latitude
  * @property float $longitude
- * @property float $altitude_feet
- * @property string $timezone
- * @property string $dst
- * @property string $source
  */
 class Airport extends AbstractObject
 {
@@ -93,19 +88,6 @@ class Airport extends AbstractObject
                 ],
                 'filters' => NULL,
             ],
-            'icao' => [
-                'title' => 'Icao',
-                'name' => 'icao',
-                'type' => 'string',
-                'required' => false,
-                'validators' => [
-                    [
-                        'name' => 'maxlength',
-                        'params' => 4,
-                    ],
-                ],
-                'filters' => NULL,
-            ],
             'latitude' => [
                 'title' => 'Latitude',
                 'name' => 'latitude',
@@ -121,54 +103,25 @@ class Airport extends AbstractObject
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,
-            ],
-            'altitude_feet' => [
-                'title' => 'Altitude_feet',
-                'name' => 'altitude_feet',
-                'type' => 'float',
-                'required' => false,
-                'validators' => NULL,
-                'filters' => NULL,
-            ],
-            'timezone' => [
-                'title' => 'Timezone',
-                'name' => 'timezone',
-                'type' => 'string',
-                'required' => false,
-                'validators' => [
-                    [
-                        'name' => 'maxlength',
-                        'params' => 255,
-                    ],
-                ],
-                'filters' => NULL,
-            ],
-            'dst' => [
-                'title' => 'Dst',
-                'name' => 'dst',
-                'type' => 'string',
-                'required' => false,
-                'validators' => [
-                    [
-                        'name' => 'maxlength',
-                        'params' => 1,
-                    ],
-                ],
-                'filters' => NULL,
-            ],
-            'source' => [
-                'title' => 'Source',
-                'name' => 'source',
-                'type' => 'string',
-                'required' => false,
-                'validators' => [
-                    [
-                        'name' => 'maxlength',
-                        'params' => 255,
-                    ],
-                ],
-                'filters' => NULL,
-            ],
+            ]
         ],
     ];
+
+    public static $run_time_cache = [];
+
+    /**
+     * @param $code
+     * @return Airport|null
+     * @throws \Exception
+     */
+    public static function getByIata($code){
+        $code = strtoupper($code);
+        if(isset(self::$run_time_cache[$code])){
+            return self::$run_time_cache[$code];
+        }
+        $airport = self::listOne('iata = "'.$code.'"');
+        self::$run_time_cache[$code] = $airport;
+        return $airport;
+
+    }
 }

@@ -19,6 +19,7 @@ use Pressmind\System\I18n;
  * @property float $price
  * @property integer $order
  * @property integer $state
+ * @property integer $quota
  * @property string $code_ibe
  * @property integer $auto_book
  * @property integer $required
@@ -224,6 +225,23 @@ class Transport extends AbstractObject
                         'name' => 'maxlength',
                         'params' => 11,
                     ],
+                ],
+                'filters' => NULL,
+            ],
+            'quota' => [
+                'title' => 'Quota',
+                'name' => 'quota',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 11,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
                 ],
                 'filters' => NULL,
             ],

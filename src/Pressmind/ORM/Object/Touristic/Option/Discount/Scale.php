@@ -91,7 +91,8 @@ class Scale extends AbstractObject
                         'name' => 'inarray',
                         'params' => [
                             'P',
-                            'F'
+                            'F',
+                            'E'
                         ],
                     ],
                 ],

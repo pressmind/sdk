@@ -47,7 +47,9 @@ class Client
         if(is_null($apiEndpoint) && is_null($apiKey) && is_null($apiUser) && is_null($apiPassword)) {
             $config = Registry::getInstance()->get('config');
             if(isset($config['rest']) && is_array($config['rest'])) {
-                //$this->_api_endpoint = $config['rest']['client']['api_endpoint'];
+                if(!empty($config['rest']['client']['api_endpoint_overwrite_default'])){
+                    $this->_api_endpoint = $config['rest']['client']['api_endpoint_overwrite_default'];
+                }
                 $this->_api_key = $config['rest']['client']['api_key'];
                 $this->_api_user = $config['rest']['client']['api_user'];
                 $this->_api_password = $config['rest']['client']['api_password'];

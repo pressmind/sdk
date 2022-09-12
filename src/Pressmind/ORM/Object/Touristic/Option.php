@@ -36,7 +36,7 @@ use Pressmind\ORM\Object\Touristic\Option\Discount;
  * @property string $price_due
  * @property string $code_ibe_board_type
  * @property string $code_ibe_board_type_category
- * @property string $code_ibe_category
+ * @property string $code_ibe_category // deprecated
  * @property integer $auto_book
  * @property integer $required
  * @property string $required_group

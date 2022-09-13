@@ -337,7 +337,7 @@ class MongoDB extends AbstractSearch
         ];
         }
 
-        // stage 2, remove unneccessary data
+        // stage 2, remove useless data
         $stages[] = ['$unset' => ['fulltext']];
 
         // stage 3, filter prices array (by occuppancy, pricerange, durationrange)
@@ -405,6 +405,19 @@ class MongoDB extends AbstractSearch
                     ]
                 ]
             ];
+            $facetStage['$facet']['boardTypesGrouped'] = [
+                [
+                    '$unwind' => '$prices.option_board_type'
+                ],
+                [
+                    '$sortByCount' => '$prices.option_board_type'
+                ],
+                [
+                    '$sort' => [
+                        '_id' => 1
+                    ]
+                ]
+            ];
             $addFieldsStage = [
                 '$addFields' => [
                     'minDuration' => [
@@ -451,7 +464,8 @@ class MongoDB extends AbstractSearch
                     'minPrice' => 1,
                     'maxPrice' => 1,
                     'total' => 1,
-                    'categoriesGrouped' => 1
+                    'categoriesGrouped' => 1,
+                    'boardTypesGrouped' => 1
                 ]
             ];
         } else { // stage n, if we don't need the filter, we use just the required methods

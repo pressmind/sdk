@@ -1002,11 +1002,11 @@ class MediaObject extends AbstractObject
                             $cheapestPriceSpeed->transport_2_airport = substr($cheapestPriceSpeed->transport_code, -3, 3); // TODO is not often used and needs a rework
                             if(!empty($cheapestPriceSpeed->transport_1_airport)) {
                                 $airport = Airport::getByIata($cheapestPriceSpeed->transport_1_airport);
-                                $cheapestPriceSpeed->transport_1_airport_name = $airport->name;
+                                $cheapestPriceSpeed->transport_1_airport_name = !empty($airport->name) ? $airport->name : null;
                             }
                             if(!empty($cheapestPriceSpeed->transport_2_airport)){
                                 $airport = Airport::getByIata($cheapestPriceSpeed->transport_2_airport);
-                                $cheapestPriceSpeed->transport_2_airport_name = $airport->name;
+                                $cheapestPriceSpeed->transport_2_airport_name = !empty($airport->name) ? $airport->name : null;
                             }
                             $cheapestPriceSpeed->transport_1_flight = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way1']->flight : null;
                             $cheapestPriceSpeed->transport_2_flight = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->flight : null;

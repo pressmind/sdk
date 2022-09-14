@@ -696,7 +696,13 @@ class MediaObject extends AbstractObject
                 if(is_string($filters->transport_types)){
                     $filters->transport_types = [$filters->transport_types];
                 }
-                $where .= ' AND transport_type in("' . implode('",',$filters->transport_types).'")';
+                $where .= ' AND transport_type in("' . implode('","',$filters->transport_types).'")';
+            }
+            if(!empty($filters->transport_1_airport)) {
+                if(is_string($filters->transport_1_airport)){
+                    $filters->transport_1_airport = [$filters->transport_1_airport];
+                }
+                $where .= ' AND transport_1_airport in("' . implode('","',$filters->transport_1_airport).'")';
             }
         }
         if(!$occupancy_filter_is_set && isset($filters->occupancies_disable_fallback) && $filters->occupancies_disable_fallback === false) {
@@ -711,6 +717,48 @@ class MediaObject extends AbstractObject
             $cheapest_prices = CheapestPriceSpeed::listAll($where, $order, $limit);
         }
         return $cheapest_prices;
+    }
+
+    /**
+     * @param null|CheapestPrice $filters
+     * @return CheapestPriceSpeed[]
+     * @throws Exception
+     */
+    public function getCheapestPricesOptions() {
+        /** @var Pdo $db */
+        $db = Registry::getInstance()->get('db');
+        $now = new DateTime();
+        $query = "SELECT duration, transport_type, transport_1_airport_name, transport_1_airport, option_occupancy,
+                min(date_departure) AS date_departure_from,
+                max(date_departure) AS date_departure_to,
+                count(*) AS count
+                FROM pmt2core_cheapest_price_speed
+                WHERE id_media_object = " . $this->getId() . "
+                AND price_total > 0
+                AND date_departure > '" . $now->format('Y-m-d 00:00:00') . "'
+                GROUP BY duration, transport_type, transport_1_airport_name, transport_1_airport, option_occupancy";
+        $result = $db->fetchAll($query);
+        $output = new \stdClass();
+        $output->count = 0;
+        foreach($result as $key => $row) {
+            $output->duration[$row->duration] = $row->duration;
+            $output->transport_type[$row->transport_type] = $row->transport_type;
+            !empty($row->transport_1_airport) ? $output->transport_1_airport[$row->transport_1_airport] = $row->transport_1_airport : '';
+            !empty($row->transport_1_airport_name) ? $output->transport_1_airport_name[$row->transport_1_airport_name] = $row->transport_1_airport_name : '';
+            $output->date_departure_from[$row->date_departure_from] = $row->date_departure_from;
+            $output->date_departure_to[$row->date_departure_to] = $row->date_departure_to;
+            $output->option_occupancy[$row->option_occupancy] = $row->option_occupancy;
+            $output->count += $row->count;
+        }
+        $output->option_occupancy = array_values($output->option_occupancy);
+        $output->duration = array_values($output->duration);
+        $output->transport_type = array_map('ucfirst', array_map('strtolower', array_values($output->transport_type)));
+        !empty($row->transport_1_airport) ? $output->transport_1_airport = array_values($output->transport_1_airport) : '';
+        !empty($row->transport_1_airport_name) ? $output->transport_1_airport_name = array_values($output->transport_1_airport_name) : '';
+        $output->date_departure_from = array_values($output->date_departure_from);
+        $output->date_departure_to = array_values($output->date_departure_to);
+
+        return $output;
     }
 
     /**

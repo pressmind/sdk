@@ -927,14 +927,16 @@ class MediaObject extends AbstractObject
     }
 
     /**
+     * @param int $max_rows (limits the generated offer rows)
      * @return array
      * @throws Exception
      */
-    public function insertCheapestPrice()
+    public function insertCheapestPrice($max_rows = 5000)
     {
         $booking_packages = $this->booking_packages;
         $result = [];
         $now = new DateTime();
+        $c = 0;
         foreach ($booking_packages as $booking_package) {
             foreach ($booking_package->dates as $date) {
                 if($date->departure < $now){ // don't index departures in the past
@@ -1102,9 +1104,12 @@ class MediaObject extends AbstractObject
                             $cheapestPriceSpeed->booking_package_variant_code = $booking_package->variant_code;
                             $cheapestPriceSpeed->booking_package_request_code = $booking_package->request_code;
                             $cheapestPriceSpeed->booking_package_name = $booking_package->name;
-
                             $cheapestPriceSpeed->create();
-                            $result[] = $cheapestPriceSpeed->toStdClass();
+                            unset($cheapestPriceSpeed);
+                            $c++;
+                            if($c == $max_rows){
+                                break(5);
+                            }
                         }
                     }
                 }
@@ -1116,7 +1121,6 @@ class MediaObject extends AbstractObject
             $cheapestPriceSpeed = new CheapestPriceSpeed();
             $cheapestPriceSpeed->generateSingleRoomIndex($this->getId());
         }
-        return $result;
     }
 
     /**

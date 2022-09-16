@@ -13,7 +13,7 @@ class System {
     public function updateTags($parameters)
     {
         if(!isset($parameters['id_object_type'])) {
-            throw new \Exception('Parameter id_object_tyep is missing');
+            throw new \Exception('Parameter id_object_type is missing');
         }
         $client = new Client();
         $response = $client->sendRequest('ObjectType', 'getById', ['ids' => $parameters['id_object_type']]);

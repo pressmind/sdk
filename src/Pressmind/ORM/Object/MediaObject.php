@@ -1229,7 +1229,12 @@ class MediaObject extends AbstractObject
         if(count($possible_columns) > 0) {
             $data = $this->getDataForLanguage($language);
             $column_name = $possible_columns[0]->objectdata_column_name;
-            return($data->$column_name);
+            $v = $data->$column_name;
+            if(is_array($v) && $v[0]->link_type == 'objectlink'){
+                $tmp = new \Pressmind\ORM\Object\MediaObject($v[0]->id_media_object_link);
+                $v = $tmp->getValueByTagName($tagName, $language);
+            }
+            return($v);
         }
         return null;
     }

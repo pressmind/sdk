@@ -290,7 +290,7 @@ class Import
                 $my_content_importer->import();
             }
 
-            /*if(isset($response[0]->agencies) && is_array($response[0]->agencies) && count($response[0]->agencies) > 0) {
+            if(isset($response[0]->agencies) && is_array($response[0]->agencies) && count($response[0]->agencies) > 0) {
                 $agency_importer = new Agency($response[0]->agencies, $id_media_object);
                 $agency_importer->import();
                 foreach ($agency_importer->getLog() as $log) {
@@ -302,7 +302,7 @@ class Import
                 if(count($agency_importer->getErrors()) > 0) {
                     $this->_errors[] = 'Error in agency import. See log "agency_import" for details';
                 }
-            }*/
+            }
 
             $brands_importer = new Brand();
             $brands_importer->import();

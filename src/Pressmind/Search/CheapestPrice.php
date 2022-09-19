@@ -6,6 +6,7 @@ namespace Pressmind\Search;
 
 class CheapestPrice
 {
+    public $id = null;
     public $duration_from = null;
     public $duration_to = null;
     public $occupancies = [];

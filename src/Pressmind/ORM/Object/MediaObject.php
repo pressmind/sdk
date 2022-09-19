@@ -704,6 +704,9 @@ class MediaObject extends AbstractObject
                 }
                 $where .= ' AND transport_1_airport in("' . implode('","',$filters->transport_1_airport).'")';
             }
+            if(!empty($filters->id)) {
+                $where .= ' AND id = ' . $filters->id;
+            }
         }
         if(!$occupancy_filter_is_set && isset($filters->occupancies_disable_fallback) && $filters->occupancies_disable_fallback === false) {
             $cheapest_prices = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 2', $order, $limit);

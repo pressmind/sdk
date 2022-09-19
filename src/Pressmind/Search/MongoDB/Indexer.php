@@ -322,26 +322,33 @@ class Indexer
             return $groups;
         }
         $group_map = $this->_config['search']['groups'][$this->mediaObject->id_object_type];
-
         if(empty($group_map['field'])){
             echo 'Error: field must be set (if you plan to use groups!)';
             exit; // @TODO
         }
         $field_name = $group_map['field'];
-        if(empty($data->$field_name)){
-            return $groups;
-        }
-        if(is_array($data->$field_name)){
-            foreach ($data->$field_name as $treeitem) {
-                $groups[] = HelperFunctions::human_to_machine($treeitem->item->name);
+        if($field_name == 'agencies'){
+            foreach($this->mediaObject->agencies as $agency){
+                $groups[] = $agency->getId();
+            }
+        }else{
+            if(empty($data->$field_name)){
+                return $groups;
+            }
+            if(is_array($data->$field_name)){
+                foreach ($data->$field_name as $treeitem) {
+                    $groups[] = HelperFunctions::human_to_machine($treeitem->item->name);
+                }
             }
         }
         try {
-            $params = [$groups, $this->mediaObject];
-            if(!empty($group_map['params']) && is_array($group_map['params'])){
-                $params = array_merge($params, $group_map['params']);
+            if(!empty($group_map['filter'])){
+                $params = [$groups, $this->mediaObject];
+                if(!empty($group_map['params']) && is_array($group_map['params'])){
+                    $params = array_merge($params, $group_map['params']);
+                }
+                $groups = call_user_func_array($group_map['filter'], $params);
             }
-            $groups = call_user_func_array($group_map['filter'], $params);
         } catch (\Exception $e) {
             echo 'Error in filter function ' .  $group_map['filter'] . ': ' . $e->getMessage();
             exit; // @TODO

@@ -102,6 +102,20 @@
                         ]
                     },
                     "code_delimiter": ",",
+                    "groups" : [
+                        {
+                            "123" : {
+                                "field": "agencies",
+                                "filter": null
+                            }
+                        },
+                        {
+                            "124" : {
+                                "field" : "website_ausgabe_default",
+                                "filter": "\\Custom\\Filter::treeToGroup"
+                            }
+                        }
+                    ],
                     "categories": {
                         "123": {
                             "zielgebiet_default": null,

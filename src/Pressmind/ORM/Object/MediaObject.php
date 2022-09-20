@@ -982,7 +982,7 @@ class MediaObject extends AbstractObject
                     if(!empty($option->required_group) && !empty($option->required)){
                         $check_group_validity[$key]['items_count'] = isset($check_group_validity[$key]['items_count']) ? $check_group_validity[$key]['items_count'] + 1 : 0;
                         if($option->state == 1 || $option->state == 2 || $option->state == 3){
-                            if(empty($cheapest_options[$key]->price) || $cheapest_options[$key]->price > $option->price){
+                            if(empty($cheapest_options[$key]->id) || empty($option->price) || $cheapest_options[$key]->price > $option->price){
                                 $cheapest_options[$key] = $option;
                             }
                         }else{

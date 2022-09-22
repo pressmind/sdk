@@ -418,6 +418,19 @@ class MongoDB extends AbstractSearch
                     ]
                 ]
             ];
+            $facetStage['$facet']['transportTypesGrouped'] = [
+                [
+                    '$unwind' => '$prices.transport_type'
+                ],
+                [
+                    '$sortByCount' => '$prices.transport_type'
+                ],
+                [
+                    '$sort' => [
+                        '_id' => 1
+                    ]
+                ]
+            ];
             $addFieldsStage = [
                 '$addFields' => [
                     'minDuration' => [
@@ -465,7 +478,8 @@ class MongoDB extends AbstractSearch
                     'maxPrice' => 1,
                     'total' => 1,
                     'categoriesGrouped' => 1,
-                    'boardTypesGrouped' => 1
+                    'boardTypesGrouped' => 1,
+                    'transportTypesGrouped' => 1
                 ]
             ];
         } else { // stage n, if we don't need the filter, we use just the required methods

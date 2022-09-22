@@ -111,6 +111,12 @@
                         },
                         {
                             "124" : {
+                                "field": "id_pool",
+                                "filter": null
+                            }
+                        },
+                        {
+                            "125" : {
                                 "field" : "website_ausgabe_default",
                                 "filter": "\\Custom\\Filter::treeToGroup"
                             }

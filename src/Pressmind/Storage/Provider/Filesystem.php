@@ -24,6 +24,9 @@ class Filesystem extends AbstractProvider implements ProviderInterface
     public function save($file, $bucket)
     {
         $bucket->name = HelperFunctions::replaceConstantsFromConfig($bucket->name);
+        if(false === file_exists($bucket->name)){
+            @mkdir($bucket->name, 0755, true);
+        }
         if(false === file_put_contents($bucket->name . DIRECTORY_SEPARATOR . $file->name, $file->content)) {
             throw new Exception('Failed to save file: ' . $bucket->name . DIRECTORY_SEPARATOR . $file->name);
         }

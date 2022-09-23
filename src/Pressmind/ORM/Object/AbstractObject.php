@@ -13,14 +13,12 @@ use Pressmind\Registry;
 use Pressmind\ORM\Filter;
 use Pressmind\ORM\Validator;
 use \stdClass;
-use \SplSubject;
-use \SplObserver;
 
 /**
  * Class AbstractObject
  * @package PressmindBooking\ORM
  */
-abstract class AbstractObject implements SplSubject
+abstract class AbstractObject
 {
     /**
      * @var array
@@ -1292,10 +1290,10 @@ abstract class AbstractObject implements SplSubject
 
     /**
      * @param string $propertyName
-     * @return array
+     * @return array|null
      */
     public function getPropertyDefinition($propertyName) {
-        return $this->_definitions['properties'][$propertyName];
+        return $this->_definitions['properties'][$propertyName] ?? null;
     }
 
     /**
@@ -1397,29 +1395,6 @@ abstract class AbstractObject implements SplSubject
         } else {
             throw new Exception('Property ' . $property_name . ' does not exist in class ' . $this->_definitions['class']['name']);
         }
-    }
-
-    /**SplSubject interface**/
-
-    /**
-     * @param SplObserver $observer
-     */
-    public function attach(SplObserver $observer)
-    {
-        // TODO: Implement attach() method.
-    }
-
-    /**
-     * @param SplObserver $observer
-     */
-    public function detach(SplObserver $observer)
-    {
-        // TODO: Implement detach() method.
-    }
-
-    public function notify()
-    {
-        // TODO: Implement notify() method.
     }
 
     /**

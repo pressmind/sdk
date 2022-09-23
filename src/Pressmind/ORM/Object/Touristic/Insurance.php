@@ -15,7 +15,7 @@ use Pressmind\ORM\Object\Touristic\Insurance\PriceTable;
  * @property string $name
  * @property string $description
  * @property string $description_long
- * @property integer $duration_max_days
+ * @property integer $duration_max_days // deprecated
  * @property boolean $worldwide
  * @property boolean $is_additional_insurance
  * @property string $urlinfo
@@ -26,6 +26,7 @@ use Pressmind\ORM\Object\Touristic\Insurance\PriceTable;
  * @property string $code
  * @property PriceTable[] $price_tables
  * @property Insurance[] $sub_insurances
+ * @property string $own_contribution
  */
 class Insurance extends AbstractObject
 {
@@ -224,6 +225,19 @@ class Insurance extends AbstractObject
                     'related_id' => 'id_insurance',
                     'target_id' => 'id_sub_insurance',
                 ],
+            ],
+            'own_contribution' => [
+                'title' => 'own_contribution',
+                'name' => 'own_contribution',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => NULL,
             ],
         ]
     );

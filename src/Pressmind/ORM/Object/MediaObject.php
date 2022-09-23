@@ -1328,7 +1328,7 @@ class MediaObject extends AbstractObject
                 }
                 foreach ($data->getPropertyDefinitions() as $name => $definition) {
                     $add_to_complete_fulltext = in_array($name, $config['data']['media_types_fulltext_index_fields'][$this->id_object_type]);
-                    if ($definition['type'] == 'string') {
+                    if ($definition['type'] == 'string' && !empty($data->$name)) {
                         $fulltext[] = [
                             'var_name' => $name,
                             'language' => $language,

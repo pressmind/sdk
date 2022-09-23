@@ -1051,8 +1051,8 @@ class MediaObject extends AbstractObject
                             $cheapestPriceSpeed->transport_2_description = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->description : null;
                             $cheapestPriceSpeed->transport_1_airline = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way1']->airline : null;
                             $cheapestPriceSpeed->transport_2_airline = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->airline : null;
-                            $cheapestPriceSpeed->transport_1_airport = substr($cheapestPriceSpeed->transport_code, 0, 3);
-                            $cheapestPriceSpeed->transport_2_airport = substr($cheapestPriceSpeed->transport_code, -3, 3); // TODO is not often used and needs a rework
+                            $cheapestPriceSpeed->transport_1_airport = !empty($cheapestPriceSpeed->transport_code) ? substr($cheapestPriceSpeed->transport_code, 0, 3) : null;
+                            $cheapestPriceSpeed->transport_2_airport = !empty($cheapestPriceSpeed->transport_code) ? substr($cheapestPriceSpeed->transport_code, -3, 3) : null; // TODO is not often used and needs a rework
                             if(!empty($cheapestPriceSpeed->transport_1_airport)) {
                                 $airport = Airport::getByIata($cheapestPriceSpeed->transport_1_airport);
                                 $cheapestPriceSpeed->transport_1_airport_name = !empty($airport->name) ? $airport->name : null;
@@ -1327,34 +1327,36 @@ class MediaObject extends AbstractObject
                     $complete_fulltext[$language][] = $this->tags;
                 }
                 foreach ($data->getPropertyDefinitions() as $name => $definition) {
-                    $add_to_complete_fulltext = in_array($name, $config['data']['media_types_fulltext_index_fields'][$this->id_object_type]);
-                    if ($definition['type'] == 'string' && !empty($data->$name)) {
-                        $fulltext[] = [
-                            'var_name' => $name,
-                            'language' => $language,
-                            'id_media_object' => $this->getId(),
-                            'fulltext_values' => trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('>', '> ', $data->$name))))
-                        ];
-                        if ($add_to_complete_fulltext) {
-                            $complete_fulltext[$language][] = trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('>', '> ', $data->$name))));
-                        }
-                    }
-                    if ($definition['type'] == 'relation') {
-                        $values = [];
-                        if ($definition['relation']['class'] == '\\Pressmind\\ORM\\Object\\MediaObject\\DataType\\Categorytree') {
-                            foreach ($data->$name as $tree) {
-                                $values[] = $tree->item->name;
-                            }
-                        }
-                        if (count($values) > 0) {
+                    if(!empty($data->$name)) {
+                        $add_to_complete_fulltext = in_array($name, $config['data']['media_types_fulltext_index_fields'][$this->id_object_type]);
+                        if ($definition['type'] == 'string') {
                             $fulltext[] = [
                                 'var_name' => $name,
                                 'language' => $language,
                                 'id_media_object' => $this->getId(),
-                                'fulltext_values' => implode(' ', $values)
+                                'fulltext_values' => trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('>', '> ', $data->$name))))
                             ];
                             if ($add_to_complete_fulltext) {
-                                $complete_fulltext[$language][] = implode(' ', $values);
+                                $complete_fulltext[$language][] = trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('>', '> ', $data->$name))));
+                            }
+                        }
+                        if ($definition['type'] == 'relation') {
+                            $values = [];
+                            if ($definition['relation']['class'] == '\\Pressmind\\ORM\\Object\\MediaObject\\DataType\\Categorytree') {
+                                foreach ($data->$name as $tree) {
+                                    $values[] = $tree->item->name;
+                                }
+                            }
+                            if (count($values) > 0) {
+                                $fulltext[] = [
+                                    'var_name' => $name,
+                                    'language' => $language,
+                                    'id_media_object' => $this->getId(),
+                                    'fulltext_values' => implode(' ', $values)
+                                ];
+                                if ($add_to_complete_fulltext) {
+                                    $complete_fulltext[$language][] = implode(' ', $values);
+                                }
                             }
                         }
                     }

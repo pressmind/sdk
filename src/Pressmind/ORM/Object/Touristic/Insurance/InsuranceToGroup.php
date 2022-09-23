@@ -53,7 +53,7 @@ class InsuranceToGroup extends AbstractObject
                     'title' => 'Group ID',
                     'name' => 'id_insurance_group',
                     'type' => 'string',
-                    'required' => false,
+                    'required' => true,
                     'validators' => [
                        [
                            'name' => 'maxlength',

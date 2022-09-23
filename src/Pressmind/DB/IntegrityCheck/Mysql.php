@@ -34,12 +34,16 @@ class Mysql
      * @throws Exception
      */
     public function check() {
+        $this->_checkPrimaryKey();
         $type_mapper = new \Pressmind\DB\Typemapper\Mysql();
         $table = $this->_db->fetchAll('DESCRIBE ' . $this->_object->getDbTableName());
         $database_table_info = [];
         foreach ($table as $field) {
             $field->Type = preg_replace('/^(bigint|int)(\([0-9]+)\)/', '$1', $field->Type);
             $database_table_info[$field->Field] = $field;
+            if(!$this->_object->hasProperty($field->Field)) {
+                $this->_differences[] = ['action' => 'drop_column', 'column_name' => $field->Field, 'msg' => get_class($this) . ': database column ' . $field->Field . ' does not exist in objects property definition and needs to be dropped'];
+            }
         }
         foreach ($this->_object->getPropertyDefinitions() as $definition) {
             if($definition['type'] != 'relation') {
@@ -74,6 +78,18 @@ class Mysql
         }
         $this->_checkIndexes();
         return count($this->_differences) > 0 ? $this->_differences : true;
+    }
+
+    private function _checkPrimaryKey() {
+        $primary_keys = $this->_db->fetchAll('SHOW KEYS FROM ' . $this->_object->getDbTableName() . ' WHERE Key_name = \'PRIMARY\'');
+        $primary_key_column_names = [];
+        foreach ($primary_keys as $primary_key) {
+            $primary_key_column_names[] = $primary_key->Column_name;
+        }
+        $primary_key_column_names_string = implode(',', $primary_key_column_names);
+        if($primary_key_column_names_string != $this->_object->getDbPrimaryKey()) {
+            $this->_differences[] = ['action' => 'alter_primary_key', 'column_names' => $this->_object->getDbPrimaryKey(), 'old_column_names' => $primary_key_column_names_string, 'msg' => get_class($this) . ': Current primary key is set to column \'' . $primary_key_column_names_string . '\' but is configured for: \'' . $this->_object->getDbPrimaryKey() . '\'. Primary key needs to be altered.'];
+        }
     }
 
     /**

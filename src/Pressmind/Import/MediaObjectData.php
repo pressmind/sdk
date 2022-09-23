@@ -3,6 +3,7 @@
 
 namespace Pressmind\Import;
 
+use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\MediaType\Factory;
 use Exception;
 use Pressmind\HelperFunctions;
@@ -61,6 +62,7 @@ class MediaObjectData extends AbstractImport implements ImportInterface
         $category_tree_ids = [];
         $conf =  Registry::getInstance()->get('config');
         $default_language = $conf['data']['languages']['default'];
+        $allowed_media_objects = array_keys($conf['data']['media_types']);
         $this->_log[] = ' MediaObjectData::import(' . $this->_id_media_object . '): Importing media object data';
         $values = [];
         $linked_media_object_ids = [];
@@ -95,8 +97,12 @@ class MediaObjectData extends AbstractImport implements ImportInterface
                             $value = $data_field->value->$section_id;
                         }
                         if($data_field->type == 'objectlink' && !is_null($value) && is_a($value,'stdClass') && isset($value->objects) && is_array($value->objects) && $this->_import_linked_objects == true) {
-                            foreach ($value->objects as $linked_media_object_id) {
-                                $linked_media_object_ids[] = $linked_media_object_id;
+                            if(in_array($data_field->id_object_type, $allowed_media_objects)){
+                                foreach ($value->objects as $linked_media_object_id) {
+                                    $linked_media_object_ids[] = $linked_media_object_id;
+                                }
+                            }else{
+                                $this->_log[] = Writer::write('                               MediaObjectData::import(' . $this->_id_media_object . '): object_link/s ('.$data_field->var_name.') found, but object_type ('.$data_field->id_object_type.') is not allowed or missing. See config (data.media_types). This is not an error, just a msg.', Writer::OUTPUT_SCREEN, 'import', Writer::TYPE_INFO);
                             }
                         }
                         $values[$language]['language'] = strtolower($language);

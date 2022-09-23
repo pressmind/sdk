@@ -1230,27 +1230,29 @@ abstract class AbstractObject implements SplSubject
      */
     private function getRelationManyToMany($property_info)
     {
-        $this->_write_log('getRelationManyToMany(' . $property_info['name'] . ')');
         $objects = [];
-        $object_name = $property_info['relation']['class'];
-        /**@var AbstractObject $object * */
-        $object = new $object_name();
-        $table = $object->getDbTableName();
-        $primary_key = $object->getDbPrimaryKey();
-        $join_table = $property_info['relation']['relation_table'];
-        $target_id = $property_info['relation']['target_id'];
-        $related_id = $property_info['relation']['related_id'];
-        $properties = $object->getPropertyNames();
-        $sql = "SELECT " . $table . "." . implode(', ' . $table . ".", $properties) . " FROM " . $table . " 
-            INNER JOIN " . $join_table . " 
-            ON " . $join_table . "." . $target_id . " = " . $table . "." . $primary_key . " 
-            AND " . $join_table . "." . $related_id . " = ?";
-        $result = $this->_db->fetchAll($sql, [$this->getId()]);
-        foreach ($result as $row) {
-            /**@var AbstractObject $new_object * */
-            $new_object = new $object_name(null, $this->_read_relations);
-            $new_object->fromStdClass($row);
-            $objects[] = $new_object;
+        if(!isset($property_info['relation']['is_target']) || $property_info['relation']['is_target'] == false) {
+            $this->_write_log('getRelationManyToMany(' . $property_info['name'] . ')');
+            $object_name = $property_info['relation']['class'];
+            /**@var AbstractObject $object * */
+            $object = new $object_name();
+            $table = $object->getDbTableName();
+            $primary_key = $object->getDbPrimaryKey();
+            $join_table = $property_info['relation']['relation_table'];
+            $target_id = $property_info['relation']['target_id'];
+            $related_id = $property_info['relation']['related_id'];
+            $properties = $object->getPropertyNames();
+            $sql = "SELECT " . $table . "." . implode(', ' . $table . ".", $properties) . " FROM " . $table . " 
+                INNER JOIN " . $join_table . " 
+                ON " . $join_table . "." . $target_id . " = " . $table . "." . $primary_key . " 
+                AND " . $join_table . "." . $related_id . " = ?";
+            $result = $this->_db->fetchAll($sql, [$this->getId()]);
+            foreach ($result as $row) {
+                /**@var AbstractObject $new_object * */
+                $new_object = new $object_name(null, $this->_read_relations);
+                $new_object->fromStdClass($row);
+                $objects[] = $new_object;
+            }
         }
         return $objects;
     }
@@ -1334,6 +1336,9 @@ abstract class AbstractObject implements SplSubject
      */
     public function getDbPrimaryKey()
     {
+        if(is_array($this->_definitions['database']['primary_key'])) {
+            return implode(',', $this->_definitions['database']['primary_key']);
+        }
         return $this->_definitions['database']['primary_key'];
     }
 

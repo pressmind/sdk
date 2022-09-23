@@ -16,9 +16,9 @@ use Pressmind\Registry;
  */
 class InsuranceToGroup extends AbstractObject
 {
-    //protected $_dont_use_autoincrement_on_primary_key = true;
+    protected $_dont_use_autoincrement_on_primary_key = true;
 
-    //protected $_replace_into_on_create = true;
+    protected $_replace_into_on_create = true;
 
     protected $_definitions = array(
         'class' => [
@@ -26,27 +26,13 @@ class InsuranceToGroup extends AbstractObject
         ],
         'database' => [
             'table_name' => 'pmt2core_touristic_insurance_to_group',
-            'primary_key' => 'id',
+            'primary_key' => [
+                'id_insurance',
+                'id_insurance_group'
+            ],
         ],
         'properties' =>
             [
-                'id' => [
-                    'title' => 'ID',
-                    'name' => 'id',
-                    'type' => 'integer',
-                    'required' => true,
-                    'validators' => [
-                        [
-                            'name' => 'maxlength',
-                            'params' => 22,
-                        ],
-                        [
-                            'name' => 'unsigned',
-                            'params' => null,
-                        ]
-                    ],
-                    'filters' => NULL,
-                ],
                 'id_insurance' => [
                     'title' => 'Insurance ID',
                     'name' => 'id_insurance',

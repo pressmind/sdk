@@ -185,7 +185,7 @@ class Date extends AbstractObject
                 'title' => 'Season',
                 'name' => 'season',
                 'type' => 'string',
-                'required' => false,
+                'required' => true,
                 'validators' => [
                     [
                         'name' => 'maxlength',
@@ -334,10 +334,14 @@ class Date extends AbstractObject
      * @return Option[]
      * @throws Exception
      */
-    public function getHousingOptions()
+    public function getHousingOptions($state_filter = [0,1,2,3])
     {
         $housing_options = [];
-        $housingOptions = Option::listAll("id_booking_package = '" . $this->id_booking_package . "' AND type = 'housing_option' AND season = '" . $this->season . "'");
+        $housingOptions = Option::listAll(
+            "id_booking_package = '" . $this->id_booking_package . "' 
+            AND type = 'housing_option' AND season = '" . $this->season . "'"
+            .(!empty($state_filter) ? " AND state in(".implode(',', $state_filter).")" : "")
+        );
         foreach ($housingOptions as $housing_option) {
             $housing_options[] = $housing_option;
         }

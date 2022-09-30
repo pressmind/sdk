@@ -36,6 +36,7 @@ class Picture implements MapperInterface
                 $mapped_object->title = $object->title;
                 $mapped_object->alt = $object->alt;
                 $mapped_object->copyright = $object->copyright;
+                $mapped_object->disabled = $object->disabled;
                 $mapped_object->tmp_url = $object->image->links->web;
                 $mapped_object->sort = $sort;
                 if (!empty($object->image->filename)) {

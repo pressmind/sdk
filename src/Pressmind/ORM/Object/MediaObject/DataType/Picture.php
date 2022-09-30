@@ -29,6 +29,7 @@ use Pressmind\Storage\Bucket;
  * @property string $title
  * @property string $alt
  * @property string $copyright
+ * @property boolean $disabled
  * @property integer $sort
  * @property string $tmp_url
  * @property boolean $download_successful
@@ -214,6 +215,14 @@ class Picture extends AbstractObject
                 'title' => 'sort',
                 'name' => 'sort',
                 'type' => 'integer',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+            ],
+            'disabled' => [
+                'title' => 'disabled',
+                'name' => 'disabled',
+                'type' => 'boolean',
                 'required' => false,
                 'filters' => null,
                 'validators' => null,

@@ -154,8 +154,7 @@ class Indexer
 
         $ids = [];
         foreach($mediaObjects as $mediaObject){
-            if(!in_array($mediaObject->visibility, $this->_allowed_visibilities[$mediaObject->id_object_type]) ||
-                empty($this->_config['search']['build_for'][$mediaObject->id_object_type])){
+            if(empty($this->_config['search']['build_for'][$mediaObject->id_object_type])){
                 continue;
             }
             foreach ($this->_config['search']['build_for'][$mediaObject->id_object_type] as $build_info) {
@@ -238,6 +237,7 @@ class Indexer
         $searchObject->departure_date_count = $this->_createDepartureDateCount($origin);
         $searchObject->valid_from = !is_null($this->mediaObject->valid_from) ?  $this->mediaObject->valid_from->format(DATE_RFC3339_EXTENDED) : null;
         $searchObject->valid_to = !is_null($this->mediaObject->valid_to) ? $this->mediaObject->valid_to->format(DATE_RFC3339_EXTENDED) : null;
+        $searchObject->visibility = $this->mediaObject->visibility;
 
         //$searchObject->dates_per_month = null;
         if(!empty($this->_config['search']['five_dates_per_month_list'])){
@@ -329,7 +329,7 @@ class Indexer
         $field_name = $group_map['field'];
         if($field_name == 'agencies'){
             foreach($this->mediaObject->agencies as $agency){
-                $groups[] = $agency->getId();
+                $groups[] = $agency->getId(). "";
             }
         }elseif($field_name == 'id_pool'){
             $groups[] = $this->mediaObject->id_pool;

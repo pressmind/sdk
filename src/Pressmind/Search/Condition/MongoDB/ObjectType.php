@@ -10,7 +10,7 @@ class ObjectType
     private $_id_object_types;
 
     /**
-     * @param integer $idObjectType
+     * @param integer|array $idObjectType
      */
     public function __construct($idObjectTypes)
     {

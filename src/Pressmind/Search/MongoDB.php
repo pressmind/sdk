@@ -178,13 +178,14 @@ class MongoDB extends AbstractSearch
     /**
      * @param boolean $getFilters
      * @param boolean $returnFiltersOnly
+     * @param \DateTime|null $preview_date
      * @return mixed
      */
-    public function getResult($getFilters = false, $returnFiltersOnly = false, $ttl = 0, $output = null, $is_preview = false)
+    public function getResult($getFilters = false, $returnFiltersOnly = false, $ttl = 0, $output = null, $preview_date = null, $allowed_visibilities = [30])
     {
         $this->_addLog('getResult(): starting query');
         if (!empty($ttl) && Registry::getInstance()->get('config')['cache']['enabled'] && in_array('MONGODB', Registry::getInstance()->get('config')['cache']['types']) && $this->_skip_cache == false) {
-            $key = $this->generateCacheKey();
+            $key = $this->generateCacheKey('', $output, $preview_date, $allowed_visibilities);
             $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
             $key_exists = false;
             if ($cache_adapter->exists($key)) {
@@ -204,7 +205,7 @@ class MongoDB extends AbstractSearch
         $collection_name = 'best_price_search_based_' . (!empty($this->_language) ? $this->_language.'_' : '') . 'origin_' . $this->_origin;
         $db = $client->$db_name;
         $collection = $db->$collection_name;
-        $result = $collection->aggregate($this->buildQuery($output, $is_preview))->toArray()[0];
+        $result = $collection->aggregate($this->buildQuery($output, $preview_date, $allowed_visibilities))->toArray()[0];
         if (!empty($ttl) && Registry::getInstance()->get('config')['cache']['enabled'] && in_array('MONGODB', Registry::getInstance()->get('config')['cache']['types']) && $this->_skip_cache == false) {
             Writer::write(get_class($this) . ' exec() writing to cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
             $info = new \stdClass();
@@ -221,13 +222,16 @@ class MongoDB extends AbstractSearch
 
     /**
      * @param null $key
+     * @param null $output
+     * @param null $preview_date
+     * @param int[] $allowed_visibilities
      * @return string|null
      * @throws \Exception
      */
-    public function updateCache($key = null){
+    public function updateCache($key = null, $output = null, $preview_date = null, $allowed_visibilities = [30]){
         $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
         if(is_null($key)) {
-            $key = $this->generateCacheKey();
+            $key = $this->generateCacheKey('', $output, $preview_date, $allowed_visibilities);
         }
         $info = $this->getCacheInfo($key);
         $params = isset($info['info']) && !empty($info['info']->parameters) ? $info['info']->parameters : null;
@@ -254,18 +258,13 @@ class MongoDB extends AbstractSearch
         return null;
     }
 
-
-    /**
-     * @return array
-     */
-
     /**
      * @param null $output
-     * @param false $is_preview
      * @param \DateTime|null $preview_date
+     * @param array $allowed_visibilities
      * @return array
      */
-    public function buildQuery($output = null, $is_preview = false, $preview_date = null)
+    public function buildQuery($output = null, $preview_date = null, $allowed_visibilities = [30])
     {
         $config = Registry::getInstance()->get('config');
         $allow_invalid_offers = !empty($config['data']['search_mongodb']['search']['allow_invalid_offers']);
@@ -296,15 +295,8 @@ class MongoDB extends AbstractSearch
             }
         }
 
-        // stage 1.5 only valid objects if its not a preview OR display the a preview of a defined date
-        if($is_preview === false || ($is_preview === true && $preview_date != null)){
-            $preview_date = null;
-            if($preview_date == null){
-                $now = new \DateTime();
-                $now->setTimezone(new \DateTimeZone('Europe/Berlin'));
-            }else{
-                $now = $preview_date;
-            }
+        // stage 1.5 only valid objects if it's not a preview
+        if($preview_date != null){
             $stages[] = [
             '$match' => [
                 '$and' => [
@@ -312,7 +304,7 @@ class MongoDB extends AbstractSearch
                         '$or' => [
                             [
                                 'valid_from' => [
-                                    '$lte' => $now->format(DATE_RFC3339_EXTENDED)
+                                    '$lte' => $preview_date->format(DATE_RFC3339_EXTENDED)
                                 ]
                             ],
                             [
@@ -324,7 +316,7 @@ class MongoDB extends AbstractSearch
                         '$or' => [
                             [
                                 'valid_to' => [
-                                    '$gte' => $now->format(DATE_RFC3339_EXTENDED)
+                                    '$gte' => $preview_date->format(DATE_RFC3339_EXTENDED)
                                 ]
                             ],
                             [
@@ -334,7 +326,19 @@ class MongoDB extends AbstractSearch
                     ]
                 ]
             ]
-        ];
+            ];
+        }
+
+        // stage 1.6 - respect visibility
+        if(!empty($allowed_visibilities) && empty($preview_date)){
+            $stages[] = [
+                '$match' => [
+                    'visibility' => [
+                        '$in' =>
+                            $allowed_visibilities
+                    ],
+                ]
+            ];
         }
 
         // stage 2, remove useless data
@@ -571,19 +575,23 @@ class MongoDB extends AbstractSearch
 
 
     /**
+     * @param bool $getFilters
+     * @param null $output
+     * @param \DateTime|null  $preview_date
+     * @param int[] $allowed_visibilities
      * @return false|string
      */
-    public function buildQueryAsJson($getFilters = true){
+    public function buildQueryAsJson($getFilters = true, $output = null, $preview_date = null, $allowed_visibilities = [30]){
         $this->setGetFilters($getFilters);
-        return json_encode($this->buildQuery());
+        return json_encode($this->buildQuery($output, $preview_date, $allowed_visibilities));
     }
 
     /**
      * @param string $add
      * @return string
      */
-    public function generateCacheKey($add = '')
+    public function generateCacheKey($add = '', $output, $preview_date, $allowed_visibilities)
     {
-        return 'MONGODB:' . $add . md5(serialize($this->buildQuery()));
+        return 'MONGODB:' . $add . md5(serialize($this->buildQuery($output, $preview_date, $allowed_visibilities)));
     }
 }

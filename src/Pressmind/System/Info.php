@@ -15,7 +15,7 @@ class Info
         '\Bank',
         '\Brand',
         '\ObjectdataTag',
-        '\Geozip',
+        '\Geodata',
         '\CategoryTree',
         '\CategoryTree\Item',
         '\CheapestPriceSpeed',

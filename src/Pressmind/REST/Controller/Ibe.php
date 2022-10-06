@@ -5,6 +5,7 @@ namespace Pressmind\REST\Controller;
 use Exception;
 use Pressmind\IBE\Booking;
 use Pressmind\MVC\AbstractController;
+use Pressmind\ORM\Object\Geodata;
 use Pressmind\ORM\Object\MediaObject;
 use Pressmind\ORM\Object\Touristic\Housing\Package;
 use Pressmind\ORM\Object\Touristic\Startingpoint\Option;
@@ -285,15 +286,9 @@ class Ibe
         $limit = $this->parameters['limit'] != null ? $this->parameters['limit'] : 10;
         $start = isset($this->parameters['start']) ? $this->parameters['start'] : 0;
         $zip = isset($this->parameters['zip']) ? $this->parameters['zip'] : null;
-        //return $zip;
-        //return $start;
         $radius = isset($this->parameters['radius']) ? $this->parameters['radius'] : null;
         $ibe_client = isset($this->parameters['iic']) ? $this->parameters['iic'] : null;
-        if(!is_null($zip)) {
-            return ['success' => true, 'data' => $this->_getZipRangeStartingPoints($id_starting_point, $zip, $radius, $start, $limit, $ibe_client)];
-        } else {
-            return ['success' => true, 'data' => $this->_getStartingPointOptionsForId($id_starting_point, $start, $limit, $ibe_client)];
-        }
+        return ['success' => true, 'data' => $this->_getStartingPointOptionsForId($id_starting_point, $start, $limit, $ibe_client, $zip, $radius)];
     }
 
     /**
@@ -343,7 +338,7 @@ class Ibe
      * @return array
      * @throws Exception
      */
-    private function _getStartingPointOptionsForId($id_starting_point, $start = 0, $limit = 10, $ibe_client = null)
+    private function _getStartingPointOptionsForId($id_starting_point, $start = 0, $limit = 10, $ibe_client = null, $zip = null, $radius = 20)
     {
         if(is_array($id_starting_point)){
             $id_starting_point = implode(',"', $id_starting_point);
@@ -352,6 +347,16 @@ class Ibe
         $query = '`id_startingpoint` in( "' . $id_starting_point . '") AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0';
         if(!empty($ibe_client)){
             $query .= ' and FIND_IN_SET("'.$ibe_client.'",ibe_clients)';
+        }
+        if(!empty($zip)){
+            $Geodata = new Geodata();
+            $zips = [];
+            foreach($Geodata->getZipsAroundZip($zip, $radius) as $item){
+                $zips[] = $item->postleitzahl;
+            }
+            if(!empty($zips)){
+                $query .= ' and zip in("'.implode('","', $zips).'")';
+            }
         }
         $total_starting_point_options = $optionObject->listAll($query);
         $limited_starting_point_options = $optionObject->listAll($query, ['zip' => 'ASC'], [$start, $limit]);
@@ -379,28 +384,6 @@ class Ibe
         $total_exit_point_options = $optionObject->listAll($query);
         $limited_exit_point_options = $optionObject->listAll($query, ['zip' => 'ASC'], [$start, $limit]);
         return array('total' => count($total_exit_point_options), 'exit_point_options' => $limited_exit_point_options);
-    }
-
-    /**
-     * @param $id_starting_point
-     * @param $zip
-     * @param $radius
-     * @param int $start
-     * @param int $limit
-     * @return array
-     */
-    private function _getZipRangeStartingPoints($id_starting_point, $zip, $radius, $start = 0 ,$limit = 10, $ibe_client = null)
-    {
-        /*$TouristicObject = new TouristicObject();
-        $starting_point_options = [];
-        $found_starting_point_options = $TouristicObject->get_startingpoint_options_around_zip($id_starting_point, $zip, $radius, 60);
-        foreach ($found_starting_point_options as $key => $starting_point_option) {
-            if($key >= $start && $key < ($start + $limit)) {
-                $starting_point_options[] = $starting_point_option;
-            }
-        }*/
-        //return array('total' => count($found_starting_point_options), 'starting_point_options' => $starting_point_options);
-        return array('total' => 0, 'starting_point_options' => null);
     }
 
     /**

@@ -359,7 +359,7 @@ class Ibe
             }
         }
         $total_starting_point_options = $optionObject->listAll($query);
-        $limited_starting_point_options = $optionObject->listAll($query, ['zip' => 'ASC'], [$start, $limit]);
+        $limited_starting_point_options = $optionObject->listAll($query, ['start_time' => 'ASC', 'price' => 'ASC', 'zip' => 'ASC'], [$start, $limit]);
         return array('total' => count($total_starting_point_options), 'starting_point_options' => $limited_starting_point_options);
     }
 

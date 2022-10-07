@@ -388,8 +388,8 @@ class Date extends AbstractObject
                                                         (          
                                                         reservation_date_from is not null
                                                         AND reservation_date_to is not null
-                                                        AND reservation_date_from = '".$this->departure->format('Y-m-d 00:00:00')."'
-                                                        AND reservation_date_to = '".$this->departure->format('Y-m-d 00:00:00')."'
+                                                        AND date(reservation_date_from) = '".$this->departure->format('Y-m-d')."'
+                                                        AND date(reservation_date_to) = '".$this->arrival->format('Y-m-d')."'
                                                         ) OR (
                                                         reservation_date_from is null 
                                                         AND reservation_date_to is null 

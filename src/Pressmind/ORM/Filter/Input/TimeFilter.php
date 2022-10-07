@@ -10,17 +10,20 @@ class TimeFilter implements FilterInterface
 
     public function filterValue($pValue)
     {
-        if(empty($pValue)) return $pValue;
         try {
             $value = null;
             /**it might be that we receive a representation of a JSON DateTime Object, so we need to cover this case ...**/
-            if((is_array($pValue) && isset($pValue['date'])) || (is_a($pValue, 'stdClass') && isset($pValue->date))) {
+            if(is_a($pValue, 'DateTime') || empty($pValue)){
+                return $pValue;
+            }else if((is_array($pValue) && isset($pValue['date'])) || (is_a($pValue, 'stdClass') && isset($pValue->date))) {
                 if(is_array($pValue)) {
                     $pValue = $pValue['date'];
                 } else {
                     $pValue = $pValue->date;
                 }
                 $value = DateTime::createFromFormat('Y-m-d H:i:s.000000', $pValue);
+            } elseif(is_string($pValue) && preg_match("/^[0-9]{2}\:[0-9]{2}\:[0-9]{2}$/", $pValue) > 0)  {
+                $value = DateTime::createFromFormat('H:i:s', $pValue);
             } else {
                 $value = DateTime::createFromFormat('Y-m-d H:i:s', $pValue);
             }

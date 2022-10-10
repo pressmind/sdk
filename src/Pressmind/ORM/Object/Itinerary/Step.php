@@ -29,6 +29,8 @@ use Pressmind\Registry;
  */
 class Step extends AbstractObject
 {
+    protected $_dont_use_autoincrement_on_primary_key = true;
+
     protected $_definitions = [
         'class' => [
             'name' => self::class

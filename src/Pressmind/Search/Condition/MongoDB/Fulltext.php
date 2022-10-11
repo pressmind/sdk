@@ -49,6 +49,7 @@ class Fulltext
                 'url' => 1,
                 'valid_from' => 1,
                 'valid_to' => 1,
+                'visibility' => 1,
                 'score' => [
                     '$meta' => 'textScore'
                 ]

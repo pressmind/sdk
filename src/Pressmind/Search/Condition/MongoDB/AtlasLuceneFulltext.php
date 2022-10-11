@@ -138,6 +138,7 @@ class AtlasLuceneFulltext
                 'url' => 1,
                 'valid_from' => 1,
                 'valid_to' => 1,
+                'visibility' => 30,
                 'highlights' => [
                     '$meta' => 'searchHighlights'
                 ],

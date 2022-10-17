@@ -28,6 +28,12 @@ use Pressmind\ORM\Object\AbstractObject;
  * @property integer $travel_duration_to
  * @property integer $pax_min
  * @property integer $pax_max
+ * @property integer $adult_pax_min
+ * @property integer $adult_pax_max
+ * @property integer $child_age_from
+ * @property integer $child_age_to
+ * @property integer $child_pax_min
+ * @property integer $child_pax_max
  */
 class PriceTable extends AbstractObject
 {
@@ -165,6 +171,32 @@ class PriceTable extends AbstractObject
                 ],
                 'filters' => NULL,
             ],
+            'child_age_to' => [
+                'title' => 'child_age_to',
+                'name' => 'child_age_to',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 11,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
+            'child_age_from' => [
+                'title' => 'child_age_from',
+                'name' => 'child_age_from',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 11,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
             'travel_date_to' => [
                 'title' => 'Travel_date_to',
                 'name' => 'travel_date_to',
@@ -280,6 +312,74 @@ class PriceTable extends AbstractObject
             'pax_max' => [
                 'title' => 'Pax_max',
                 'name' => 'pax_max',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 11,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'filters' => NULL,
+            ],
+            'adult_pax_min' => [
+                'title' => 'adult_pax_min',
+                'name' => 'adult_pax_min',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 11,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'filters' => NULL,
+            ],
+            'adult_pax_max' => [
+                'title' => 'adult_pax_max',
+                'name' => 'adult_pax_max',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 11,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'filters' => NULL,
+            ],
+            'child_pax_min' => [
+                'title' => 'child_pax_min',
+                'name' => 'child_pax_min',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 11,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'filters' => NULL,
+            ],
+            'child_pax_max' => [
+                'title' => 'child_pax_max',
+                'name' => 'child_pax_max',
                 'type' => 'integer',
                 'required' => false,
                 'validators' => [

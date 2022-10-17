@@ -14,6 +14,7 @@ use Pressmind\ORM\Object\AbstractObject;
  * @property string $unit
  * @property string $price_type
  * @property boolean $family_insurance
+ * @property boolean $pair_insurance
  * @property integer $age_to
  * @property integer $age_from
  * @property DateTime $travel_date_to
@@ -125,6 +126,14 @@ class PriceTable extends AbstractObject
             'family_insurance' => [
                 'title' => 'Family_insurance',
                 'name' => 'family_insurance',
+                'type' => 'boolean',
+                'required' => false,
+                'validators' => null,
+                'filters' => NULL,
+            ],
+            'pair_insurance' => [
+                'title' => 'pair_insurance',
+                'name' => 'pair_insurance',
                 'type' => 'boolean',
                 'required' => false,
                 'validators' => null,

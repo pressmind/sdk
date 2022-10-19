@@ -56,6 +56,8 @@ class Info
         '\Touristic\Insurance\InsuranceToGroup',
         '\Touristic\Insurance\InsuranceToInsurance',
         '\Touristic\Insurance\PriceTable',
+        '\Touristic\Insurance\Package',
+        '\Touristic\Insurance\InsuranceToPackage',
         '\Touristic\Option',
         '\Touristic\Option\Description',
         '\Touristic\Option\Discount',

@@ -6,6 +6,7 @@ use DateTime;
 use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\Touristic\Insurance\Calculated;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToInsurance;
+use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToPriceTable;
 use Pressmind\ORM\Object\Touristic\Insurance\PriceTable;
 
 /**
@@ -198,17 +199,20 @@ class Insurance extends AbstractObject
                 'filters' => NULL,
             ],
             'price_tables' => [
-                'title' => 'Price tables',
                 'name' => 'price_tables',
+                'title' => 'price_tables',
                 'type' => 'relation',
-                'relation' => [
-                    'type' => 'hasMany',
-                    'related_id' => 'id_insurance',
-                    'class' => PriceTable::class,
-                ],
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,
+                'relation' => [
+                    'type' => 'ManyToMany',
+                    'class' => PriceTable::class,
+                    'relation_table' => 'pmt2core_touristic_insurance_to_price_table',
+                    'relation_class' => InsuranceToPriceTable::class,
+                    'related_id' => 'id_insurance',
+                    'target_id' => 'id_price_table',
+                ],
             ],
             'sub_insurances' => [
                 'name' => 'sub_insurances',

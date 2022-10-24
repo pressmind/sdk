@@ -701,7 +701,7 @@ abstract class AbstractObject
     {
         $required_check = $this->checkForRequiredProperties();
         if ($required_check !== true) {
-            throw new Exception('Missing required properties: ' . implode(', ', $required_check) . ' in ' . get_class($this));
+            throw new Exception('Missing required properties (create): ' . implode(', ', $required_check) . ' in ' . get_class($this));
         }
         $field_list = $this->getPropertyNames();
         $values = [];
@@ -825,7 +825,7 @@ abstract class AbstractObject
     {
         $required_check = $this->checkForRequiredProperties();
         if ($required_check != true) {
-            throw new Exception('Missing required properties: ' . implode(', ', $required_check));
+            throw new Exception('Missing required properties (update): ' . implode(', ', $required_check));
         }
         $field_list = $this->getPropertyNames();
         $values = [];

@@ -172,6 +172,19 @@ class Booking
     }
 
     /**
+     * @return ValidPriceTablePackage[]
+     * @throws Exception
+     */
+    public function getInsurancePriceTablePackages() {
+        $validPriceTablePackages= [];
+        if(!is_null($this->getBookingPackage()->insurance_group)) {
+            $Package = new Insurance\Package();
+            $validPriceTablePackages = $Package->getValidPackagesByInsuranceGroup($this->getBookingPackage()->insurance_group->id);
+        }
+        return $validPriceTablePackages;
+    }
+
+    /**
      * @param null $pId
      * @return \Pressmind\ORM\Object\Touristic\Housing\Package
      * @throws Exception

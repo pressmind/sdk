@@ -138,6 +138,7 @@ class Ibe
 
         $extras = $booking->getAllAvailableExtras($date->departure, $date->arrival, $date->season);
         $result['insurances'] = $booking->getInsurances();
+        $result['insurance_price_table_packages'] = $booking->getInsurancePriceTablePackages();
 
         $predefined_options = [];
 

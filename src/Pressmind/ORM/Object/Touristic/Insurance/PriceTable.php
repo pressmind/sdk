@@ -63,22 +63,6 @@ class PriceTable extends AbstractObject
                 ],
                 'filters' => NULL,
             ],
-            'id_insurance' => [
-                'title' => 'Id_insurance',
-                'name' => 'id_insurance',
-                'type' => 'string',
-                'required' => true,
-                'validators' => [
-                    [
-                        'name' => 'maxlength',
-                        'params' => 32,
-                    ],
-                ],
-                'filters' => NULL,
-                'index' => [
-                    'id_insurance' => 'index'
-                ]
-            ],
             'code' => [
                 'title' => 'Code',
                 'name' => 'code',

@@ -36,6 +36,7 @@ class TouristicData extends AbstractImport
         'touristic_insurances' => '\Insurance',
         'touristic_additional_insurances' => '\Insurance',
         'touristic_insurances_price_tables' => '\Insurance\PriceTable',
+        'touristic_insurances_to_price_table' => '\Insurance\InsuranceToPriceTable',
         'touristic_option_discounts' => '\Option\Discount'
     ];
 

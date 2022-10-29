@@ -24,8 +24,9 @@ use DateTime;
  * @property string $code_ibe
  * @property integer $id_early_bird_discount_group
  * @property string $link_pib
- * @property integer $guaranteed
- * @property integer $saved
+ * @property boolean $guaranteed
+ * @property boolean $saved
+ * @property boolean $flex
  * @property string $touroperator
  * @property Startingpoint $startingpoint
  * @property Transport[] $transports
@@ -262,6 +263,14 @@ class Date extends AbstractObject
             'guaranteed' => [
                 'title' => 'Guaranteed',
                 'name' => 'guaranteed',
+                'type' => 'boolean',
+                'required' => false,
+                'validators' => null,
+                'filters' => NULL,
+            ],
+            'flex' => [
+                'title' => 'flex',
+                'name' => 'flex',
                 'type' => 'boolean',
                 'required' => false,
                 'validators' => null,

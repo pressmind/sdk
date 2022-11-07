@@ -4,7 +4,9 @@ namespace Pressmind\ORM\Object\Touristic;
 
 use DateTime;
 use Pressmind\ORM\Object\AbstractObject;
+use Pressmind\ORM\Object\Touristic\Insurance\Attribute;
 use Pressmind\ORM\Object\Touristic\Insurance\Calculated;
+use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToAttribute;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToInsurance;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToPriceTable;
 use Pressmind\ORM\Object\Touristic\Insurance\PriceTable;
@@ -28,6 +30,7 @@ use Pressmind\ORM\Object\Touristic\Insurance\PriceTable;
  * @property PriceTable[] $price_tables
  * @property Insurance[] $sub_insurances
  * @property string $own_contribution
+ * @property Attribute[] $attributes
  */
 class Insurance extends AbstractObject
 {
@@ -212,6 +215,22 @@ class Insurance extends AbstractObject
                     'relation_class' => InsuranceToPriceTable::class,
                     'related_id' => 'id_insurance',
                     'target_id' => 'id_price_table',
+                ],
+            ],
+            'attributes' => [
+                'name' => 'attributes',
+                'title' => 'attributes',
+                'type' => 'relation',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+                'relation' => [
+                    'type' => 'ManyToMany',
+                    'class' => PriceTable::class,
+                    'relation_table' => 'pmt2core_touristic_insurance_to_attributes',
+                    'relation_class' => InsuranceToAttribute::class,
+                    'related_id' => 'id_insurance',
+                    'target_id' => 'id_attributes',
                 ],
             ],
             'sub_insurances' => [

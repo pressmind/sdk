@@ -4,6 +4,8 @@ namespace Pressmind\ORM\Object\Touristic\Startingpoint;
 
 use Pressmind\ORM\Object\AbstractObject;
 use \DateTime;
+use Pressmind\ORM\Object\Touristic\Startingpoint\Option\ZipRange;
+
 /**
  * Class Option
  * @property string $id
@@ -25,10 +27,11 @@ use \DateTime;
  * @property DateTime $exit_time
  * @property integer $exit_time_offset
  * @property integer $start_time_offset
- * @property boolean $with_end_time
+ * @property boolean $with_end_time // deprecated
  * @property boolean $with_exit_time
  * @property string $ibe_clients
  * @property boolean $is_pickup_service
+ * @property ZipRange[] $zip_ranges
  */
 class Option extends AbstractObject
 {
@@ -248,7 +251,7 @@ class Option extends AbstractObject
                 ],
                 'filters' => NULL,
             ],
-            'with_end_time' => [
+            'with_end_time' => [ // TODO deprecated
                 'title' => 'With_end_time',
                 'name' => 'with_end_time',
                 'type' => 'boolean',
@@ -281,6 +284,19 @@ class Option extends AbstractObject
                 'title' => 'is_pickup_service',
                 'name' => 'is_pickup_service',
                 'type' => 'boolean',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'zip_ranges' => [
+                'title' => 'zip_ranges',
+                'name' => 'zip_ranges',
+                'type' => 'relation',
+                'relation' => [
+                    'type' => 'hasMany',
+                    'related_id' => 'id_option',
+                    'class' => ZipRange::class,
+                ],
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,

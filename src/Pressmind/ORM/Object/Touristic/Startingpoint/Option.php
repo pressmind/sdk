@@ -27,11 +27,17 @@ use Pressmind\ORM\Object\Touristic\Startingpoint\Option\ZipRange;
  * @property DateTime $exit_time
  * @property integer $exit_time_offset
  * @property integer $start_time_offset
- * @property boolean $with_end_time // deprecated
  * @property boolean $with_exit_time
  * @property string $ibe_clients
  * @property boolean $is_pickup_service
  * @property ZipRange[] $zip_ranges
+ * @property string $zip_validity_area
+ * @property string $rail
+ * @property string $transportation
+ * @property integer $order
+ * @property boolean $extended_price_scale
+ * @property string $pickup_service_street
+ * @property string $pickup_service_house_number
  */
 class Option extends AbstractObject
 {
@@ -251,14 +257,6 @@ class Option extends AbstractObject
                 ],
                 'filters' => NULL,
             ],
-            'with_end_time' => [ // TODO deprecated
-                'title' => 'With_end_time',
-                'name' => 'with_end_time',
-                'type' => 'boolean',
-                'required' => false,
-                'validators' => null,
-                'filters' => NULL,
-            ],
             'with_exit_time' => [
                 'title' => 'With_exit_time',
                 'name' => 'with_exit_time',
@@ -301,6 +299,63 @@ class Option extends AbstractObject
                 'validators' => NULL,
                 'filters' => NULL,
             ],
+            'zip_validity_area' => [
+                'title' => 'zip_validity_area',
+                'name' => 'zip_validity_area',
+                'type' => 'string',
+                'required' => false,
+                'validators' => null,
+                'filters' => NULL,
+            ],
+            'rail' => [
+                'title' => 'rail',
+                'name' => 'rail',
+                'type' => 'string',
+                'required' => false,
+                'validators' => null,
+                'filters' => NULL,
+            ],
+            'transportation' => [
+                'title' => 'transportation',
+                'name' => 'transportation',
+                'type' => 'string',
+                'required' => false,
+                'validators' => null,
+                'filters' => NULL,
+            ],
+            'order' => [
+                'title' => 'order',
+                'name' => 'order',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => null,
+                'filters' => NULL,
+            ],
+            'extended_price_scale' => [
+                'title' => 'extended_price_scale',
+                'name' => 'extended_price_scale',
+                'type' => 'boolean',
+                'required' => false,
+                'validators' => null,
+                'filters' => NULL,
+            ],
+            'pickup_service_street' => [
+                'title' => 'pickup_service_street',
+                'name' => 'pickup_service_street',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'pickup_service_house_number' => [
+                'title' => 'pickup_service_house_number',
+                'name' => 'pickup_service_house_number',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+
         ]
     );
 }

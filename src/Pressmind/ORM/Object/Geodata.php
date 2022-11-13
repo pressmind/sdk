@@ -337,5 +337,24 @@ class Geodata extends AbstractObject
         return $output;
     }
 
+    /**
+     * @param $zip
+     * @return false|Geodata
+     * @throws \Exception
+     */
+    public function getByZip($zip){
+        if (!filter_var($zip, FILTER_VALIDATE_INT)) {
+            return false;
+        }
+        $query = 'select * from pmt2core_geodata where postleitzahl = "'.$zip.'" limit 1';
+        $result = $this->_db->fetchAll($query);
+        if(!empty($result[0])){
+            $Geodata = new Geodata();
+            $Geodata->fromStdClass($result[0]);
+            return $Geodata;
+        }
+        return false;
+    }
+
 
 }

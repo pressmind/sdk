@@ -6,7 +6,7 @@ use Pressmind\ORM\Object\AbstractObject;
 
 /**
  * Class ZipRange
- * @property string $id_zip_ranges
+ * @property string $id
  * @property string $id_option
  * @property string $from
  * @property string $to
@@ -14,6 +14,7 @@ use Pressmind\ORM\Object\AbstractObject;
 class ZipRange extends AbstractObject
 {
     protected $_dont_use_autoincrement_on_primary_key = true;
+    protected $_replace_into_on_create = true;
 
     protected $_definitions = array(
         'class' => [
@@ -21,12 +22,12 @@ class ZipRange extends AbstractObject
         ],
         'database' => [
             'table_name' => 'pmt2core_touristic_startingpoint_options_zip_ranges',
-            'primary_key' => 'id_zip_ranges',
+            'primary_key' => 'id',
         ],
         'properties' => [
-            'id_zip_ranges' => [
-                'title' => 'Id_zip_ranges',
-                'name' => 'id_zip_ranges',
+            'id' => [
+                'title' => 'id',
+                'name' => 'id',
                 'type' => 'string',
                 'required' => true,
                 'validators' => [

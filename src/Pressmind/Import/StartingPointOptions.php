@@ -41,7 +41,6 @@ class StartingPointOptions extends AbstractImport implements ImportInterface
                     $this->_log[] = ' Importer::_importMediaObjectTouristicStartingPointOptions(' . implode(',', $this->_ids) . '): writing data';
                     foreach ($result->options as $option) {
                         $starting_point_option = new Option();
-                        unset($option->zip_ranges);
                         $starting_point_option->fromStdClass($option);
                         $starting_point_option->id_startingpoint = $result->id;
                         try {

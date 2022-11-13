@@ -278,6 +278,7 @@ class Booking
     }
 
     /**
+     * @deprecated
      * @return bool
      * @throws Exception
      */
@@ -294,6 +295,7 @@ class Booking
     }
 
     /**
+     * @deprecated
      * @return bool
      * @throws Exception
      */

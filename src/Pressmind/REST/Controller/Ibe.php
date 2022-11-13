@@ -8,6 +8,7 @@ use Pressmind\MVC\AbstractController;
 use Pressmind\ORM\Object\Geodata;
 use Pressmind\ORM\Object\MediaObject;
 use Pressmind\ORM\Object\Touristic\Housing\Package;
+use Pressmind\ORM\Object\Touristic\Startingpoint;
 use Pressmind\ORM\Object\Touristic\Startingpoint\Option;
 
 class Ibe
@@ -102,17 +103,20 @@ class Ibe
 
         $result['starting_points'] = ['total' => 0];
         $result['exit_points'] = ['total' => 0];
+        $icc = !empty($this->parameters['params']['iic']) ? $this->parameters['params']['iic'] : null;
         if(!empty($booking->getDate()->id_starting_point) && empty($result['transport_pairs'])){
             // this way is soon deprecated, because its even better to use the startingpoint from the transport instead from the date
-            $result['starting_points'] = $this->_getStartingPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit, !empty($this->parameters['params']['iic']) ? $this->parameters['params']['iic'] : null);
-            $result['exit_points'] = $this->_getExitPointOptionsForId($booking->getDate()->id_starting_point, 0, $starting_points_limit, !empty($this->parameters['params']['iic']) ? $this->parameters['params']['iic'] : null);
+            $id_starting_point = $id_exit_point = $booking->getDate()->id_starting_point;
         }elseif(!empty($result['transport_pairs'])){
-            $result['starting_points'] = $this->_getStartingPointOptionsForId($result['transport_pairs'][0]['way1']->id_starting_point, 0, $starting_points_limit, !empty($this->parameters['params']['iic']) ? $this->parameters['params']['iic'] : null);
-            $result['exit_points'] = $this->_getExitPointOptionsForId($result['transport_pairs'][0]['way2']->id_starting_point, 0, $starting_points_limit, !empty($this->parameters['params']['iic']) ? $this->parameters['params']['iic'] : null);
+            $id_starting_point = $result['transport_pairs'][0]['way1']->id_starting_point;
+            $id_exit_point= $result['transport_pairs'][0]['way2']->id_starting_point;
         }
-        $result['has_pickup_services'] = $booking->hasPickServices();
+        $result['starting_points']['total'] = count(StartingPoint::getOptionsByZipRadius($id_starting_point, $icc, null, 20, 0, null));
+        $result['starting_points']['starting_point_options'] = StartingPoint::getOptionsByZipRadius($id_starting_point, $icc, null, 20,0, $starting_points_limit);
+        $result['exit_points']['total'] = count(StartingPoint::getExitOptionsByZipRadius($id_exit_point, $icc, null, 20, 0, null));
+        $result['exit_points']['starting_point_options'] = StartingPoint::getExitOptionsByZipRadius($id_exit_point, $icc, null, 20,0, $starting_points_limit);
+        $result['has_pickup_services'] = Startingpoint::hasPickupService($id_starting_point, $icc);
         $result['has_starting_points'] = $result['starting_points']['total'] > 0;
-
         $result['has_seatplan'] = false;
         if(!empty($result['transport_pairs'])){
             $result['has_seatplan'] = !empty($result['transport_pairs'][0]['way1']->seatplan_required) || !empty($result['transport_pairs'][0]['way2']->seatplan_required);
@@ -268,6 +272,7 @@ class Ibe
         return $transport_pairs;
     }
 
+    // @TODO @see pressmind_ib3_v2_get_starting_point_options
     public function pressmind_ib3_v2_get_exit_point($params) {
         $this->parameters = $params['data'];
         $id_starting_point = $this->parameters['id_starting_point'] ?? null;
@@ -289,7 +294,21 @@ class Ibe
         $zip = isset($this->parameters['zip']) ? $this->parameters['zip'] : null;
         $radius = isset($this->parameters['radius']) ? $this->parameters['radius'] : null;
         $ibe_client = isset($this->parameters['iic']) ? $this->parameters['iic'] : null;
-        return ['success' => true, 'data' => $this->_getStartingPointOptionsForId($id_starting_point, $start, $limit, $ibe_client, $zip, $radius)];
+        $data = [];
+        $data['total'] = count(Startingpoint::getOptionsByZipRadius($id_starting_point, $ibe_client, $zip, $radius, 0, null));
+        $data['starting_point_options'] = Startingpoint::getOptionsByZipRadius($id_starting_point, $ibe_client, $zip, $radius, $start, $limit);
+        return ['success' => true, 'data' => $data];
+    }
+
+    public function pressmind_ib3_v2_find_pickup_service($params) {
+        $this->parameters = $params['data'];
+        $id_starting_point = $this->parameters['id_starting_point'];
+        $zip = isset($this->parameters['zip']) ? $this->parameters['zip'] : null;
+        $ibe_client = isset($this->parameters['iic']) ? $this->parameters['iic'] : null;
+        $data = [];
+        $data['total'] = count(Startingpoint::getPickupOptionByZip($id_starting_point, $ibe_client, $zip));
+        $data['starting_point_options'] = Startingpoint::getPickupOptionByZip($id_starting_point, $ibe_client, $zip);
+        return ['success' => true, 'data' => $data];
     }
 
     /**
@@ -331,61 +350,6 @@ class Ibe
         return ['success' => true, 'CheapestPriceSpeed' => null, 'Options' => null];
     }
 
-    /**
-     * @param $id_starting_point
-     * @param int $start
-     * @param int $limit
-     * @param string $ibe_client
-     * @return array
-     * @throws Exception
-     */
-    private function _getStartingPointOptionsForId($id_starting_point, $start = 0, $limit = 10, $ibe_client = null, $zip = null, $radius = 20)
-    {
-        if(is_array($id_starting_point)){
-            $id_starting_point = implode(',"', $id_starting_point);
-        }
-        $optionObject = new Option();
-        $query = '`id_startingpoint` in( "' . $id_starting_point . '") AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0';
-        if(!empty($ibe_client)){
-            $query .= ' and FIND_IN_SET("'.$ibe_client.'",ibe_clients)';
-        }
-        if(!empty($zip)){
-            $Geodata = new Geodata();
-            $zips = [];
-            foreach($Geodata->getZipsAroundZip($zip, $radius) as $item){
-                $zips[] = $item->postleitzahl;
-            }
-            if(!empty($zips)){
-                $query .= ' and zip in("'.implode('","', $zips).'")';
-            }
-        }
-        $total_starting_point_options = $optionObject->listAll($query);
-        $limited_starting_point_options = $optionObject->listAll($query, ['start_time' => 'ASC', 'price' => 'ASC', 'zip' => 'ASC'], [$start, $limit]);
-        return array('total' => count($total_starting_point_options), 'starting_point_options' => $limited_starting_point_options);
-    }
-
-    /**
-     * @param $id_starting_point
-     * @param int $start
-     * @param int $limit
-     * @param null $ibe_client
-     * @return array
-     * @throws Exception
-     */
-    private function _getExitPointOptionsForId($id_starting_point, $start = 0, $limit = 10, $ibe_client = null)
-    {
-        if(is_array($id_starting_point)){
-            $id_starting_point = implode(',"', $id_starting_point);
-        }
-        $optionObject = new Option();
-        $query = '`id_startingpoint` in( "' . $id_starting_point . '") AND (`exit` = 1 OR (`entry` = 0 AND `exit` = 0)) AND `is_pickup_service` = 0';
-        if(!empty($ibe_client)){
-            $query .= ' and FIND_IN_SET("'.$ibe_client.'",ibe_clients)';
-        }
-        $total_exit_point_options = $optionObject->listAll($query);
-        $limited_exit_point_options = $optionObject->listAll($query, ['zip' => 'ASC'], [$start, $limit]);
-        return array('total' => count($total_exit_point_options), 'exit_point_options' => $limited_exit_point_options);
-    }
 
     /**
      * @param $transports

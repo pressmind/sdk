@@ -91,7 +91,7 @@ class Mysql
             $primary_key_column_names[] = $primary_key->Column_name;
         }
         $primary_key_column_names_string = implode(',', $primary_key_column_names);
-        if($primary_key_column_names_string != $this->_object->getDbPrimaryKey()) {
+        if(!empty($primary_key_column_names_string) && $primary_key_column_names_string != $this->_object->getDbPrimaryKey()) {
             $this->_differences[] = ['action' => 'alter_primary_key', 'column_names' => $this->_object->getDbPrimaryKey(), 'old_column_names' => $primary_key_column_names_string, 'msg' => get_class($this) . ': Current primary key is set to column \'' . $primary_key_column_names_string . '\' but is configured for: \'' . $this->_object->getDbPrimaryKey() . '\'. Primary key needs to be altered.'];
         }
     }

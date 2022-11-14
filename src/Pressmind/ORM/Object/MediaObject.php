@@ -1017,7 +1017,10 @@ class MediaObject extends AbstractObject
                             ){
                                 continue;
                             }
-
+                            $price = $option->price + $transport_price + $included_options_price;
+                            if($price <= 0){
+                                continue;
+                            }
                             $cheapestPriceSpeed = new CheapestPriceSpeed();
                             $cheapestPriceSpeed->id_media_object = $this->getId();
                             $cheapestPriceSpeed->id_booking_package = $booking_package->getId();
@@ -1042,7 +1045,7 @@ class MediaObject extends AbstractObject
                             $cheapestPriceSpeed->price_option = $option->price;
                             $cheapestPriceSpeed->price_option_pseudo = $option->price_pseudo;
                             $cheapestPriceSpeed->option_price_due = $option->price_due;
-                            $cheapestPriceSpeed->price_regular_before_discount = $option->price + $transport_price + $included_options_price;
+                            $cheapestPriceSpeed->price_regular_before_discount = $price;
                             $cheapestPriceSpeed->transport_code = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->code : null;
                             $cheapestPriceSpeed->transport_type = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->type : null;
                             $cheapestPriceSpeed->transport_1_way = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->way : null;

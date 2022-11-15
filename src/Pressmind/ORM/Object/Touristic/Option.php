@@ -58,6 +58,7 @@ use Pressmind\ORM\Object\Touristic\Option\Discount;
  * @property string $ibe_clients
  * @property string $agencies
  * @property string $crs_meta_data
+ * @property boolean $dont_use_for_offers
  */
 class Option extends AbstractObject
 {
@@ -746,6 +747,14 @@ class Option extends AbstractObject
                 'title' => 'crs_meta_data',
                 'name' => 'crs_meta_data',
                 'type' => 'longtext',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'dont_use_for_offers' => [
+                'title' => 'dont_use_for_offers',
+                'name' => 'dont_use_for_offers',
+                'type' => 'boolean',
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,

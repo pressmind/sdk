@@ -54,13 +54,18 @@ class Filesystem extends AbstractProvider implements ProviderInterface
     {
         $bucket->name = HelperFunctions::replaceConstantsFromConfig($bucket->name);
         $dir = rtrim($bucket->name , '/');
-        if(empty(trim($bucket->name,'/')) || strlen($dir) < 8){
-            throw new Exception('Path is possible to short ('.$dir.'), stop here for security reasons ');
-        }
-        $dir .= '/*';
-        exec('rm -rf '.$dir, $o, $r);
-        if($r > 0){
-            throw new Exception('deletion failed: '.print_r($o, true));
+        if(!empty($dir) && file_exists($dir) && is_dir($dir) && substr_count($dir, '/') > 5){
+            $perms = fileperms($dir);
+            $owner = fileowner($dir);
+            exec('rm -rf '.$dir, $o, $r);
+            if($r > 0){
+                throw new Exception('deletion failed: '.print_r($o, true));
+            }
+            mkdir($dir);
+            chmod($dir, $perms);
+            chown($dir, $owner);
+        }else{
+            throw new Exception('Path is possible to short or does not exists: ('.$dir.'), stop here for security reasons ');
         }
         return true;
     }

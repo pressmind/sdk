@@ -16,11 +16,14 @@
         "ext-curl": "*",
         "ext-bcmath": "*",
         "ext-pdo": "*",
+        "ext-pdo_mysql": "*",
         "ext-readline": "*",
         "ext-mbstring": "*",
         "ext-gd": "*",
         "ext-zlib": "*",
-        "ext-fileinfo": "*"
+        "ext-fileinfo": "*",
+        "ext-redis": "*",
+        "ext-imagick": "*"
     },
     "autoload": {
         "psr-4": {

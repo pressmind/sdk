@@ -35,6 +35,7 @@ use Pressmind\System\I18n;
  * @property boolean $seatplan_required
  * @property string $airline
  * @property string $flight
+ * @property boolean $dont_use_for_offers
  */
 class Transport extends AbstractObject
 {
@@ -401,6 +402,14 @@ class Transport extends AbstractObject
                 'title' => 'flight',
                 'name' => 'flight',
                 'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'dont_use_for_offers' => [
+                'title' => 'dont_use_for_offers',
+                'name' => 'dont_use_for_offers',
+                'type' => 'boolean',
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,

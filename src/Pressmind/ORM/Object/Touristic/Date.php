@@ -340,16 +340,19 @@ class Date extends AbstractObject
     );
 
     /**
+     * @param $state_filter
+     * @param $is_offer_query
      * @return Option[]
      * @throws Exception
      */
-    public function getHousingOptions($state_filter = [0,1,2,3])
+    public function getHousingOptions($state_filter = [0,1,2,3], $is_offer_query = false)
     {
         $housing_options = [];
         $housingOptions = Option::listAll(
             "id_booking_package = '" . $this->id_booking_package . "' 
             AND type = 'housing_option' AND season = '" . $this->season . "'"
             .(!empty($state_filter) ? " AND state in(".implode(',', $state_filter).")" : "")
+            .(!empty($is_offer_query) ? " AND dont_use_for_offers = 0" : "")
         );
         foreach ($housingOptions as $housing_option) {
             $housing_options[] = $housing_option;
@@ -361,34 +364,36 @@ class Date extends AbstractObject
      * @return Option[]
      * @throws Exception
      */
-    public function getSightseeings()
+    public function getSightseeings($is_query_offer = false)
     {
-        return $this->getOptions(['sightseeing']);
+        return $this->getOptions(['sightseeing'], $is_query_offer);
     }
 
     /**
      * @return Option[]
      * @throws Exception
      */
-    public function getExtras()
+    public function getExtras($is_query_offer = false)
     {
-        return $this->getOptions(['extra']);
+        return $this->getOptions(['extra'], $is_query_offer);
     }
 
     /**
      * @return Option[]
      * @throws Exception
      */
-    public function getTickets()
+    public function getTickets($is_query_offer = false)
     {
-        return $this->getOptions(['ticket']);
+        return $this->getOptions(['ticket'], $is_query_offer);
     }
 
     /**
+     * @param $types
+     * @param $is_offer_query
      * @return Option[]
      * @throws Exception
      */
-    public function getOptions($types)
+    public function getOptions($types, $is_offer_query = false)
     {
         $options = [];
         $options_list = Option::listAll("id_booking_package = '" . $this->id_booking_package . "' 
@@ -404,8 +409,7 @@ class Date extends AbstractObject
                                                         AND reservation_date_to is null 
                                                         AND (season in ('" . $this->season . "','-', '') or season is null)
                                                         )
-                                                    )
-                                                ");
+                                                    )".(!empty($is_offer_query) ? " AND dont_use_for_offers = 0" : ""));
         foreach ($options_list as $option) {
             $options[] = $option;
         }
@@ -417,13 +421,13 @@ class Date extends AbstractObject
      * @return Option[]
      * @throws Exception
      */
-    public function getAllOptionsButExcludePriceMixOptions($price_mix){
+    public function getAllOptionsButExcludePriceMixOptions($price_mix, $is_query_offer = false){
         $option_set['date_transport'] = ['ticket', 'sightseeing', 'extra'];
         $option_set['date_housing'] = ['ticket', 'sightseeing', 'extra'];
         $option_set['date_extra'] = ['ticket', 'sightseeing',];
         $option_set['date_ticket'] = ['sightseeing', 'extra'];
         $option_set['date_sightseeing'] = ['ticket', 'extra'];
-        return isset($option_set[$price_mix]) ? $this->getOptions($option_set[$price_mix]) : [];
+        return isset($option_set[$price_mix]) ? $this->getOptions($option_set[$price_mix], $is_query_offer) : [];
     }
 
 
@@ -433,13 +437,14 @@ class Date extends AbstractObject
      * @param array $types
      * @return Transport[]
      */
-    public function getTransports($state_filter = [0,2,3], $ids = [], $types = []){
+    public function getTransports($state_filter = [0,2,3], $ids = [], $types = [], $is_query_offer = false){
         $valid_transports = [];
         foreach($this->transports as $transport){
             if(
                 (in_array($transport->state, $state_filter) || count($state_filter) == 0) AND
                 (in_array($transport->getId(), $ids) || count($ids) == 0) AND
-                (in_array($transport->type, $types) || count($types) == 0)
+                (in_array($transport->type, $types) || count($types) == 0) AND
+                ($is_query_offer === false || $is_query_offer && !$transport->dont_use_for_offers)
             ){
                 $valid_transports[] = $transport;
             }
@@ -454,8 +459,8 @@ class Date extends AbstractObject
      * @param int $max_pairs
      * @return array
      */
-    public function getTransportPairs($state_filter = [0,2,3], $ids = [], $types = [], $max_pairs = null){
-        $valid_transports = $this->getTransports($state_filter, $ids, $types);
+    public function getTransportPairs($state_filter = [0,2,3], $ids = [], $types = [], $max_pairs = null, $is_query_offer = false){
+        $valid_transports = $this->getTransports($state_filter, $ids, $types, $is_query_offer);
         $transport_pairs = [];
 
         // some transports can contain more than one groups, this multiple groups are marked with the "#"-sign

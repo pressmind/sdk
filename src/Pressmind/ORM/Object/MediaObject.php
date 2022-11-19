@@ -936,6 +936,8 @@ class MediaObject extends AbstractObject
      */
     public function insertCheapestPrice($max_rows = 5000)
     {
+        $CheapestPrice = new CheapestPriceSpeed();
+        $CheapestPrice->deleteByMediaObjectId($this->getId());
         $booking_packages = $this->booking_packages;
         $result = [];
         $now = new DateTime();
@@ -949,20 +951,20 @@ class MediaObject extends AbstractObject
                 $early_bird_discounts = is_null($date->early_bird_discount_group) ? [null] : $date->early_bird_discount_group->items;
 
                 /** @var Transport[] $transport_pairs */
-                $transport_pairs = count($date->transports) > 0 ? $date->getTransportPairs([0,2,3]) : [null];
+                $transport_pairs = count($date->transports) > 0 ? $date->getTransportPairs([0,2,3], [], [], null, true) : [null];
 
                 $options = [];
                 if($booking_package->price_mix == 'date_housing') {
-                    $options = $date->getHousingOptions();
+                    $options = $date->getHousingOptions([0,1,2,3], true);
                 }
                 if($booking_package->price_mix == 'date_sightseeing') {
-                    $options = $date->getSightseeings();
+                    $options = $date->getSightseeings(true);
                 }
                 if($booking_package->price_mix == 'date_extra') {
-                    $options = $date->getExtras();
+                    $options = $date->getExtras(true);
                 }
                 if($booking_package->price_mix == 'date_ticket') {
-                    $options = $date->getTickets();
+                    $options = $date->getTickets(true);
                 }
                 if($booking_package->price_mix == 'date_transport') {
                     $tmpOption = new Option();
@@ -976,7 +978,7 @@ class MediaObject extends AbstractObject
                 $code_ibe_included_options = [];
                 $cheapest_options = [];
                 $check_group_validity = [];
-                $option_list = $date->getAllOptionsButExcludePriceMixOptions($booking_package->price_mix);
+                $option_list = $date->getAllOptionsButExcludePriceMixOptions($booking_package->price_mix, true);
                 foreach($option_list as $option){
                     $key = $option->type.'-'.$option->required_group;
                     if(!empty($option->required_group) && !empty($option->required)){

@@ -332,7 +332,7 @@ class Indexer
                 $groups[] = $agency->getId(). "";
             }
         }elseif($field_name == 'id_pool'){
-            $groups[] = $this->mediaObject->id_pool;
+            $groups[] = $this->mediaObject->id_pool ."";
         }else{
             if(empty($data->$field_name)){
                 return $groups;

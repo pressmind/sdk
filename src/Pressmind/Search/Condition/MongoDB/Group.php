@@ -29,7 +29,7 @@ class Group
         if($type == 'first_match') {
             $q = [];
             foreach ($this->_groups as $group) {
-                $q[] = ['groups' => $group];
+                $q[] = ['groups' => (string)$group];
             }
             $q[] = ['groups' => ['$size' => 0]];
             $query['$or'] = $q;

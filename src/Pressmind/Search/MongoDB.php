@@ -296,15 +296,15 @@ class MongoDB extends AbstractSearch
         }
 
         // stage 1.5 only valid objects if it's not a preview
-        if($preview_date != null){
-            $stages[] = [
+        $current_date = empty($preview_date) ? new \DateTime() : $preview_date;
+        $stages[] = [
             '$match' => [
                 '$and' => [
                     [
                         '$or' => [
                             [
                                 'valid_from' => [
-                                    '$lte' => $preview_date->format(DATE_RFC3339_EXTENDED)
+                                    '$lte' => $current_date->format(DATE_RFC3339_EXTENDED)
                                 ]
                             ],
                             [
@@ -316,7 +316,7 @@ class MongoDB extends AbstractSearch
                         '$or' => [
                             [
                                 'valid_to' => [
-                                    '$gte' => $preview_date->format(DATE_RFC3339_EXTENDED)
+                                    '$gte' => $current_date->format(DATE_RFC3339_EXTENDED)
                                 ]
                             ],
                             [
@@ -325,9 +325,7 @@ class MongoDB extends AbstractSearch
                         ]
                     ]
                 ]
-            ]
-            ];
-        }
+            ]];
 
         // stage 1.6 - respect visibility
         if(!empty($allowed_visibilities) && empty($preview_date)){

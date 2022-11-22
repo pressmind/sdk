@@ -13,6 +13,7 @@ class GD implements AdapterInterface
 {
 
     /**
+     * @TODO: this must deliver a jpg, see ImageMagick.php!
      * @param Config $config
      * @param File $file
      * @param string $derivativeName

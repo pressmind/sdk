@@ -16,6 +16,7 @@ use Pressmind\ORM\Object\Itinerary\Step\DocumentMediaObject\Derivative;
 use Pressmind\ORM\Object\MediaObject\DataType\Picture;
 use Pressmind\Registry;
 use Pressmind\Storage\Bucket;
+use Pressmind\Storage\File;
 
 /**
  * Class DocumentMediaObject
@@ -26,13 +27,19 @@ use Pressmind\Storage\Bucket;
  * @property string $copyright
  * @property string $caption
  * @property string $alt
+ * @property string $uri
  * @property string $title
- * @property integer $file_size
  * @property string $file_name
  * @property integer $sort
  * @property string $tmp_url
  * @property boolean $download_successful
  * @property string $mime_type
+ * @property string $code
+ * @property string $name
+ * @property string $tags
+ * @property integer $width
+ * @property integer $height
+ * @property integer $filesize
  * @property Derivative[] $derivatives
  */
 class DocumentMediaObject extends Picture
@@ -118,18 +125,18 @@ class DocumentMediaObject extends Picture
                 'validators' => null,
                 'filters' => null
             ],
+            'uri' => [
+                'title' => 'uri',
+                'name' => 'uri',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+            ],
             'title' => [
                 'title' => 'title',
                 'name' => 'title',
                 'type' => 'string',
-                'required' => false,
-                'validators' => null,
-                'filters' => null
-            ],
-            'file_size' => [
-                'title' => 'file_size',
-                'name' => 'file_size',
-                'type' => 'integer',
                 'required' => false,
                 'validators' => null,
                 'filters' => null
@@ -175,6 +182,54 @@ class DocumentMediaObject extends Picture
                 'filters' => null,
                 'validators' => null,
             ],
+            'code' => [
+                'title' => 'code',
+                'name' => 'code',
+                'type' => 'string',
+                'required' => false,
+                'validators' => null,
+                'filters' => null
+            ],
+            'name' => [
+                'title' => 'name',
+                'name' => 'name',
+                'type' => 'string',
+                'required' => false,
+                'validators' => null,
+                'filters' => null
+            ],
+            'tags' => [
+                'title' => 'tags',
+                'name' => 'tags',
+                'type' => 'string',
+                'required' => false,
+                'validators' => null,
+                'filters' => null
+            ],
+            'width' => [
+                'title' => 'width',
+                'name' => 'width',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => null,
+                'filters' => null
+            ],
+            'height' => [
+                'title' => 'height',
+                'name' => 'height',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => null,
+                'filters' => null
+            ],
+            'filesize' => [
+                'title' => 'filesize',
+                'name' => 'filesize',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => null,
+                'filters' => null
+            ],
             'derivatives' => [
                 'title' => 'derivatives',
                 'name' => 'derivatives',
@@ -192,53 +247,8 @@ class DocumentMediaObject extends Picture
             ]
         ]
     ];
-
-    /**
-     * @param bool $use_cache
-     * @param integer $retry_counter
-     * @return \Pressmind\Storage\File
-     * @throws Exception
-     */
-    public function downloadOriginal($use_cache = true, $retry_counter = 0, $last_error = null)
-    {
-        $max_retries = 1;
-        $download_url = $this->tmp_url;
-        if($use_cache == false) {
-            $download_url .= '&cache=0';
-        }
-        $downloader = new Downloader();
-        $query = [];
-        $url = parse_url($this->tmp_url);
-        parse_str($url['query'], $query);
-        if($retry_counter > 0 && $max_retries >= $retry_counter) {
-            Writer::write('ID ' . $this->getId() . ': Retry No. ' . $retry_counter . ' of downloading itinerary image from ' . $download_url, WRITER::OUTPUT_FILE, 'image_processor', Writer::TYPE_INFO);
-        }
-        $tmp_file_name = empty($this->file_name) ? 'itinerary_' . $this->id_step . '_' . $this->id_media_object . '.tmp' : $this->file_name;
-        if($max_retries >= $retry_counter) {
-            try {
-                $storage_file = $downloader->download($download_url, $tmp_file_name);
-                $mime_type = $storage_file->getMimetype();
-                $this->_checkMimetype($mime_type);
-                $new_file_name = 'itinerary_' . $this->id_step . '_' . $this->id_media_object . '.' . HelperFunctions::getExtensionFromMimeType($storage_file->getMimetype());
-                $this->download_successful = true;
-                $this->mime_type = $storage_file->getMimetype();
-                $storage_file->name = $new_file_name;
-                $this->file_name = $new_file_name;
-                $storage_file->save();
-                $this->update();
-                return $storage_file;
-            } catch (Exception $e) {
-                $last_error = $e->getMessage();
-                Writer::write('ID ' . $this->getId() . ': Downloading itinerary image from ' . $download_url . ' failed at try ' . $retry_counter . '. Error: ' . $last_error, WRITER::OUTPUT_FILE, 'image_processor', Writer::TYPE_ERROR);
-                $this->downloadOriginal(false, ($retry_counter + 1), $last_error);
-            } catch (S3Exception $e) {
-                $last_error = $e->getMessage();
-            }
-        } else {
-            throw new Exception('Download of itinerary image ID: ' . $this->id . ' failed! Maximum retries of ' . $max_retries . ' exceeded! Last error: ' . $last_error);
-        }
-    }
-
+    
+    
     /**
      * @param \Pressmind\Image\Processor\Config $derivative_config
      * @param \Pressmind\Image\Processor\AdapterInterface $image_processor
@@ -260,4 +270,5 @@ class DocumentMediaObject extends Picture
         $webp_processor->process($derivative_config, $derivative_binary_file, $derivative_config->name);
         unset($derivative_binary_file);
     }
+    
 }

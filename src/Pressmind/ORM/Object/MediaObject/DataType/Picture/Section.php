@@ -4,10 +4,13 @@ namespace Pressmind\ORM\Object\MediaObject\DataType\Picture;
 use Exception;
 use Pressmind\HelperFunctions;
 use Pressmind\Image\Downloader;
+use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\MediaObject\DataType\Picture;
 use Pressmind\Image\Processor;
 use Pressmind\ORM\Object\MediaObject\DataType\Picture\Derivative;
+use Pressmind\Registry;
+use Pressmind\Storage\Bucket;
 use Pressmind\Storage\File;
 
 /**
@@ -183,42 +186,7 @@ class Section extends Picture
             ]
         ]
     ];
-
-    /**
-     * @param bool $use_cache
-     * @param integer $retry_counter
-     * @throws Exception
-     */
-    public function downloadOriginal($use_cache = true, $retry_counter = 0, $last_error = null)
-    {
-        $max_retries = 2;
-        $download_url = $this->tmp_url;
-        if($use_cache == false) {
-            $download_url .= '&cache=0';
-        }
-        $downloader = new Downloader();
-        $query = [];
-        $url = parse_url($this->tmp_url);
-        parse_str($url['query'], $query);
-        if($max_retries >= $retry_counter) {
-            try {
-                $storage_file = $downloader->download($download_url, $this->file_name);
-                $new_file_name = $this->id_media_object . '_' . $query['id'] . '_' . $this->section_name . '_'.md5($this->tmp_url). '.' . HelperFunctions::getExtensionFromMimeType($storage_file->getMimetype());
-                $this->download_successful = true;
-                $this->mime_type = $storage_file->getMimetype();
-                $storage_file->name = $new_file_name;
-                $this->file_name = $new_file_name;
-                $storage_file->save();
-                $this->update();
-                return $storage_file;
-            } catch (Exception $e) {
-                $this->downloadOriginal(false, $retry_counter + 1);
-            }
-        } else {
-            throw new Exception('Download of image ID: ' . $this->id . ' failed! Maximum retries exceeded!');
-        }
-    }
-
+    
     /**
      * @param Processor\Config $derivative_config
      * @param Processor\AdapterInterface $image_processor
@@ -242,4 +210,5 @@ class Section extends Picture
         $webp_processor->process($derivative_config, $derivative_binary_file, $derivative_config->name);
         unset($derivative_binary_file);
     }
+    
 }

@@ -12,6 +12,7 @@ use Pressmind\ORM\Object\MediaObject\DataType\Picture\Derivative;
 use Pressmind\ORM\Object\MediaObject\DataType\Picture\Section;
 use Pressmind\Registry;
 use Pressmind\Storage\Bucket;
+use Pressmind\Storage\File;
 
 /**
  * Class Plaintext
@@ -25,6 +26,7 @@ use Pressmind\Storage\Bucket;
  * @property integer $width
  * @property integer $height
  * @property integer $file_size
+ * @property string $uri
  * @property string $caption
  * @property string $title
  * @property string $alt
@@ -203,6 +205,14 @@ class Picture extends AbstractObject
                 'filters' => null,
                 'validators' => null,
             ],
+            'uri' => [
+                'title' => 'uri',
+                'name' => 'uri',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+            ],
             'copyright' => [
                 'title' => 'copyright',
                 'name' => 'copyright',
@@ -359,8 +369,9 @@ class Picture extends AbstractObject
         $parsed_url = parse_url($tmp_url);
         parse_str($parsed_url['query'], $parsed_query);
         if(!is_null($derivativeName)) {
-            if($parsed_query['w'] != $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'] ||
-                $parsed_query['h'] != $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height']
+            if(
+                (isset($parsed_query['w']) && $parsed_query['w'] != $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width']) ||
+                (isset($parsed_query['h']) && $parsed_query['h'] != $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'])
             ){
                 $w_ratio = $parsed_query['w'] / $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'];
                 if(!empty($parsed_query['h'])){
@@ -431,25 +442,16 @@ class Picture extends AbstractObject
             $download_url .= '&cache=0';
         }
         $downloader = new Downloader();
-        $query = [];
-        $url = parse_url($this->tmp_url);
-        parse_str($url['query'], $query);
         if($retry_counter > 0 && $max_retries >= $retry_counter) {
-            Writer::write('ID ' . $this->getId() . ': Retry No. ' . $retry_counter . ' of downloading image from ' . $download_url, WRITER::OUTPUT_FILE, 'image_processor', Writer::TYPE_INFO);
+            Writer::write('ID ' . $this->getId() . ': Retry No. ' . $retry_counter . ' of downloading image from ' . $download_url, WRITER::TYPE_ERROR, 'image_processor', Writer::TYPE_INFO);
         }
-        $tmp_file_name = empty($this->file_name) ? $this->id_media_object . '_' . $this->id_picture . '.tmp' : $this->file_name;
         if($max_retries >= $retry_counter) {
             try {
-                $new_file_name_without_extension = $this->id_media_object . '_' . $query['id'];
-                $storage_file = $downloader->download($download_url, $tmp_file_name);
-                $mime_type = $storage_file->getMimetype();
-                $this->_checkMimetype($mime_type);
-                $new_file_name = $new_file_name_without_extension . '.' . HelperFunctions::getExtensionFromMimeType($storage_file->getMimetype());
-                $storage_file->name = $new_file_name;
+                $this->_checkMimetype($this->mime_type);
+                $storage_file = $downloader->download($download_url, $this->file_name.'.tmp');
+                $storage_file->name = $this->file_name;
                 $storage_file->save();
                 $this->download_successful = true;
-                $this->mime_type = $storage_file->getMimetype();
-                $this->file_name = $new_file_name;
                 $this->update();
                 return $storage_file;
             } catch (Exception $e) {
@@ -460,7 +462,9 @@ class Picture extends AbstractObject
                 $last_error = $e->getMessage();
             }
         } else {
-            throw new Exception('Download of image ID: ' . $this->id . ' failed! Maximum retries of ' . $max_retries . ' exceeded! Last error: ' . $last_error);
+            $err = 'Download of image ID: ' . $this->id . ' failed! Maximum retries of ' . $max_retries . ' exceeded! Last error: ' . $last_error;
+            $downloader->writeLockFile($this->file_name, $err);
+            throw new Exception($err);
         }
     }
 
@@ -534,5 +538,15 @@ class Picture extends AbstractObject
         $file = $this->getFile();
         $file->read();
         return $file;
+    }
+
+    /**
+     * @return bool
+     */
+    public function exists(){
+        $config = Registry::getInstance()->get('config');
+        $file = new File(new Bucket($config['image_handling']['storage']));
+        $file->name = $this->file_name;
+        return $file->exists();
     }
 }

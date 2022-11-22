@@ -5,6 +5,7 @@ namespace Pressmind\Import;
 
 
 use Exception;
+use Pressmind\HelperFunctions;
 use Pressmind\Import;
 use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\Itinerary\Step;
@@ -155,15 +156,26 @@ class Itinerary extends AbstractImport implements ImportInterface
             }
             $img_sort = 0;
             foreach ($step->document_media_objects as &$document_media_object) {
-                foreach($document_media_object->urls as $key => $url) {
-                    if($key == "web") {
-                        $document_media_object->tmp_url = str_replace('&v=web', '', $url);
-                    }
-                }
-                unset($document_media_object->urls);
-                unset($document_media_object->uri);
-                $document_media_object->download_successful = false;
-                $document_media_object->sort = $img_sort;
+                $mapped_object = new \stdClass();
+                $mapped_object->id_step = $step->id;
+                $mapped_object->id_media_object = $id_media_object;
+                $mapped_object->copyright = $document_media_object->copyright;
+                $mapped_object->caption = $document_media_object->caption;
+                $mapped_object->alt = $document_media_object->alt;
+                $mapped_object->uri = $document_media_object->uri;
+                $mapped_object->title = $document_media_object->title;
+                $mapped_object->download_successful = false;
+                $mapped_object->tmp_url = $document_media_object->links->web->url;
+                $mapped_object->mime_type = $document_media_object->links->web->mime_type;
+                $mapped_object->file_name = 'itinerary_'.$step->id . '_' . $document_media_object->id_media_object .'.'. HelperFunctions::getExtensionFromMimeType($document_media_object->links->web->mime_type);
+                $mapped_object->code = $document_media_object->code;
+                $mapped_object->name = $document_media_object->name;
+                $mapped_object->tags = $document_media_object->tags;
+                $mapped_object->width = $document_media_object->width;
+                $mapped_object->height = $document_media_object->height;
+                $mapped_object->filesize = $document_media_object->filesize;
+                $mapped_object->sort = $img_sort;
+                $document_media_object = $mapped_object;
                 $img_sort++;
             }
 

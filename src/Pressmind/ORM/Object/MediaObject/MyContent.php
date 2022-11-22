@@ -26,6 +26,8 @@ class MyContent extends AbstractObject
 {
     protected $_dont_use_autoincrement_on_primary_key = true;
 
+    protected $_replace_into_on_create = true;
+
     protected $_definitions = [
         'class' => [
             'name' => self::class

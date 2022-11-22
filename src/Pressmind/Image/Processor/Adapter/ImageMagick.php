@@ -29,7 +29,7 @@ class ImageMagick implements AdapterInterface
         $derivative_file = new File($file->getBucket());
         $derivative_file->name = $new_name;
         if($derivative_file->exists()) {
-            Writer::write('Derivative ' . $derivative_file->name . ' allready exists. Skipping ...', WRITER::OUTPUT_FILE, 'image_processor', WRITER::TYPE_INFO);
+            Writer::write('Derivative ' . $derivative_file->name . ' already exists. Skipping ...', WRITER::OUTPUT_SCREEN, 'image_processor', WRITER::TYPE_INFO);
             $derivative_file->read();
             return $derivative_file;
         }

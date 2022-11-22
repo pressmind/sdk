@@ -1238,7 +1238,7 @@ class MediaObject extends AbstractObject
             $data = $this->getDataForLanguage($language);
             $column_name = $possible_columns[0]->objectdata_column_name;
             $v = $data->$column_name;
-            if(is_array($v) && $v[0]->link_type == 'objectlink'){
+            if(is_array($v) && !empty($v[0]->link_type) && $v[0]->link_type == 'objectlink'){
                 $tmp = new \Pressmind\ORM\Object\MediaObject($v[0]->id_media_object_link);
                 $v = $tmp->getValueByTagName($tagName, $language);
             }

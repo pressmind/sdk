@@ -89,6 +89,9 @@ class Filesystem extends AbstractProvider implements ProviderInterface
     public function fileExists($file, $bucket)
     {
         $bucket->name = HelperFunctions::replaceConstantsFromConfig($bucket->name);
+        if(empty($file->name)){
+            return false;
+        }
         return file_exists($bucket->name . DIRECTORY_SEPARATOR . $file->name);
     }
     /**

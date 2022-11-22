@@ -368,6 +368,7 @@ class Picture extends AbstractObject
         $parsed_query = [];
         $parsed_url = parse_url($tmp_url);
         parse_str($parsed_url['query'], $parsed_query);
+        unset($parsed_query['v']);
         if(!is_null($derivativeName)) {
             if(
                 (isset($parsed_query['w']) && $parsed_query['w'] != $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width']) ||

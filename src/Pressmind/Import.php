@@ -552,10 +552,10 @@ class Import
 
 		if(!$this->checkRunFile($image_processor_path))
 		{
-			exec('bash -c "exec nohup ' . $php_binary . ' ' . $image_processor_path . ' > /dev/null 2>&1 &"');
-		}
-
-        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): bash -c "exec nohup php ' . APPLICATION_PATH . '/cli/file_downloader.php > /dev/null 2>&1 &"', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
+            $cmd = 'bash -c "exec nohup ' . $php_binary . ' ' . $image_processor_path . ' > /dev/null 2>&1 &"';
+			exec($cmd);
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): '.$cmd, Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        }
 
 		$file_downloader_path = APPLICATION_PATH . '/cli/file_downloader.php';
 

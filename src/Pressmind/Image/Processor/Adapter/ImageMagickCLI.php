@@ -8,6 +8,15 @@ use Pressmind\Storage\File;
 
 class ImageMagickCLI implements AdapterInterface
 {
+
+    /**
+     * @TODO: this must deliver a jpg, see ImageMagick.php!
+     * @param $config
+     * @param $file
+     * @param $derivativeName
+     * @return File
+     * @throws \Exception
+     */
     public function process($config, $file, $derivativeName)
     {
         $path_info = pathinfo($file->name);

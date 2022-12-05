@@ -228,6 +228,12 @@ class Indexer
         $searchObject->id_object_type = $this->mediaObject->id_object_type;
         $searchObject->id_media_object = $this->mediaObject->id;
         $searchObject->url = $this->mediaObject->getPrettyUrl($language);
+        foreach($this->_config['search']['build_for'][$this->mediaObject->id_object_type] as $v){
+            if($v['language'] == $language && !empty($v['disable_language_prefix_in_url'])){
+                $searchObject->url = $this->mediaObject->getPrettyUrl();
+                break;
+            }
+        }
         $searchObject->code = array_filter(array_map('trim', explode(',', $this->mediaObject->code)));;
         $searchObject->description = $this->_mapDescriptions($language);
         $searchObject->categories = $this->_mapCategories($language);

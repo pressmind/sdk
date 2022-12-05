@@ -97,7 +97,8 @@
                         "123" : [
                             {
                                 "language": "de",
-                                "origin": 0
+                                "origin": 0,
+                                "disable_language_prefix_in_url": false
                             }
                         ]
                     },

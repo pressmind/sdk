@@ -42,6 +42,7 @@ class MediaObject extends AbstractImport
         $media_object->booking_link = $data->booking_link;
         $media_object->sales_priority = $data->sales_prio;
         $media_object->sales_position = $data->position;
+        $media_object->recommendation_rate = $data->recommendation_rate;
         /*try {
             $old_media_object = new \Pressmind\ORM\Object\MediaObject();
             $old_media_object->read($data->id_media_object);

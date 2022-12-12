@@ -47,6 +47,7 @@ use Pressmind\ValueObject\MediaObject\Result\GetPrettyUrls;
  * @property integer $reference_media_object
  * @property DateTime $different_season_from
  * @property DateTime $different_season_to
+ * @property float $recommendation_rate
  * @property string $booking_type
  * @property string $booking_link
  * @property string $sales_priority
@@ -403,6 +404,14 @@ class MediaObject extends AbstractObject
                 'title' => 'sales_position',
                 'name' => 'sales_position',
                 'type' => 'integer',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'recommendation_rate' => [
+                'title' => 'recommendation_rate',
+                'name' => 'recommendation_rate',
+                'type' => 'float',
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,
@@ -1081,7 +1090,7 @@ class MediaObject extends AbstractObject
                             $cheapestPriceSpeed->id_included_options = implode(',', $id_included_options);
                             $cheapestPriceSpeed->code_ibe_included_options = implode(',', $code_ibe_included_options);
                             $cheapestPriceSpeed->id_start_point_option = null;
-                            $cheapestPriceSpeed->id_origin = null;
+                            $cheapestPriceSpeed->id_origin = $booking_package->id_origin;
                             $cheapestPriceSpeed->id_startingpoint = null;
                             $cheapestPriceSpeed->price_total = $cheapestPriceSpeed->price_regular_before_discount;
                             $cheapestPriceSpeed->earlybird_discount = null;

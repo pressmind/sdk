@@ -543,6 +543,11 @@ class MongoDB extends AbstractSearch
                 $stages[] = $addFieldsForDepatureSort;
                 $sort = ['$sort' => ['fst_date_departure' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1]];
             }
+        }elseif(array_key_first($this->_sort) == 'recommendation_rate'){
+            $sort = ['$sort' => [
+                        'recommendation_rate' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
+                ]
+            ];
         }
         $facetStage['$facet']['documents'][] = $sort;
         $stages[] = $facetStage;

@@ -424,6 +424,11 @@ abstract class AbstractObject
      * @throws Exception
      */
     public function updateCache($id) {
+
+        if(empty(Registry::getInstance()->get('config')['cache']['enabled'])){
+            return 'updateCache(), cache is not enabled, see config.cache.enabled';
+        }
+
         $key = $this->_createCacheKey($id);
         $cache_adapter = \Pressmind\Cache\Adapter\Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
         Writer::write(get_class($this) . ' updateCache() writing to cache. ID: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);

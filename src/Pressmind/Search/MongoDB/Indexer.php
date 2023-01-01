@@ -703,19 +703,17 @@ class Indexer
         foreach ($years as $year => $months) {
             foreach ($months as $month) {
                 $object = new \stdClass();
-                $object->year = $year;
-                $object->month = $month;
-                //$max_days = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+                $object->year = (int)$year;
+                $object->month = (int)$month;
                 $date = new \DateTime($year . '-' . $month . '-01');
                 $max_days = $date->format('t');
                 $query = "SELECT date_departure, date_arrival, option_occupancy_min, option_occupancy_max, option_occupancy, duration, 
-                        price_total, price_regular_before_discount, earlybird_discount, 
-                        earlybird_discount_f, earlybird_discount_date_to 
+                        price_total, price_regular_before_discount, earlybird_discount, earlybird_discount_f, earlybird_discount_date_to 
                             FROM pmt2core_cheapest_price_speed 
                         WHERE (date_departure BETWEEN :departure_from AND :departure_to) 
                           AND id_media_object = :id_media_object AND id_origin = :id_origin
                           AND ((option_occupancy = 2 AND price_mix = 'date_housing') OR (price_mix != 'date_housing'))
-                          GROUP BY date_departure, duration ORDER BY date_departure LIMIT 0,5";
+                          GROUP BY date_departure, duration ORDER BY date_departure, duration";
                 $values = [
                     ':id_media_object' => $this->mediaObject->id,
                     ':id_origin' => $origin,
@@ -723,13 +721,35 @@ class Indexer
                     ':departure_to' => $year . "-" . $month . "-" . $max_days
                 ];
                 $result = $db->fetchAll($query, $values);
-                $object->five_dates_in_month = $result;
+                $date_list = [];
+                $c = 0;
+                foreach($result as $v){
+                    $v->price_total = (float)$v->price_total;
+                    $v->price_regular_before_discount = (float)$v->price_regular_before_discount;
+                    $v->earlybird_discount = (float)$v->earlybird_discount;
+                    $v->earlybird_discount_f = (float)$v->earlybird_discount_f;
+                    $v->option_occupancy_min = (int)$v->option_occupancy_min;
+                    $v->option_occupancy_max = (int)$v->option_occupancy_max;
+                    $v->option_occupancy = (int)$v->option_occupancy;
+                    $v->duration = (int)$v->duration;
+                    if(!isset($date_list[$v->date_departure])){
+                        if($c <  5){
+                            $v->durations_from_this_departure = [$v->duration];
+                            $date_list[$v->date_departure] = $v;
+                        }
+                    }else{
+                        $date_list[$v->date_departure]->durations_from_this_departure[] = $v->duration;
+                        $date_list[$v->date_departure]->durations_from_this_departure = array_unique($date_list[$v->date_departure]->durations_from_this_departure);
+                    }
+                    $c++;
+                }
+                $object->five_dates_in_month = $date_list;
                 $count_query = "select count(*) as count from (SELECT distinct date_departure FROM pmt2core_cheapest_price_speed
                                 WHERE (date_departure BETWEEN :departure_from AND :departure_to) 
                                 AND id_media_object = :id_media_object AND id_origin = :id_origin 
                                 AND ((option_occupancy = 2 AND price_mix = 'date_housing') OR (price_mix != 'date_housing'))) t";
                 $result = $db->fetchRow($count_query, $values);
-                $object->dates_total = $result->count;
+                $object->dates_total = (int)$result->count;
                 $objects[] = $object;
             }
         }

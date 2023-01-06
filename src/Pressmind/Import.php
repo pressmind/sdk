@@ -403,7 +403,9 @@ class Import
                 }
             }
 
-            if(false == $disable_touristic_data_import && isset($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type]) && is_array($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type])  && $my_content_importer_has_run == false) {
+            if(isset($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type]) &&
+                is_array($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type]) &&
+                $my_content_importer_has_run == false) {
                 foreach ($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type] as $custom_import_class_name) {
                     $custom_import_class = new $custom_import_class_name($id_media_object);
                     $custom_import_class->import();

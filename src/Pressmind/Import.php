@@ -201,8 +201,16 @@ class Import
      */
     public function importMediaObject($id_media_object, $import_linked_objects = true)
     {
+        global $_RUNTIME_IMPORTED_IDS;
         $id_media_object = intval($id_media_object);
 
+        if(!empty($_RUNTIME_IMPORTED_IDS) && in_array($id_media_object, $_RUNTIME_IMPORTED_IDS)){
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . '--------------------------------------------------------------------------------', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . ') is already imported in this run', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+            return true;
+        }
+        $_RUNTIME_IMPORTED_IDS[] = $id_media_object;
+        
         $config = Registry::getInstance()->get('config');
         $this->_start_time = microtime(true);
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . '--------------------------------------------------------------------------------', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
@@ -495,7 +503,7 @@ class Import
             if (!$file_info->isDot()) {
                 $id_media_object = $file_info->getFilename();
                 unlink($file_info->getPathname());
-                $this->_imported_ids[] = $id_media_object;
+                $this->_imported_ids[] = $id_media_object; 
             }
         }
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . 'Importer::removeOrphans() Checking ' . count($this->_imported_ids) . ' mediaobjects', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);

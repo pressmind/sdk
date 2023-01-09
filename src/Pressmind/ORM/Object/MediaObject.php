@@ -1341,7 +1341,7 @@ class MediaObject extends AbstractObject
                 if (in_array('tags', $config['data']['media_types_fulltext_index_fields'][$this->id_object_type])) {
                     $complete_fulltext[$language][] = $this->tags;
                 }
-                if(empty($data->getPropertyDefinitions())){
+                if(empty($data) || empty($data->getPropertyDefinitions())){
                     continue;
                 }
                 foreach ($data->getPropertyDefinitions() as $name => $definition) {

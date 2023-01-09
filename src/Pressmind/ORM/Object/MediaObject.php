@@ -674,6 +674,8 @@ class MediaObject extends AbstractObject
             }
             if(!is_null($filters->date_from) && !is_null($filters->date_to)) {
                 $where .= " AND date_departure BETWEEN '" . $filters->date_from->format('Y-m-d 00:00:00') . "' AND '" . $filters->date_to->format('Y-m-d 23:59:59') . "'";
+            }elseif(!is_null($filters->date_from) && is_null($filters->date_to)) {
+                $where .= " AND date_departure = '" . $filters->date_from->format('Y-m-d 00:00:00') . "'";
             }else{
                 $where .= " AND date_departure > '" . $now->format('Y-m-d 00:00:00') . "'";
             }
@@ -717,7 +719,7 @@ class MediaObject extends AbstractObject
                 $where .= ' AND id = ' . $filters->id;
             }
         }
-        
+
         if(!$occupancy_filter_is_set && isset($filters->occupancies_disable_fallback) && $filters->occupancies_disable_fallback === false) {
             $cheapest_prices = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 2', $order, $limit);
             if (empty($cheapest_prices)) {

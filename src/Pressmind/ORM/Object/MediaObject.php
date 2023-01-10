@@ -942,12 +942,12 @@ class MediaObject extends AbstractObject
     }
 
     /**
-     * @param int $max_rows (limits the generated offer rows)
      * @return array
      * @throws Exception
      */
-    public function insertCheapestPrice($max_rows = 5000)
+    public function insertCheapestPrice()
     {
+        $max_rows = empty(Registry::getInstance()->get('config')['data']['touristic']['max_offers_per_product']) ? 5000 : Registry::getInstance()->get('config')['data']['touristic']['max_offers_per_product'];
         $CheapestPrice = new CheapestPriceSpeed();
         $CheapestPrice->deleteByMediaObjectId($this->getId());
         $booking_packages = $this->booking_packages;

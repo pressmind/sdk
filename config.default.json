@@ -119,6 +119,12 @@
                         },
                         {
                             "125" : {
+                                "field": "brand",
+                                "filter": null
+                            }
+                        },
+                        {
+                            "126" : {
                                 "field" : "website_ausgabe_default",
                                 "filter": "\\Custom\\Filter::treeToGroup"
                             }

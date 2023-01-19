@@ -20,6 +20,7 @@ use Pressmind\Registry;
  * @property integer $id_variant
  * @property integer $id_media_object
  * @property string $type
+ * @property int $order
  * @property Section[] $sections
  * @property Board[] $board
  * @property Geopoint[] $geopoints
@@ -104,6 +105,19 @@ class Step extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'validators' => null,
+                'filters' => null
+            ],
+            'order' => [
+                'title' => 'order',
+                'name' => 'order',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ]
+                ],
                 'filters' => null
             ],
             'sections' => [

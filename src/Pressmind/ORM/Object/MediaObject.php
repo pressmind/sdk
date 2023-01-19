@@ -1432,7 +1432,7 @@ class MediaObject extends AbstractObject
         $filters = [
             'id_media_object' => $this->getId()
         ];
-        return Step::listAll($filters);
+        return Step::listAll($filters, ['order' => 'asc']);
     }
 
     /**

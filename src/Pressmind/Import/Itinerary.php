@@ -127,7 +127,9 @@ class Itinerary extends AbstractImport implements ImportInterface
         foreach ($old_steps as $old_step) {
             $old_step->delete(true);
         }
+        $c = 0;
         foreach ($data as &$step) {
+            $step->order = $c;
             $new_text_objects = [];
             if(isset($step->text_media_objects)) {
                 $text_objects = $step->text_media_objects;
@@ -184,6 +186,7 @@ class Itinerary extends AbstractImport implements ImportInterface
             $new_step->fromStdClass($step);
             $new_step->id_media_object = $id_media_object;
             $new_step->create();
+            $c++;
         }
     }
 }

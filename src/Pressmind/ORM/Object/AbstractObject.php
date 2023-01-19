@@ -237,13 +237,13 @@ abstract class AbstractObject
         }
         if(isset($this->_definitions['database']['order_columns']) && !is_null($this->_definitions['database']['order_columns'])) {
             foreach ($this->_definitions['database']['order_columns'] as $column_name => $direction) {
-                $order_columns[] = $column_name . ' ' . $direction;
+                $order_columns[] = '`'.$column_name . '` ' . $direction;
             }
         }
 
         if(!is_null($order) && is_array($order)) {
             foreach ($order as $column_name => $direction) {
-                $order_columns[] = $column_name . ' ' . $direction;
+                $order_columns[] = '`'.$column_name . '` ' . $direction;
             }
         }
 

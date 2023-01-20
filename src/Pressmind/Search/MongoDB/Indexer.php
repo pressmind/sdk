@@ -341,7 +341,7 @@ class Indexer
         }elseif($field_name == 'id_pool'){
             $groups[] = $this->mediaObject->id_pool ."";
         }elseif($field_name == 'brand'){
-            $groups[] = $this->mediaObject->brand ."";
+            $groups[] = $this->mediaObject->brand->id ."";
         }else{
             if(empty($data->$field_name)){
                 return $groups;

@@ -177,7 +177,7 @@ class Ibe
         } else if($booking->booking_package->price_mix == 'date_transport') {
             $housing_package = new Package();
             $housing_package->name = !empty($booking_package->name) ? $booking_package->name : $result['product']['title'];
-            $option = new \Pressmind\ORM\Object\Touristic\Option();
+            $option = (new \Pressmind\ORM\Object\Touristic\Option())->toStdClass();
             $option->id = uniqid();
             $option->name = 'Teilnahmegebühr';
             $option->max_pax = 10;

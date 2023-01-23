@@ -449,7 +449,7 @@ class Picture extends AbstractObject
         if($max_retries >= $retry_counter) {
             try {
                 $this->_checkMimetype($this->mime_type);
-                $storage_file = $downloader->download($download_url, $this->file_name.'.tmp');
+                $storage_file = $downloader->download($download_url, $this->file_name);
                 $storage_file->name = $this->file_name;
                 $storage_file->save();
                 $this->download_successful = true;

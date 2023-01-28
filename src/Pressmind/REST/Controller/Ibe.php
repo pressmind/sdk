@@ -8,8 +8,10 @@ use Pressmind\MVC\AbstractController;
 use Pressmind\ORM\Object\Geodata;
 use Pressmind\ORM\Object\MediaObject;
 use Pressmind\ORM\Object\Touristic\Housing\Package;
+use Pressmind\ORM\Object\Touristic\Option\Discount;
 use Pressmind\ORM\Object\Touristic\Startingpoint;
 use Pressmind\ORM\Object\Touristic\Startingpoint\Option;
+use Pressmind\REST\Controller\Touristic\Date;
 
 class Ibe
 {
@@ -168,7 +170,7 @@ class Ibe
                     foreach($package->options as $option){
                         $current_saison = trim($option->season);
                         if(in_array($current_saison, [$date->season, '-']) || empty($option->season)){
-                            $valid_options[] = $option;
+                            $valid_options[] = new \Pressmind\ORM\Object\Touristic\Option($option->id, true);
                         }
                     }
                     $package->options = $valid_options;
@@ -225,17 +227,43 @@ class Ibe
             $housing_packages[] = $housing_package;
         }
 
-
-
-        //$result['debug'] = $settings['steps']['starting_points']['pagination_page_size']['value'];
         $result['housing_packages'] = $housing_packages;
+        $result['option_discounts'] = $this->getOptionDiscounts($housing_packages);
         $result['earlybird'] = $booking->getEarlyBird();
         $result['extras'] = $extras;
         $result['id_ibe'] = $booking->getBookingPackage()->ibe_type;
         $result['code_ibe'] = is_null($booking->getHousingPackage()) ? null : $booking->getHousingPackage()->code_ibe;
         $result['product_type_ibe'] = $booking->getBookingPackage()->product_type_ibe;
-
         return ['success' => true, 'data' => $result];
+    }
+
+
+    /**
+     * @param Package[] $housing_packages
+     * @return void
+     */
+    private function getOptionDiscounts($housing_packages){
+        $discounts = [];
+        foreach($housing_packages as $housing_package){
+            foreach($housing_package->options as $option){
+                $discount = new Discount($option->discount->id, true);
+                if(!$discount->isValid()){
+                    continue;
+                }
+                $valid_scales = [];
+                foreach($discount->scales as $scale){
+                    if((new \DateTime()) >= $scale->valid_from && $scale->valid_to >= (new \DateTime())){
+                        $valid_scales[] = $scale;
+                    }
+                }
+                if(count($valid_scales) == 0){
+                    continue;
+                }
+                $discount->scales = $valid_scales;
+                $discounts[$discount->id] = $discount;
+            }
+        }
+        return array_values($discounts);
     }
 
     /**

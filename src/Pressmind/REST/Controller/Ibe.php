@@ -252,7 +252,9 @@ class Ibe
                 }
                 $valid_scales = [];
                 foreach($discount->scales as $scale){
-                    if((new \DateTime()) >= $scale->valid_from && $scale->valid_to >= (new \DateTime())){
+                    if(((new \DateTime()) >= $scale->valid_from || $scale->valid_from === null) &&
+                        ($scale->valid_to >= (new \DateTime() || $scale->valid_to === null))
+                    ){
                         $valid_scales[] = $scale;
                     }
                 }

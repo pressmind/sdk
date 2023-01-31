@@ -526,10 +526,18 @@ class MongoDB extends AbstractSearch
                 ]
             ];
         }elseif(array_key_first($this->_sort) == 'price_total'){
-            $sort = ['$sort' => [
-                        'prices.price_total' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
+            if($allow_invalid_offers){
+                $sort = ['$sort' => [
+                            'has_price' => -1,
+                            'prices.price_total' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
+                        ]
+                ];
+            }else{
+                $sort = ['$sort' => [
+                    'prices.price_total' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
                     ]
-            ];
+                ];
+            }
         }elseif(array_key_first($this->_sort) == 'score'){
             $sort = ['$sort' => [
                         'score' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1

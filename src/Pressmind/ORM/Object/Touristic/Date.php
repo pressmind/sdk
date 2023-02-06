@@ -527,8 +527,13 @@ class Date extends AbstractObject
         foreach($transports_without_groups as $transport){
             $transports_by_type[trim($transport->type)][] = $transport;
         }
-        foreach($transports_by_type as $transports){
-            $transport_pairs = array_merge($transport_pairs, $this->_collectPairs($transports));
+
+        foreach($transports_by_type as $type => $transports){
+            if($type === 'FLUG'){
+                $transport_pairs = array_merge($transport_pairs, $this->_collectAirportPairs($transports));
+            }else{
+                $transport_pairs = array_merge($transport_pairs, $this->_collectPairs($transports));
+            }
         }
 
         // mix transport that are grouped
@@ -597,9 +602,12 @@ class Date extends AbstractObject
         return $transport_pairs;
     }
 
+    /**
+     * @param $transports
+     * @return Transport[]
+     */
     private function _collectPairs($transports){
         $transport_pairs = [];
-
         $transports_outwards = [];
         $transports_return = [];
         foreach ($transports as $transport) {
@@ -616,6 +624,27 @@ class Date extends AbstractObject
                 $transport_pairs[$i]['way2'] = $transport_return;
                 $i++;
             }
+        }
+        return $transport_pairs;
+    }
+
+    /**
+     * @param $transports
+     * @return Transport[]
+     */
+    private function _collectAirportPairs($transports){
+        $transport_pairs = [];
+        $transports_by_base_airport = [];
+        foreach ($transports as $transport) {
+            if($transport->way == 1){
+                $base_airport = substr($transport->code, 0, 3);
+            }else{
+                $base_airport = substr($transport->code, -3, 3);
+            }
+            $transports_by_base_airport[$base_airport][] = $transport;
+        }
+        foreach($transports_by_base_airport as $transports){
+            $transport_pairs = array_merge($transport_pairs, $this->_collectPairs($transports));
         }
         return $transport_pairs;
     }

@@ -23,6 +23,9 @@ class TransportType
         if($type == 'first_match') {
             return ['prices' => ['$elemMatch' => ['transport_type' => ['$in' => $this->_transportType]]]];
         }
+        if($type == 'prices_filter') {
+            return ['$in' => ['$$this.transport_type', $this->_transportType]];
+        }
         return null;
     }
 }

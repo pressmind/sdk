@@ -23,6 +23,9 @@ class BoardType
         if($type == 'first_match') {
             return ['prices' => ['$elemMatch' => ['option_board_type' => ['$in' => $this->_boardType]]]];
         }
+        if($type == 'prices_filter') {
+            return ['$in' => ['$$this.option_board_type', $this->_boardType]];
+        }
         return null;
     }
 }

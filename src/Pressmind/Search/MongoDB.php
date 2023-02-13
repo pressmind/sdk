@@ -342,9 +342,9 @@ class MongoDB extends AbstractSearch
         // stage 2, remove useless data
         $stages[] = ['$unset' => ['fulltext']];
 
-        // stage 3, filter prices array (by occuppancy, pricerange, durationrange)
+        // stage 3, filter prices array (by occupancy, pricerange, durationrange)
         $addFieldsConditions = [];
-        $prices_filter = ['$addFields' => ['prices' => ['$first' => ['$filter' => ['input' => '$prices', 'cond' => ['$and' => []]]]]]];
+        $prices_filter = ['$addFields' => ['prices' =>  ['$filter' => ['input' => '$prices', 'cond' => ['$and' => []]]]]];
         $prices_filter_cleanup = ['$addFields' => ['prices' => ['$filter' => ['input' => '$prices', 'cond' => ['$and' => []]]]]];
         foreach ($this->_conditions as $condition_name => $condition) {
             $query['$and'][] = $condition->getQuery();
@@ -354,7 +354,7 @@ class MongoDB extends AbstractSearch
                 }
             }
         }
-        $prices_filter['$addFields']['prices']['$first']['$filter']['cond']['$and'] = $addFieldsConditions;
+        $prices_filter['$addFields']['prices']['$filter']['cond']['$and'] = $addFieldsConditions;
         $prices_filter_cleanup['$addFields']['prices']['$filter']['cond']['$and'] = $addFieldsConditions;
 
 
@@ -367,10 +367,122 @@ class MongoDB extends AbstractSearch
         }
         $stages[] = $prices_filter;
 
+        // order by the best price... (longest stay, cheapest price)
+        $stages[] = ['$sort' => ['prices.price_total' => -1, 'prices.duration' => 1]];
+
         // stage n - output as date_list
         if($output == 'date_list'){
-            $stages[] = ['$unwind' => ['path' => '$prices.date_departures']];
+            $stages[] = ['$unwind' => ['path' => '$prices', 'preserveNullAndEmptyArrays' => false]];
+            $stages[] = ['$unwind' => ['path' => '$prices.date_departures', 'preserveNullAndEmptyArrays' => false]];
         }
+
+        // stage n projection split board_types, transports and prices
+        $projectStage = [
+            '$project' => [
+                '_id' => 1,
+                'best_price_meta' => 1,
+                'categories' => 1,
+                'code' => 1,
+                'departure_date_count' => 1,
+                'description' => 1,
+                'groups' => 1,
+                'id_media_object' => 1,
+                'id_object_type' => 1,
+                'last_modified_date' => 1,
+                'recommendation_rate' => 1,
+                'url' => 1,
+                'valid_from' => 1,
+                'valid_to' => 1,
+                'visibility' => 1,
+                'dates_per_month' => 1,
+                'has_price' => ['$gt' => [['$size' => '$prices'], 0 ] ],
+                'prices' => [
+                    '$reduce' => [
+                        'input' => '$prices',
+                        'initialValue' => [],
+                        'in' => [
+                            '$cond' => [
+                                'if' => [
+                                    '$or' => [
+                                        ['$lt' =>
+                                            ['$$this.price_total', '$$value.price_total']
+                                        ],
+                                        ['$and' => [
+                                            ['$eq' => ['$$this.price_total', '$$value.price_total']],
+                                            ['$gt' => ['$$this.duration', '$$value.duration']]
+                                        ]
+                                        ]
+                                    ]
+                                ],
+                                'then' => '$$this',
+                                'else' => '$$value',
+                            ]
+                        ]
+                    ],
+                ],
+                'transport_types' => [
+                    '$reduce' => [
+                        'input' => '$prices',
+                        'initialValue' => [],
+                        'in' => [
+                            '$cond' => [
+                                'if' => [
+                                    '$in' => ['$$this.transport_type', '$$value.transport_type']
+                                ],
+                                'then' => '$$value',
+                                'else' => [
+                                    '$concatArrays' =>
+                                        ['$$value', ['$$this']]
+                                ],
+                            ]
+                        ]
+                    ],
+                ],
+                'board_types' => [
+                    '$reduce' => [
+                        'input' => '$prices',
+                        'initialValue' => [],
+                        'in' => [
+                            '$cond' => [
+                                'if' => [
+                                    '$in' => ['$$this.option_board_type', '$$value.option_board_type']
+                                ],
+                                'then' => '$$value',
+                                'else' => [
+                                    '$concatArrays' =>
+                                        ['$$value', ['$$this']]
+                                ],
+                            ]
+                        ]
+                    ],
+                ],
+            ]
+        ];
+        if($output == 'date_list'){
+            $projectStage = [
+                '$project' => [
+                    '_id' => 1,
+                    'best_price_meta' => 1,
+                    'categories' => 1,
+                    'code' => 1,
+                    'departure_date_count' => 1,
+                    'description' => 1,
+                    'groups' => 1,
+                    'id_media_object' => 1,
+                    'id_object_type' => 1,
+                    'last_modified_date' => 1,
+                    'recommendation_rate' => 1,
+                    'url' => 1,
+                    'valid_from' => 1,
+                    'valid_to' => 1,
+                    'visibility' => 1,
+                    'dates_per_month' => 1,
+                    'has_price' => ['$gt' => ['$prices.price_total', 0]],
+                    'prices' => 1,
+                ]
+            ];
+        }
+        $stages[] = $projectStage;
 
         // stage n, build the filter stages
         if($this->_get_filters === true || $this->_return_filters_only === true) {
@@ -407,32 +519,57 @@ class MongoDB extends AbstractSearch
                     ]
                 ]
             ];
-            $facetStage['$facet']['boardTypesGrouped'] = [
-                [
-                    '$unwind' => '$prices.option_board_type'
-                ],
-                [
-                    '$sortByCount' => '$prices.option_board_type'
-                ],
-                [
-                    '$sort' => [
-                        '_id' => 1
+
+            if($output == 'date_list'){
+                $facetStage['$facet']['boardTypesGrouped'] = [
+                    [
+                        '$sortByCount' => '$prices.option_board_type'
+                    ],
+                    [
+                        '$sort' => [
+                            '_id' => 1
+                        ]
                     ]
-                ]
-            ];
-            $facetStage['$facet']['transportTypesGrouped'] = [
-                [
-                    '$unwind' => '$prices.transport_type'
-                ],
-                [
-                    '$sortByCount' => '$prices.transport_type'
-                ],
-                [
-                    '$sort' => [
-                        '_id' => 1
+                ];
+                $facetStage['$facet']['transportTypesGrouped'] = [
+                    [
+                        '$sortByCount' => '$prices.transport_type'
+                    ],
+                    [
+                        '$sort' => [
+                            '_id' => 1
+                        ]
                     ]
-                ]
-            ];
+                ];
+            }else{
+                $facetStage['$facet']['boardTypesGrouped'] = [
+                    [
+                        '$unwind' => '$board_types'
+                    ],
+                    [
+                        '$sortByCount' => '$board_types.option_board_type'
+                    ],
+                    [
+                        '$sort' => [
+                            '_id' => 1
+                        ]
+                    ]
+                ];
+                $facetStage['$facet']['transportTypesGrouped'] = [
+                    [
+                        '$unwind' => '$transport_types'
+                    ],
+                    [
+                        '$sortByCount' => '$transport_types.transport_type'
+                    ],
+                    [
+                        '$sort' => [
+                            '_id' => 1
+                        ]
+                    ]
+                ];
+            }
+
             $addFieldsStage = [
                 '$addFields' => [
                     'minDuration' => [

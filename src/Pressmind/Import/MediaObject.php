@@ -38,7 +38,7 @@ class MediaObject extends AbstractImport
         $media_object->reference_media_object = $data->reference_media_object;
         $media_object->different_season_from = $data->diffent_saison_from != '0000-00-00' ? \DateTime::createFromFormat('Y-m-d', $data->diffent_saison_from)->setTime(0,0,0) : null;
         $media_object->different_season_to = $data->different_saison_to != '0000-00-00' ? \DateTime::createFromFormat('Y-m-d', $data->different_saison_to)->setTime(23,59,59) : null;
-        $media_object->booking_type = $data->booking_type;
+        $media_object->booking_type = $data->booking_type == 'on-request' ? 'request' : $data->booking_type;
         $media_object->booking_link = $data->booking_link;
         $media_object->sales_priority = $data->sales_prio;
         $media_object->sales_position = $data->position;

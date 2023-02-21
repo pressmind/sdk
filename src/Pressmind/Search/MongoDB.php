@@ -359,7 +359,6 @@ class MongoDB extends AbstractSearch
 
 
         // stage 4-x, filter by departure dates
-        $departure_range_filter = [];
         if($this->hasCondition('DateRange')){
             $stages[] = $prices_filter_cleanup;
             $condition = $this->getConditionByType('DateRange');
@@ -395,6 +394,7 @@ class MongoDB extends AbstractSearch
                 'valid_to' => 1,
                 'visibility' => 1,
                 'dates_per_month' => 1,
+                'sales_priority' => 1,
                 'has_price' => ['$gt' => [['$size' => '$prices'], 0 ] ],
                 'prices' => [
                     '$reduce' => [
@@ -477,6 +477,7 @@ class MongoDB extends AbstractSearch
                     'valid_to' => 1,
                     'visibility' => 1,
                     'dates_per_month' => 1,
+                    'sales_priority' => 1,
                     'has_price' => ['$gt' => ['$prices.price_total', 0]],
                     'prices' => 1,
                 ]
@@ -666,34 +667,57 @@ class MongoDB extends AbstractSearch
             if($allow_invalid_offers){
                 $sort = ['$sort' => [
                             'has_price' => -1,
-                            'prices.price_total' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
+                            'prices.price_total' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1,
+                            'sales_priority' => 1
                         ]
                 ];
             }else{
                 $sort = ['$sort' => [
-                    'prices.price_total' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
+                    'prices.price_total' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1,
+                    'sales_priority' => 1
                     ]
                 ];
             }
         }elseif(array_key_first($this->_sort) == 'score'){
             $sort = ['$sort' => [
-                        'score' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
+                        'score' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1,
+                        'sales_priority' => 1
                     ]
             ];
         }elseif(array_key_first($this->_sort) == 'date_departure'){
             if($output == 'date_list'){
-                $sort = ['$sort' => ['prices.date_departures' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1]];
+                $sort = ['$sort' => [
+                            'prices.date_departures' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1,
+                            'sales_priority' => 1
+                        ]
+                ];
             }else{
                 $addFieldsForDepatureSort = ['$addFields' => ['fst_date_departure' => ['$first' => '$prices.date_departures']]];
                 $stages[] = $addFieldsForDepatureSort;
-                $sort = ['$sort' => ['fst_date_departure' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1]];
+                $sort = ['$sort' => [
+                                'fst_date_departure' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1,
+                                'sales_priority' => 1
+                        ]
+                ];
             }
         }elseif(array_key_first($this->_sort) == 'recommendation_rate'){
             $sort = ['$sort' => [
-                        'recommendation_rate' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
+                        'recommendation_rate' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1,
+                        'sales_priority' => 1
+                ]
+            ];
+        }elseif(array_key_first($this->_sort) == 'priority'){
+            $sort = ['$sort' => [
+                        'sales_priority' => 1
+                ]
+            ];
+        }else{
+            $sort = ['$sort' => [
+                    'sales_priority' => 1
                 ]
             ];
         }
+
         $facetStage['$facet']['documents'][] = $sort;
         $stages[] = $facetStage;
 

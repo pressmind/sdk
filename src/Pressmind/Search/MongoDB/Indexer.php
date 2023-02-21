@@ -246,6 +246,7 @@ class Indexer
         $searchObject->valid_to = !is_null($this->mediaObject->valid_to) ? $this->mediaObject->valid_to->format(DATE_RFC3339_EXTENDED) : null;
         $searchObject->visibility = $this->mediaObject->visibility;
         $searchObject->recommendation_rate = $this->mediaObject->recommendation_rate;
+        $searchObject->sales_priority = $this->mediaObject->sales_priority.$this->mediaObject->sales_position;
 
         //$searchObject->dates_per_month = null;
         if(!empty($this->_config['search']['five_dates_per_month_list'])){

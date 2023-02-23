@@ -230,7 +230,7 @@ class Insurance extends AbstractObject
                     'relation_table' => 'pmt2core_touristic_insurance_to_attributes',
                     'relation_class' => InsuranceToAttribute::class,
                     'related_id' => 'id_insurance',
-                    'target_id' => 'id_attributes',
+                    'target_id' => 'id_attribute',
                 ],
             ],
             'sub_insurances' => [

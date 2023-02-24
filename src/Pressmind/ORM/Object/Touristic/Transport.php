@@ -36,6 +36,7 @@ use Pressmind\System\I18n;
  * @property string $airline
  * @property string $flight
  * @property boolean $dont_use_for_offers
+ * @property boolean $use_earlybird
  */
 class Transport extends AbstractObject
 {
@@ -409,6 +410,14 @@ class Transport extends AbstractObject
             'dont_use_for_offers' => [
                 'title' => 'dont_use_for_offers',
                 'name' => 'dont_use_for_offers',
+                'type' => 'boolean',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'use_earlybird' => [
+                'title' => 'use_earlybird',
+                'name' => 'use_earlybird',
                 'type' => 'boolean',
                 'required' => false,
                 'validators' => NULL,

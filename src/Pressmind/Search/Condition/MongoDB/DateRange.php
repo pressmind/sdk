@@ -36,7 +36,16 @@ class DateRange
     public function getQuery($type = 'first_match')
     {
         if($type == 'first_match') {
-            return ['prices' => ['$elemMatch' => ['date_departures' => ['$gte' => $this->_dateFrom->format(DATE_RFC3339_EXTENDED), '$lte' => $this->_dateTo->format(DATE_RFC3339_EXTENDED)]]]];
+            return ['prices' => [
+                '$elemMatch' => [
+                    'date_departures' => [
+                        '$elemMatch' => [
+                            '$gte' => $this->_dateFrom->format(DATE_RFC3339_EXTENDED),
+                            '$lte' => $this->_dateTo->format(DATE_RFC3339_EXTENDED)]
+                        ]
+                ]
+            ]
+            ];
         } else if($type == 'departure_filter') {
             return [
                 [

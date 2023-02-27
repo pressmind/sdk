@@ -1030,7 +1030,7 @@ class MediaObject extends AbstractObject
                         $is_bookable = in_array($date->state, [1,4,0]);
                         $is_request = in_array($date->state, [2]);
                         $is_bookable = $is_bookable && in_array($option->state, [3,2]);
-                        $is_request = $is_request && in_array($option->state, [1]);
+                        $is_request = $is_request || in_array($option->state, [1]);
                         if(count($id_included_options) == 1 && $cheapest_options[0]->state == 4){
                             $is_bookable = false;
                             $is_request = false;
@@ -1039,10 +1039,11 @@ class MediaObject extends AbstractObject
                             $is_bookable = false;
                             $is_request = true;
                         }
-                        $is_bookable = $is_bookable && in_array($transport_pair['way1']->state, [3,2,0]);
-                        $is_request = $is_request && in_array($transport_pair['way1']->state, [1]);
-                        $is_bookable = $is_bookable && in_array($transport_pair['way2']->state, [3,2,0]);
-                        $is_request = $is_request && in_array($transport_pair['way2']->state, [1]);
+                        $is_bookable = $is_bookable && in_array($transport_pair['way1']->state, [3,0]);
+                        $is_request = $is_request || in_array($transport_pair['way1']->state, [2]);
+                        $is_bookable = $is_bookable && in_array($transport_pair['way2']->state, [3,0]);
+                        $is_request = $is_request || in_array($transport_pair['way2']->state, [2]);
+
                         $transport_earlybird_price_base = 0;
                         foreach ($early_bird_discounts as $early_bird_discount) {
                             if (!is_null($transport_pair) && isset($transport_pair['way1'])) {

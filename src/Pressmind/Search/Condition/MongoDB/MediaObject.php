@@ -27,6 +27,13 @@ class MediaObject
         return (new \ReflectionClass($this))->getShortName();
     }
 
+    /**
+     * @return int[]
+     */
+    public function getValue(){
+        return $this->_id_media_object;
+    }
+
     public function getQuery($type = 'first_match')
     {
         if($type == 'first_match') {

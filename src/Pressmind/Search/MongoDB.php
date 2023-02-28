@@ -278,7 +278,6 @@ class MongoDB extends AbstractSearch
         }
 
         // stage 1 first_match
-        $elemMatchPrices = [];
         $andQuery['$and'] = [];
         foreach ($this->_conditions as $condition_name => $condition) {
             if(empty($condition->getQuery('first_match', $allow_invalid_offers))){
@@ -369,12 +368,6 @@ class MongoDB extends AbstractSearch
         // order by the best price... (longest stay, cheapest price)
         $stages[] = ['$sort' => ['prices.price_total' => -1, 'prices.duration' => 1]];
 
-        // stage n - output as date_list
-        if($output == 'date_list'){
-            $stages[] = ['$unwind' => ['path' => '$prices', 'preserveNullAndEmptyArrays' => false]];
-            $stages[] = ['$unwind' => ['path' => '$prices.date_departures', 'preserveNullAndEmptyArrays' => false]];
-        }
-
         // stage n projection split board_types, transports and prices
         $projectStage = [
             '$project' => [
@@ -459,31 +452,21 @@ class MongoDB extends AbstractSearch
             ]
         ];
         if($output == 'date_list'){
-            $projectStage = [
-                '$project' => [
-                    '_id' => 1,
-                    'best_price_meta' => 1,
-                    'categories' => 1,
-                    'code' => 1,
-                    'departure_date_count' => 1,
-                    'description' => 1,
-                    'groups' => 1,
-                    'id_media_object' => 1,
-                    'id_object_type' => 1,
-                    'last_modified_date' => 1,
-                    'recommendation_rate' => 1,
-                    'url' => 1,
-                    'valid_from' => 1,
-                    'valid_to' => 1,
-                    'visibility' => 1,
-                    'dates_per_month' => 1,
-                    'sales_priority' => 1,
-                    'has_price' => ['$gt' => ['$prices.price_total', 0]],
-                    'prices' => 1,
-                ]
-            ];
+            $projectStage['$project']['has_price'] = ['$gt' => ['$prices.price_total', 0]];
         }
         $stages[] = $projectStage;
+
+        if(array_key_first($this->_sort) == 'list' && $this->hasCondition('MediaObject')){
+            $MediaObjectCondition = $this->getConditionByType('MediaObject');
+            $order_by_list = ['$addFields' =>
+                ['sort' => ['$indexOfArray' => [$MediaObjectCondition->getValue(), '$_id']]]];
+            $stages[] = $order_by_list;
+        }
+
+        // stage n - output as date_list
+        if($output == 'date_list'){
+            $stages[] = ['$unwind' => ['path' => '$prices.date_departures', 'preserveNullAndEmptyArrays' => false]];
+        }
 
         // stage n, build the filter stages
         if($this->_get_filters === true || $this->_return_filters_only === true) {
@@ -709,6 +692,11 @@ class MongoDB extends AbstractSearch
         }elseif(array_key_first($this->_sort) == 'priority'){
             $sort = ['$sort' => [
                         'sales_priority' => 1
+                ]
+            ];
+        }elseif(array_key_first($this->_sort) == 'list' && $this->hasCondition('MediaObject')){
+            $sort = ['$sort' => [
+                    'sort' => 1
                 ]
             ];
         }else{

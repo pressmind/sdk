@@ -1191,6 +1191,7 @@ class MediaObject extends AbstractObject
      */
     private function _checkEarlyBirdDiscount($discount, $date) {
         $now = new DateTime();
+        $now->setTime(0,0,0);
         if(!is_null($discount) &&
             (($now >= $discount->booking_date_from || is_null($discount->booking_date_from)) && $now <= $discount->booking_date_to) &&
             ($date->departure >= $discount->travel_date_from && $date->departure <= $discount->travel_date_to)) {

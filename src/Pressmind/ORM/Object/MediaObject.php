@@ -669,17 +669,18 @@ class MediaObject extends AbstractObject
         $where = "id_media_object = " . $this->getId()." AND price_total > 0";
         $occupancy_filter_is_set = false;
         if(!is_null($filters)) {
-            if(!is_null($filters->duration_from) && !is_null($filters->duration_to)) {
+            if(!empty($filters->duration_from) && !empty($filters->duration_to)) {
                 $where .= ' AND duration BETWEEN ' . $filters->duration_from . ' AND ' . $filters->duration_to;
             }
-            if(!is_null($filters->date_from) && !is_null($filters->date_to)) {
+            if(!empty($filters->date_from) && !empty($filters->date_to)) {
                 $where .= " AND date_departure BETWEEN '" . $filters->date_from->format('Y-m-d 00:00:00') . "' AND '" . $filters->date_to->format('Y-m-d 23:59:59') . "'";
-            }elseif(!is_null($filters->date_from) && is_null($filters->date_to)) {
+            }elseif(!empty($filters->date_from) && empty($filters->date_to)) {
                 $where .= " AND date_departure = '" . $filters->date_from->format('Y-m-d 00:00:00') . "'";
             }else{
                 $where .= " AND date_departure > '" . $now->format('Y-m-d 00:00:00') . "'";
             }
-            if(!is_null($filters->price_from) && !is_null($filters->price_to)) {
+            if(!empty($filters->price_to)) {
+                $filters->price_from = empty($filters->price_from) ? 0 : $filters->price_from;
                 $where .= ' AND price_total BETWEEN ' . $filters->price_from . ' AND ' . $filters->price_to;
             }
             if(!empty($filters->occupancies)) {
@@ -691,16 +692,16 @@ class MediaObject extends AbstractObject
                 $where .= implode(') OR (', $im) .  ')';
                 $occupancy_filter_is_set = true;
             }
-            if(!is_null($filters->id_option)) {
+            if(!empty($filters->id_option)) {
                 $where .= ' AND id_option = ' . $filters->id_option;
             }
-            if(!is_null($filters->id_date)) {
+            if(!empty($filters->id_date)) {
                 $where .= ' AND id_date = ' . $filters->id_date;
             }
-            if(!is_null($filters->id_booking_package)) {
+            if(!empty($filters->id_booking_package)) {
                 $where .= ' AND id_booking_package = ' . $filters->id_booking_package;
             }
-            if(!is_null($filters->id_housing_package)) {
+            if(!empty($filters->id_housing_package)) {
                 $where .= ' AND id_housing_package = ' . $filters->id_housing_package;
             }
             if(!empty($filters->transport_types)) {

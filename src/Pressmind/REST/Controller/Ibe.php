@@ -241,6 +241,9 @@ class Ibe
         $discounts = [];
         foreach($housing_packages as $housing_package){
             foreach($housing_package->options as $option){
+                if(empty($option->discount)){
+                    continue;
+                }
                 $discount = new Discount($option->discount->id, true);
                 if(!$discount->isValid()){
                     continue;

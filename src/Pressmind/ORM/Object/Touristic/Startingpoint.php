@@ -229,7 +229,11 @@ class Startingpoint extends AbstractObject
             $query .= ' and ' . (int)$zip . ' between cast(zr.`from` as UNSIGNED) and cast(zr.`to` as UNSIGNED)';
             $currentCity = $Geodata->getByZip($zip);
         }
-        $query .= ' order by start_time ASC, price ASC, zip ASC';
+        if(!empty($zips)){
+            $query .= ' order by start_time ASC, FIELD(zip, "'.implode('","', $zips).'"), price ASC';
+        }else{
+            $query .= ' order by start_time ASC, price ASC, zip ASC';
+        }
         if(!empty($limit)){
             $query .= ' limit '.$start.','.$limit;
         }
@@ -240,9 +244,11 @@ class Startingpoint extends AbstractObject
         foreach($result as $row){
             $Option = new Startingpoint\Option();
             $Option->fromStdClass($row);
-            if(!empty($currentCity->gemeinde_name)) {
-                $Option->city = $currentCity->gemeinde_name;
-                $Option->zip = $currentCity->postleitzahl;
+            if($list_pickup_service) {
+                $Option->zip = $zip;
+                if (!empty($currentCity->gemeinde_name)) {
+                    $Option->city = $currentCity->gemeinde_name;
+                }
             }
             $output[] = $Option;
         }

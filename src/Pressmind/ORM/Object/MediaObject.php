@@ -1006,6 +1006,7 @@ class MediaObject extends AbstractObject
                         }
                     }
                 }
+                $cheapest_options = array_values($cheapest_options);
                 foreach($check_group_validity as $k => $v){
                     if(isset($v['items_count_not_valid']) && ($v['items_count'] - $v['items_count_not_valid'] == 0)){
                         continue(2);

@@ -25,8 +25,8 @@ class Ibe
     public function pressmind_ib3_v2_get_touristic_object($params)
     {
         $this->parameters = $params['data'];
-        if(empty($this->parameters['params']['imo']) || empty($this->parameters['params']['idbp']) || empty($this->parameters['params']['idd']) || empty($this->parameters['params']['iho'])){
-            return ['success' => false, 'msg' => 'error: parameters are missing imo, idbp, idd, iho', 'data' => null];
+        if(empty($this->parameters['params']['imo']) || empty($this->parameters['params']['idbp']) || empty($this->parameters['params']['idd'])){
+            return ['success' => false, 'msg' => 'error: parameters are missing imo, idbp, idd', 'data' => null];
         }
 
         $settings = isset($this->parameters['settings']) ? $this->parameters['settings'] : null;
@@ -159,9 +159,14 @@ class Ibe
         }
 
         if($booking->getBookingPackage()->price_mix == 'date_housing') {
-            $Option = new \Pressmind\ORM\Object\Touristic\Option(array_key_first($this->parameters['params']['iho']));
+            if(!empty($this->parameters['params']['iho'])){
+                $Option = new \Pressmind\ORM\Object\Touristic\Option(array_key_first($this->parameters['params']['iho']));
+                $id_housing_package = $Option->id_housing_package;
+            }else{
+                $id_housing_package = $booking->getBookingPackage()->housing_packages[0]->getId();
+            }
             $housing_packages = [];
-            $package = new Package($Option->id_housing_package, true);
+            $package = new Package($id_housing_package, true);
             $valid_options = [];
             foreach($package->options as $option){
                 $current_saison = trim($option->season);

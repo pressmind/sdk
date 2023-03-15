@@ -3,6 +3,7 @@
 namespace Pressmind\ORM\Object\Touristic;
 use Pressmind\ORM\Object\AbstractObject;
 use DateTime;
+use Pressmind\ORM\Object\Touristic\Option\Discount;
 use Pressmind\System\I18n;
 
 /**
@@ -37,6 +38,7 @@ use Pressmind\System\I18n;
  * @property string $flight
  * @property boolean $dont_use_for_offers
  * @property boolean $use_earlybird
+ * @property Discount $discount
  */
 class Transport extends AbstractObject
 {
@@ -130,6 +132,22 @@ class Transport extends AbstractObject
                 'filters' => NULL,
                 'index' => [
                     'id_early_bird_discount_group' => 'index'
+                ]
+            ],
+            'id_touristic_option_discount' => [
+                'title' => 'id_touristic_option_discount',
+                'name' => 'id_touristic_option_discount',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ],
+                ],
+                'filters' => NULL,
+                'index' => [
+                    'id_touristic_option_discount' => 'index'
                 ]
             ],
             'code' => [
@@ -419,6 +437,20 @@ class Transport extends AbstractObject
                 'title' => 'use_earlybird',
                 'name' => 'use_earlybird',
                 'type' => 'boolean',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'discount' => [
+                'title' => 'Discount',
+                'name' => 'discount',
+                'type' => 'relation',
+                'relation' => [
+                    'type' => 'hasOne',
+                    'related_id' => 'id_touristic_option_discount',
+                    'class' => Discount::class,
+                    'filters' => ['active' => 1]
+                ],
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,

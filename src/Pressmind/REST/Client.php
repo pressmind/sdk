@@ -18,7 +18,7 @@ class Client
     /**
      * @var string
      */
-    private $_api_endpoint = 'https://webcore.pressmind.net/v2-11/rest/';
+    private $_api_endpoint = 'https://webcore.pressmind.net/v2-12/rest/';
 
     /**
      * @var string

@@ -268,7 +268,7 @@ class Calendar extends AbstractIndex
                 }
                 try{
                     $collection->updateOne(['_id' => $document->_id], ['$set' => $document], ['upsert' => true]);
-                }catch (\Exception){
+                }catch (\Exception $exception){
                     print_r($document);
                 }
             }

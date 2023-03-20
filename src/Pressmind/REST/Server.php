@@ -123,7 +123,7 @@ class Server
             $this->_response->addHeader('Access-Control-Allow-Methods', implode(',', array_merge($this->_output_methods, $this->_header_methods)));
             $this->_response->addHeader('Access-Control-Allow-Headers', 'Origin, Content-Type, X-Auth-Token, Authorization, Cache-Control, Pragma, Expires');
             $this->_response->addHeader('Cache-Control', 'no-cache');
-            if(in_array('gzip', array_map('trim', explode(',', $this->_request->getHeader('Accept-Encoding'))))) {
+            if(in_array('gzip', array_map('trim', explode(',', (string)$this->_request->getHeader('Accept-Encoding'))))) {
                 $this->_response->addHeader('Content-Encoding', 'gzip');
             }
             if ($route_match = $this->_router->handle($this->_request)) {

@@ -22,6 +22,7 @@ use Pressmind\ORM\Object\Touristic\Option;
 use Pressmind\ORM\Object\Touristic\Transport;
 use Pressmind\Registry;
 use Pressmind\Search\CheapestPrice;
+use Pressmind\Search\MongoDB\Calendar;
 use Pressmind\Search\MongoDB\Indexer;
 use Pressmind\ValueObject\MediaObject\Result\GetByPrettyUrl;
 use Pressmind\ValueObject\MediaObject\Result\GetPrettyUrls;
@@ -778,6 +779,146 @@ class MediaObject extends AbstractObject
     }
 
     /**
+     * @param \Pressmind\Search\CalendarFilter $filters
+     * @param int $min_columns
+     * @param int $origin
+     * @param string $language
+     * @return \stdClass
+     * @throws Exception
+     */
+    public function getCalendar($filters, $min_columns = 3, $origin = 0, $language = null){
+        $config = Registry::getInstance()->get('config');
+        $collection = (new \MongoDB\Client($config['data']['search_mongodb']['database']['uri']))->{$config['data']['search_mongodb']['database']['db']}->{'calendar_' . (!empty($language) ? $language.'_' : '') . 'origin_' . $origin};
+        $stages = [];
+        $query['$match']['id_media_object'] = $this->getId();
+        if(!empty($filters->occupancy)){ // Entfernen
+            $query['$match']['occupancy'] = $filters->occupancy;
+        }
+        $stages[] = $query;
+        $result = $collection->aggregate($stages)->toArray();
+        $filter = [
+            'transport_types' => [],
+            'durations' => [],
+            'id_housing_packages' => [],
+            'airports' => []
+        ];
+        $documents = json_decode(json_encode($result), false);
+        $filtered_documents = [];
+        foreach($documents as $document){
+            if(!empty($document->transport_type) && !isset($filter['transport_types'][$document->transport_type])){
+                $filter['transport_types'][$document->transport_type] = ['durations' => [], 'airports' => [], 'id_housing_packages' => []];
+            }
+            if(!empty($document->booking_package->duration) && !in_array($document->booking_package->duration, $filter['transport_types'][$document->transport_type]['durations'])){
+                $filter['transport_types'][$document->transport_type]['durations'][] = $document->booking_package->duration;
+            }
+            if(!empty($document->airport) && !in_array($document->airport, $filter['transport_types'][$document->transport_type]['airports'])){
+                $filter['transport_types'][$document->transport_type]['airports'][] = $document->airport;
+            }
+            if(!empty($document->housing_package->id) && !in_array($document->housing_package->id, $filter['transport_types'][$document->transport_type]['id_housing_packages'])){
+                $filter['transport_types'][$document->transport_type]['id_housing_packages'][] = $document->housing_package->id;
+            }
+            if(!empty($document->booking_package->duration) && !isset($filter['durations'][$document->booking_package->duration])){
+                $filter['durations'][$document->booking_package->duration] = ['transport_types' => [], 'airports' => [], 'id_housing_packages' => []];
+            }
+            if(!empty($document->transport_type) && !in_array($document->transport_type, $filter['durations'][$document->booking_package->duration]['transport_types'])){
+                $filter['durations'][$document->booking_package->duration]['transport_types'][] = $document->transport_type;
+            }
+            if(!empty($document->airport) && !in_array($document->airport, $filter['durations'][$document->booking_package->duration]['airports'])){
+                $filter['durations'][$document->booking_package->duration]['airports'][] = $document->airport;
+            }
+            if(!empty($document->housing_package->id) && !in_array($document->housing_package->id, $filter['durations'][$document->booking_package->duration]['id_housing_packages'])){
+                $filter['durations'][$document->booking_package->duration]['id_housing_packages'][] = $document->housing_package->id;
+            }
+            if(!empty($document->housing_package->id) && !isset($filter['id_housing_packages'][$document->housing_package->id])){
+                $filter['id_housing_packages'][$document->housing_package->id] = ['durations' => [], 'transport_types' => [], 'airports' => []];
+            }
+            if(!empty($document->transport_type) && !in_array($document->transport_type, $filter['id_housing_packages'][$document->housing_package->id]['transport_types'])){
+                $filter['id_housing_packages'][$document->housing_package->id]['transport_types'][] = $document->transport_type;
+            }
+            if(!empty($document->airport) && !in_array($document->airport, $filter['id_housing_packages'][$document->housing_package->id]['airports'])){
+                $filter['id_housing_packages'][$document->housing_package->id]['airports'][] = $document->airport;
+            }
+            if(!empty($document->booking_package->duration) && !in_array($document->booking_package->duration, $filter['id_housing_packages'][$document->housing_package->id]['durations'])){
+                $filter['id_housing_packages'][$document->housing_package->id]['durations'][] = $document->booking_package->duration;
+            }
+            if(!empty($document->airport) && !isset($filter['airports'][$document->airport])){
+                $filter['airports'][$document->airport] = ['durations' => [], 'transport_types' => [], 'id_housing_packages' => []];
+            }
+            if(!empty($document->transport_type) && !empty($document->airport) && !in_array($document->transport_type, $filter['airports'][$document->airport]['transport_types'])){
+                $filter['airports'][$document->airport]['transport_types'][] = $document->transport_type;
+            }
+            if(!empty($document->housing_package->id) && !empty($document->airport) && !in_array($document->housing_package->id, $filter['airports'][$document->airport]['id_housing_packages'])){
+                $filter['airports'][$document->airport]['id_housing_packages'][] = $document->housing_package->id;
+            }
+            if(!empty($document->booking_package->duration) && !empty($document->airport) && !in_array($document->booking_package->duration, $filter['airports'][$document->airport]['durations'])){
+                $filter['airports'][$document->airport]['durations'][] = $document->booking_package->duration;
+            }
+            if(
+                (empty($filters->transport_type) || $filters->transport_type == $document->transport_type) &&
+                (empty($filters->duration) || $filters->duration == $document->booking_package->duration) &&
+                (empty($filters->id_housing_package) || $filters->id_housing_package == $document->housing_package->id) &&
+                (empty($filters->airport) || $filters->airport == $document->airport) &&
+                (empty($filters->housing_package_code_ibe) || $filters->housing_package_code_ibe == $document->housing_package->code_ibe)
+            ){
+               $filtered_documents[] = $document;
+            }
+        }
+        $result = new \stdClass();
+        $result->filter = $filter;
+        $result->calendar = null;
+        if(count($filtered_documents) == 0){
+            return $result;
+        }
+        $result->calendar = $filtered_documents[0];
+        $BookingPackage = new Package();
+        $BookingPackage->fromStdClass($result->calendar->booking_package);
+        $result->calendar->booking_package = $BookingPackage;
+        $HousingPackage = new \Pressmind\ORM\Object\Touristic\Housing\Package();
+        $HousingPackage->fromStdClass($result->calendar->housing_package);
+        $result->calendar->housing_package = $HousingPackage;
+        foreach($result->calendar->month as $k => $departure){
+            foreach($departure->days as $k1 => $day){
+                $result->calendar->month[$k]->days[$k1]->date = new \DateTime($day->date);
+                if(isset($result->calendar->month[$k]->days[$k1]->cheapest_price)){
+                    $CheapestPrice = new CheapestPriceSpeed();
+                    $CheapestPrice->earlybird_discount_date_to = !empty($CheapestPrice->earlybird_discount_date_to) ? new \DateTime($CheapestPrice->earlybird_discount_date_to) : null;
+                    $CheapestPrice->date_arrival = !empty($CheapestPrice->date_arrival) ? new \DateTime($CheapestPrice->date_arrival) : null;
+                    $CheapestPrice->date_departure = !empty($CheapestPrice->date_departure) ? new \DateTime($CheapestPrice->date_departure) : null;
+                    $CheapestPrice->transport_1_date_from = !empty($CheapestPrice->transport_1_date_from) ? new \DateTime($CheapestPrice->transport_1_date_from) : null;
+                    $CheapestPrice->transport_2_date_from = !empty($CheapestPrice->transport_2_date_from) ? new \DateTime($CheapestPrice->transport_2_date_from) : null;
+                    $CheapestPrice->transport_1_date_from = !empty($CheapestPrice->transport_1_date_from) ? new \DateTime($CheapestPrice->transport_1_date_from) : null;
+                    $CheapestPrice->transport_2_date_from = !empty($CheapestPrice->transport_2_date_from) ? new \DateTime($CheapestPrice->transport_2_date_from) : null;
+                    $CheapestPrice->fromStdClass($result->calendar->month[$k]->days[$k1]->cheapest_price);
+                    $result->calendar->month[$k]->days[$k1]->cheapest_price = $CheapestPrice;
+                }
+            }
+        }
+        $from = clone $result->calendar->month[0]->days[0]->date;
+        $to = clone $result->calendar->month[array_key_last($result->calendar->month)]->days[0]->date;
+        if(count($result->calendar->month) < $min_columns){
+            $add_months = $min_columns - count($result->calendar->month) + 1;
+            $from->modify('+' . count($result->calendar->month) . ' month');
+            $to->modify('+' . $add_months . ' month'); // +1?
+            foreach (new \DatePeriod($from, new \DateInterval('P1M'), $to) as $dt) {
+                $days = range(1, $dt->format('t'));
+                $departure = new \stdClass();
+                $departure->year = $dt->format('Y');
+                $departure->month = $dt->format('m');
+                $departure->is_bookable = false;
+                $departure->days = [];
+                foreach($days as $day){
+                    $dayObj = new \stdClass();
+                    $dayObj->date = new \DateTime($dt->format('Y-m-'.$day.' 00:00:00'));
+                    $departure->days[] = $dayObj;
+                }
+                $result->calendar->month[] = $departure;
+            }
+        }
+        return $result;
+    }
+
+
+    /**
      * @return string[]
      * @throws Exception
      */
@@ -1321,6 +1462,7 @@ class MediaObject extends AbstractObject
        }
        if($config['data']['search_mongodb']['enabled'] === true) {
            $this->deleteMongoDBIndex();
+           $this->deleteMongoDBCalendar();
        }
    }
    */
@@ -1344,6 +1486,28 @@ class MediaObject extends AbstractObject
         if(isset($config['data']['search_mongodb']['enabled']) && $config['data']['search_mongodb']['enabled'] === true) {
             $Indexer = new Indexer();
             $Indexer->upsertMediaObject($this->getId());
+        }
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function createMongoDBCalendar(){
+        $config = Registry::getInstance()->get('config');
+        if(isset($config['data']['search_mongodb']['enabled']) && $config['data']['search_mongodb']['enabled'] === true) {
+            $Calendar = new Calendar();
+            $Calendar->upsertMediaObject($this->getId());
+        }
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function deleteMongoDBCalendar(){
+        $config = Registry::getInstance()->get('config');
+        if($config['data']['search_mongodb']['enabled'] === true) {
+            $Calendar = new Calendar();
+            $Calendar->deleteMediaObject($this->getId());
         }
     }
 

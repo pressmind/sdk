@@ -448,15 +448,23 @@ class Import
             $media_object->createSearchIndex();
             if(isset($config['data']['search_mongodb']['enabled']) && $config['data']['search_mongodb']['enabled'] === true) {
                 try {
-                    $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '):  updating mongodb index', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+                    $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): createMongoDBIndex', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
                     $media_object->createMongoDBIndex();
                 } catch (Exception $e) {
                     $this->_log[] = 'Error during creating MongoDBIndex: ' . $e->getMessage();
                     $this->_errors[] = 'Error during creating MongoDBIndex: ' . $e->getMessage();
                 }
+                try {
+                    $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): createMongoDBCalendar', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+                    $media_object->createMongoDBCalendar();
+                } catch (Exception $e) {
+                    $this->_log[] = 'Error during creating createMongoDBCalendar: ' . $e->getMessage();
+
+                    echo $e->getTraceAsString();
+                    $this->_errors[] = 'Error during creating createMongoDBCalendar: ' . $e->getMessage();
+                }
             }
 
-            
             unset($response);
             unset($media_object);
 

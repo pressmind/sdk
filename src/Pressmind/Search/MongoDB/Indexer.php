@@ -8,46 +8,11 @@ use Pressmind\ORM\Object\MediaObject;
 use Pressmind\ORM\Object\Touristic\Date;
 use Pressmind\Registry;
 
-class Indexer
+class Indexer extends AbstractIndex
 {
-    /**
-     * @var MediaObject null
-     */
-    public $mediaObject = null;
-
-    /**
-     * @var \MongoDB\Database
-     */
-    public $db;
-
-    /**
-     * @var \MongoDB\Collection
-     */
-    public $collection;
-
-    /**
-     * @var array
-     */
-    private $_config;
-
-    /**
-     * @var array
-     */
-    private $_allowed_visibilities;
-
-    /**
-     * @var array
-     */
-    private $_allowed_fulltext_fields;
 
     public function __construct() {
-        $this->_config = Registry::getInstance()->get('config')['data']['search_mongodb'];
-        $this->_allowed_visibilities = Registry::getInstance()->get('config')['data']['media_types_allowed_visibilities'];
-        $this->_allowed_fulltext_fields = Registry::getInstance()->get('config')['data']['media_types_fulltext_index_fields'];
-        $uri = $this->_config['database']['uri'];
-        $db_name = $this->_config['database']['db'];
-        $client = new \MongoDB\Client($uri);
-        $this->db = $client->$db_name;
+        parent::__construct();
     }
 
     /**
@@ -85,60 +50,6 @@ class Indexer
             }
         }
         $this->upsertMediaObject($ids);
-    }
-
-
-    public function createCollectionIfNotExists($collection_name)
-    {
-        foreach($this->db->listCollections() as $collection){
-            if($collection['name'] == $collection_name){
-                return true;
-            }else{
-                $this->db->createCollection($collection_name, ['collation' => [ 'locale' => 'de' ]]);
-                $this->createCollectionIndex($collection_name);
-                return true;
-            }
-        }
-    }
-
-    public function createCollectionsIfNotExists()
-    {
-        foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
-            foreach ($build_infos as $build_info) {
-                $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
-                $this->createCollectionIfNotExists($collection_name);
-            }
-        }
-    }
-
-
-    /**
-     * Create the required indexes for each collection
-     * @throws \MongoDB\Driver\Exception\Exception
-     */
-    public function createCollectionIndexes()
-    {
-        foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
-            foreach ($build_infos as $build_info) {
-                $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
-                $this->createCollectionIndex($collection_name);
-            }
-        }
-    }
-
-    public function flushCollections()
-    {
-        foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
-            foreach ($build_infos as $build_info) {
-                $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
-                $this->flushCollection($collection_name);
-            }
-        }
-    }
-
-    public function flushCollection($collection_name)
-    {
-        $this->db->$collection_name->deleteMany([]);
     }
 
     /**
@@ -234,7 +145,7 @@ class Indexer
                 break;
             }
         }
-        $searchObject->code = array_filter(array_map('trim', explode(',', $this->mediaObject->code)));;
+        $searchObject->code = array_filter(array_map('trim', explode(',', (string)$this->mediaObject->code)));;
         $searchObject->description = $this->_mapDescriptions($language);
         $searchObject->categories = $this->_mapCategories($language);
         $searchObject->groups = $this->_mapGroups($language);
@@ -613,10 +524,10 @@ class Indexer
     /**
      * @param $pricea
      * @param $priceb
-     * @return bool
+     * @return int
      */
     private function _priceSort($pricea, $priceb) {
-        return $pricea->price_total > $priceb->price_total;
+        return $priceb->price_total <=> $pricea->price_total;
     }
 
     /**

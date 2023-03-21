@@ -694,16 +694,16 @@ class MediaObject extends AbstractObject
                 $occupancy_filter_is_set = true;
             }
             if(!empty($filters->id_option)) {
-                $where .= ' AND id_option = ' . $filters->id_option;
+                $where .= ' AND id_option = "' . $filters->id_option.'"';
             }
             if(!empty($filters->id_date)) {
-                $where .= ' AND id_date = ' . $filters->id_date;
+                $where .= ' AND id_date = "' . $filters->id_date.'"';
             }
             if(!empty($filters->id_booking_package)) {
-                $where .= ' AND id_booking_package = ' . $filters->id_booking_package;
+                $where .= ' AND id_booking_package = "' . $filters->id_booking_package.'"';
             }
             if(!empty($filters->id_housing_package)) {
-                $where .= ' AND id_housing_package = ' . $filters->id_housing_package;
+                $where .= ' AND id_housing_package = "' . $filters->id_housing_package.'"';
             }
             if(!empty($filters->transport_types)) {
                 if(is_string($filters->transport_types)){
@@ -871,6 +871,7 @@ class MediaObject extends AbstractObject
         }
         $result->calendar = $filtered_documents[0];
         $BookingPackage = new Package();
+        $result->calendar->booking_package->created = null;
         $BookingPackage->fromStdClass($result->calendar->booking_package);
         $result->calendar->booking_package = $BookingPackage;
         $HousingPackage = new \Pressmind\ORM\Object\Touristic\Housing\Package();

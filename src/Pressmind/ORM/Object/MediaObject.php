@@ -882,14 +882,15 @@ class MediaObject extends AbstractObject
                 $result->calendar->month[$k]->days[$k1]->date = new \DateTime($day->date);
                 if(isset($result->calendar->month[$k]->days[$k1]->cheapest_price)){
                     $CheapestPrice = new CheapestPriceSpeed();
-                    $CheapestPrice->earlybird_discount_date_to = !empty($CheapestPrice->earlybird_discount_date_to) ? new \DateTime($CheapestPrice->earlybird_discount_date_to) : null;
-                    $CheapestPrice->date_arrival = !empty($CheapestPrice->date_arrival) ? new \DateTime($CheapestPrice->date_arrival) : null;
-                    $CheapestPrice->date_departure = !empty($CheapestPrice->date_departure) ? new \DateTime($CheapestPrice->date_departure) : null;
-                    $CheapestPrice->transport_1_date_from = !empty($CheapestPrice->transport_1_date_from) ? new \DateTime($CheapestPrice->transport_1_date_from) : null;
-                    $CheapestPrice->transport_2_date_from = !empty($CheapestPrice->transport_2_date_from) ? new \DateTime($CheapestPrice->transport_2_date_from) : null;
-                    $CheapestPrice->transport_1_date_from = !empty($CheapestPrice->transport_1_date_from) ? new \DateTime($CheapestPrice->transport_1_date_from) : null;
-                    $CheapestPrice->transport_2_date_from = !empty($CheapestPrice->transport_2_date_from) ? new \DateTime($CheapestPrice->transport_2_date_from) : null;
-                    $CheapestPrice->fromStdClass($result->calendar->month[$k]->days[$k1]->cheapest_price);
+                    $price = $result->calendar->month[$k]->days[$k1]->cheapest_price;
+                    $price->earlybird_discount_date_to = !empty($price->earlybird_discount_date_to) ? new \DateTime($price->earlybird_discount_date_to) : null;
+                    $price->date_arrival = !empty($price->date_arrival) ? new \DateTime($price->date_arrival) : null;
+                    $price->date_departure = !empty($price->date_departure) ? new \DateTime($price->date_departure) : null;
+                    $price->transport_1_date_from = !empty($price->transport_1_date_from) ? new \DateTime($price->transport_1_date_from) : null;
+                    $price->transport_2_date_from = !empty($price->transport_2_date_from) ? new \DateTime($price->transport_2_date_from) : null;
+                    $price->transport_1_date_to = !empty($price->transport_1_date_to) ? new \DateTime($price->transport_1_date_to) : null;
+                    $price->transport_2_date_to = !empty($price->transport_2_date_to) ? new \DateTime($price->transport_2_date_to) : null;
+                    $CheapestPrice->fromStdClass($price);
                     $result->calendar->month[$k]->days[$k1]->cheapest_price = $CheapestPrice;
                 }
             }

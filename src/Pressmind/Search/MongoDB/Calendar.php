@@ -266,6 +266,7 @@ class Calendar extends AbstractIndex
                             $cheapestPriceReduced->id_media_object = $date_to_cheapest_price[$current_date]->id_media_object;
                             $cheapestPriceReduced->id_booking_package = $date_to_cheapest_price[$current_date]->id_booking_package;
                             $cheapestPriceReduced->id_housing_package = $date_to_cheapest_price[$current_date]->id_housing_package;
+                            $cheapestPriceReduced->id_date = $date_to_cheapest_price[$current_date]->id_date;
                             $cheapestPriceReduced->option_occupancy = $date_to_cheapest_price[$current_date]->option_occupancy;
                             $cheapestPriceReduced->transport_type = $date_to_cheapest_price[$current_date]->transport_type;
                             $cheapestPriceReduced->price_total = $date_to_cheapest_price[$current_date]->price_total;

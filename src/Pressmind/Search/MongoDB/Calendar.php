@@ -4,6 +4,7 @@ namespace Pressmind\Search\MongoDB;
 
 use Pressmind\DB\Adapter\Pdo;
 use Pressmind\HelperFunctions;
+use Pressmind\ORM\Object\CheapestPriceSpeed;
 use Pressmind\ORM\Object\MediaObject;
 use Pressmind\ORM\Object\Touristic\Booking;
 use Pressmind\ORM\Object\Touristic\Date;
@@ -258,9 +259,20 @@ class Calendar extends AbstractIndex
                         $date->date = $current_date;
                         if (!empty($date_to_cheapest_price[$current_date])) {
                             $month->is_bookable = true;
-                            $date->cheapest_price = $date_to_cheapest_price[$current_date]->toStdClass();
-                            $date->cheapest_price->date_departure = $date->cheapest_price->date_departure->format(DATE_RFC3339_EXTENDED);
-                            $date->cheapest_price->date_arrival = $date->cheapest_price->date_arrival->format(DATE_RFC3339_EXTENDED);
+                            /**
+                             * @var CheapestPriceSpeed $cheapestPriceReduced
+                             */
+                            $cheapestPriceReduced = new \stdClass();
+                            $cheapestPriceReduced->id_media_object = $date_to_cheapest_price[$current_date]->id_media_object;
+                            $cheapestPriceReduced->id_booking_package = $date_to_cheapest_price[$current_date]->id_booking_package;
+                            $cheapestPriceReduced->id_housing_package = $date_to_cheapest_price[$current_date]->id_housing_package;
+                            $cheapestPriceReduced->option_occupancy = $date_to_cheapest_price[$current_date]->option_occupancy;
+                            $cheapestPriceReduced->transport_type = $date_to_cheapest_price[$current_date]->transport_type;
+                            $cheapestPriceReduced->price_total = $date_to_cheapest_price[$current_date]->price_total;
+                            $cheapestPriceReduced->date_arrival = $date_to_cheapest_price[$current_date]->date_arrival->format(DATE_RFC3339_EXTENDED);
+                            $cheapestPriceReduced->date_departure = $date_to_cheapest_price[$current_date]->date_departure->format(DATE_RFC3339_EXTENDED);
+                            $cheapestPriceReduced->earlybird_discount_date_to = $date_to_cheapest_price[$current_date]->earlybird_discount_date_to;
+                            $date->cheapest_price = $cheapestPriceReduced;
                         }
                         $month->days[] = $date;
                     }

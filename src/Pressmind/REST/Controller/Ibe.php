@@ -228,7 +228,7 @@ class Ibe
             $housing_packages[] = $housing_package;
         }
 
-        $result['housing_packages'] = $housing_packages;
+        $result['housing_packages'] = $this->filterValidHousingPackages($housing_packages);
         $result['option_discounts'] = $this->getOptionDiscounts($housing_packages);
         $result['earlybird'] = $booking->getEarlyBird();
         $result['extras'] = $extras;
@@ -250,26 +250,51 @@ class Ibe
                 if(empty($option->discount)){
                     continue;
                 }
-                $discount = new Discount($option->discount->id, true);
-                if(!$discount->isValid()){
-                    continue;
-                }
-                $valid_scales = [];
-                foreach($discount->scales as $scale){
-                    if(($scale->valid_from === null || (new \DateTime()) >= $scale->valid_from) &&
-                        ($scale->valid_to === null || $scale->valid_to >= (new \DateTime()))
-                    ){
-                        $valid_scales[] = $scale;
-                    }
-                }
-                if(count($valid_scales) == 0){
-                    continue;
-                }
-                $discount->scales = $valid_scales;
+                $discount = $this->filterValidOptionDiscounts($option->discount->id);
                 $discounts[$discount->id] = $discount;
             }
         }
         return array_values($discounts);
+    }
+
+    /**
+     * @param int $id_option_discount
+     * @return null|Discount
+     * @throws Exception
+     */
+    private function filterValidOptionDiscounts($id_option_discount){
+        $discount = new Discount($id_option_discount, true);
+        if(!$discount->isValid()){
+           return null;
+        }
+        $valid_scales = [];
+        foreach($discount->scales as $scale){
+            if(($scale->valid_from === null || (new \DateTime()) >= $scale->valid_from) &&
+                ($scale->valid_to === null || $scale->valid_to >= (new \DateTime()))
+            ){
+                $valid_scales[] = $scale;
+            }
+        }
+        $discount->scales = $valid_scales;
+        return $discount;
+    }
+
+    /**
+     * @param Package $housing_packages[]
+     * @return void
+     */
+    function filterValidHousingPackages($housing_packages){
+        foreach($housing_packages as $k => $housing_package){
+            /**
+             * @var Package $housing_package
+             */
+            foreach($housing_package->options as $k2 => $option){
+                if(!empty($option->id_touristic_option_discount)){
+                    $housing_packages[$k]->options[$k2]->discount = $this->filterValidOptionDiscounts($option->id_touristic_option_discount);
+                }
+            }
+        }
+        return $housing_packages;
     }
 
     /**

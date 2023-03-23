@@ -1180,11 +1180,12 @@ class MediaObject extends AbstractObject
                             $is_bookable = false;
                             $is_request = true;
                         }
-                        $is_bookable = $is_bookable && in_array($transport_pair['way1']->state, [3,0]);
-                        $is_request = $is_request || in_array($transport_pair['way1']->state, [2]);
-                        $is_bookable = $is_bookable && in_array($transport_pair['way2']->state, [3,0]);
-                        $is_request = $is_request || in_array($transport_pair['way2']->state, [2]);
-
+                        if(!empty($transport_pair['way1']) && !empty($transport_pair['way2'])){
+                            $is_bookable = $is_bookable && in_array($transport_pair['way1']->state, [3,0]);
+                            $is_request = $is_request || in_array($transport_pair['way1']->state, [2]);
+                            $is_bookable = $is_bookable && in_array($transport_pair['way2']->state, [3,0]);
+                            $is_request = $is_request || in_array($transport_pair['way2']->state, [2]);
+                        }
                         $transport_earlybird_price_base = 0;
                         foreach ($early_bird_discounts as $early_bird_discount) {
                             if (!is_null($transport_pair) && isset($transport_pair['way1'])) {

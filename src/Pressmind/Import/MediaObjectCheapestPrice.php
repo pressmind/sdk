@@ -65,8 +65,8 @@ class MediaObjectCheapestPrice extends AbstractImport
                $Date->id = uniqid();
                $Date->id_media_object = $id_media_object;
                $Date->id_booking_package = $BookingPackage->id;
-               $Date->departure = new \DateTime($priceObject->valid_from);
-               $Date->arrival = new \DateTime($priceObject->valid_to);
+               $Date->departure = $from;
+               $Date->arrival = $to;
                $Date->season = 'A';
                $BookingPackage->dates = [$Date];
                /**

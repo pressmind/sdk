@@ -153,7 +153,8 @@ class Calendar extends AbstractIndex
                         'occupancy' => $occupancy,
                         'transport_type' => $result->transport_type,
                         'transport_1_airport' => $result->transport_1_airport,
-                        'transport_2_airport' => $result->transport_2_airport
+                        'transport_2_airport' => $result->transport_2_airport,
+                        'durations' => []
                     ];
                 }
             }

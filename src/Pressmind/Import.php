@@ -8,6 +8,7 @@ use Pressmind\Import\Brand;
 use Pressmind\Import\CategoryTree;
 use Pressmind\Import\ImportInterface;
 use Pressmind\Import\Itinerary;
+use Pressmind\Import\MediaObjectCheapestPrice;
 use Pressmind\Import\MediaObjectData;
 use Pressmind\Import\MediaObjectType;
 use Pressmind\Import\MyContent;
@@ -281,6 +282,11 @@ class Import
                 $fake_data->touristic_base = $response[0]->touristic->touristic_base;
                 $touristic_data_importer = new TouristicData();
                 $touristic_data_importer->import($fake_data, $id_media_object, $this->_import_type);
+            }
+
+            if(!empty($response[0]->cheapest_prices)){
+                $touristic_data_importer = new MediaObjectCheapestPrice();
+                $touristic_data_importer->import($response[0]->cheapest_prices, $id_media_object, $this->_import_type);
             }
 
             /*if(is_a($response[0]->insurance_group, 'stdClass') && intval($response[0]->id_insurance_group) != 0) {

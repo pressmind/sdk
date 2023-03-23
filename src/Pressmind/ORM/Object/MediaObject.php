@@ -24,6 +24,7 @@ use Pressmind\Registry;
 use Pressmind\Search\CheapestPrice;
 use Pressmind\Search\MongoDB\Calendar;
 use Pressmind\Search\MongoDB\Indexer;
+use Pressmind\System\Info;
 use Pressmind\ValueObject\MediaObject\Result\GetByPrettyUrl;
 use Pressmind\ValueObject\MediaObject\Result\GetPrettyUrls;
 
@@ -1307,6 +1308,7 @@ class MediaObject extends AbstractObject
                             $cheapestPriceSpeed->booking_package_variant_code = $booking_package->variant_code;
                             $cheapestPriceSpeed->booking_package_request_code = $booking_package->request_code;
                             $cheapestPriceSpeed->booking_package_name = $booking_package->name;
+                            $cheapestPriceSpeed->is_virtual_created_price = $booking_package->is_virtual_created_price;
                             $cheapestPriceSpeed->create();
                             unset($cheapestPriceSpeed);
                             $c++;
@@ -1648,5 +1650,28 @@ class MediaObject extends AbstractObject
     public function isAPrimaryType(){
         $config = Registry::getInstance()->get('config');
         return in_array($this->id_object_type, $config['data']['primary_media_type_ids']);
+    }
+
+    /**
+     * @param $id_media_object
+     * @return void
+     * @throws Exception
+     */
+    public static function deleteTouristic($id_media_object){
+        /** @var \Pressmind\DB\Adapter\Pdo $db */
+        $db = Registry::getInstance()->get('db');
+        $tables = [
+            'pmt2core_touristic_booking_packages',
+            'pmt2core_touristic_dates',
+            'pmt2core_touristic_transports',
+            'pmt2core_touristic_housing_packages',
+            'pmt2core_touristic_housing_package_description_links',
+            'pmt2core_touristic_option_descriptions',
+            'pmt2core_touristic_options',
+            'pmt2core_cheapest_price_speed',
+        ];
+        foreach ($tables as $table) {
+            $db->delete($table, ['id_media_object = ?', $id_media_object]);
+        }
     }
 }

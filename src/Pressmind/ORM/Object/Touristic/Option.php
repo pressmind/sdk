@@ -54,6 +54,7 @@ use Pressmind\ORM\Object\Touristic\Option\Discount;
  * @property integer $occupancy_min
  * @property integer $occupancy_max
  * @property integer $occupancy_max_age
+ * @property integer $id_touristic_option_discount;
  * @property Discount $discount
  * @property string $ibe_clients
  * @property string $agencies
@@ -431,14 +432,19 @@ class Option extends AbstractObject
                     [
                         'name' => 'inarray',
                         'params' => [
-                            'once',
-                            1 => 'nightly',
-                            2 => 'daily',
-                            3 => 'weekly',
-                            4 => 'stay',
-                            5 => 'nights_person',
-                            6 => 'person_stay',
-                            7 => 'once_stay',
+
+                            'once',    // extras 'Einmalig pro Person Default
+                            'once_stay', // extras Einmalig pro Aufenthalt
+                            'nightly', // extras Nächtlich
+                            'daily',   // extras Täglich
+                            'weekly',  // extras Wöchentlich
+
+
+                            'person_stay',     // housing option, pro Person pro Aufenthalt Default
+                            'stay',    // housing option, pro Aufenthalt
+                            'nights_person',   // housing option, pro Nacht pro Person
+
+
                         ],
                     ],
                 ],

@@ -285,6 +285,9 @@ class Indexer extends AbstractIndex
      */
     private function _mapCategories($language) {
         $categories = [];
+        if(empty($this->_config['search']['categories'][$this->mediaObject->id_object_type])){
+            return $categories;
+        }
         $categories_map = $this->_config['search']['categories'][$this->mediaObject->id_object_type];
         $data = $this->mediaObject->getDataForLanguage($language)->toStdClass();
 

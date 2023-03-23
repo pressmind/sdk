@@ -30,10 +30,14 @@ class MediaObjectCheapestPrice extends AbstractImport
                continue;
            }
            if($priceObject->valid_from == '1970-01-01 00:00:00'){
-               $priceObject->valid_from = (new \DateTime())->format('Y-m-d 00:00:00');
+               $date  = new \DateTime();
+               $date->setTime(0,0,0);
+               $date->add(new \DateInterval('P1D'));
+               $priceObject->valid_from = $date->format('Y-m-d 00:00:00');
            }
            if($priceObject->valid_to == '1970-01-01 00:00:00'){
                $date  = new \DateTime();
+               $date->setTime(0,0,0);
                $date->add(new \DateInterval('P90D'));
                $priceObject->valid_to = $date->format('Y-m-d 00:00:00');
            }

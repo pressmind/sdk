@@ -1093,6 +1093,7 @@ class MediaObject extends AbstractObject
         $CheapestPrice->deleteByMediaObjectId($this->getId());
         $booking_packages = $this->booking_packages;
         $now = new DateTime();
+        $now->setTime(0,0,0);
         $c = 0;
         foreach ($booking_packages as $booking_package) {
             foreach ($booking_package->dates as $date) {

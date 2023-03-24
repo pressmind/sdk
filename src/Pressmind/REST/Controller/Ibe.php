@@ -228,8 +228,8 @@ class Ibe
             $housing_packages[] = $housing_package;
         }
 
-        $result['housing_packages'] = $this->filterValidHousingPackages($housing_packages);
-        $result['option_discounts'] = $this->getOptionDiscounts($housing_packages);
+        $result['housing_packages'] = $this->filterValidHousingPackages($housing_packages, $date->departure);
+        $result['option_discounts'] = $this->getOptionDiscounts($housing_packages, $date->departure);
         $result['earlybird'] = $booking->getEarlyBird();
         $result['extras'] = $extras;
         $result['id_ibe'] = $booking->getBookingPackage()->ibe_type;
@@ -243,14 +243,14 @@ class Ibe
      * @param Package[] $housing_packages
      * @return void
      */
-    private function getOptionDiscounts($housing_packages){
+    private function getOptionDiscounts($housing_packages, $departure){
         $discounts = [];
         foreach($housing_packages as $housing_package){
             foreach($housing_package->options as $option){
                 if(empty($option->discount)){
                     continue;
                 }
-                $discount = $this->filterValidOptionDiscounts($option->discount->id);
+                $discount = $this->filterValidOptionDiscounts($option->discount->id, $departure);
                 $discounts[$discount->id] = $discount;
             }
         }
@@ -262,15 +262,15 @@ class Ibe
      * @return null|Discount
      * @throws Exception
      */
-    private function filterValidOptionDiscounts($id_option_discount){
+    private function filterValidOptionDiscounts($id_option_discount, $departure){
         $discount = new Discount($id_option_discount, true);
         if(!$discount->isValid()){
            return null;
         }
         $valid_scales = [];
         foreach($discount->scales as $scale){
-            if(($scale->valid_from === null || (new \DateTime()) >= $scale->valid_from) &&
-                ($scale->valid_to === null || $scale->valid_to >= (new \DateTime()))
+            if(($scale->valid_from === null || $departure >= $scale->valid_from) &&
+                ($scale->valid_to === null || $scale->valid_to >= $departure)
             ){
                 $valid_scales[] = $scale;
             }
@@ -283,14 +283,14 @@ class Ibe
      * @param Package $housing_packages[]
      * @return void
      */
-    function filterValidHousingPackages($housing_packages){
+    function filterValidHousingPackages($housing_packages, $departure){
         foreach($housing_packages as $k => $housing_package){
             /**
              * @var Package $housing_package
              */
             foreach($housing_package->options as $k2 => $option){
                 if(!empty($option->id_touristic_option_discount)){
-                    $housing_packages[$k]->options[$k2]->discount = $this->filterValidOptionDiscounts($option->id_touristic_option_discount);
+                    $housing_packages[$k]->options[$k2]->discount = $this->filterValidOptionDiscounts($option->id_touristic_option_discount, $departure);
                 }
             }
         }

@@ -22,7 +22,8 @@ class Indexer extends AbstractIndex
      * @throws \MongoDB\Driver\Exception\Exception
      */
     public function createCollectionIndex($collection_name){
-        
+
+        $this->db->$collection_name->dropIndexes();
         $this->db->$collection_name->createIndex( ['prices.price_total' => 1]);
         $this->db->$collection_name->createIndex( ['prices.price_total' => -1]);
         $this->db->$collection_name->createIndex( ['prices.date_departure' => 1]);
@@ -35,7 +36,20 @@ class Indexer extends AbstractIndex
         $this->db->$collection_name->createIndex( ['categories.name' => 1]);
         $this->db->$collection_name->createIndex( ['categories.it_item' => 1, 'categories.field_name' => 1]);
         $this->db->$collection_name->createIndex( ['id_media_object' => 1], ['unique' => 1]);
-        $this->db->$collection_name->createIndex( ['fulltext' => 'text'], ['default_language' => 'german', 'collation' => ['locale' => 'simple']]);
+        $this->db->$collection_name->createIndex( [
+            'fulltext' => 'text',
+            'categories.path_str' => 'text',
+            'code' => 'text'
+        ], [
+            'default_language' => 'none',
+            'weights' => [
+                        'fulltext' => 5,
+                        'categories.path_str' => 10,
+                        'code' => 15
+            ],
+            'name' => 'fulltext_text'
+
+        ]);
         $this->db->$collection_name->createIndex( ['groups' => 1]);
     }
 
@@ -220,8 +234,12 @@ class Indexer extends AbstractIndex
                 try {
                     $params = [$value];
                     if(!empty($item_info['params']) && is_array($item_info['params'])){
-                        $params = array_merge($params, $item_info['params']);
+                        $params = array_merge($params, array_values($item_info['params']));
                     }
+
+                    // @TODO parameter müssen in der richtigen named order definiert werden.
+                    //var_dump($item_info['filter']);
+                   // var_dump($params);
                     $value = call_user_func_array($item_info['filter'], $params);
                 } catch (\Exception $e) {
                     echo 'Error in filter function ' .  $item_info['filter'] . ': ' . $e->getMessage();
@@ -277,6 +295,14 @@ class Indexer extends AbstractIndex
             echo 'Error in filter function ' .  $group_map['filter'] . ': ' . $e->getMessage();
             exit; // @TODO
         }
+
+        foreach($groups as $v){
+            if(empty($v)){
+                echo 'Error: "'.$v.'" is not allowed as group value';
+            }
+        }
+
+
         return $groups;
     }
 

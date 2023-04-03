@@ -774,7 +774,7 @@ class Option extends AbstractObject
 
     /**
      * Converts a periodic price_due to 'once', (person based price),
-     * Use this to flatten die price model
+     * Use this to flatten the price model
      * @param float $duration_days
      * @param int $nights
      * @return float

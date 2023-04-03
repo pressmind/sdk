@@ -350,17 +350,21 @@ class Booking
             }elseif($extra->season == $season || empty($extra->season)){
                 $valid_extras[] = $extra;
             }
-            /* @TODO old but good.. remove soon
-            if(empty($extra->reservation_date_from) || empty($extra->reservation_date_to) ||
-                empty($reservation_date_from) || empty($reservation_date_to) ||
-                ($extra->reservation_date_from->format('Ymd') == $reservation_date_from->format('Ymd') &&
-                    $extra->reservation_date_to->format('Ymd') == $reservation_date_to->format('Ymd'))
-            ){
-                $valid_extras[] = $extra;
-            }
-            */
         }
         return $valid_extras;
+    }
+
+    /**
+     * @param Option[] $extras
+     * @param float $duration
+     * @param int $nights
+     * @return Option[]
+     */
+    public function calculateExtras($extras, $duration, $nights){
+        foreach($extras as $extra){
+            $extra->calculatePrice($duration, $nights);
+        }
+        return $extras;
     }
 
     /**

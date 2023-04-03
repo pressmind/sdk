@@ -146,19 +146,15 @@ class Ibe
         $extras = $booking->getAllAvailableExtras($date->departure, $date->arrival, $date->season);
         $result['insurances'] = $booking->getInsurances();
         $result['insurance_price_table_packages'] = $booking->getInsurancePriceTablePackages();
-
         $predefined_options = [];
-
         if(isset($this->parameters['params']['iho'])) {
             foreach ($this->parameters['params']['iho'] as $key => $value) {
                 $predefined_options[$key] = $value;
             }
         }
-
         if(isset($this->parameters['params']['ido'])) {
             $predefined_options[$this->parameters['params']['ido']] = 1;
         }
-
         if($booking->getBookingPackage()->price_mix == 'date_housing') {
             if(!empty($this->parameters['params']['iho'])){
                 $Option = new \Pressmind\ORM\Object\Touristic\Option(array_key_first($this->parameters['params']['iho']));
@@ -231,7 +227,7 @@ class Ibe
         $result['housing_packages'] = $this->filterValidHousingPackages($housing_packages, $date->departure);
         $result['option_discounts'] = $this->getOptionDiscounts($housing_packages, $date->departure);
         $result['earlybird'] = $booking->getEarlyBird();
-        $result['extras'] = $extras;
+        $result['extras'] = $booking->calculateExtras($extras, $booking->getBookingPackage()->duration, $housing_packages[0]->nights);
         $result['id_ibe'] = $booking->getBookingPackage()->ibe_type;
         $result['code_ibe'] = is_null($booking->getHousingPackage()) ? null : $booking->getHousingPackage()->code_ibe;
         $result['product_type_ibe'] = $booking->getBookingPackage()->product_type_ibe;

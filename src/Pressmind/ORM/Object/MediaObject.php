@@ -1125,12 +1125,12 @@ class MediaObject extends AbstractObject
                     $tmpOption->price = 0;
                     $options[] = $tmpOption;
                 }
-                $included_options_price = 0;
-                $included_options_earlybird_price_base = 0;
-                $included_options_lowest_state = 3;
-                $included_options_description = [];
-                $id_included_options = [];
-                $code_ibe_included_options = [];
+
+
+
+
+
+
                 $cheapest_options = [];
                 $check_group_validity = [];
                 $option_list = $date->getAllOptionsButExcludePriceMixOptions($booking_package->price_mix, true);
@@ -1147,28 +1147,38 @@ class MediaObject extends AbstractObject
                         }
                     }
                 }
+
+                /**
+                 * @var Option[] $cheapest_options
+                 */
                 $cheapest_options = array_values($cheapest_options);
                 foreach($check_group_validity as $k => $v){
                     if(isset($v['items_count_not_valid']) && ($v['items_count'] - $v['items_count_not_valid'] == 0)){
                         continue(2);
                     }
                 }
-                foreach($cheapest_options as $option){
-                    $included_options_price += $option->price;
-                    if($option->use_earlybird){
-                        $included_options_earlybird_price_base += $option->price;
-                    }
-                    if($included_options_lowest_state > $option->state){
-                        $included_options_lowest_state = $option->state;
-                    }
-                    $included_options_description[] = $option->name;
-                    $id_included_options[] = $option->getId();
-                    $code_ibe_included_options[] = $option->code_ibe;
-                }
-
 
                 foreach ($options as $option) {
                     $housing_package = $option->getHousingPackage();
+                    $included_options_price = 0;
+                    $included_options_earlybird_price_base = 0;
+                    $included_options_lowest_state = 3;
+                    $included_options_description = [];
+                    $id_included_options = [];
+                    $code_ibe_included_options = [];
+                    foreach($cheapest_options as $cheapest_option){
+                        $cheapest_option_price = $cheapest_option->calculatePrice($booking_package->duration, $housing_package->nights);
+                        $included_options_price += $cheapest_option_price;
+                        if($option->use_earlybird){
+                            $included_options_earlybird_price_base += $cheapest_option_price;
+                        }
+                        if($included_options_lowest_state > $cheapest_option->state){
+                            $included_options_lowest_state = $cheapest_option->state;
+                        }
+                        $included_options_description[] = $cheapest_option->name;
+                        $id_included_options[] = $cheapest_option->getId();
+                        $code_ibe_included_options[] = $cheapest_option->code_ibe;
+                    }
                     foreach ($transport_pairs as $transport_pair) {
                         $is_bookable = in_array($date->state, [1,4,0]);
                         $is_request = in_array($date->state, [2]);

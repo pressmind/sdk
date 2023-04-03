@@ -432,19 +432,14 @@ class Option extends AbstractObject
                     [
                         'name' => 'inarray',
                         'params' => [
-
-                            'once',    // extras 'Einmalig pro Person Default
-                            'once_stay', // extras Einmalig pro Aufenthalt
-                            'nightly', // extras Nächtlich
-                            'daily',   // extras Täglich
-                            'weekly',  // extras Wöchentlich
-
-
-                            'person_stay',     // housing option, pro Person pro Aufenthalt Default
-                            'stay',    // housing option, pro Aufenthalt
-                            'nights_person',   // housing option, pro Nacht pro Person
-
-
+                            'once',         // extras: einmalig pro Person (Default)
+                            'once_stay',    // extras: einmalig pro Aufenthalt
+                            'nightly',      // extras: nächtlich
+                            'daily',        // extras: täglich
+                            'weekly',       // extras: wöchentlich
+                            'person_stay',  // housing_option: pro Person pro Aufenthalt (Default)
+                            'stay',         // housing_option: pro Aufenthalt
+                            'nights_person',// housing_option: pro Nacht pro Person
                         ],
                     ],
                 ],
@@ -776,4 +771,32 @@ class Option extends AbstractObject
         $housing_packages = Package::listAll(['id' => $this->id_housing_package]);
         return !empty($housing_packages[0]) ? $housing_packages[0] : null;
     }
+
+    /**
+     * Converts a periodic price_due to 'once', (person based price),
+     * Use this to flatten die price model
+     * @param float $duration_days
+     * @param int $nights
+     * @return float
+     */
+    public function calculatePrice($duration_days, $nights){
+        $price = $this->price;
+        if (in_array($this->type, ['ticket', 'sightseeing', 'extra']) && in_array($this->price_due, ['nightly', 'daily', 'weekly'])) {
+            if (in_array($this->price_due, ['nightly', 'nights_person'])) {
+                $price= $this->price * $nights;
+            }
+            if ($this->price_due == 'daily') {
+                $price = $this->price * $duration_days;
+            }
+            if ($this->price_due == 'weekly') {
+                $price =  $this->price * ceil($duration_days / 7);
+            }
+            $this->price_due = 'once';
+            $this->price = $price;
+        }
+        return $price;
+    }
+
+
+
 }

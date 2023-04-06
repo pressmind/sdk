@@ -69,14 +69,20 @@ class Ibe
         }
         $services_box_title = null;
         $services_box_content = null;
-        if(!empty(strip_tags($mediaObject->getValueByTagName('pressmind-ib3.services-box-content')))){
+        if(!empty(strip_tags((string)$mediaObject->getValueByTagName('pressmind-ib3.services-box-content')))){
             $services_box_content = $mediaObject->getValueByTagName('pressmind-ib3.services-box-content');
-            if(!empty(strip_tags($mediaObject->getValueByTagName('pressmind-ib3.services-box-title')))){
+            if(!empty(strip_tags((string)$mediaObject->getValueByTagName('pressmind-ib3.services-box-title')))){
                 $services_box_title = strip_tags($mediaObject->getValueByTagName('pressmind-ib3.services-box-title'));
             }else{
                 $services_box_title = 'Leistungen';
             }
         }
+
+        $booking_transaction_recipients = null;
+        if(!empty(strip_tags((string)$mediaObject->getValueByTagName('pressmind-ib3.booking-transaction-recipients')))){
+            $booking_transaction_recipients = $mediaObject->getValueByTagName('pressmind-ib3.booking-transaction-recipients');
+        }
+
         $date = $booking->getDate();
         if(empty($date)){
             return ['success' => false, 'data' => null, 'code' => 'not_found', 'msg' => 'date not found, id: '.$this->parameters['params']['idd']];
@@ -231,6 +237,7 @@ class Ibe
         $result['id_ibe'] = $booking->getBookingPackage()->ibe_type;
         $result['code_ibe'] = is_null($booking->getHousingPackage()) ? null : $booking->getHousingPackage()->code_ibe;
         $result['product_type_ibe'] = $booking->getBookingPackage()->product_type_ibe;
+        $result['booking_transaction_recipients'] = $booking_transaction_recipients;
         return ['success' => true, 'data' => $result];
     }
 

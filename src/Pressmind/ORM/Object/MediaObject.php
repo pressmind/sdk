@@ -1125,12 +1125,7 @@ class MediaObject extends AbstractObject
                     $tmpOption->price = 0;
                     $options[] = $tmpOption;
                 }
-
-
-
-
-
-
+                
                 $cheapest_options = [];
                 $check_group_validity = [];
                 $option_list = $date->getAllOptionsButExcludePriceMixOptions($booking_package->price_mix, true);
@@ -1299,8 +1294,10 @@ class MediaObject extends AbstractObject
                                 $cheapestPriceSpeed->earlybird_discount = strtolower($early_bird_discount->type) == 'p' ? $early_bird_discount->discount_value : null;
                                 $cheapestPriceSpeed->earlybird_discount_date_to = $early_bird_discount->booking_date_to;
                                 $cheapestPriceSpeed->earlybird_discount_f = strtolower($early_bird_discount->type) == 'f' ? $early_bird_discount->discount_value : null;
+                                $cheapestPriceSpeed->earlybird_name = empty($date->early_bird_discount_group->name) ? 'Frühbucher' : $date->early_bird_discount_group->name;
                                 $cheapestPriceSpeed->price_total = $cheapestPriceSpeed->price_regular_before_discount + $this->_calculateEarlyBirdDiscount($early_bird_discount, $price_base_early_bird);
                             }
+
                             $cheapestPriceSpeed->date_code_ibe = $date->code_ibe;
                             $cheapestPriceSpeed->housing_package_code_ibe = !empty($housing_package) ? $housing_package->code_ibe : null;
                             $cheapestPriceSpeed->housing_package_name = !empty($housing_package) ? $housing_package->name : null;

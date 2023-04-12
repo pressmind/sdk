@@ -436,6 +436,7 @@ class Indexer extends AbstractIndex
                 earlybird_discount, 
                 earlybird_discount_f, 
                 earlybird_discount_date_to, 
+                earlybird_name, 
                 option_board_type, 
                 price_mix,
                 transport_type
@@ -498,6 +499,7 @@ class Indexer extends AbstractIndex
                 earlybird_discount, 
                 earlybird_discount_f, 
                 earlybird_discount_date_to, 
+                earlybird_name,
                 option_board_type, 
                 price_mix,
                 transport_type

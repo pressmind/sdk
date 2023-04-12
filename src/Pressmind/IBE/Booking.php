@@ -368,13 +368,18 @@ class Booking
     }
 
     /**
-     * @return \Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup\Item|null
+     * @return \Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup|null
      */
     public function getEarlyBird(){
         if(empty($this->date->early_bird_discount_group)){
             return null;
         }
         $MediaObject = new MediaObject();
-        return $MediaObject->getEarlyBirdDiscount($this->date->early_bird_discount_group->items, $this->date);
+        $item = $MediaObject->getEarlyBirdDiscount($this->date->early_bird_discount_group->items, $this->date);
+        if(!empty($item)){
+            $group = $this->date->early_bird_discount_group->toStdClass();
+            $group->items = [$item->toStdClass()];
+        }
+        return $group;
     }
 }

@@ -1125,7 +1125,7 @@ class MediaObject extends AbstractObject
                     $tmpOption->price = 0;
                     $options[] = $tmpOption;
                 }
-                
+
                 $cheapest_options = [];
                 $check_group_validity = [];
                 $option_list = $date->getAllOptionsButExcludePriceMixOptions($booking_package->price_mix, true);
@@ -1448,7 +1448,7 @@ class MediaObject extends AbstractObject
                 $tmp = new \Pressmind\ORM\Object\MediaObject($v[0]->id_media_object_link);
                 $v = $tmp->getValueByTagName($tagName, $language);
             }
-            return($v);
+            return !empty($v) ? $v : null;
         }
         return null;
     }

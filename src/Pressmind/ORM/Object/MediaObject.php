@@ -1161,8 +1161,9 @@ class MediaObject extends AbstractObject
                     $included_options_description = [];
                     $id_included_options = [];
                     $code_ibe_included_options = [];
+                    $nights = empty($housing_package) ? 0 : $housing_package->nights;
                     foreach($cheapest_options as $cheapest_option){
-                        $cheapest_option_price = $cheapest_option->calculatePrice($booking_package->duration, $housing_package->nights);
+                        $cheapest_option_price = $cheapest_option->calculatePrice($booking_package->duration, $nights);
                         $included_options_price += $cheapest_option_price;
                         if($option->use_earlybird){
                             $included_options_earlybird_price_base += $cheapest_option_price;

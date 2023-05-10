@@ -75,8 +75,13 @@ class Indexer extends AbstractIndex
         if(!is_array($id_media_objects)){
             $id_media_objects = [$id_media_objects];
         }
+        foreach ($this->_config['search']['build_for'] as $build_infos) {
+            foreach($build_infos as $build_info){
+                $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
+                $this->createCollectionIndex($collection_name);
+            }
+        }
         $mediaObjects = MediaObject::listAll(['id' => ['in', implode(',', $id_media_objects)]]);
-
         $ids = [];
         foreach($mediaObjects as $mediaObject){
             if(empty($this->_config['search']['build_for'][$mediaObject->id_object_type])){
@@ -84,7 +89,6 @@ class Indexer extends AbstractIndex
             }
             foreach ($this->_config['search']['build_for'][$mediaObject->id_object_type] as $build_info) {
                 $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
-                $this->createCollectionIndex($collection_name); // TODO might not the best place todo this..
                 $collection = $this->db->$collection_name;
                 $document = $this->createIndex($mediaObject->id, $build_info['language'], $build_info['origin']);
                 if($document === false){
@@ -189,7 +193,7 @@ class Indexer extends AbstractIndex
             $searchObject->best_price_meta = $searchObject->prices[0];
         }
 
-        if(empty($searchObject->prices) && empty($this->_config['search']['allow_invalid_offers'])){
+        if(empty($searchObject->prices) && (empty($this->_config['search']['allow_invalid_offers']) && $searchObject->visibility != 10) ){
             return false;
         }
 
@@ -462,15 +466,15 @@ class Indexer extends AbstractIndex
                 ];
                 $results = $db->fetchAll($query, $values);
                 if(!is_null($results)) {
-                    foreach($results as $result){
+                    foreach($results as $result) {
                         $date_departures = array_unique(explode(',', $result->date_departures));
                         asort($date_departures);
                         $formatted_date_departures = [];
-                        foreach ($date_departures as $k => $date_departure){
+                        foreach ($date_departures as $k => $date_departure) {
                             $date = \DateTime::createFromFormat('Y-m-d H:i:s', $date_departure);
-                            if(empty($date)){
-                               echo 'error: date is not valid'; // check group_concat max size see bootstrap.php
-                               break(1);
+                            if (empty($date)) {
+                                echo 'error: date is not valid'; // check group_concat max size see bootstrap.php
+                                break(1);
                             }
                             $formatted_date_departures[] = $date->format(DATE_RFC3339_EXTENDED);
                         }
@@ -706,20 +710,15 @@ class Indexer extends AbstractIndex
     {
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
-
         $config = $this->_config['search']['touristic'];
-
         $query = "SELECT date_departure, date_arrival, option_occupancy_min, option_occupancy_max, option_occupancy, duration, price_total, price_regular_before_discount, earlybird_discount, earlybird_discount_f, earlybird_discount_date_to FROM pmt2core_cheapest_price_speed WHERE (date_departure BETWEEN DATE_ADD(NOW(), INTERVAL :departure_offset_from DAY) AND DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY)) AND id_media_object = :id_media_object AND id_origin = :id_origin GROUP BY duration ORDER BY price_total";
-
         $values = [
             ':id_media_object' => $this->mediaObject->id,
             ':id_origin' => $origin,
             ':departure_offset_from' => $config['departure_offset_from'],
             ':departure_offset_to' => $config['departure_offset_to']
         ];
-
         $result = $db->fetchAll($query, $values);
-
         return $result;
     }
 }

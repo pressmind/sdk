@@ -86,6 +86,8 @@ use DateTime;
  * @property float $id_included_options
  * @property float $code_ibe_included_options
  * @property boolean $is_virtual_created_price (true if price is created from MediaObject->CheapestPrice during Import (! belongs to Pressmind > MOE -> Booking -> Prices)
+ * @property boolean $guaranteed
+ * @property boolean $saved
  */
 class CheapestPriceSpeed extends AbstractObject
 {
@@ -873,6 +875,22 @@ class CheapestPriceSpeed extends AbstractObject
             'is_virtual_created_price' => [
                 'title' => 'is_virtual_created_price',
                 'name' => 'is_virtual_created_price',
+                'type' => 'boolean',
+                'required' => false,
+                'validators' => null,
+                'filters' => null
+            ],
+            'guaranteed' => [
+                'title' => 'guaranteed',
+                'name' => 'guaranteed',
+                'type' => 'boolean',
+                'required' => false,
+                'validators' => null,
+                'filters' => null
+            ],
+            'saved' => [
+                'title' => 'saved',
+                'name' => 'saved',
                 'type' => 'boolean',
                 'required' => false,
                 'validators' => null,

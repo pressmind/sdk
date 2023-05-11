@@ -1323,6 +1323,8 @@ class MediaObject extends AbstractObject
                             $cheapestPriceSpeed->booking_package_request_code = $booking_package->request_code;
                             $cheapestPriceSpeed->booking_package_name = $booking_package->name;
                             $cheapestPriceSpeed->is_virtual_created_price = $booking_package->is_virtual_created_price;
+                            $cheapestPriceSpeed->guaranteed = $date->guaranteed;
+                            $cheapestPriceSpeed->saved = $date->saved;
                             $cheapestPriceSpeed->create();
                             unset($cheapestPriceSpeed);
                             $c++;

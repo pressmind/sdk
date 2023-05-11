@@ -274,6 +274,8 @@ class Calendar extends AbstractIndex
                             $cheapestPriceReduced->date_arrival = $date_to_cheapest_price[$current_date]->date_arrival->format(DATE_RFC3339_EXTENDED);
                             $cheapestPriceReduced->date_departure = $date_to_cheapest_price[$current_date]->date_departure->format(DATE_RFC3339_EXTENDED);
                             $cheapestPriceReduced->earlybird_discount_date_to = $date_to_cheapest_price[$current_date]->earlybird_discount_date_to;
+                            $cheapestPriceReduced->guaranteed = $date_to_cheapest_price[$current_date]->guaranteed;
+                            $cheapestPriceReduced->saved = $date_to_cheapest_price[$current_date]->saved;
                             $date->cheapest_price = $cheapestPriceReduced;
                         }
                         $month->days[] = $date;

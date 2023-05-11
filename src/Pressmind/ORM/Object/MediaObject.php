@@ -78,6 +78,11 @@ class MediaObject extends AbstractObject
     private $_all_available_dates;
 
     /**
+     * @var Option[]
+     */
+    private $_all_available_options;
+
+    /**
      * @var bool
      */
     protected $_dont_use_autoincrement_on_primary_key = true;
@@ -1412,6 +1417,18 @@ class MediaObject extends AbstractObject
             $this->_all_available_dates = Date::listAll(['id_media_object' => $this->getId(), 'departure' => ['>=', $now->format('Y-m-d H:i:s')]]);
         }
         return $this->_all_available_dates;
+    }
+
+    /**
+     * @return Option[]
+     * @throws Exception
+     */
+    public function getAllAvailableOptions()
+    {
+        if(empty($this->_all_available_options)) {
+            $this->_all_available_options = Option::listAll(['id_media_object' => $this->getId()]);
+        }
+        return $this->_all_available_options;
     }
 
     /**

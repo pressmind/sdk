@@ -15,6 +15,20 @@ class Indexer extends AbstractIndex
         parent::__construct();
     }
 
+
+    /**
+     * @param $collection_name
+     * @return bool
+     */
+    public function collectionExists($collection_name){
+        foreach($this->db->collection_names as $collection){
+            if($collection === $collection_name){
+                return true;
+            }
+        }
+       return false;
+    }
+
     /**
      * sets a index to a collection
      * @param $collection_name
@@ -23,7 +37,9 @@ class Indexer extends AbstractIndex
      */
     public function createCollectionIndex($collection_name){
 
-        $this->db->$collection_name->dropIndexes();
+        if($this->collectionExists($collection_name)){
+            $this->db->$collection_name->dropIndexes();
+        }
         $this->db->$collection_name->createIndex( ['prices.price_total' => 1]);
         $this->db->$collection_name->createIndex( ['prices.price_total' => -1]);
         $this->db->$collection_name->createIndex( ['prices.date_departure' => 1]);

@@ -19,6 +19,7 @@ use DateTime;
  * @property DateTime $date_departure
  * @property DateTime $date_arrival
  * @property string $option_name
+ * @property string $option_description_long
  * @property string $option_code
  * @property string $option_board_type
  * @property integer $option_occupancy
@@ -285,6 +286,14 @@ class CheapestPriceSpeed extends AbstractObject
             'option_name' => [
                 'name' => 'option_name',
                 'title' => 'option_name',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'option_description_long' => [
+                'name' => 'option_description_long',
+                'title' => 'option_description_long',
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,

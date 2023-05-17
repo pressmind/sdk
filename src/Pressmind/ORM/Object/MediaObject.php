@@ -1236,6 +1236,7 @@ class MediaObject extends AbstractObject
                             $cheapestPriceSpeed->date_departure = $date->departure;
                             $cheapestPriceSpeed->date_arrival = $date->arrival;
                             $cheapestPriceSpeed->option_name = $option->name;
+                            $cheapestPriceSpeed->option_description_long = $option->description_long;
                             $cheapestPriceSpeed->option_code = $option->code;
                             $cheapestPriceSpeed->option_board_type = $option->board_type;
                             $cheapestPriceSpeed->option_occupancy = $option->occupancy;

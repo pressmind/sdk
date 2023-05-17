@@ -14,6 +14,7 @@ use Pressmind\ORM\Object\Touristic\Startingpoint\Option\ZipRange;
  * @property string $code
  * @property string $name
  * @property float $price
+ * @property float $base_price
  * @property string $text
  * @property DateTime $start_time
  * @property boolean $with_start_time
@@ -123,6 +124,14 @@ class Option extends AbstractObject
             'price' => [
                 'title' => 'Price',
                 'name' => 'price',
+                'type' => 'float',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'base_price' => [
+                'title' => 'base_price',
+                'name' => 'base_price',
                 'type' => 'float',
                 'required' => false,
                 'validators' => NULL,

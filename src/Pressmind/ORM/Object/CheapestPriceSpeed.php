@@ -60,7 +60,7 @@ use DateTime;
  * @property string $earlybird_name
  * @property integer $id_option_auto_book
  * @property integer $id_option_required_group
- * @property string $id_start_point_option
+ * @property string $id_startingpoint_option
  * @property integer $id_origin
  * @property string $id_startingpoint
  * @property string $date_code_ibe
@@ -89,6 +89,7 @@ use DateTime;
  * @property boolean $is_virtual_created_price (true if price is created from MediaObject->CheapestPrice during Import (! belongs to Pressmind > MOE -> Booking -> Prices)
  * @property boolean $guaranteed
  * @property boolean $saved
+ * @property string $startingpoint_name
  */
 class CheapestPriceSpeed extends AbstractObject
 {
@@ -663,9 +664,9 @@ class CheapestPriceSpeed extends AbstractObject
                 'filters' => null,
                 'validators' => null
             ],
-            'id_start_point_option' => [
-                'name' => 'id_start_point_option',
-                'title' => 'id_start_point_option',
+            'id_startingpoint_option' => [
+                'name' => 'id_startingpoint_option',
+                'title' => 'id_startingpoint_option',
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
@@ -904,6 +905,14 @@ class CheapestPriceSpeed extends AbstractObject
                 'required' => false,
                 'validators' => null,
                 'filters' => null
+            ],
+            'startingpoint_name' => [
+                'name' => 'startingpoint_name',
+                'title' => 'startingpoint_name',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
             ],
         ]
     ];

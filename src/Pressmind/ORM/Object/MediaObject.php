@@ -19,6 +19,7 @@ use Pressmind\ORM\Object\Touristic\Date;
 use Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup\Item;
 use Pressmind\ORM\Object\Touristic\Insurance\Group;
 use Pressmind\ORM\Object\Touristic\Option;
+use Pressmind\ORM\Object\Touristic\Startingpoint;
 use Pressmind\ORM\Object\Touristic\Transport;
 use Pressmind\Registry;
 use Pressmind\Search\CheapestPrice;
@@ -1199,6 +1200,12 @@ class MediaObject extends AbstractObject
                             $is_bookable = $is_bookable && in_array($transport_pair['way2']->state, [3,0]);
                             $is_request = $is_request || in_array($transport_pair['way2']->state, [2]);
                         }
+                        $StartingPoint = null;
+                        $starting_point_price = 0;
+                        if(!empty($transport_pair['way1']->id_starting_point)){
+                            $StartingPoint = Startingpoint::getCheapestOption($transport_pair['way1']->id_starting_point);
+                            $starting_point_price = empty($StartingPoint->price) ? 0 : $StartingPoint->price;
+                        }
                         $transport_earlybird_price_base = 0;
                         foreach ($early_bird_discounts as $early_bird_discount) {
                             if (!is_null($transport_pair) && isset($transport_pair['way1'])) {
@@ -1219,8 +1226,8 @@ class MediaObject extends AbstractObject
                             ){
                                 continue;
                             }
-                            $price = $option->price + $transport_price + $included_options_price;
-                            $price_base_early_bird = ($option->use_earlybird ? $option->price : 0) + $transport_earlybird_price_base + $included_options_earlybird_price_base;
+                            $price = $option->price + $transport_price + $starting_point_price + $included_options_price;
+                            $price_base_early_bird = ($option->use_earlybird ? $option->price : 0) + $transport_earlybird_price_base + $starting_point_price + $included_options_earlybird_price_base;
                             if($price <= 0){
                                 continue;
                             }
@@ -1290,9 +1297,10 @@ class MediaObject extends AbstractObject
                             $cheapestPriceSpeed->included_options_description = implode(',', $included_options_description);
                             $cheapestPriceSpeed->id_included_options = implode(',', $id_included_options);
                             $cheapestPriceSpeed->code_ibe_included_options = implode(',', $code_ibe_included_options);
-                            $cheapestPriceSpeed->id_start_point_option = null;
+                            $cheapestPriceSpeed->id_startingpoint_option = empty($StartingPoint) ? null : $StartingPoint->id;
                             $cheapestPriceSpeed->id_origin = $booking_package->id_origin;
-                            $cheapestPriceSpeed->id_startingpoint = null;
+                            $cheapestPriceSpeed->id_startingpoint = empty($StartingPoint) ? null : $StartingPoint->id_startingpoint;
+                            $cheapestPriceSpeed->startingpoint_name = empty($StartingPoint) ? null : $StartingPoint->name;
                             $cheapestPriceSpeed->price_total = $cheapestPriceSpeed->price_regular_before_discount;
                             $cheapestPriceSpeed->earlybird_discount = null;
                             $cheapestPriceSpeed->earlybird_discount_date_to = null;
@@ -1316,7 +1324,7 @@ class MediaObject extends AbstractObject
                             $cheapestPriceSpeed->option_request_code = $option->request_code;
                             $cheapestPriceSpeed->transport_1_code_ibe = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->code_ibe : null;
                             $cheapestPriceSpeed->transport_2_code_ibe = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->code_ibe : null;
-                            $cheapestPriceSpeed->startingpoint_code_ibe = null;
+                            $cheapestPriceSpeed->startingpoint_code_ibe = empty($StartingPoint) ? null : $StartingPoint->code_ibe;
                             $cheapestPriceSpeed->booking_package_ibe_type = $booking_package->ibe_type;
                             $cheapestPriceSpeed->booking_package_product_type_ibe = $booking_package->product_type_ibe;
                             $cheapestPriceSpeed->booking_package_type_of_travel = $booking_package->type_of_travel;

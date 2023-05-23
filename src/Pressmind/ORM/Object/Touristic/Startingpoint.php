@@ -113,6 +113,8 @@ class Startingpoint extends AbstractObject
         ]
     );
 
+    protected static $_run_time_cache = [];
+
     /**
      * @param $id_starting_point
      * @param string|null $ibe_client
@@ -123,7 +125,7 @@ class Startingpoint extends AbstractObject
         $options = self::getOptions($id_starting_point, 0, null, $ibe_client, null, 20, false,  true);
         foreach($options  as $option){
             if($option->is_pickup_service){
-                return true;
+                    return true;
             }
         }
         return false;
@@ -253,6 +255,39 @@ class Startingpoint extends AbstractObject
             $output[] = $Option;
         }
         return $output;
+    }
+
+    /**
+     * @param string|array  $id_starting_point
+     * @param string $ibe_client
+     * @return Option|null
+     * @throws \Exception
+     */
+    public static function getCheapestOption($id_starting_point, $ibe_client = null){
+        $key = md5(__FUNCTION__.'-'.serialize($id_starting_point).'-'.$ibe_client);
+        if(isset(self::$_run_time_cache[$key])){
+            return self::$_run_time_cache[$key];
+        }
+        if(is_array($id_starting_point)){
+            $id_starting_point = implode(',"', $id_starting_point);
+        }
+        $query = 'select o.* from pmt2core_touristic_startingpoint_options o 
+                    where `id_startingpoint` in( "' . $id_starting_point . '") 
+                    AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0))';
+        if(!empty($ibe_client)){
+            $query .= ' and FIND_IN_SET("'.$ibe_client.'",ibe_clients)';
+        }
+        $query .= ' order by price ASC';
+        $registry = Registry::getInstance();
+        $db = $registry->get('db');
+        $result = $db->fetchRow($query);
+        if(!empty($result)){
+            $Option = new Startingpoint\Option();
+            $Option->fromStdClass($result);
+            self::$_run_time_cache[$key] = $Option;
+            return $Option;
+        }
+        return null;
     }
 
 }

@@ -393,8 +393,12 @@ class Picture extends AbstractObject
                     $parsed_query['cy'] = $parsed_query['cy'] / $h_ratio;
                 }
             }
-            $parsed_query['w'] = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'];
-            $parsed_query['h'] = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'];
+            if(!empty($config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'])){
+                $parsed_query['w'] = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'];
+            }
+            if(!empty($config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'])){
+                $parsed_query['h'] = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'];
+            }
         }
         return $parsed_url['scheme'] . '://' . $parsed_url['host'] . $parsed_url['path'] . '?' . http_build_query($parsed_query);
     }

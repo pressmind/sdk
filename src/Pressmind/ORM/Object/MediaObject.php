@@ -1095,6 +1095,7 @@ class MediaObject extends AbstractObject
     public function insertCheapestPrice()
     {
         $max_rows = empty(Registry::getInstance()->get('config')['data']['touristic']['max_offers_per_product']) ? 5000 : Registry::getInstance()->get('config')['data']['touristic']['max_offers_per_product'];
+        $ibe_client = empty(Registry::getInstance()->get('config')['data']['touristic']['ibe_client']) ? null : Registry::getInstance()->get('config')['data']['touristic']['ibe_client'];
         $CheapestPrice = new CheapestPriceSpeed();
         $CheapestPrice->deleteByMediaObjectId($this->getId());
         $booking_packages = $this->booking_packages;
@@ -1203,7 +1204,7 @@ class MediaObject extends AbstractObject
                         $StartingPoint = null;
                         $starting_point_price = 0;
                         if(!empty($transport_pair['way1']->id_starting_point)){
-                            $StartingPoint = Startingpoint::getCheapestOption($transport_pair['way1']->id_starting_point);
+                            $StartingPoint = Startingpoint::getCheapestOption($transport_pair['way1']->id_starting_point, $ibe_client);
                             $starting_point_price = empty($StartingPoint->price) ? 0 : $StartingPoint->price;
                         }
                         $transport_earlybird_price_base = 0;

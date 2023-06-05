@@ -937,6 +937,9 @@ class MediaObject extends AbstractObject
         $strategy = $config['data']['media_types_pretty_url'][$this->id_object_type]['strategy'] ?? 'unique';
         $url_array = [];
         foreach ($fields as $field) {
+            if(empty($this->$field)){
+                continue;
+            }
             if(in_array($field, $this->getPropertyNames())) {
                 $url_array[] = strtolower(HelperFunctions::replaceLatinSpecialChars(trim($this->$field)));
             } else {

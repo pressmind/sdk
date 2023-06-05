@@ -361,7 +361,7 @@ class Import
 
                 if(is_array($linked_media_object_ids) && count($linked_media_object_ids) > 0) {
                     $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): found linked media objects in media object data. Importing ...', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
-                    $this->importMediaObjectsFromArray($linked_media_object_ids, false);
+                    $this->importMediaObjectsFromArray($linked_media_object_ids);
                 }
 
                 //$media_object->readRelations();

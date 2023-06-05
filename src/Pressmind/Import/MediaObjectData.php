@@ -86,6 +86,9 @@ class MediaObjectData extends AbstractImport implements ImportInterface
                         $value = null;
                         if($data_field->type == 'categorytree' && isset($data_field->value)) {
                             $value = $data_field->value;
+                            if(!empty($value)){
+                                $value->id_object_type = $this->_data->id_media_objects_data_type;
+                            }
                         } else if($data_field->type == 'key_value') {
                             if(!empty($data_field->value)) {
                                 $value = [

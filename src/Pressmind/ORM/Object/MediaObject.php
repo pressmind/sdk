@@ -1712,4 +1712,25 @@ class MediaObject extends AbstractObject
             $db->delete($table, ['id_media_object = ?', $id_media_object]);
         }
     }
+
+    /**
+     * @param string $id_item
+     * @param integer $foreign_id_object_type 123
+     * @param string$foreign_field_name 'zielgebiet_default'
+     * @return MediaObject[]
+     * @throws Exception
+     */
+    public static function getJoinedMediaObjectsByCategory($id_item, $foreign_id_object_type, $foreign_field_name = null){
+        $query = ['id_item' => $id_item, 'id_object_type' => $foreign_id_object_type, 'is_tail' => 1];
+        if(!empty($foreign_field_name)){
+            $query['var_name'] = $foreign_field_name;
+        }
+        $Objects = \Pressmind\ORM\Object\MediaObject\DataType\Categorytree::listAll($query);
+        $output = [];
+        foreach($Objects as $Object){
+            $output[] = new MediaObject($Object->id_media_object);
+        }
+        return $output;
+    }
+
 }

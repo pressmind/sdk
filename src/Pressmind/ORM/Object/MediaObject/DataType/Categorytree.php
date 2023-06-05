@@ -9,11 +9,13 @@ use Pressmind\ORM\Object\CategoryTree\Item;
  * @package Pressmind\ORM\Object\MediaObject\DataType
  * @property integer $id
  * @property integer $id_media_object
+ * @property integer $id_object_type
  * @property string $section_name
  * @property string $language
  * @property string $var_name
  * @property integer $id_tree
  * @property string $id_item
+ * @property boolean $id_tail
  * @property \Pressmind\ORM\Object\CategoryTree $tree
  * @property Item $item;
  */
@@ -51,6 +53,26 @@ class Categorytree extends AbstractObject
             'id_media_object' => [
                 'title' => 'id_media_object',
                 'name' => 'id_media_object',
+                'type' => 'integer',
+                'required' => true,
+                'filters' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'index' => [
+                    'id_media_object' => 'index'
+                ]
+            ],
+            'id_object_type' => [
+                'title' => 'id_object_type',
+                'name' => 'id_object_type',
                 'type' => 'integer',
                 'required' => true,
                 'filters' => null,
@@ -134,6 +156,14 @@ class Categorytree extends AbstractObject
                 'index' => [
                     'id_item' => 'index'
                 ]
+            ],
+            'is_tail' => [
+                'title' => 'is_tail',
+                'name' => 'is_tail',
+                'type' => 'boolean',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
             ],
             /*'tree' => [
                 'title' => 'id_item',

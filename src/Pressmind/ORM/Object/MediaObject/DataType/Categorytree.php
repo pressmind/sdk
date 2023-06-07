@@ -15,7 +15,7 @@ use Pressmind\ORM\Object\CategoryTree\Item;
  * @property string $var_name
  * @property integer $id_tree
  * @property string $id_item
- * @property boolean $id_tail
+ * @property boolean $is_tail
  * @property \Pressmind\ORM\Object\CategoryTree $tree
  * @property Item $item;
  */
@@ -87,7 +87,7 @@ class Categorytree extends AbstractObject
                     ]
                 ],
                 'index' => [
-                    'id_media_object' => 'index'
+                    'id_object_type' => 'index'
                 ]
             ],
             'section_name' => [

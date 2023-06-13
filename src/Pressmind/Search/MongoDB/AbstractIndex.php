@@ -105,6 +105,7 @@ class AbstractIndex
         foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
             foreach ($build_infos as $build_info) {
                 $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
+                $this->db->$collection_name->dropIndexes();
                 $this->flushCollection($collection_name);
             }
         }

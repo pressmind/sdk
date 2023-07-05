@@ -8,7 +8,6 @@ use Pressmind\ORM\Object\AbstractObject;
 /**
  * Class PriceTable
  * @property string $id
- * @property string $id_insurance
  * @property string $code
  * @property float $price
  * @property string $unit

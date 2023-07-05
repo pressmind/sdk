@@ -207,7 +207,7 @@ class MongoDB extends AbstractSearch
         $collection = $db->$collection_name;
         $query = $this->buildQuery($output, $preview_date, $allowed_visibilities);
         try{
-            $result = $collection->aggregate($query)->toArray()[0];
+            $result = $collection->aggregate($query, ['allowDiskUse' => true])->toArray()[0];
         }catch (\Exception $exception){
             echo $exception->getMessage();
             if(!empty($_GET['debug']) || (defined('PM_SDK_DEBUG') && PM_SDK_DEBUG)) {

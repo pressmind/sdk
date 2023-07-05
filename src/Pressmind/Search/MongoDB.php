@@ -205,7 +205,16 @@ class MongoDB extends AbstractSearch
         $collection_name = 'best_price_search_based_' . (!empty($this->_language) ? $this->_language.'_' : '') . 'origin_' . $this->_origin;
         $db = $client->$db_name;
         $collection = $db->$collection_name;
-        $result = $collection->aggregate($this->buildQuery($output, $preview_date, $allowed_visibilities))->toArray()[0];
+        $query = $this->buildQuery($output, $preview_date, $allowed_visibilities);
+        try{
+            $result = $collection->aggregate($query)->toArray()[0];
+        }catch (\Exception $exception){
+            echo $exception->getMessage();
+            if(!empty($_GET['debug']) || (defined('PM_SDK_DEBUG') && PM_SDK_DEBUG)) {
+                echo '<pre>'.json_encode($query).'</pre>';
+            }
+            exit;
+        }
         if (!empty($ttl) && Registry::getInstance()->get('config')['cache']['enabled'] && in_array('MONGODB', Registry::getInstance()->get('config')['cache']['types']) && $this->_skip_cache == false) {
             Writer::write(get_class($this) . ' exec() writing to cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
             $info = new \stdClass();
@@ -259,6 +268,7 @@ class MongoDB extends AbstractSearch
     }
 
     /**
+     * @TODO Refactor!
      * @param null $output
      * @param \DateTime|null $preview_date
      * @param array $allowed_visibilities
@@ -365,9 +375,6 @@ class MongoDB extends AbstractSearch
         }
         $stages[] = $prices_filter;
 
-        // order by the best price... (longest stay, cheapest price)
-        $stages[] = ['$sort' => ['prices.price_total' => -1, 'prices.duration' => 1]];
-
         // stage n projection split board_types, transports and prices
         $projectStage = [
             '$project' => [
@@ -452,21 +459,75 @@ class MongoDB extends AbstractSearch
                 ],
             ]
         ];
+
         if($output == 'date_list'){
+            $stages[] = ['$unwind' => ['path' => '$prices', 'preserveNullAndEmptyArrays' => false]];
+            $stages[] = ['$unwind' => ['path' => '$prices.date_departures', 'preserveNullAndEmptyArrays' => false]];
+            $stages[] = ['$sort' => ['prices.date_departures' => 1, 'prices.price_total' => -1, 'prices.duration' => 1]];
+            $stages[] = ['$group' => [
+                '_id' => '$_id',
+                'best_price_meta' => ['$first' => '$$ROOT.best_price_meta'],
+                'categories' => ['$first' => '$$ROOT.categories'],
+                'code' => ['$first' => '$$ROOT.code'],
+                'departure_date_count' => ['$first' => '$$ROOT.departure_date_count'],
+                'description' => ['$first' => '$$ROOT.description'],
+                'groups' => ['$first' => '$$ROOT.groups'],
+                'id_media_object' => ['$first' => '$$ROOT.id_media_object'],
+                'id_object_type' => ['$first' => '$$ROOT.id_object_type'],
+                'last_modified_date' => ['$first' => '$$ROOT.last_modified_date'],
+                'recommendation_rate' => ['$first' => '$$ROOT.recommendation_rate'],
+                'url' => ['$first' => '$$ROOT.url'],
+                'valid_from' => ['$first' => '$$ROOT.valid_from'],
+                'valid_to' => ['$first' => '$$ROOT.valid_to'],
+                'visibility' => ['$first' => '$$ROOT.visibility'],
+                'has_price' => ['$first' => '$$ROOT.has_price'],
+                'dates_per_month' => ['$first' => '$$ROOT.dates_per_month'],
+                'prices' => ['$push' => '$$ROOT.prices'],
+            ]
+            ];
             $projectStage['$project']['has_price'] = ['$gt' => ['$prices.price_total', 0]];
+            $projectStage['$project']['prices'] =  [
+                '$reduce' => [
+                    'input' => '$prices',
+                    'initialValue' => [],
+                    'in' => [
+                            '$cond' => [
+                                'if' => [
+                                   '$gt' => [
+                                       [
+                                           '$size' => [
+                                               '$filter' => [
+                                                   'input' => '$$value',
+                                                   'as' => 'price',
+                                                   'cond' => [
+                                                       '$and' => [
+                                                           ['$eq' => ['$$price.date_departures', '$$this.date_departures']],
+                                                       ]
+                                                   ]
+                                               ]
+                                            ]
+                                        ],
+                                       0
+                                   ]
+                                ],
+                                'then' => '$$value',
+                                'else' => ['$concatArrays' => ['$$value', ['$$this']]],
+                            ],
+                        ]
+                    ]
+                ];
+            $stages[] = $projectStage;
+            $stages[] = ['$unwind' => ['path' => '$prices', 'preserveNullAndEmptyArrays' => false]];
+            $stages[] = ['$set' => ['departure_date_count' => 1]];
+        }else{
+            $stages[] = $projectStage;
         }
-        $stages[] = $projectStage;
 
         if(array_key_first($this->_sort) == 'list' && $this->hasCondition('MediaObject')){
             $MediaObjectCondition = $this->getConditionByType('MediaObject');
             $order_by_list = ['$addFields' =>
                 ['sort' => ['$indexOfArray' => [$MediaObjectCondition->getValue(), '$_id']]]];
             $stages[] = $order_by_list;
-        }
-
-        // stage n - output as date_list
-        if($output == 'date_list'){
-            $stages[] = ['$unwind' => ['path' => '$prices.date_departures', 'preserveNullAndEmptyArrays' => false]];
         }
 
         // stage n, build the filter stages
@@ -652,12 +713,14 @@ class MongoDB extends AbstractSearch
                 $sort = ['$sort' => [
                             'has_price' => -1,
                             'prices.price_total' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1,
+                            'prices.duration' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? -1 : 1,
                             'sales_priority' => 1
                         ]
                 ];
             }else{
                 $sort = ['$sort' => [
                     'prices.price_total' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1,
+                    'prices.duration' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? -1 : 1,
                     'sales_priority' => 1
                     ]
                 ];

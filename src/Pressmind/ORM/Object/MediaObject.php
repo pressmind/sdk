@@ -28,6 +28,7 @@ use Pressmind\Search\MongoDB\Indexer;
 use Pressmind\System\Info;
 use Pressmind\ValueObject\MediaObject\Result\GetByPrettyUrl;
 use Pressmind\ValueObject\MediaObject\Result\GetPrettyUrls;
+use stdClass;
 
 /**
  * Class MediaObject
@@ -762,7 +763,7 @@ class MediaObject extends AbstractObject
                 AND date_departure > '" . $now->format('Y-m-d 00:00:00') . "'
                 GROUP BY duration, transport_type, transport_1_airport_name, transport_1_airport, option_occupancy";
         $result = $db->fetchAll($query);
-        $output = new \stdClass();
+        $output = new stdClass();
         $output->count = 0;
         foreach($result as $key => $row) {
             $output->duration[$row->duration] = $row->duration;
@@ -790,7 +791,7 @@ class MediaObject extends AbstractObject
      * @param int $min_columns
      * @param int $origin
      * @param string $language
-     * @return \stdClass
+     * @return stdClass
      * @throws Exception
      */
     public function getCalendar($filters, $min_columns = 3, $origin = 0, $language = null){
@@ -870,7 +871,7 @@ class MediaObject extends AbstractObject
                $filtered_documents[] = $document;
             }
         }
-        $result = new \stdClass();
+        $result = new stdClass();
         $result->filter = $filter;
         $result->calendar = null;
         if(count($filtered_documents) == 0){
@@ -906,13 +907,13 @@ class MediaObject extends AbstractObject
             $to->modify('+' . $add_months . ' month'); // +1?
             foreach (new \DatePeriod($from, new \DateInterval('P1M'), $to) as $dt) {
                 $days = range(1, $dt->format('t'));
-                $departure = new \stdClass();
+                $departure = new stdClass();
                 $departure->year = $dt->format('Y');
                 $departure->month = $dt->format('m');
                 $departure->is_bookable = false;
                 $departure->days = [];
                 foreach($days as $day){
-                    $dayObj = new \stdClass();
+                    $dayObj = new stdClass();
                     $dayObj->date = new \DateTime($dt->format('Y-m-'.$day.' 00:00:00'));
                     $departure->days[] = $dayObj;
                 }
@@ -930,7 +931,7 @@ class MediaObject extends AbstractObject
     public function buildPrettyUrls($language = null)
     {
 
-        // @TODO umbau auf mehrsprachigkeit.
+        // @TODO check multilanguage handling
         $config = Registry::getInstance()->get('config');
         $fields = $config['data']['media_types_pretty_url'][$this->id_object_type]['fields'] ?? ['name'];
         $separator = $config['data']['media_types_pretty_url'][$this->id_object_type]['separator'] ?? '-';
@@ -1310,11 +1311,14 @@ class MediaObject extends AbstractObject
                             $cheapestPriceSpeed->earlybird_discount_date_to = null;
                             $cheapestPriceSpeed->earlybird_discount_f = null;
                             if($this->_checkEarlyBirdDiscount($early_bird_discount, $date)) {
-                                $cheapestPriceSpeed->earlybird_discount = strtolower($early_bird_discount->type) == 'p' ? $early_bird_discount->discount_value : null;
-                                $cheapestPriceSpeed->earlybird_discount_date_to = $early_bird_discount->booking_date_to;
-                                $cheapestPriceSpeed->earlybird_discount_f = strtolower($early_bird_discount->type) == 'f' ? $early_bird_discount->discount_value : null;
-                                $cheapestPriceSpeed->earlybird_name = empty($date->early_bird_discount_group->name) ? 'Frühbucher' : $date->early_bird_discount_group->name;
-                                $cheapestPriceSpeed->price_total = $cheapestPriceSpeed->price_regular_before_discount + $this->_calculateEarlyBirdDiscount($early_bird_discount, $price_base_early_bird);
+                                $discount = $this->_calculateEarlyBirdDiscount($early_bird_discount, $price_base_early_bird);
+                                if(!empty($discount)){
+                                    $cheapestPriceSpeed->earlybird_discount = strtolower($early_bird_discount->type) == 'p' ? $early_bird_discount->discount_value : null;
+                                    $cheapestPriceSpeed->earlybird_discount_date_to = $early_bird_discount->booking_date_to;
+                                    $cheapestPriceSpeed->earlybird_discount_f = strtolower($early_bird_discount->type) == 'f' ? $early_bird_discount->discount_value : null;
+                                    $cheapestPriceSpeed->earlybird_name = empty($date->early_bird_discount_group->name) ? 'Frühbucher' : $date->early_bird_discount_group->name;
+                                    $cheapestPriceSpeed->price_total = $cheapestPriceSpeed->price_regular_before_discount + $discount;
+                                }
                             }
 
                             $cheapestPriceSpeed->date_code_ibe = $date->code_ibe;

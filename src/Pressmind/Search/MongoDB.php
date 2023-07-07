@@ -518,7 +518,6 @@ class MongoDB extends AbstractSearch
                 ];
             $stages[] = $projectStage;
             $stages[] = ['$unwind' => ['path' => '$prices', 'preserveNullAndEmptyArrays' => false]];
-            $stages[] = ['$set' => ['departure_date_count' => 1]];
         }else{
             $stages[] = $projectStage;
         }

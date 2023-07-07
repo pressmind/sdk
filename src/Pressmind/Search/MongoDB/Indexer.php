@@ -542,12 +542,17 @@ class Indexer extends AbstractIndex
                     ':departure_offset_to' => $config['departure_offset_to']
                 ];
                 $results = $db->fetchAll($query, $values);
+                $used_departures = [];
                 if(!is_null($results)) {
                     foreach($results as $result){
                         $date_departures = array_unique(explode(',', $result->date_departures));
                         asort($date_departures);
                         $formatted_date_departures = [];
                         foreach ($date_departures as $k => $date_departure){
+                            if(in_array($date_departure, $used_departures) ){
+                                continue;
+                            }
+                            $used_departures[] = $date_departure;
                             $date = \DateTime::createFromFormat('Y-m-d H:i:s', $date_departure);
                             if(empty($date)){
                                 echo 'error: date is not valid';

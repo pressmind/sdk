@@ -1108,7 +1108,7 @@ class MediaObject extends AbstractObject
         $c = 0;
         foreach ($booking_packages as $booking_package) {
             foreach ($booking_package->dates as $date) {
-                if($date->departure < $now){ // don't index departures in the past
+                if($date->departure < $now || $date->state === 3){
                     continue;
                 }
                 /** @var Item[] $early_bird_discounts */
@@ -1736,6 +1736,133 @@ class MediaObject extends AbstractObject
         $output = [];
         foreach($Objects as $Object){
             $output[] = new MediaObject($Object->id_media_object);
+        }
+        return $output;
+    }
+
+    /**
+     * only for internal stats!
+     * @return stdClass[]
+     * @throws Exception
+     */
+    public static function getMediaObjectsWithPickupServices(){
+        /** @var Pdo $db */
+        $db = Registry::getInstance()->get('db');
+        $result = $db->fetchAll('select m.id,
+                                           m.name,
+                                           group_concat(distinct o.id) as id_starting_point_options
+                                    from `wp-pm-web-core`.pmt2core_touristic_transports t
+                                             left join pmt2core_touristic_startingpoints s on (t.id_starting_point = s.id)
+                                             left join pmt2core_touristic_startingpoint_options o on (s.id = o.id_startingpoint)
+                                             left join pmt2core_media_objects m on (t.id_media_object = m.id)
+                                    where is_pickup_service = 1
+                                    group by  m.id');
+        $output = [];
+        foreach($result as $row) {
+            $tmp = new stdClass();
+            $tmp->id = $row->id;
+            $tmp->name = $row->name;
+            $tmp->id_starting_point_options = explode($row->id_starting_point_options);
+            $output[] = $tmp;
+        }
+        return $output;
+    }
+
+
+    /**
+     * only for internal stats!
+     * @return stdClass[]
+     * @throws Exception
+     */
+    public static function getMediaObjectsWithPickupServicesAndZeroZipRanges(){
+        /** @var Pdo $db */
+        $db = Registry::getInstance()->get('db');
+        $result = $db->fetchAll('select *
+                                            from (select m.id,
+                                                         m.name,
+                                                         o.id as id_option,
+                                                         o.name as option_name,
+                                                         o.code_ibe as option_code_ibe,
+                                                         (select count(*)
+                                                          from pmt2core_touristic_startingpoint_options_zip_ranges z
+                                                          where z.id_option = o.id) as zip_count
+                                                  from `wp-pm-web-core`.pmt2core_touristic_transports t
+                                                           left join pmt2core_touristic_startingpoints s on (t.id_starting_point = s.id)
+                                                           left join pmt2core_touristic_startingpoint_options o on (s.id = o.id_startingpoint)
+                                                           left join pmt2core_media_objects m on (t.id_media_object = m.id)
+                                                  where is_pickup_service = 1) a
+                                            where zip_count = 0
+                                            group by id, id_option');
+        $output = [];
+        foreach($result as $row) {
+            $tmp = new stdClass();
+            $tmp->id = $row->id;
+            $tmp->name = $row->name;
+            $tmp->id_option = $row->id_option;
+            $tmp->code_ibe = $row->code_ibe;
+            $output[] = $tmp;
+        }
+        return $output;
+    }
+
+    /**
+     * only for internal stats!
+     * @return stdClass[]
+     * @throws Exception
+     */
+    public static function getMediaObjectByCRSID($crs_id, $property = 'code'){
+        /** @var Pdo $db */
+        $db = Registry::getInstance()->get('db');
+        $config = Registry::getInstance()->get('config');
+        if($property === 'code'){
+            $query = 'select id_media_object from pmt2core_media_objects where code = "'.$crs_id.'"';
+        }else{
+            $queries = [];
+            foreach ($config['data']['media_types'] as $media_type_id => $media_type_name) {
+                $DataType = \Pressmind\ORM\Object\MediaType\Factory::createById($media_type_id);
+                if(!$DataType->hasProperty($property)){
+                    continue;
+                }
+                $queries = 'select id_media_object from '.$DataType->getDbTableName().' where '.$property.' = "'.$crs_id.'"';
+            }
+            if(empty($queries)){
+                return [];
+            }
+            $query = implode(' UNION ', $queries);
+        }
+        $output = [];
+        $result = $db->fetchAll($query);
+        foreach($result as $row) {
+            $tmp = new stdClass();
+            $tmp->id = $row->id;
+            $output[] = $tmp;
+        }
+        return $output;
+    }
+
+    /**
+     * only for internal stats!
+     * @return stdClass[]
+     * @throws Exception
+     */
+    public static function getCheapestPriceCount($id_media_object){
+        if(!is_array($id_media_object)){
+            $id_media_object = [$id_media_object];
+        }
+        /** @var Pdo $db */
+        $db = Registry::getInstance()->get('db');
+        $result = $db->fetchAll('select  id_media_object, 
+                                                count(id) as count from pmt2core_cheapest_price_speed
+                                        where id_media_object in ('.implode(',', $id_media_object).')
+                                            and price_total > 0
+                                            and date_departure > NOW()
+                                        group by id_media_object');
+        $output = [];
+        foreach($result as $row) {
+            $tmp = new stdClass();
+            $tmp->id = $row->id;
+            $tmp->count = $row->count;
+            $output[] = $tmp;
         }
         return $output;
     }

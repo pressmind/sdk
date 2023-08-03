@@ -263,7 +263,7 @@ class Startingpoint extends AbstractObject
      * @return Option|null
      * @throws \Exception
      */
-    public static function getCheapestOption($id_starting_point, $ibe_client = null){
+    public static function getCheapestOption($id_starting_point, $ibe_client = null, $price_gte = true){
         $key = md5(__FUNCTION__.'-'.serialize($id_starting_point).'-'.$ibe_client);
         if(isset(self::$_run_time_cache[$key])){
             return self::$_run_time_cache[$key];
@@ -276,6 +276,9 @@ class Startingpoint extends AbstractObject
                     AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0))';
         if(!empty($ibe_client)){
             $query .= ' and FIND_IN_SET("'.$ibe_client.'",ibe_clients)';
+        }
+        if($price_gte){
+            $query .= ' and price >= 0';
         }
         $query .= ' order by price ASC';
         $registry = Registry::getInstance();

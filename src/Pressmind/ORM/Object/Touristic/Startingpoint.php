@@ -260,6 +260,7 @@ class Startingpoint extends AbstractObject
     /**
      * @param string|array  $id_starting_point
      * @param string $ibe_client
+     * @param boolean $gte
      * @return Option|null
      * @throws \Exception
      */

@@ -463,7 +463,7 @@ class MongoDB extends AbstractSearch
         if($output == 'date_list'){
             $stages[] = ['$unwind' => ['path' => '$prices', 'preserveNullAndEmptyArrays' => false]];
             $stages[] = ['$unwind' => ['path' => '$prices.date_departures', 'preserveNullAndEmptyArrays' => false]];
-            $stages[] = ['$sort' => ['prices.date_departures' => 1, 'prices.price_total' => -1, 'prices.duration' => 1]];
+            $stages[] = ['$sort' => ['prices.date_departures' => 1, 'prices.price_total' => 1, 'prices.duration' => -1]];
             $stages[] = ['$group' => [
                 '_id' => '$_id',
                 'best_price_meta' => ['$first' => '$$ROOT.best_price_meta'],

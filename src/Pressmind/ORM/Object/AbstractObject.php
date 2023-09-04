@@ -18,6 +18,7 @@ use \stdClass;
  * Class AbstractObject
  * @package PressmindBooking\ORM
  */
+#[\AllowDynamicProperties]
 abstract class AbstractObject
 {
     /**

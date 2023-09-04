@@ -115,6 +115,11 @@ class Airport extends AbstractObject
      * @throws \Exception
      */
     public static function getByIata($code){
+        if(empty($code)){
+            $airport = new Airport();
+            $airport->name = 'Unbekannt';
+            return $airport;
+        }
         $code = strtoupper($code);
         if(isset(self::$run_time_cache[$code])){
             return self::$run_time_cache[$code];

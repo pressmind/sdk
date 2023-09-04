@@ -243,6 +243,7 @@ class Calendar extends AbstractIndex
                 $to->modify('first day of next month');
                 $document->from = $from->format(DATE_RFC3339_EXTENDED);
                 $document->to = $to->format(DATE_RFC3339_EXTENDED);
+                $document->bookable_date_count = 0;
                 foreach (new \DatePeriod($from, new \DateInterval('P1M'), $to) as $dt) {
                     $days = range(1, $dt->format('t'));
                     $month = new \stdClass();
@@ -260,10 +261,12 @@ class Calendar extends AbstractIndex
                         $date->date = $current_date;
                         if (!empty($date_to_cheapest_price[$current_date])) {
                             $month->is_bookable = true;
+                            $document->bookable_date_count++;
                             /**
                              * @var CheapestPriceSpeed $cheapestPriceReduced
                              */
                             $cheapestPriceReduced = new \stdClass();
+                            $cheapestPriceReduced->id = $date_to_cheapest_price[$current_date]->getId();
                             $cheapestPriceReduced->id_media_object = $date_to_cheapest_price[$current_date]->id_media_object;
                             $cheapestPriceReduced->id_booking_package = $date_to_cheapest_price[$current_date]->id_booking_package;
                             $cheapestPriceReduced->id_housing_package = $date_to_cheapest_price[$current_date]->id_housing_package;
@@ -276,6 +279,15 @@ class Calendar extends AbstractIndex
                             $cheapestPriceReduced->earlybird_discount_date_to = $date_to_cheapest_price[$current_date]->earlybird_discount_date_to;
                             $cheapestPriceReduced->guaranteed = $date_to_cheapest_price[$current_date]->guaranteed;
                             $cheapestPriceReduced->saved = $date_to_cheapest_price[$current_date]->saved;
+                            $cheapestPriceReduced->id_option = $date_to_cheapest_price[$current_date]->id_option;
+                            $cheapestPriceReduced->earlybird_discount_date_to = $date_to_cheapest_price[$current_date]->earlybird_discount_date_to;
+                            $cheapestPriceReduced->earlybird_discount = $date_to_cheapest_price[$current_date]->earlybird_discount;
+                            $cheapestPriceReduced->earlybird_discount_f = $date_to_cheapest_price[$current_date]->earlybird_discount_f;
+                            $cheapestPriceReduced->earlybird_name = $date_to_cheapest_price[$current_date]->earlybird_name;
+                            $cheapestPriceReduced->price_regular_before_discount = $date_to_cheapest_price[$current_date]->price_regular_before_discount;
+                            $cheapestPriceReduced->price_option_pseudo = $date_to_cheapest_price[$current_date]->price_option_pseudo;
+                            $cheapestPriceReduced->id_transport_1 = $date_to_cheapest_price[$current_date]->id_transport_1;
+                            $cheapestPriceReduced->id_transport_2 = $date_to_cheapest_price[$current_date]->id_transport_2;
                             $date->cheapest_price = $cheapestPriceReduced;
                         }
                         $month->days[] = $date;

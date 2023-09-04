@@ -840,13 +840,13 @@ class MediaObject extends AbstractObject
             if(!empty($document->housing_package->id) && !isset($filter['id_housing_packages'][$document->housing_package->id])){
                 $filter['id_housing_packages'][$document->housing_package->id] = ['durations' => [], 'transport_types' => [], 'airports' => []];
             }
-            if(!empty($document->transport_type) && !in_array($document->transport_type, $filter['id_housing_packages'][$document->housing_package->id]['transport_types'])){
+            if(!empty($document->transport_type) && !empty($filter['id_housing_packages'][$document->housing_package->id]['transport_types']) && !in_array($document->transport_type, $filter['id_housing_packages'][$document->housing_package->id]['transport_types'])){
                 $filter['id_housing_packages'][$document->housing_package->id]['transport_types'][] = $document->transport_type;
             }
             if(!empty($document->airport) && !in_array($document->airport, $filter['id_housing_packages'][$document->housing_package->id]['airports'])){
                 $filter['id_housing_packages'][$document->housing_package->id]['airports'][] = $document->airport;
             }
-            if(!empty($document->booking_package->duration) && !in_array($document->booking_package->duration, $filter['id_housing_packages'][$document->housing_package->id]['durations'])){
+            if(!empty($document->booking_package->duration) && !empty($filter['id_housing_packages'][$document->housing_package->id]['durations']) && !in_array($document->booking_package->duration, $filter['id_housing_packages'][$document->housing_package->id]['durations'])){
                 $filter['id_housing_packages'][$document->housing_package->id]['durations'][] = $document->booking_package->duration;
             }
             if(!empty($document->airport) && !isset($filter['airports'][$document->airport])){
@@ -1251,7 +1251,7 @@ class MediaObject extends AbstractObject
                             $cheapestPriceSpeed->option_description_long = $option->description_long;
                             $cheapestPriceSpeed->option_code = $option->code;
                             $cheapestPriceSpeed->option_board_type = $option->board_type;
-                            $cheapestPriceSpeed->option_occupancy = $option->occupancy;
+                            $cheapestPriceSpeed->option_occupancy = empty($option->occupancy) ? 1 : $option->occupancy;
                             $cheapestPriceSpeed->option_occupancy_min = empty($option->occupancy_min) ? $option->occupancy : $option->occupancy_min;
                             $cheapestPriceSpeed->option_occupancy_max = empty($option->occupancy_max) ? $option->occupancy : $option->occupancy_max;
                             $cheapestPriceSpeed->price_transport_total = $transport_price;

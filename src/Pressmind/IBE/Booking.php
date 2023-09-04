@@ -13,6 +13,7 @@ use Pressmind\ORM\Object\Touristic\Option;
 use Pressmind\ORM\Object\Touristic\Startingpoint;
 use Pressmind\ORM\Object\Touristic\Transport;
 
+#[\AllowDynamicProperties]
 class Booking
 {
     /**

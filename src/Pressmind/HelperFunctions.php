@@ -136,7 +136,7 @@ class HelperFunctions
      * @return string
      */
     static public function human_to_machine($human_name) {
-        return preg_replace(
+        $str = preg_replace(
             array(
                 '/[^a-zA-Z0-9]+/',
                 '/-+/',
@@ -150,6 +150,7 @@ class HelperFunctions
                 ''),
             strtolower(self::replaceLatinSpecialChars($human_name))
         );
+        return preg_replace(['/^[0-9]+/', '/^_+/'], '', $str);
     }
 
     /**

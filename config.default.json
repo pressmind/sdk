@@ -186,6 +186,18 @@
                         ]
                     }
                 }
+            },
+            "media_types_allowed_visibilities": {
+                "123": [
+                    30,
+                    60
+                ]
+            },
+            "disable_recursive_import" : {
+                    "123" : [
+                        "{varname}_{section}"
+                    ]
+                }
             }
         },
         "cache": {

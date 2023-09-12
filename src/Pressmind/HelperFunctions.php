@@ -136,6 +136,9 @@ class HelperFunctions
      * @return string
      */
     static public function human_to_machine($human_name) {
+        if(is_int($human_name) || is_float($human_name)) {
+            return $human_name;
+        }
         $str = preg_replace(
             array(
                 '/[^a-zA-Z0-9]+/',

@@ -167,7 +167,7 @@ class ObjectTypeScaffolder
                 'name' => $this->_generateClassName($this->_object_definition->name)
             ],
             'database' => [
-                'table_name' => 'objectdata_' . HelperFunctions::human_to_machine($this->_tablename),
+                'table_name' => 'objectdata_' . $this->_tablename,
                 'primary_key' => 'id',
                 'relation_key' => 'id_media_object'
             ],

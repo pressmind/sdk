@@ -226,7 +226,7 @@ class Insurance extends AbstractObject
                 'filters' => NULL,
                 'relation' => [
                     'type' => 'ManyToMany',
-                    'class' => PriceTable::class,
+                    'class' => Attribute::class,
                     'relation_table' => 'pmt2core_touristic_insurance_to_attributes',
                     'relation_class' => InsuranceToAttribute::class,
                     'related_id' => 'id_insurance',

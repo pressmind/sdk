@@ -15,7 +15,7 @@ use Pressmind\Storage\Bucket;
 use Pressmind\Storage\File;
 
 /**
- * Class Plaintext
+ * Class Picture
  * @package Pressmind\ORM\Object\MediaObject\DataType
  * @property integer $id
  * @property integer $id_picture

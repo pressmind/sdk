@@ -5,7 +5,7 @@ use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\CategoryTree\Item;
 
 /**
- * Class Plaintext
+ * Class Categorytree
  * @package Pressmind\ORM\Object\MediaObject\DataType
  * @property integer $id
  * @property integer $id_media_object

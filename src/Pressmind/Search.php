@@ -374,7 +374,7 @@ class Search
         $db_engine = $config['database']['engine'];
         foreach ($this->_conditions as $key => $condition) {
             if (!isset($joins_sorted[$condition->getSort()])) $joins_sorted[$condition->getSort()] = [];
-            if(strtolower($condition->getJoinType()) != 'subselect') {
+            if($condition->getJoinType() != 'SUBSELECT') {
                 if (!is_null($condition->getJoins()) && !in_array($condition->getJoins(), $joins_sorted[$condition->getSort()])) {
                     $joins_sorted[$condition->getSort()][] = $condition->getJoins();
                 }

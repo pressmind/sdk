@@ -346,6 +346,8 @@ class Indexer extends AbstractIndex
                         $stdItem->name = $treeitem->item->name;
                         $stdItem->id_tree = $treeitem->item->id_tree;
                         $stdItem->id_parent = $treeitem->item->id_parent;
+                        $stdItem->code = $treeitem->item->code;
+                        $stdItem->sort = $treeitem->item->sort;
                         $stdItem->field_name = $varName;
                         $stdItem->level = $this->getTreeDepth($data->$varName, $treeitem->id_item);
                         $stdItem->path_str = $this->getTreePath($data->$varName, $treeitem->id_item, 'name');

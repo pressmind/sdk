@@ -45,8 +45,8 @@ class Php implements AdapterInterface
 
         include_once $this->_config_file;
         $return_config['development'] = $config['development'];
-        $return_config['production'] = array_merge($config['development'], $config['production']);
-        $return_config['testing'] = array_merge($config['development'], $config['testing']);
+        $return_config['production'] = array_merge($config['development'], !empty($config['production']) ? $config['production'] : []);
+        $return_config['testing'] = array_merge($config['development'], !empty($config['testing']) ? $config['testing'] : []);
         return $return_config[$this->_environment];
     }
 

@@ -860,7 +860,7 @@ class MediaObject extends AbstractObject
             if(!empty($document->airport) && !isset($filter['airports'][$document->airport])){
                 $filter['airports'][$document->airport] = ['durations' => [], 'transport_types' => [], 'id_housing_packages' => [], 'occupancies' => []];
             }
-            if(!empty($document->occupancy) && !in_array($document->occupancy, $filter['airports'][$document->airport]['occupancies'])){
+            if(!empty($document->occupancy) && !empty($document->airport) && !in_array($document->occupancy, $filter['airports'][$document->airport]['occupancies'])){
                 $filter['airports'][$document->airport]['occupancies'][] = $document->occupancy;
             }
             if(!empty($document->transport_type) && !empty($document->airport) && !in_array($document->transport_type, $filter['airports'][$document->airport]['transport_types'])){
@@ -872,7 +872,7 @@ class MediaObject extends AbstractObject
             if(!empty($document->booking_package->duration) && !empty($document->airport) && !in_array($document->booking_package->duration, $filter['airports'][$document->airport]['durations'])){
                 $filter['airports'][$document->airport]['durations'][] = $document->booking_package->duration;
             }
-            if(!empty($document->airport) && !isset($filter['occupancies'][$document->occupancy])){
+            if(!empty($document->occupancy) && !isset($filter['occupancies'][$document->occupancy])){
                 $filter['occupancies'][$document->occupancy] = ['durations' => [], 'transport_types' => [], 'id_housing_packages' => [], 'airports' => []];
             }
             if(!empty($document->transport_type) && !in_array($document->transport_type, $filter['occupancies'][$document->occupancy]['transport_types'])){

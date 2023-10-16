@@ -40,8 +40,9 @@ class DateRange
                 '$elemMatch' => [
                     'date_departures' => [
                         '$elemMatch' => [
-                            '$gte' => $this->_dateFrom->format(DATE_RFC3339_EXTENDED),
-                            '$lte' => $this->_dateTo->format(DATE_RFC3339_EXTENDED)]
+                            '$gte' => $this->_dateFrom->format('Y-m-d'),
+                            '$lte' => $this->_dateTo->format('Y-m-d')
+                            ]
                         ]
                 ]
             ]
@@ -70,13 +71,13 @@ class DateRange
                                                                         [
                                                                             '$gte' => [
                                                                                 '$$a2',
-                                                                                $this->_dateFrom->format(DATE_RFC3339_EXTENDED)
+                                                                                $this->_dateFrom->format('Y-m-d')
                                                                             ]
                                                                         ],
                                                                         [
                                                                             '$lte' => [
                                                                                 '$$a2',
-                                                                                $this->_dateTo->format(DATE_RFC3339_EXTENDED)
+                                                                                $this->_dateTo->format('Y-m-d')
                                                                             ]
                                                                         ]
                                                                     ]

@@ -461,7 +461,8 @@ class Indexer extends AbstractIndex
                 earlybird_name, 
                 option_board_type, 
                 price_mix,
-                transport_type
+                transport_type,
+                guaranteed
                 FROM pmt2core_cheapest_price_speed 
                 WHERE 
                 id_media_object = :id_media_object 
@@ -488,6 +489,7 @@ class Indexer extends AbstractIndex
                         $date_departures = array_unique(explode(',', $result->date_departures));
                         asort($date_departures);
                         $formatted_date_departures = [];
+                        $formatted_guaranteed_departures = [];
                         foreach ($date_departures as $k => $date_departure) {
                             $date = \DateTime::createFromFormat('Y-m-d H:i:s', $date_departure);
                             if (empty($date)) {
@@ -495,8 +497,13 @@ class Indexer extends AbstractIndex
                                 break(1);
                             }
                             $formatted_date_departures[] = $date->format(DATE_RFC3339_EXTENDED);
+                            if(!empty($result->guaranteed)){
+                                $formatted_guaranteed_departures[] = $date->format(DATE_RFC3339_EXTENDED);
+                            }
                         }
                         $result->date_departures = $formatted_date_departures;
+                        unset($result->guaranteed);
+                        $result->guaranteed_departures = $formatted_guaranteed_departures;
                         $result->occupancy = intval($result->occupancy);
                         $result->duration = floatval($result->duration);
                         $result->price_total = floatval($result->price_total); // @TODO pseudo price handling is missing
@@ -524,7 +531,8 @@ class Indexer extends AbstractIndex
                 earlybird_name,
                 option_board_type, 
                 price_mix,
-                transport_type
+                transport_type,
+                guaranteed
                 FROM pmt2core_cheapest_price_speed 
                 WHERE 
                 id_media_object = :id_media_object 
@@ -550,6 +558,7 @@ class Indexer extends AbstractIndex
                         $date_departures = array_unique(explode(',', $result->date_departures));
                         asort($date_departures);
                         $formatted_date_departures = [];
+                        $formatted_guaranteed_departures = [];
                         foreach ($date_departures as $k => $date_departure){
                             if(in_array($date_departure, $used_departures) ){
                                 continue;
@@ -561,8 +570,13 @@ class Indexer extends AbstractIndex
                                 break(1);
                             }
                             $formatted_date_departures[] = $date->format(DATE_RFC3339_EXTENDED);
+                            if(!empty($result->guaranteed)){
+                                $formatted_guaranteed_departures[] = $date->format(DATE_RFC3339_EXTENDED);
+                            }
                         }
                         $result->date_departures = $formatted_date_departures;
+                        unset($result->guaranteed);
+                        $result->guaranteed_departures = $formatted_guaranteed_departures;
                         $result->occupancy = null;
                         $result->duration = floatval($result->duration);
                         $result->price_total = floatval($result->price_total);

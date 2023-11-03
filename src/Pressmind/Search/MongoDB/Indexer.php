@@ -519,7 +519,7 @@ class Indexer extends AbstractIndex
 
         // price mixes NOT date_housing, this price_mix type doesn't have a occupancy!
         foreach ($config['duration_ranges'] as $duration_range) {
-                $query = "SELECT 
+            $query = "SELECT 
                 option_occupancy as occupancy, 
                 group_concat(date_departure) as date_departures,
                 max(duration) as duration, 
@@ -543,49 +543,49 @@ class Indexer extends AbstractIndex
                   AND (date_departure BETWEEN DATE_ADD(NOW(), INTERVAL :departure_offset_from DAY) 
                   AND DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY)) 
                 GROUP BY price_total ORDER BY price_total";
-                $values = [
-                    ':id_media_object' => $this->mediaObject->id,
-                    ':id_origin' => $origin,
-                    ':duration_range_from' => $duration_range[0],
-                    ':duration_range_to' => $duration_range[1].'.9',
-                    ':departure_offset_from' => $config['departure_offset_from'],
-                    ':departure_offset_to' => $config['departure_offset_to']
-                ];
-                $results = $db->fetchAll($query, $values);
-                $used_departures = [];
-                if(!is_null($results)) {
-                    foreach($results as $result){
-                        $date_departures = array_unique(explode(',', $result->date_departures));
-                        asort($date_departures);
-                        $formatted_date_departures = [];
-                        $formatted_guaranteed_departures = [];
-                        foreach ($date_departures as $k => $date_departure){
-                            if(in_array($date_departure, $used_departures) ){
-                                continue;
-                            }
-                            $used_departures[] = $date_departure;
-                            $date = \DateTime::createFromFormat('Y-m-d H:i:s', $date_departure);
-                            if(empty($date)){
-                                echo 'error: date is not valid';
-                                break(1);
-                            }
-                            $formatted_date_departures[] = $date->format(DATE_RFC3339_EXTENDED);
-                            if(!empty($result->guaranteed)){
-                                $formatted_guaranteed_departures[] = $date->format(DATE_RFC3339_EXTENDED);
-                            }
+            $values = [
+                ':id_media_object' => $this->mediaObject->id,
+                ':id_origin' => $origin,
+                ':duration_range_from' => $duration_range[0],
+                ':duration_range_to' => $duration_range[1].'.9',
+                ':departure_offset_from' => $config['departure_offset_from'],
+                ':departure_offset_to' => $config['departure_offset_to']
+            ];
+            $results = $db->fetchAll($query, $values);
+            $used_departures = [];
+            if(!is_null($results)) {
+                foreach($results as $result){
+                    $date_departures = array_unique(explode(',', $result->date_departures));
+                    asort($date_departures);
+                    $formatted_date_departures = [];
+                    $formatted_guaranteed_departures = [];
+                    foreach ($date_departures as $k => $date_departure){
+                        if(in_array($date_departure, $used_departures) ){
+                            continue;
                         }
-                        $result->date_departures = $formatted_date_departures;
-                        unset($result->guaranteed);
-                        $result->guaranteed_departures = $formatted_guaranteed_departures;
-                        $result->occupancy = null;
-                        $result->duration = floatval($result->duration);
-                        $result->price_total = floatval($result->price_total);
-                        $result->price_regular_before_discount = floatval($result->price_regular_before_discount);
-                        $result->earlybird_discount = floatval($result->earlybird_discount);
-                        $result->earlybird_discount_f = floatval($result->earlybird_discount_f);
-                        $prices[] = $result;
+                        $used_departures[] = $date_departure;
+                        $date = \DateTime::createFromFormat('Y-m-d H:i:s', $date_departure);
+                        if(empty($date)){
+                            echo 'error: date is not valid';
+                            break(1);
+                        }
+                        $formatted_date_departures[] = $date->format(DATE_RFC3339_EXTENDED);
+                        if(!empty($result->guaranteed)){
+                            $formatted_guaranteed_departures[] = $date->format(DATE_RFC3339_EXTENDED);
+                        }
                     }
+                    $result->date_departures = $formatted_date_departures;
+                    unset($result->guaranteed);
+                    $result->guaranteed_departures = $formatted_guaranteed_departures;
+                    $result->occupancy = null;
+                    $result->duration = floatval($result->duration);
+                    $result->price_total = floatval($result->price_total);
+                    $result->price_regular_before_discount = floatval($result->price_regular_before_discount);
+                    $result->earlybird_discount = floatval($result->earlybird_discount);
+                    $result->earlybird_discount_f = floatval($result->earlybird_discount_f);
+                    $prices[] = $result;
                 }
+            }
         }
 
         usort($prices, [$this, '_priceSort']);
@@ -695,7 +695,7 @@ class Indexer extends AbstractIndex
                 $date = new \DateTime($year . '-' . $month . '-01');
                 $max_days = $date->format('t');
                 $query = "SELECT date_departure, date_arrival, option_occupancy_min, option_occupancy_max, option_occupancy, duration, 
-                        price_total, price_regular_before_discount, earlybird_discount, earlybird_discount_f, earlybird_discount_date_to 
+                        price_total, price_regular_before_discount, earlybird_discount, earlybird_discount_f, earlybird_discount_date_to, guaranteed
                             FROM pmt2core_cheapest_price_speed 
                         WHERE (date_departure BETWEEN :departure_from AND :departure_to) 
                           AND id_media_object = :id_media_object AND id_origin = :id_origin

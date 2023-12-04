@@ -271,11 +271,7 @@ class Indexer extends AbstractIndex
             $Filter = new $p[0]();
             $Filter->mediaObject = $this->mediaObject;
             $ReflectionMethod = new \ReflectionMethod($item['filter']);
-            if(!empty($value)){
-                $atts = [$value];
-            }else{
-                $atts = [];
-            }
+            $atts = [$value];
             if(!empty($item['params'])){
                 foreach($item['params'] as $name => $value){
                     foreach($ReflectionMethod->getParameters() as $parameter){

@@ -43,6 +43,7 @@ class Info
         '\Route',
         '\Search',
         '\Season',
+        '\Port',
         '\Touristic\Base',
         '\Touristic\Booking\Package',
         '\Touristic\Date',

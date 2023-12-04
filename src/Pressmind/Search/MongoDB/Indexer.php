@@ -251,25 +251,45 @@ class Indexer extends AbstractIndex
                 }
             }
             if(isset($item_info['filter']) && !empty ($item_info['filter'])) {
-                try {
-                    $params = [$value];
-                    if(!empty($item_info['params']) && is_array($item_info['params'])){
-                        $params = array_merge($params, array_values($item_info['params']));
-                    }
-
-                    // @TODO parameter müssen in der richtigen named order definiert werden.
-                    //var_dump($item_info['filter']);
-                   // var_dump($params);
-                    $value = call_user_func_array($item_info['filter'], $params);
-                } catch (\Exception $e) {
-                    echo 'Error in filter function ' .  $item_info['filter'] . ': ' . $e->getMessage();
-                    exit; // @TODO
-                }
+                $value = $this->filterFunction($item_info, $value);
             }
             $description[$index_name] = $value;
         }
 
         return $description;
+    }
+
+    /**
+     * @param array $item
+     * @param mixed $value first value as param
+     * @return void
+     * @throws \ReflectionException
+     */
+    private function filterFunction($item, $value = null){
+        try {
+            $p = explode('::', $item['filter']);
+            $Filter = new $p[0]();
+            $Filter->mediaObject = $this->mediaObject;
+            $ReflectionMethod = new \ReflectionMethod($item['filter']);
+            if(!empty($value)){
+                $atts = [$value];
+            }else{
+                $atts = [];
+            }
+            if(!empty($item['params'])){
+                foreach($item['params'] as $name => $value){
+                    foreach($ReflectionMethod->getParameters() as $parameter){
+                        if($parameter->getName() === $name){
+                            $atts[] = $value;
+                        }
+                    }
+                }
+            }
+            return call_user_func_array([$Filter, $p[1]], $atts);
+        } catch (\Exception $e) {
+            echo 'Error in filter function ' .  $item['filter'] . ': ' . $e->getMessage();
+            return false;
+        }
     }
 
     private function _mapGroups($language)

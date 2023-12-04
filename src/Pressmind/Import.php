@@ -12,6 +12,7 @@ use Pressmind\Import\MediaObjectCheapestPrice;
 use Pressmind\Import\MediaObjectData;
 use Pressmind\Import\MediaObjectType;
 use Pressmind\Import\MyContent;
+use Pressmind\Import\Port;
 use Pressmind\Import\Season;
 use Pressmind\Import\StartingPointOptions;
 use Pressmind\Import\TouristicData;
@@ -323,6 +324,9 @@ class Import
 
             $seasons_importer = new Season();
             $seasons_importer->import();
+
+            $ports_importer = new Port();
+            $ports_importer->import();
 
             $itinerary_importer = new Itinerary($id_media_object);
             $itinerary_importer->import();

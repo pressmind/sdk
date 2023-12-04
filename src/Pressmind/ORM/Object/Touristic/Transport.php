@@ -463,7 +463,8 @@ class Transport extends AbstractObject
             'BUS' => 'Busreise',
             'PKW' => 'Eigenanreise',
             'FLUG' => 'Flugreise',
-            'SCHIFF' => 'Schiffsreise'
+            'SCHIFF' => 'Schiffsreise',
+            'BAH' => 'Bahnreise'
         ];
         return I18n::translate($mapping[$this->type]);
     }

@@ -47,17 +47,17 @@ class Key_value implements MapperInterface
                         case 'DROPDOWN':
                         default:
                             $value_name = 'value_' . $key . '_string';
-                            $key_value_row_column->value_string = isset($row->$value_name) ? $row->$value_name : '';
+                            $key_value_row_column->value_string = isset($row->$value_name) ? $row->$value_name : null;
                             $key_value_row_column->datatype = 'string';
                             break;
                         case 'INTEGER':
                             $value_name = 'value_' . $key . '_int';
-                            $key_value_row_column->value_integer = isset($row->$value_name) ? $row->$value_name : '';
+                            $key_value_row_column->value_integer = isset($row->$value_name) ? $row->$value_name : null;
                             $key_value_row_column->datatype = 'integer';
                             break;
                         case 'NUMBER':
                             $value_name = 'value_' . $key . '_decimal';
-                            $key_value_row_column->value_float = isset($row->$value_name) ? $row->$value_name : '';
+                            $key_value_row_column->value_float = isset($row->$value_name) ? $row->$value_name : null;
                             $key_value_row_column->datatype = 'float';
                             break;
                     }

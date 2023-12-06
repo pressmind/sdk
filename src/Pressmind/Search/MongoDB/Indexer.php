@@ -353,8 +353,24 @@ class Indexer extends AbstractIndex
         $categories_map = $this->_config['search']['categories'][$this->mediaObject->id_object_type];
         $data = $this->mediaObject->getDataForLanguage($language)->toStdClass();
 
-        foreach ($categories_map as $varName => $additionalInfo) {
-            if(empty($additionalInfo)) {
+        foreach ($categories_map as $field => $additionalInfo) {
+            $type = 'categorytree';
+            $object_link_field = null;
+            $varName = $field;
+            if(!empty($additionalInfo['field'])){
+                $varName = $additionalInfo['field'];
+            }
+            if(!empty($additionalInfo['from'])){
+                $type = 'categorytree_from_objectlink'; // legacy
+                $object_link_field = $additionalInfo['from'];
+            }
+            if(!empty($additionalInfo['type'])){
+                $type = $additionalInfo['type'];
+            }
+            if(!empty($additionalInfo['virtual_id_tree'])){
+                $virtual_id_tree = $additionalInfo['virtual_id_tree'];
+            }
+            if($type == 'categorytree') {
                 if(is_array($data->$varName)) {
                     foreach ($data->$varName as $treeitem) {
                         $stdItem = new \stdClass();
@@ -373,14 +389,17 @@ class Indexer extends AbstractIndex
                         $categories[] = (array)$stdItem;
                     }
                 }
-            } else {
-                if(!empty($additionalInfo['from'])) {
-                    foreach ($this->_mapCategoriesFromObjectLinks($additionalInfo['from'], $varName, $language) as $linkedCategory) {
-                        $categories[] = $linkedCategory;
-                    }
+            } elseif($type == 'categorytree_from_objectlink') {
+                foreach ($this->_mapCategoriesFromObjectLinks($object_link_field, $varName, $field, $language) as $linkedCategory) {
+                    $categories[] = $linkedCategory;
+                }
+            }elseif($type == 'plaintext_from_objectlink') {
+                foreach ($this->_mapPlaintextFromObjectLinks($object_link_field, $varName, $field, $virtual_id_tree, $language) as $linkedCategory) {
+                    $categories[] = $linkedCategory;
                 }
             }
         }
+
         return $categories;
     }
 
@@ -418,12 +437,54 @@ class Indexer extends AbstractIndex
     }
 
     /**
-     * @param string $varName
-     * @param string $categoryVarName
+     * @param $varName
+     * @param $plaintextVarName
+     * @param $field_name
+     * @param $virtual_id_tree
+     * @param $language
      * @return array
      * @throws \Exception
      */
-    private function _mapCategoriesFromObjectLinks($varName, $categoryVarName, $language) {
+    private function _mapPlaintextFromObjectLinks($varName, $plaintextVarName, $field, $virtual_id_tree, $language) {
+        if(empty($virtual_id_tree)){
+            throw new \Exception('virtual_id_tree is required for plaintext_from_objectlink');
+        }
+        if(empty($field)){
+            throw new \Exception('field is required for plaintext_from_objectlink');
+        }
+        $data = $this->mediaObject->getDataForLanguage($language);
+        $categories = [];
+        if(is_array($data->$varName)){
+            foreach ($data->$varName as $objectlink) {
+                $linkedObject = new MediaObject($objectlink->id_media_object_link);
+                $linkedObjectData = $linkedObject->getDataForLanguage($language);
+                if(!is_null($linkedObjectData) ) {
+                  $stdItem = new \stdClass();
+                  $stdItem->name = $plaintextVarName == 'name' ? $linkedObject->name : $linkedObjectData->$plaintextVarName ;
+                  $stdItem->id_item = md5($objectlink->id_media_object_link.'-'.$varName.'-'.$plaintextVarName.'-'.$stdItem->name.'-'.$virtual_id_tree);
+                  $stdItem->id_tree = $virtual_id_tree;
+                  $stdItem->id_parent = null;
+                  $stdItem->field_name = $field;
+                  $stdItem->level = 0;
+                  $stdItem->path_str = [$stdItem->name];
+                  $stdItem->path_ids = [$stdItem->id_item];
+                  $categories[] = (array)$stdItem;
+
+                }
+            }
+        }
+        return $categories;
+    }
+
+    /**
+     * @param $varName
+     * @param $categoryVarName
+     * @param $field
+     * @param $language
+     * @return array
+     * @throws \Exception
+     */
+    private function _mapCategoriesFromObjectLinks($varName, $categoryVarName, $field, $language) {
         $data = $this->mediaObject->getDataForLanguage($language);
         $categories = [];
         if(is_array($data->$varName)){
@@ -437,7 +498,7 @@ class Indexer extends AbstractIndex
                         $stdItem->name = $treeitem->item->name;
                         $stdItem->id_tree = $treeitem->item->id_tree;
                         $stdItem->id_parent = $treeitem->item->id_parent;
-                        $stdItem->field_name = $categoryVarName;
+                        $stdItem->field_name = $field;
                         $stdItem->level = $this->getTreeDepth($linkedObjectData->$categoryVarName, $treeitem->id_item);
                         $stdItem->path_str = $this->getTreePath($linkedObjectData->$categoryVarName, $treeitem->id_item, 'name');
                         krsort($stdItem->path_str);

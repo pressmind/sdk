@@ -251,7 +251,7 @@ class Indexer extends AbstractIndex
                 }
             }
             if(isset($item_info['filter']) && !empty ($item_info['filter'])) {
-                $value = $this->filterFunction($item_info, $value);
+                $value = $this->_filterFunction($item_info, $value);
             }
             $description[$index_name] = $value;
         }
@@ -261,31 +261,45 @@ class Indexer extends AbstractIndex
 
     /**
      * @param array $item
-     * @param mixed $value first value as param
+     * @param mixed $first_param legacy
      * @return void
      * @throws \ReflectionException
      */
-    private function filterFunction($item, $value = null){
+    private function _filterFunction($item, $first_param = null){
         try {
-            $p = explode('::', $item['filter']);
-            $Filter = new $p[0]();
-            $Filter->mediaObject = $this->mediaObject;
-            $ReflectionMethod = new \ReflectionMethod($item['filter']);
-            $atts = [$value];
-            if(!empty($item['params'])){
-                foreach($item['params'] as $name => $value){
-                    foreach($ReflectionMethod->getParameters() as $parameter){
-                        if($parameter->getName() === $name){
-                            $atts[] = $value;
-                        }
-                    }
-                }
-            }
-            return call_user_func_array([$Filter, $p[1]], $atts);
+            return $this->_callMethod($item['filter'], !empty($item['params']) ? $item['params'] : [], $first_param);
         } catch (\Exception $e) {
             echo 'Error in filter function ' .  $item['filter'] . ': ' . $e->getMessage();
             return false;
         }
+    }
+
+    /**
+     * @param string $method
+     * @param array $params
+     * @param mixed $first_param legacy
+     * @return mixed
+     * @throws \ReflectionException
+     */
+    private function _callMethod($method, $params = [], $first_param = 'undefined'){
+        $p = explode('::', $method);
+        $Filter = new $p[0]();
+        $Filter->mediaObject = $this->mediaObject;
+        $ReflectionMethod = new \ReflectionMethod($method);
+        $atts = [];
+        if($first_param != 'undefined'){
+            $atts = [$first_param];
+        }
+        if(!empty($params)){
+            foreach($params as $name => $value){
+                foreach($ReflectionMethod->getParameters() as $parameter){
+                    if($parameter->getName() === $name){
+                        $atts[] = $value;
+                    }
+                }
+            }
+        }
+        return call_user_func_array([$Filter, $p[1]], $atts);
     }
 
     private function _mapGroups($language)
@@ -354,6 +368,13 @@ class Indexer extends AbstractIndex
         $data = $this->mediaObject->getDataForLanguage($language)->toStdClass();
 
         foreach ($categories_map as $field => $additionalInfo) {
+            if(!empty($additionalInfo['aggregation']['method'])){
+                $aggregated_result = $this->_callMethod($additionalInfo['aggregation']['method'], $additionalInfo['aggregation']['params']);
+                if(is_array($aggregated_result)){
+                    $categories = array_merge($categories, $aggregated_result);
+                }
+                continue;
+            }
             $type = 'categorytree';
             $object_link_field = null;
             $varName = $field;
@@ -381,10 +402,10 @@ class Indexer extends AbstractIndex
                         $stdItem->code = $treeitem->item->code;
                         $stdItem->sort = $treeitem->item->sort;
                         $stdItem->field_name = $varName;
-                        $stdItem->level = $this->getTreeDepth($data->$varName, $treeitem->id_item);
-                        $stdItem->path_str = $this->getTreePath($data->$varName, $treeitem->id_item, 'name');
+                        $stdItem->level = self::getTreeDepth($data->$varName, $treeitem->id_item);
+                        $stdItem->path_str = self::getTreePath($data->$varName, $treeitem->id_item, 'name');
                         krsort($stdItem->path_str);
-                        $stdItem->path_ids =$this->getTreePath($data->$varName, $treeitem->id_item, 'id');
+                        $stdItem->path_ids = self::getTreePath($data->$varName, $treeitem->id_item, 'id');
                         krsort($stdItem->path_ids);
                         $categories[] = (array)$stdItem;
                     }
@@ -409,11 +430,11 @@ class Indexer extends AbstractIndex
      * @param int $level
      * @return int
      */
-    public function getTreeDepth($serialized_list, $id, $level = 0){
+    public static function getTreeDepth($serialized_list, $id, $level = 0){
         foreach($serialized_list as $item){
             if($item->item->id == $id && !empty($item->item->id_parent)){
                 $level++;
-                return $this->getTreeDepth($serialized_list, $item->item->id_parent, $level);
+                return self::getTreeDepth($serialized_list, $item->item->id_parent, $level);
             }
         }
         return $level;
@@ -426,11 +447,11 @@ class Indexer extends AbstractIndex
      * @param array $path
      * @return array
      */
-    public function getTreePath($serialized_list, $id, $key, $path = []){
+    public static function getTreePath($serialized_list, $id, $key, $path = []){
         foreach($serialized_list as $item){
             if($item->item->id == $id){
                 $path[] = $item->item->{$key};
-                return $this->getTreePath($serialized_list, $item->item->id_parent, $key, $path);
+                return self::getTreePath($serialized_list, $item->item->id_parent, $key, $path);
             }
         }
         return $path;
@@ -469,7 +490,6 @@ class Indexer extends AbstractIndex
                   $stdItem->path_str = [$stdItem->name];
                   $stdItem->path_ids = [$stdItem->id_item];
                   $categories[] = (array)$stdItem;
-
                 }
             }
         }
@@ -497,12 +517,12 @@ class Indexer extends AbstractIndex
                         $stdItem->id_item = $treeitem->item->id;
                         $stdItem->name = $treeitem->item->name;
                         $stdItem->id_tree = $treeitem->item->id_tree;
-                        $stdItem->id_parent = $treeitem->item->id_parent;
+                        $stdItem->id_parent = $treeitem->item ->id_parent;
                         $stdItem->field_name = $field;
-                        $stdItem->level = $this->getTreeDepth($linkedObjectData->$categoryVarName, $treeitem->id_item);
-                        $stdItem->path_str = $this->getTreePath($linkedObjectData->$categoryVarName, $treeitem->id_item, 'name');
+                        $stdItem->level = self::getTreeDepth($linkedObjectData->$categoryVarName, $treeitem->id_item);
+                        $stdItem->path_str = self::getTreePath($linkedObjectData->$categoryVarName, $treeitem->id_item, 'name');
                         krsort($stdItem->path_str);
-                        $stdItem->path_ids =$this->getTreePath($linkedObjectData->$categoryVarName, $treeitem->id_item, 'id');
+                        $stdItem->path_ids = self::getTreePath($linkedObjectData->$categoryVarName, $treeitem->id_item, 'id');
                         krsort($stdItem->path_ids);
                         $categories[] = (array)$stdItem;
                     }

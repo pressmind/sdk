@@ -8,11 +8,14 @@ class Code
 
     private $_combineOperator;
 
-    public function __construct($codes, $combineOperator = 'OR')
+    private $_asRegex;
+
+    public function __construct($codes, $combineOperator = 'OR', $asRegex = false)
     {
         if(!is_array($codes)) {
             $codes = [$codes];
         }
+        $this->_asRegex = $asRegex;
         $this->_codes = $codes;
         $this->_combineOperator = $combineOperator;
     }
@@ -26,15 +29,25 @@ class Code
 
     public function getQuery($type = 'first_match')
     {
+        $query = [];
         if($type == 'first_match') {
             if (count($this->_codes) > 1) {
-                $foo = [];
+                $q = [];
                 foreach ($this->_codes as $code) {
-                    $foo[] = ['code' => $code];
+                    if($this->_asRegex) {
+                        $q[] = ['code' => ['$regex' => $code]];
+                    }else{
+                        $q[] = ['code' => $code];
+                    }
                 }
-                $query['$' . strtolower($this->_combineOperator)] = $foo;
+                $query['$' . strtolower($this->_combineOperator)] = $q;
             } else {
-                $query['code'] = $this->_codes[0];
+                if($this->_asRegex) {
+                    $query['code'] = ['$regex' => $this->_codes[0]];
+                }else{
+                    $query['code'] = $this->_codes[0];
+                }
+
             }
             return $query;
         }

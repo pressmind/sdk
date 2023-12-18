@@ -356,8 +356,27 @@ class Picture extends AbstractObject
      */
     public function getTmpUri($derivativeName = null, $sectionName = null)
     {
-        $height = null;
         $config = Registry::getInstance()->get('config');
+        $image_width = $this->width;
+        $image_height = $this->height;
+        $image_max_width = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'];
+        $image_max_height = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'];
+        $onlyheight = false;
+        $onlywidth = false;
+        if($config['image_handling']['processor']['derivatives'][$derivativeName]['preserve_aspect_ratio'] && !$config['image_handling']['processor']['derivatives'][$derivativeName]['crop']) {
+            // Verhältnis des Bildes berechnen
+            $aspectRatio = $image_width / $image_height;
+            // Berechnen, wie das Bild skaliert werden sollte
+            if ($image_max_width / $aspectRatio <= $image_max_height) {
+                // Das Bild wird auf maximale Breite skaliert und die Höhe wird automatisch angepasst
+                $onlywidth = true;
+                $onlyheight = false;
+            } else {
+                // Das Bild wird auf maximale Höhe skaliert und die Breite wird automatisch angepasst
+                $onlyheight = true;
+                $onlywidth = false;
+            }
+        }
         $tmp_url = $this->tmp_url;
         if(!is_null($sectionName)){
             $section = $this->getSection($sectionName);
@@ -393,10 +412,10 @@ class Picture extends AbstractObject
                     $parsed_query['cy'] = $parsed_query['cy'] / $h_ratio;
                 }
             }
-            if(!empty($config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'])){
+            if(!empty($config['image_handling']['processor']['derivatives'][$derivativeName]['max_width']) && !$onlyheight){
                 $parsed_query['w'] = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'];
             }
-            if(!empty($config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'])){
+            if(!empty($config['image_handling']['processor']['derivatives'][$derivativeName]['max_height']) && !$onlywidth){
                 $parsed_query['h'] = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'];
             }
         }

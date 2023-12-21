@@ -45,6 +45,7 @@ class Fulltext
                 'id_media_object' => 1,
                 'id_object_type' => 1,
                 'last_modified_date' => 1,
+                'possible_durations' => 1,
                 'prices' => 1,
                 'url' => 1,
                 'valid_from' => 1,

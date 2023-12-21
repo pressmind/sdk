@@ -185,10 +185,8 @@ class Ibe
             $option = (new \Pressmind\ORM\Object\Touristic\Option())->toStdClass();
             $option->id = uniqid();
             $option->name = 'Teilnahmegebühr';
-            $option->max_pax = 10;
-            $option->min_pax = 1;
             $option->type = 'dummy';
-            $option->occupancy_max = 10;
+            $option->occupancy_max = 1;
             $option->occupancy_min = 1;
             $option->occupancy = 1;
             $option->quota = 15;

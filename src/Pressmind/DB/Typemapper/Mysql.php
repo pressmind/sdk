@@ -11,6 +11,8 @@ class Mysql
         'int' => 'INT',
         'integer' => 'INT',
         'float' => 'FLOAT',
+        'double' => 'double',
+        'decimal' => 'decimal',
         'varchar' => 'VARCHAR',
         'date' => 'DATE',
         'datetime' => 'DATETIME',
@@ -31,6 +33,9 @@ class Mysql
         'text' => 'text',
         'integer' => 'int',
         'int' => 'int',
+        'float' => 'float',
+        'double' => 'double',
+        'decimal' => 'decimal',
         'table' => 'relation',
         'date' => 'datetime',
         'plaintext' => 'text',
@@ -81,6 +86,10 @@ class Mysql
                     }
                     if($validator['name'] == 'inarray') {
                         $return = 'enum(\'' . implode("','", $validator['params']) . '\')';
+                    }
+                    if($validator['name'] == 'precision') {
+                        echo 'here';
+                        $return .= '(' . implode(",", $validator['params']) . ')';
                     }
                 }
             } else {

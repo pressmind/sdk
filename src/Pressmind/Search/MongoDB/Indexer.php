@@ -183,6 +183,7 @@ class Indexer extends AbstractIndex
         $searchObject->description = $this->_mapDescriptions($language);
         $searchObject->categories = $this->_mapCategories($language);
         $searchObject->groups = $this->_mapGroups($language);
+        $searchObject->locations = $this->_mapLocations($language);
         $searchObject->prices = $this->_aggregatePrices($origin);
         $searchObject->has_price = !empty($searchObject->prices);
         $searchObject->fulltext = $this->_createFulltext($language);
@@ -354,6 +355,31 @@ class Indexer extends AbstractIndex
 
 
         return $groups;
+    }
+
+
+    /**
+     * @param $language
+     * @return \stdClass
+     */
+    private function _mapLocations($language)
+    {
+        $data = $this->mediaObject->getDataForLanguage($language)->toStdClass();
+        $locations = new \stdClass();
+        if(empty($this->_config['search']['locations'][$this->mediaObject->id_object_type])){
+            return $locations;
+        }
+        $location_fields = array_keys($this->_config['search']['locations'][$this->mediaObject->id_object_type]);
+        foreach($location_fields as $field){
+            $geojson = new \stdClass();
+            $geojson->type = 'MultiPoint';
+            $geojson->coordinates = [];
+            foreach($data->$field as $location){
+                $geojson->coordinates[] = [$location->lng, $location->lat];
+            }
+            $locations->$field = $geojson;
+        }
+        return $locations;
     }
 
     /**

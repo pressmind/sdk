@@ -285,20 +285,21 @@ class MongoDB extends AbstractSearch
             $condition = $this->getConditionByType('AtlasLuceneFulltext');
             $stages[] = $condition->getQuery('base');
             $stages[] = $condition->getQuery('project');
+            $stages = array_filter($stages);
         }
 
         // stage 1 first_match
         $andQuery['$and'] = [];
         foreach ($this->_conditions as $condition_name => $condition) {
-            if(empty($condition->getQuery('first_match', $allow_invalid_offers))){
+            if (empty($condition->getQuery('first_match', $allow_invalid_offers))) {
                 continue;
             }
-            $andQuery['$and'][]  = $condition->getQuery('first_match', $allow_invalid_offers);
+            $andQuery['$and'][] = $condition->getQuery('first_match', $allow_invalid_offers);
         }
 
-        if(!empty($andQuery['$and'])){
+        if (!empty($andQuery['$and'])) {
             $stages[] = ['$match' => $andQuery];
-            if($this->hasCondition('Fulltext')){
+            if ($this->hasCondition('Fulltext')) {
                 $condition = $this->getConditionByType('Fulltext');
                 $stages[] = $condition->getQuery('project');
             }

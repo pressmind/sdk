@@ -198,6 +198,7 @@ class Mysql
             'integer' => 'INT',
             'bigint' => 'BIGINT',
             'float' => 'FLOAT',
+            'double' => 'DOUBLE',
             'varchar' => 'VARCHAR',
             'date' => 'DATE',
             'datetime' => 'DATETIME',

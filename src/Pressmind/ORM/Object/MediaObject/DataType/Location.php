@@ -121,18 +121,30 @@ class Location extends AbstractObject
             'lat' => [
                 'title' => 'lat',
                 'name' => 'lat',
-                'type' => 'float',
+                'type' => 'decimal',
                 'required' => false,
                 'filters' => null,
-                'validators' => null,
+                'validators' =>
+                [
+                    [
+                        'name' => 'precision',
+                        'params' => [8,6],
+                    ]
+                ]
             ],
             'lng' => [
                 'title' => 'lng',
                 'name' => 'lng',
-                'type' => 'float',
+                'type' => 'decimal',
                 'required' => false,
                 'filters' => null,
-                'validators' => null,
+                'validators' =>
+                [
+                    [
+                        'name' => 'precision',
+                        'params' => [9,6],
+                    ]
+                ]
             ]
         ]
     ];

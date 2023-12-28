@@ -1047,7 +1047,7 @@ abstract class AbstractObject
                 try {
                     $validator = Validator\Factory::create($validatorSpec);
                 } catch (Exception | Error $e) {
-                    throw new Exception('Validator ' . $validatorSpec['name'] . ' could not be created in class ' . get_class($this));
+                    throw new Exception('Validator ' . $validatorSpec['name'] . ' could not be created in class ' . get_class($this)."\n".$e->getMessage());
                 }
                 if (!$validator->isValid($value)) {
                     throw new Exception('Validation for property ' . $name . ' failed for class ' . get_class($this) . ': ' . $validator->getError());

@@ -65,6 +65,7 @@
                 "ibe_client" : null
             },
             "media_type_custom_import_hooks": {},
+            "media_type_custom_post_import_hooks": {},
             "primary_media_type_ids": null,
             "media_types": {},
             "media_types_pretty_url": {},

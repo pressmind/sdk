@@ -374,6 +374,9 @@ class Indexer extends AbstractIndex
             $geojson = new \stdClass();
             $geojson->type = 'MultiPoint';
             $geojson->coordinates = [];
+            if(empty($data->$field) || !is_array($data->$field) ){
+                continue;
+            }
             foreach($data->$field as $location){
                 $geojson->coordinates[] = [$location->lng, $location->lat];
             }

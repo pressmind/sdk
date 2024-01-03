@@ -568,6 +568,9 @@ class Import
      */
     public function postImport($id_media_object = null)
     {
+        if(!is_array($id_media_object)){
+            $id_media_object = [$id_media_object];
+        }
         $config = Registry::getInstance()->get('config');
         if(isset($config['data']['media_type_custom_post_import_hooks']) &&
             is_array($config['data']['media_type_custom_post_import_hooks'])) {
@@ -577,7 +580,7 @@ class Import
                 }
                 foreach ($hooks as $custom_import_class_name) {
                     $custom_import_class = new $custom_import_class_name($id_media_object);
-                    $custom_import_class->import();
+                    $custom_import_class->import($id_media_object);
                     foreach ($custom_import_class->getLog() as $log) {
                         Writer::write($log, WRITER::OUTPUT_FILE, 'custom_post_import_hook', WRITER::TYPE_INFO);
                     }
@@ -598,7 +601,7 @@ class Import
                 }
             }
         }
-        $image_processor_path = APPLICATION_PATH . '/cli/image_processor.php' . (is_null($id_media_object) ? '' : ' ' . $id_media_object);
+        $image_processor_path = APPLICATION_PATH . '/cli/image_processor.php' . (empty($id_media_object) ? '' : ' mediaobject ' . implode(',',$id_media_object));
         $php_binary = isset($config['server']['php_cli_binary']) && !empty($config['server']['php_cli_binary']) ? $config['server']['php_cli_binary'] : 'php';
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): Starting post import processes ', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): bash -c "exec nohup php ' . $image_processor_path . ' > /dev/null 2>&1 &"', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);

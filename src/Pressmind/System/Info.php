@@ -47,6 +47,7 @@ class Info
         '\Touristic\Base',
         '\Touristic\Booking\Package',
         '\Touristic\Date',
+        '\Touristic\Date\Attribute',
         '\Touristic\EarlyBirdDiscountGroup',
         '\Touristic\EarlyBirdDiscountGroup\Item',
         '\Touristic\ExtrasToMediaObject',

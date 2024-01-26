@@ -1737,6 +1737,7 @@ class MediaObject extends AbstractObject
         $tables = [
             'pmt2core_touristic_booking_packages',
             'pmt2core_touristic_dates',
+            'pmt2core_touristic_date_attributes',
             'pmt2core_touristic_transports',
             'pmt2core_touristic_housing_packages',
             'pmt2core_touristic_housing_package_description_links',

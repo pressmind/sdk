@@ -5,6 +5,7 @@ namespace Pressmind\ORM\Object\Touristic;
 use Exception;
 use Pressmind\ORM\Object\AbstractObject;
 use DateTime;
+use Pressmind\ORM\Object\Touristic\Date\Attribute;
 
 /**
  * Class Date
@@ -31,6 +32,7 @@ use DateTime;
  * @property Startingpoint $startingpoint
  * @property Transport[] $transports
  * @property EarlyBirdDiscountGroup $early_bird_discount_group
+ * @property Attribute[] $attributes
  */
 class Date extends AbstractObject
 {
@@ -331,6 +333,19 @@ class Date extends AbstractObject
                     'type' => 'hasOne',
                     'related_id' => 'id_early_bird_discount_group',
                     'class' => EarlyBirdDiscountGroup::class,
+                ],
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'attributes' => [
+                'title' => 'attributes',
+                'name' => 'attributes',
+                'type' => 'relation',
+                'relation' => [
+                    'type' => 'hasMany',
+                    'related_id' => 'id_date',
+                    'class' => Attribute::class,
                 ],
                 'required' => false,
                 'validators' => NULL,

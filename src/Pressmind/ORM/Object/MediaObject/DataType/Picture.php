@@ -368,13 +368,13 @@ class Picture extends AbstractObject
             $aspectRatio = $image_width / $image_height;
             // Berechnen, wie das Bild skaliert werden sollte
             if ($image_max_width / $aspectRatio <= $image_max_height) {
-                // Das Bild wird auf maximale Breite skaliert und die Höhe wird automatisch angepasst
-                $onlywidth = true;
-                $onlyheight = false;
-            } else {
                 // Das Bild wird auf maximale Höhe skaliert und die Breite wird automatisch angepasst
-                $onlyheight = true;
                 $onlywidth = false;
+                $onlyheight = true;
+            } else {
+                // Das Bild wird auf maximale Breite skaliert und die Höhe wird automatisch angepasst
+                $onlyheight = false;
+                $onlywidth = true;
             }
         }
         $tmp_url = $this->tmp_url;

@@ -359,11 +359,11 @@ class Picture extends AbstractObject
         $config = Registry::getInstance()->get('config');
         $image_width = $this->width;
         $image_height = $this->height;
-        $image_max_width = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'];
-        $image_max_height = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'];
+        $image_max_width = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'] ?? 1980;
+        $image_max_height = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'] ?? 1980;
         $onlyheight = false;
         $onlywidth = false;
-        if($config['image_handling']['processor']['derivatives'][$derivativeName]['preserve_aspect_ratio'] && !$config['image_handling']['processor']['derivatives'][$derivativeName]['crop']) {
+        if((!empty($config['image_handling']['processor']['derivatives'][$derivativeName]['preserve_aspect_ratio']) && (!empty($config['image_handling']['processor']['derivatives'][$derivativeName]['crop']) && $config['image_handling']['processor']['derivatives'][$derivativeName]['preserve_aspect_ratio']) && !$config['image_handling']['processor']['derivatives'][$derivativeName]['crop'])) {
             // Verhältnis des Bildes berechnen
             $aspectRatio = $image_width / $image_height;
             // Berechnen, wie das Bild skaliert werden sollte

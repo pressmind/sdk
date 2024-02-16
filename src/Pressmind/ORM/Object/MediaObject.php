@@ -1238,7 +1238,11 @@ class MediaObject extends AbstractObject
                         $starting_point_price = 0;
                         if(!empty($transport_pair['way1']->id_starting_point)){
                             $StartingPoint = Startingpoint::getCheapestOption($transport_pair['way1']->id_starting_point, $ibe_client);
-                            $starting_point_price = empty($StartingPoint->price) ? 0 : $StartingPoint->price;
+                            if($StartingPoint->price_per_day){
+                                $starting_point_price = $StartingPoint->price * $booking_package->duration;
+                            }else{
+                                $starting_point_price = empty($StartingPoint->price) ? 0 : $StartingPoint->price;
+                            }
                         }
                         $transport_earlybird_price_base = 0;
                         foreach ($early_bird_discounts as $early_bird_discount) {

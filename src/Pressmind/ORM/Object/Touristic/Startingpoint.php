@@ -148,11 +148,12 @@ class Startingpoint extends AbstractObject
      * @param int $radius
      * @param int $start
      * @param int $limit
+     * @param array $order_by_code_list
      * @return Option[]
      * @throws \Exception
      */
-    public static function getOptionsByZipRadius($id_starting_point, $ibe_client = null, $zip = null, $radius = 20, $start = 0, $limit = 10){
-        return self::getOptions($id_starting_point, $start, $limit, $ibe_client, $zip, $radius);
+    public static function getOptionsByZipRadius($id_starting_point, $ibe_client = null, $zip = null, $radius = 20, $start = 0, $limit = 10, $order_by_code_list = []){
+        return self::getOptions($id_starting_point, $start, $limit, $ibe_client, $zip, $radius, false, false, 'radius', $order_by_code_list);
     }
 
     /**
@@ -176,11 +177,12 @@ class Startingpoint extends AbstractObject
      * @param string $zip
      * @param int $start
      * @param int $limit
+     * @param array $order_by_code_list
      * @return Option[]
      * @throws \Exception
      */
-    public static function getPickupOptionByZip($id_starting_point, $ibe_client = null, $zip = null, $start = 0, $limit = 1){
-        return self::getOptions($id_starting_point, $start, $limit, $ibe_client, $zip, 20, false, true, 'range');
+    public static function getPickupOptionByZip($id_starting_point, $ibe_client = null, $zip = null, $start = 0, $limit = 1, $order_by_code_list = []){
+        return self::getOptions($id_starting_point, $start, $limit, $ibe_client, $zip, 20, false, true, 'range', $order_by_code_list);
 
     }
 
@@ -194,10 +196,11 @@ class Startingpoint extends AbstractObject
      * @param boolean $list_exits
      * @param boolean $list_pickup_service
      * @param string $zip_search radius | range
+     * @param array $order_by_code_list
      * @return Option[]
      * @throws \Exception
      */
-    public static function getOptions($id_starting_point, $start = 0, $limit = 10, $ibe_client = null, $zip = null, $radius = 20, $list_exits = false, $list_pickup_service = false, $zip_search = 'radius'){
+    public static function getOptions($id_starting_point, $start = 0, $limit = 10, $ibe_client = null, $zip = null, $radius = 20, $list_exits = false, $list_pickup_service = false, $zip_search = 'radius', $order_by_code_list = []){
         if(is_array($id_starting_point)){
             $id_starting_point = implode(',"', $id_starting_point);
         }

@@ -231,10 +231,14 @@ class Startingpoint extends AbstractObject
             $query .= ' and ' . (int)$zip . ' between cast(zr.`from` as UNSIGNED) and cast(zr.`to` as UNSIGNED)';
             $currentCity = $Geodata->getByZip($zip);
         }
+        $order_by_field_list = ' ';
+        if(!empty($order_by_code_list)){
+            $order_by_field_list = ' FIELD(o.code, "'.implode('","', $order_by_code_list).'") = 0, FIELD(o.code, "'.implode('","', $order_by_code_list).'"), ';
+        }
         if(!empty($zips)){
-            $query .= ' order by start_time ASC, FIELD(zip, "'.implode('","', $zips).'"), price ASC';
+            $query .= ' order by'.$order_by_field_list.'start_time ASC, FIELD(zip, "'.implode('","', $zips).'"), price ASC';
         }else{
-            $query .= ' order by start_time ASC, price ASC, zip ASC';
+            $query .= ' order by '.$order_by_field_list.'start_time ASC, price ASC, zip ASC';
         }
         if(!empty($limit)){
             $query .= ' limit '.$start.','.$limit;

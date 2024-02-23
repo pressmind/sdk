@@ -103,9 +103,13 @@ class Ibe
         $result['transport_pairs'] = $date->getTransportPairs([0,2,3], $use_ways, $use_transport_types, 1);
 
         $starting_points_limit = 10;
+        $starting_points_order_by_code_list = [];
         if(!is_null($settings)) {
             if(isset($settings['steps']['starting_points']['pagination_page_size']['value'])) {
                 $starting_points_limit = $settings['steps']['starting_points']['pagination_page_size']['value'];
+            }
+            if(!empty($settings['steps']['starting_points']['default_starting_point_codes']['value']) && is_array($settings['steps']['starting_points']['default_starting_point_codes']['value'])) {
+                $starting_points_order_by_code_list = $settings['steps']['starting_points']['default_starting_point_codes']['value'];
             }
         }
 
@@ -120,7 +124,7 @@ class Ibe
             $id_exit_point= $result['transport_pairs'][0]['way2']->id_starting_point;
         }
         $result['starting_points']['total'] = count(StartingPoint::getOptionsByZipRadius($id_starting_point, $icc, null, 20, 0, null));
-        $result['starting_points']['starting_point_options'] = StartingPoint::getOptionsByZipRadius($id_starting_point, $icc, null, 20,0, $starting_points_limit);
+        $result['starting_points']['starting_point_options'] = StartingPoint::getOptionsByZipRadius($id_starting_point, $icc, null, 20,0, $starting_points_limit, $starting_points_order_by_code_list);
         $result['exit_points']['total'] = count(StartingPoint::getExitOptionsByZipRadius($id_exit_point, $icc, null, 20, 0, null));
         $result['exit_points']['starting_point_options'] = StartingPoint::getExitOptionsByZipRadius($id_exit_point, $icc, null, 20,0, $starting_points_limit);
         $result['has_pickup_services'] = Startingpoint::hasPickupService($id_starting_point, $icc);
@@ -354,9 +358,11 @@ class Ibe
         $zip = isset($this->parameters['zip']) ? $this->parameters['zip'] : null;
         $radius = isset($this->parameters['radius']) ? $this->parameters['radius'] : null;
         $ibe_client = isset($this->parameters['iic']) ? $this->parameters['iic'] : null;
+        //$list_exits = !empty($this->parameters['list_exits']);
+        $order_by_code_list = !empty($this->parameters['order_by_code_list']) && is_array($this->parameters['order_by_code_list']) ? $this->parameters['order_by_code_list'] : [];
         $data = [];
         $data['total'] = count(Startingpoint::getOptionsByZipRadius($id_starting_point, $ibe_client, $zip, $radius, 0, null));
-        $data['starting_point_options'] = Startingpoint::getOptionsByZipRadius($id_starting_point, $ibe_client, $zip, $radius, $start, $limit);
+        $data['starting_point_options'] = Startingpoint::getOptionsByZipRadius($id_starting_point, $ibe_client, $zip, $radius, $start, $limit, $order_by_code_list);
         return ['success' => true, 'data' => $data];
     }
 

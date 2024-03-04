@@ -363,18 +363,15 @@ class Picture extends AbstractObject
         $image_max_height = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'] ?? 1980;
         $onlyheight = false;
         $onlywidth = false;
+        $crop = $config['image_handling']['processor']['derivatives'][$derivativeName]['crop'] ?? false;
 
-        // Bildverhältnis überprüfen und ob das Seitenverhältnis beibehalten werden soll
-        if(!empty($config['image_handling']['processor']['derivatives'][$derivativeName]['preserve_aspect_ratio']) && !$config['image_handling']['processor']['derivatives'][$derivativeName]['crop']) {
+        // Bildverhältnis und Crop-Einstellungen überprüfen
+        if(!$crop && !empty($config['image_handling']['processor']['derivatives'][$derivativeName]['preserve_aspect_ratio'])) {
             $aspectRatio = $image_width / $image_height;
             if ($image_max_width / $aspectRatio < $image_max_height) {
-                // Das Bild wird auf maximale Breite skaliert und die Höhe wird automatisch angepasst
                 $onlywidth = true;
-                $onlyheight = false;
             } else {
-                // Das Bild wird auf maximale Höhe skaliert und die Breite wird automatisch angepasst
                 $onlyheight = true;
-                $onlywidth = false;
             }
         }
 
@@ -392,24 +389,28 @@ class Picture extends AbstractObject
         unset($parsed_query['v']);
 
         if(!is_null($derivativeName)) {
-            // Anpassungen für Bildabmessungen und Ausschnitt
-            // (Diese Logik bleibt unverändert, außer dass Überprüfungen für 'w' und 'h' hinzugefügt/entfernt werden, basierend auf 'onlywidth' und 'onlyheight')
-            // ...
+            // Wenn 'crop' aktiv ist, werden sowohl 'w' als auch 'h' unabhängig vom Bildformat gesetzt
+            if($crop) {
+                $parsed_query['w'] = $image_max_width;
+                $parsed_query['h'] = $image_max_height;
+            } else {
+                // Nur 'w' setzen, wenn nur die Breite angepasst werden soll und 'h' entfernen
+                if($onlywidth || !$onlyheight){
+                    $parsed_query['w'] = $image_max_width;
+                    unset($parsed_query['h']);
+                }
 
-            // Nur 'w' setzen, wenn nur die Breite angepasst werden soll und 'h' entfernen
-            if($onlywidth || !$onlyheight){
-                $parsed_query['w'] = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'];
-                unset($parsed_query['h']);
-            }
-
-            // Nur 'h' setzen, wenn nur die Höhe angepasst werden soll und 'w' entfernen
-            if($onlyheight || !$onlywidth){
-                $parsed_query['h'] = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'];
-                unset($parsed_query['w']);
+                // Nur 'h' setzen, wenn nur die Höhe angepasst werden soll und 'w' entfernen
+                if($onlyheight ||!$onlywidth){
+                    $parsed_query['h'] = $image_max_height;
+                    unset($parsed_query['w']);
+                }
             }
         }
+
         return $parsed_url['scheme'] . '://' . $parsed_url['host'] . $parsed_url['path'] . '?' . http_build_query($parsed_query);
     }
+
 
 
     /**

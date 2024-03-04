@@ -409,13 +409,13 @@ class Picture extends AbstractObject
                 }
             }
             // Nur 'w' setzen, wenn nur die Breite angepasst werden soll
-            if($onlywidth){
+            if($onlywidth || !$onlyheight){
                 $parsed_query['w'] = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'];
                 unset($parsed_query['h']); // Sicherstellen, dass 'h' nicht gesetzt ist
             }
 
             // Nur 'h' setzen, wenn nur die Höhe angepasst werden soll
-            if($onlyheight){
+            if($onlyheight || !$onlywidth){
                 $parsed_query['h'] = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'];
                 unset($parsed_query['w']); // Sicherstellen, dass 'w' nicht gesetzt ist
             }

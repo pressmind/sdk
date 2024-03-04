@@ -394,11 +394,7 @@ class Picture extends AbstractObject
                 (isset($parsed_query['h']) && $parsed_query['h'] != $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'])
             ){
                 $w_ratio = $parsed_query['w'] / $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'];
-                if(!empty($parsed_query['h'])){
-                    $h_ratio = $parsed_query['h'] / $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height']; // @TODO not exists
-                }else{
-                    $h_ratio = $w_ratio;
-                }
+                $h_ratio = isset($parsed_query['h']) ? $parsed_query['h'] / $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'] : $w_ratio;
                 if(!empty($parsed_query['cw'])){
                     $parsed_query['cw'] = $parsed_query['cw'] / $w_ratio;
                 }
@@ -412,11 +408,16 @@ class Picture extends AbstractObject
                     $parsed_query['cy'] = $parsed_query['cy'] / $h_ratio;
                 }
             }
-            if(!empty($config['image_handling']['processor']['derivatives'][$derivativeName]['max_width']) && !$onlyheight){
+            // Nur 'w' setzen, wenn nur die Breite angepasst werden soll
+            if($onlywidth){
                 $parsed_query['w'] = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'];
+                unset($parsed_query['h']); // Sicherstellen, dass 'h' nicht gesetzt ist
             }
-            if(!empty($config['image_handling']['processor']['derivatives'][$derivativeName]['max_height']) && !$onlywidth){
+
+            // Nur 'h' setzen, wenn nur die Höhe angepasst werden soll
+            if($onlyheight){
                 $parsed_query['h'] = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'];
+                unset($parsed_query['w']); // Sicherstellen, dass 'w' nicht gesetzt ist
             }
         }
         return $parsed_url['scheme'] . '://' . $parsed_url['host'] . $parsed_url['path'] . '?' . http_build_query($parsed_query);

@@ -1129,6 +1129,7 @@ class MediaObject extends AbstractObject
     {
         $max_rows = empty(Registry::getInstance()->get('config')['data']['touristic']['max_offers_per_product']) ? 5000 : Registry::getInstance()->get('config')['data']['touristic']['max_offers_per_product'];
         $ibe_client = empty(Registry::getInstance()->get('config')['data']['touristic']['ibe_client']) ? null : Registry::getInstance()->get('config')['data']['touristic']['ibe_client'];
+        $include_negative_option_in_cheapest_price = !isset(Registry::getInstance()->get('config')['data']['touristic']['include_negative_option_in_cheapest_price']) ? true : Registry::getInstance()->get('config')['data']['touristic']['include_negative_option_in_cheapest_price'];
         $CheapestPrice = new CheapestPriceSpeed();
         $CheapestPrice->deleteByMediaObjectId($this->getId());
         $booking_packages = $this->booking_packages;
@@ -1204,6 +1205,9 @@ class MediaObject extends AbstractObject
                     $nights = empty($housing_package) ? 0 : $housing_package->nights;
                     foreach($cheapest_options as $cheapest_option){
                         $cheapest_option_price = $cheapest_option->calculatePrice($booking_package->duration, $nights);
+                        if($include_negative_option_in_cheapest_price === false && $cheapest_option_price < 0){
+                            continue;
+                        }
                         $included_options_price += $cheapest_option_price;
                         if($option->use_earlybird){
                             $included_options_earlybird_price_base += $cheapest_option_price;

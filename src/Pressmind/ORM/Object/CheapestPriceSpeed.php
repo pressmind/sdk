@@ -90,6 +90,7 @@ use DateTime;
  * @property boolean $guaranteed
  * @property boolean $saved
  * @property string $startingpoint_name
+ * @property string $agency
  */
 class CheapestPriceSpeed extends AbstractObject
 {
@@ -913,6 +914,19 @@ class CheapestPriceSpeed extends AbstractObject
                 'required' => false,
                 'filters' => null,
                 'validators' => null
+            ],
+            'agency' => [
+                'name' => 'agency',
+                'title' => 'agency',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ]
             ],
         ]
     ];

@@ -39,6 +39,7 @@ use Pressmind\System\I18n;
  * @property boolean $dont_use_for_offers
  * @property boolean $use_earlybird
  * @property Discount $discount
+ * @property string $agencies
  */
 class Transport extends AbstractObject
 {
@@ -451,6 +452,14 @@ class Transport extends AbstractObject
                     'class' => Discount::class,
                     'filters' => ['active' => 1]
                 ],
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'agencies' => [
+                'title' => 'agencies',
+                'name' => 'agencies',
+                'type' => 'string',
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,

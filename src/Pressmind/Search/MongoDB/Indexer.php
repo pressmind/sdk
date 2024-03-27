@@ -93,8 +93,10 @@ class Indexer extends AbstractIndex
         }
         foreach ($this->_config['search']['build_for'] as $build_infos) {
             foreach($build_infos as $build_info){
-                $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
-                $this->createCollectionIndex($collection_name);
+                foreach($this->_agencies as $agency){
+                    $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
+                    $this->createCollectionIndex($collection_name);
+                }
             }
         }
         $mediaObjects = MediaObject::listAll(['id' => ['in', implode(',', $id_media_objects)]]);
@@ -104,27 +106,29 @@ class Indexer extends AbstractIndex
                 continue;
             }
             foreach ($this->_config['search']['build_for'][$mediaObject->id_object_type] as $build_info) {
-                $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
-                $collection = $this->db->$collection_name;
-                $document = $this->createIndex($mediaObject->id, $build_info['language'], $build_info['origin']);
-                if($document === false){
-                    continue;
+                 foreach($this->_agencies as $agency) {
+                    $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
+                    $collection = $this->db->$collection_name;
+                    $document = $this->createIndex($mediaObject->id, $build_info['language'], $build_info['origin'], $agency);
+                    if ($document === false) {
+                        continue;
+                    }
+                    $collection->updateOne(['_id' => $mediaObject->id], ['$set' => $document], ['upsert' => true]);
+                    $ids[] = $mediaObject->id;
                 }
-                $collection->updateOne(['_id' => $mediaObject->id], ['$set' => $document], ['upsert' => true]);
-                $ids[] = $mediaObject->id;
             }
         }
-
-        // remove the possible delta to aware the consistent
         foreach($id_media_objects as $id_media_object){
             if(in_array($id_media_object, $ids)){
                 continue;
             }
             foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
                 foreach ($build_infos as $build_info) {
-                    $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
-                    $collection = $this->db->$collection_name;
-                    $collection->deleteOne(['_id' => $id_media_object]);
+                    foreach($this->_agencies as $agency) {
+                        $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
+                        $collection = $this->db->$collection_name;
+                        $collection->deleteOne(['_id' => $id_media_object]);
+                    }
                 }
             }
         }
@@ -143,9 +147,11 @@ class Indexer extends AbstractIndex
         foreach($id_media_objects as $id_media_object){
             foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
                 foreach ($build_infos as $build_info) {
-                    $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
-                    $collection = $this->db->$collection_name;
-                    $collection->deleteOne(['_id' => $id_media_object]);
+                    foreach($this->_agencies as $agency) {
+                        $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
+                        $collection = $this->db->$collection_name;
+                        $collection->deleteOne(['_id' => $id_media_object]);
+                    }
                 }
             }
         }
@@ -154,18 +160,23 @@ class Indexer extends AbstractIndex
     /**
      * @param int $origin
      * @param string $language
+     * @param string $agency
      * @return string
      */
-    public function getCollectionName($origin = 0, $language = null){
-        return 'best_price_search_based_' . (!empty($language) ? $language.'_' : '') . 'origin_' . $origin;
+    public function getCollectionName($origin = 0, $language = null, $agency = null){
+        return 'best_price_search_based_' . (!empty($language) ? $language.'_' : '') . 'origin_' . $origin.(!empty($agency) ? '_agency_'. $agency: '');
     }
 
 
     /**
-     * @param integer $idMediaObject
+     * @param int $idMediaObject
+     * @param string $language
+     * @param int $origin
+     * @param string $agency
+     * @return false|mixed
      * @throws \Exception
      */
-    public function createIndex($idMediaObject, $language, $origin)
+    public function createIndex($idMediaObject, $language, $origin, $agency = null)
     {
         $searchObject = new \stdClass();
         $this->mediaObject = new MediaObject($idMediaObject, true, true);
@@ -184,10 +195,10 @@ class Indexer extends AbstractIndex
         $searchObject->categories = $this->_mapCategories($language);
         $searchObject->groups = $this->_mapGroups($language);
         $searchObject->locations = $this->_mapLocations($language);
-        $searchObject->prices = $this->_aggregatePrices($origin);
+        $searchObject->prices = $this->_aggregatePrices($origin, $agency);
         $searchObject->has_price = !empty($searchObject->prices);
         $searchObject->fulltext = $this->_createFulltext($language);
-        $searchObject->departure_date_count = $this->_createDepartureDateCount($origin);
+        $searchObject->departure_date_count = $this->_createDepartureDateCount($origin, $agency);
         $searchObject->valid_from = !is_null($this->mediaObject->valid_from) ?  $this->mediaObject->valid_from->format(DATE_RFC3339_EXTENDED) : null;
         $searchObject->valid_to = !is_null($this->mediaObject->valid_to) ? $this->mediaObject->valid_to->format(DATE_RFC3339_EXTENDED) : null;
         $searchObject->visibility = $this->mediaObject->visibility;
@@ -196,12 +207,12 @@ class Indexer extends AbstractIndex
 
         //$searchObject->dates_per_month = null;
         if(!empty($this->_config['search']['five_dates_per_month_list'])){
-            $searchObject->dates_per_month = $this->_createDatesPerMonth($origin);
+            $searchObject->dates_per_month = $this->_createDatesPerMonth($origin, $agency);
         }
 
         //$searchObject->possible_durations = null;
         if(!empty($this->_config['search']['possible_duration_list'])){
-            $searchObject->possible_durations = $this->_createPossibleDurations($origin);
+            $searchObject->possible_durations = $this->_createPossibleDurations($origin, $agency);
         }
         $now = new \DateTime();
         $now->setTimezone(new \DateTimeZone('Europe/Berlin'));
@@ -478,6 +489,9 @@ class Indexer extends AbstractIndex
      */
     public static function getTreePath($serialized_list, $id, $key, $path = []){
         foreach($serialized_list as $item){
+            if(empty($item->item->id)){
+                continue;
+            }
             if($item->item->id == $id){
                 $path[] = $item->item->{$key};
                 return self::getTreePath($serialized_list, $item->item->id_parent, $key, $path);
@@ -562,10 +576,12 @@ class Indexer extends AbstractIndex
     }
 
     /**
+     * @param int $origin
+     * @param string $agency
      * @return array
      * @throws \Exception
      */
-    private function _aggregatePrices($origin)
+    private function _aggregatePrices($origin, $agency = null)
     {
         $config = $this->_config['search']['touristic'];
         $prices = [];
@@ -593,6 +609,7 @@ class Indexer extends AbstractIndex
                 WHERE 
                 id_media_object = :id_media_object 
                   AND id_origin = :id_origin
+                  ".(empty($agency) ? "" : " AND agency = :agency")."
                   AND (earlybird_discount = 0 OR earlybird_discount_date_to >= NOW()) 
                   AND(duration BETWEEN :duration_range_from AND :duration_range_to) 
                   AND (option_occupancy = :occupancy ) 
@@ -609,6 +626,9 @@ class Indexer extends AbstractIndex
                     ':departure_offset_from' => $config['departure_offset_from'],
                     ':departure_offset_to' => $config['departure_offset_to']
                 ];
+                if(!empty($agency)){
+                    $values[':agency'] = $agency;
+                }
                 $results = $db->fetchAll($query, $values);
                 if(!is_null($results)) {
                     foreach($results as $result) {
@@ -663,6 +683,7 @@ class Indexer extends AbstractIndex
                 WHERE 
                 id_media_object = :id_media_object 
                   AND id_origin = :id_origin
+                  ".(empty($agency) ? "" : " AND agency = :agency")."
                   AND (earlybird_discount = 0 OR earlybird_discount_date_to >= NOW()) 
                   AND(duration BETWEEN :duration_range_from AND :duration_range_to) 
                   AND price_mix != 'date_housing'
@@ -677,6 +698,9 @@ class Indexer extends AbstractIndex
                 ':departure_offset_from' => $config['departure_offset_from'],
                 ':departure_offset_to' => $config['departure_offset_to']
             ];
+            if(!empty($agency)){
+                $values[':agency'] = $agency;
+            }
             $results = $db->fetchAll($query, $values);
             $used_departures = [];
             if(!is_null($results)) {
@@ -770,22 +794,35 @@ class Indexer extends AbstractIndex
     }
 
     /**
+     * @param int $origin
+     * @param string $agency
+     * @return array
      * @return integer|null
      * @throws \Exception
      */
-    private function _createDepartureDateCount($origin)
+    private function _createDepartureDateCount($origin, $agency = null)
     {
         $query = "SELECT COUNT(DISTINCT(date_departure)) as departure_date_count from pmt2core_cheapest_price_speed WHERE id_media_object = ? AND id_origin = ?";
-
+        $values = [$this->mediaObject->id, $origin];
+        if(!empty($agency)) {
+            $query .= " AND agency = ?";
+            $values[] = $agency;
+        }
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
 
-        $result = $db->fetchRow($query, [$this->mediaObject->id, $origin]);
+        $result = $db->fetchRow($query, $values);
 
         return !is_null($result) ? intval($result->departure_date_count) : null;
     }
 
-    private function _createDatesPerMonth($origin)
+    /**
+     * @param $origin
+     * @param $agency
+     * @return array
+     * @throws \Exception
+     */
+    private function _createDatesPerMonth($origin, $agency = null)
     {
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
@@ -796,14 +833,19 @@ class Indexer extends AbstractIndex
                     WHERE (date_departure BETWEEN DATE_ADD(NOW(), 
                         INTERVAL :departure_offset_from DAY) AND DATE_ADD(NOW(), 
                       INTERVAL :departure_offset_to DAY)) 
-                    AND id_media_object = :id_media_object AND id_origin = :id_origin 
-                    GROUP BY year, month ORDER BY year ASC, month ASC";
+                    AND id_media_object = :id_media_object 
+                    AND id_origin = :id_origin ".(
+                        empty($agency) ? "" : " AND agency = :agency"
+            )." GROUP BY year, month ORDER BY year ASC, month ASC";
         $values = [
             ':id_media_object' => $this->mediaObject->id,
             ':id_origin' => $origin,
             ':departure_offset_from' => $config['departure_offset_from'],
-            ':departure_offset_to' => $config['departure_offset_to']
+            ':departure_offset_to' => $config['departure_offset_to'],
         ];
+        if(!empty($agency)){
+            $values[':agency'] = $agency;
+        }
         $result = $db->fetchAll($query, $values);
         $years = [];
         if (is_array($result)) {
@@ -824,15 +866,19 @@ class Indexer extends AbstractIndex
                         price_total, price_regular_before_discount, earlybird_discount, earlybird_discount_f, earlybird_discount_date_to, guaranteed
                             FROM pmt2core_cheapest_price_speed 
                         WHERE (date_departure BETWEEN :departure_from AND :departure_to) 
-                          AND id_media_object = :id_media_object AND id_origin = :id_origin
-                          AND ((option_occupancy = 2 AND price_mix = 'date_housing') OR (price_mix != 'date_housing'))
+                          AND id_media_object = :id_media_object AND id_origin = :id_origin ".(
+                            empty($agency) ? "" : " AND agency = :agency").
+                          " AND ((option_occupancy = 2 AND price_mix = 'date_housing') OR (price_mix != 'date_housing'))
                           GROUP BY date_departure, duration ORDER BY date_departure, duration";
                 $values = [
                     ':id_media_object' => $this->mediaObject->id,
                     ':id_origin' => $origin,
                     ':departure_from' => $year . "-" . $month . "-01",
-                    ':departure_to' => $year . "-" . $month . "-" . $max_days
+                    ':departure_to' => $year . "-" . $month . "-" . $max_days,
                 ];
+                if(!empty($agency)){
+                    $values[':agency'] = $agency;
+                }
                 $result = $db->fetchAll($query, $values);
                 $date_list = [];
                 $c = 0;
@@ -859,7 +905,8 @@ class Indexer extends AbstractIndex
                 $object->five_dates_in_month = $date_list;
                 $count_query = "select count(*) as count from (SELECT distinct date_departure FROM pmt2core_cheapest_price_speed
                                 WHERE (date_departure BETWEEN :departure_from AND :departure_to) 
-                                AND id_media_object = :id_media_object AND id_origin = :id_origin 
+                                AND id_media_object = :id_media_object AND id_origin = :id_origin ".(
+                                empty($agency) ? "" : " AND agency = :agency")."
                                 AND ((option_occupancy = 2 AND price_mix = 'date_housing') OR (price_mix != 'date_housing'))) t";
                 $result = $db->fetchRow($count_query, $values);
                 $object->dates_total = (int)$result->count;
@@ -869,18 +916,38 @@ class Indexer extends AbstractIndex
         return $objects;
     }
 
-    private function _createPossibleDurations($origin)
+    /**
+     * @param int $origin
+     * @param string $agency
+     * @return array|null
+     * @throws \Exception
+     */
+    private function _createPossibleDurations($origin, $agency = null)
     {
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
         $config = $this->_config['search']['touristic'];
-        $query = "SELECT date_departure, date_arrival, option_occupancy_min, option_occupancy_max, option_occupancy, duration, price_total, price_regular_before_discount, earlybird_discount, earlybird_discount_f, earlybird_discount_date_to, transport_type FROM pmt2core_cheapest_price_speed WHERE (date_departure BETWEEN DATE_ADD(NOW(), INTERVAL :departure_offset_from DAY) AND DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY)) AND id_media_object = :id_media_object AND id_origin = :id_origin GROUP BY duration ORDER BY price_total";
+        $query = "SELECT date_departure, date_arrival, option_occupancy_min, 
+                         option_occupancy_max, option_occupancy, duration, price_total, 
+                         price_regular_before_discount, earlybird_discount, earlybird_discount_f, 
+                         earlybird_discount_date_to, transport_type 
+                   FROM pmt2core_cheapest_price_speed 
+                   WHERE 
+                       (date_departure BETWEEN DATE_ADD(NOW(), INTERVAL :departure_offset_from DAY) 
+                           AND DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY)) 
+                     AND id_media_object = :id_media_object 
+                     AND id_origin = :id_origin ".(
+                    empty($agency) ? "" : " AND agency = :agency")."
+                   GROUP BY duration ORDER BY price_total";
         $values = [
             ':id_media_object' => $this->mediaObject->id,
             ':id_origin' => $origin,
             ':departure_offset_from' => $config['departure_offset_from'],
             ':departure_offset_to' => $config['departure_offset_to']
         ];
+        if(!empty($agency)){
+            $values[':agency'] = $agency;
+        }
         $result = $db->fetchAll($query, $values);
         return $result;
     }

@@ -49,6 +49,11 @@ class MongoDB extends AbstractSearch
     private $_origin;
 
     /**
+     * @var string
+     */
+    private $_agency;
+
+    /**
      * @var boolean
      */
     private $_get_filters;
@@ -66,7 +71,7 @@ class MongoDB extends AbstractSearch
     /**
      * @param array $conditions
      */
-    public function __construct($conditions, $sort = ['price_total' => 'asc'], $language = null, $origin = 0)
+    public function __construct($conditions, $sort = ['price_total' => 'asc'], $language = null, $origin = 0, $agency = null)
     {
         $config = Registry::getInstance()->get('config');
         $this->_addLog('__construct()');
@@ -77,11 +82,16 @@ class MongoDB extends AbstractSearch
         $this->_db_uri = $config['data']['search_mongodb']['database']['uri'];
         $this->_db_name = $config['data']['search_mongodb']['database']['db'];
         $this->_origin = $origin;
+        $this->_agency = $agency;
         if(is_null($language) && count($config['data']['languages']['allowed']) > 1) {
             $this->_language = $config['data']['languages']['default'];
         }elseif(!is_null($language)){
             $this->_language = $language;
         }
+    }
+
+    private function _getCollectionName(){
+        return 'best_price_search_based_' . (!empty($this->_language) ? $this->_language.'_' : '') . 'origin_' . $this->_origin.(!empty($this->_agency) ? '_agency_'. $this->_agency: '') ;
     }
 
     private function _addLog($text) {
@@ -202,7 +212,7 @@ class MongoDB extends AbstractSearch
         $this->setReturnFiltersOnly($returnFiltersOnly);
         $client = new \MongoDB\Client($this->_db_uri);
         $db_name = $this->_db_name;
-        $collection_name = 'best_price_search_based_' . (!empty($this->_language) ? $this->_language.'_' : '') . 'origin_' . $this->_origin;
+        $collection_name = $this->_getCollectionName();
         $db = $client->$db_name;
         $collection = $db->$collection_name;
         $query = $this->buildQuery($output, $preview_date, $allowed_visibilities);
@@ -248,7 +258,7 @@ class MongoDB extends AbstractSearch
             try {
                 $client = new \MongoDB\Client($this->_db_uri);
                 $db_name = $this->_db_name;
-                $collection_name = 'best_price_search_based_' . (!empty($this->_language) ? $this->_language.'_' : '') . 'origin_' . $this->_origin;
+                $collection_name = $this->_getCollectionName();
                 $db = $client->$db_name;
                 $collection = $db->$collection_name;
                 $result = $collection->aggregate($params->aggregate)->toArray()[0];

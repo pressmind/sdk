@@ -43,10 +43,22 @@ class AbstractIndex
      */
     protected $_allowed_fulltext_fields;
 
+    /**
+     * @var boolean
+     */
+    protected $_agency_based_option_and_prices;
+
+    /**
+     * @var string[]
+     */
+    protected $_agencies;
+
     public function __construct() {
         $this->_config = Registry::getInstance()->get('config')['data']['search_mongodb'];
         $this->_allowed_visibilities = Registry::getInstance()->get('config')['data']['media_types_allowed_visibilities'];
         $this->_allowed_fulltext_fields = Registry::getInstance()->get('config')['data']['media_types_fulltext_index_fields'];
+        $this->_agency_based_option_and_prices = isset(Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['enabled']) ? Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['enabled'] : false;
+        $this->_agencies = $this->_agency_based_option_and_prices && isset(Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['allowed_agencies']) && is_array(Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['allowed_agencies']) ? Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['allowed_agencies'] : [null];
         $uri = $this->_config['database']['uri'];
         $db_name = $this->_config['database']['db'];
         $client = new \MongoDB\Client($uri);
@@ -79,8 +91,10 @@ class AbstractIndex
     {
         foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
             foreach ($build_infos as $build_info) {
-                $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
-                $this->createCollectionIfNotExists($collection_name);
+                foreach($this->_agencies as $agency) {
+                    $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
+                    $this->createCollectionIfNotExists($collection_name);
+                }
             }
         }
     }
@@ -94,8 +108,10 @@ class AbstractIndex
     {
         foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
             foreach ($build_infos as $build_info) {
-                $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
-                $this->createCollectionIndex($collection_name);
+                foreach($this->_agencies as $agency) {
+                    $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
+                    $this->createCollectionIndex($collection_name);
+                }
             }
         }
     }
@@ -104,9 +120,11 @@ class AbstractIndex
     {
         foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
             foreach ($build_infos as $build_info) {
-                $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
-                $this->db->$collection_name->dropIndexes();
-                $this->flushCollection($collection_name);
+                foreach($this->_agencies as $agency) {
+                    $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
+                    $this->db->$collection_name->dropIndexes();
+                    $this->flushCollection($collection_name);
+                }
             }
         }
     }

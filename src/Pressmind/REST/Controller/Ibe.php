@@ -197,6 +197,8 @@ class Ibe
             $option->price_due = 'person_stay';
             $option->price = $result['transport_pairs'][0]['way1']->price + $result['transport_pairs'][0]['way2']->price;
             $result['transport_pairs'][0]['way1']->price = $result['transport_pairs'][0]['way2']->price = 0;
+            $option->id_touristic_option_discount = $result['transport_pairs'][0]['way1']->id_touristic_option_discount;
+            $option->discount = $result['transport_pairs'][0]['way1']->discount;
             $housing_package->options = [$option];
             $housing_packages[] = $housing_package;
         } else {

@@ -93,6 +93,7 @@ class Ibe
         // @TODO, wenn need only one transport pair! there is no need to deliver other transports
         //$result['transports'] = $date->getTransports([0,2,3], array_filter([$booking->id_transport_way_1, $booking->id_transport_way_2]), array_filter([$booking->transport_type]));
 
+        $ida = !empty($this->parameters['params']['ida']) ? $this->parameters['params']['ida'] : null;
         $use_transport_types = [];
         $use_ways = [];
         if(empty($booking->id_transport_way_1) || empty($booking->id_transport_way_2)){
@@ -100,7 +101,7 @@ class Ibe
         }else{
             $use_ways = array_filter(array_merge($booking->id_transport_way_1, $booking->id_transport_way_2));
         }
-        $result['transport_pairs'] = $date->getTransportPairs([0,2,3], $use_ways, $use_transport_types, 1);
+        $result['transport_pairs'] = $date->getTransportPairs([0,2,3], $use_ways, $use_transport_types, 1, false, $ida);
 
         $starting_points_limit = 10;
         $starting_points_order_by_code_list = [];
@@ -126,7 +127,7 @@ class Ibe
         $result['starting_points']['total'] = count(StartingPoint::getOptionsByZipRadius($id_starting_point, $icc, null, 20, 0, null));
         $result['starting_points']['starting_point_options'] = StartingPoint::getOptionsByZipRadius($id_starting_point, $icc, null, 20,0, $starting_points_limit, $starting_points_order_by_code_list);
         $result['exit_points']['total'] = count(StartingPoint::getExitOptionsByZipRadius($id_exit_point, $icc, null, 20, 0, null));
-        $result['exit_points']['starting_point_options'] = StartingPoint::getExitOptionsByZipRadius($id_exit_point, $icc, null, 20,0, $starting_points_limit);
+        $result['exit_points']['exit_point_options'] = StartingPoint::getExitOptionsByZipRadius($id_exit_point, $icc, null, 20,0, $starting_points_limit);
         $result['has_pickup_services'] = Startingpoint::hasPickupService($id_starting_point, $icc);
         $result['has_starting_points'] = $result['starting_points']['total'] > 0;
         $result['has_seatplan'] = false;
@@ -336,20 +337,6 @@ class Ibe
         array_splice($transport_pairs, 1);
 
         return $transport_pairs;
-    }
-
-    // @TODO @see pressmind_ib3_v2_get_starting_point_options
-    public function pressmind_ib3_v2_get_exit_point($params) {
-        $this->parameters = $params['data'];
-        $id_starting_point = $this->parameters['id_starting_point'] ?? null;
-        $starting_point_option_code = $this->parameters['starting_point_option_code'] ?? null;
-        $exit_point = null;
-        $optionObject = new \Pressmind\ORM\Object\Touristic\Startingpoint\Option();
-        $exit_point_result = $optionObject->listAll(['id_startingpoint' => $id_starting_point, '`exit`' => 1, 'code' => $starting_point_option_code]);
-        if(is_array($exit_point_result) && count($exit_point_result) > 0) {
-            $exit_point = $exit_point_result[0];
-        }
-        return ['exit_point' => $exit_point];
     }
 
     public function pressmind_ib3_v2_get_starting_point_options($params) {

@@ -326,10 +326,11 @@ class Booking
      * @param \DateTime $reservation_date_from
      * @param \DateTime $reservation_date_to
      * @param string $season
+     * @param string $agency
      * @return Option[]
      * @throws Exception
      */
-    public function getAllAvailableExtras($reservation_date_from = null, $reservation_date_to = null, $season = null) {
+    public function getAllAvailableExtras($reservation_date_from = null, $reservation_date_to = null, $season = null, $agency = null) {
         $extras = $this->getBookingPackage()->extras;
         $tickets = $this->getBookingPackage()->tickets;
         $sightseeings = $this->getBookingPackage()->sightseeings;
@@ -339,6 +340,11 @@ class Booking
             $season = null;
         }
         foreach ($all_extras as $extra){
+            if(!empty($extra->agencies) && !empty($agency)){
+                if(!in_array($agency, explode(',', $extra->agencies))){
+                    continue;
+                }
+            }
             if($extra->season == '-'){
                 $extra->season = null;
             }

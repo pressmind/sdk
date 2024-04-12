@@ -8,6 +8,7 @@ use DateTime;
 /**
  * Class CheapestPriceSpeed
  * @package Pressmind\ORM\Object
+ * @property integer $id
  * @property integer $id_media_object
  * @property string $id_booking_package
  * @property string $id_housing_package

@@ -773,6 +773,11 @@ class MongoDB extends AbstractSearch
                     'sort' => 1
                 ]
             ];
+        }elseif(array_key_first($this->_sort) == 'valid_from'){
+            $sort = ['$sort' => [
+                        'valid_from' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
+                ]
+            ];
         }else{
             $sort = ['$sort' => [
                     'sales_priority' => 1

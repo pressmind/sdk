@@ -970,12 +970,14 @@ class MediaObject extends AbstractObject
     public function buildPrettyUrls($language = null)
     {
         $config = Registry::getInstance()->get('config');
-        $fields = $config['data']['media_types_pretty_url'][$this->id_object_type]['fields'] ?? ['name'];
-        $separator = $config['data']['media_types_pretty_url'][$this->id_object_type]['separator'] ?? '-';
-        $strategy = $config['data']['media_types_pretty_url'][$this->id_object_type]['strategy'] ?? 'unique';
-        $prefix = $config['data']['media_types_pretty_url'][$this->id_object_type]['prefix'] ?? '/';
-        $suffix = $config['data']['media_types_pretty_url'][$this->id_object_type]['suffix'] ?? '';
-        if(!empty($config['data']['media_types_pretty_url'][$this->id_object_type]['language'])){
+        $is_legancy = !isset($config['data']['media_types_pretty_url'][array_key_first($config['data']['media_types_pretty_url'])]['id_object_type']);
+        if($is_legancy){
+            $fields = $config['data']['media_types_pretty_url'][$this->id_object_type]['fields'] ?? ['name'];
+            $separator = $config['data']['media_types_pretty_url'][$this->id_object_type]['separator'] ?? '-';
+            $strategy = $config['data']['media_types_pretty_url'][$this->id_object_type]['strategy'] ?? 'unique';
+            $prefix = $config['data']['media_types_pretty_url'][$this->id_object_type]['prefix'] ?? '/';
+            $suffix = $config['data']['media_types_pretty_url'][$this->id_object_type]['suffix'] ?? '';
+        }else{
             foreach($config['data']['media_types_pretty_url'] as $v){
                 if($v['id_object_type'] == $this->id_object_type && $v['language'] == $language){
                     $fields = $v['field'] ?? ['name'];

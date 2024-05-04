@@ -969,12 +969,24 @@ class MediaObject extends AbstractObject
      */
     public function buildPrettyUrls($language = null)
     {
-
-        // @TODO check multilanguage handling
         $config = Registry::getInstance()->get('config');
         $fields = $config['data']['media_types_pretty_url'][$this->id_object_type]['fields'] ?? ['name'];
         $separator = $config['data']['media_types_pretty_url'][$this->id_object_type]['separator'] ?? '-';
         $strategy = $config['data']['media_types_pretty_url'][$this->id_object_type]['strategy'] ?? 'unique';
+        $prefix = $config['data']['media_types_pretty_url'][$this->id_object_type]['prefix'] ?? '/';
+        $suffix = $config['data']['media_types_pretty_url'][$this->id_object_type]['suffix'] ?? '';
+        if(!empty($config['data']['media_types_pretty_url'][$this->id_object_type]['language'])){
+            foreach($config['data']['media_types_pretty_url'] as $v){
+                if($v['id_object_type'] == $this->id_object_type && $v['language'] == $language){
+                    $fields = $v['field'] ?? ['name'];
+                    $separator = $v['separator'] ?? '-';
+                    $strategy = $v['strategy'] ?? 'unique';
+                    $prefix = $v['prefix'] ?? '/';
+                    $suffix = $v['suffix'] ?? '';
+                    break;
+                }
+            }
+        }
         $url_array = [];
         foreach ($fields as $field) {
             if(empty($this->$field)){
@@ -1010,8 +1022,6 @@ class MediaObject extends AbstractObject
             }
         }
         $url = implode($separator, $url_array);
-        $prefix = $config['data']['media_types_pretty_url'][$this->id_object_type]['prefix'] ?? '/';
-        $suffix = $config['data']['media_types_pretty_url'][$this->id_object_type]['suffix'] ?? '';
         $final_url = $prefix . trim(preg_replace('/\W+/', '-', $url), '-') . $suffix;
         if($strategy == 'unique' || $strategy == 'count-up') {
             if($this->_doesRouteExist($final_url)) {

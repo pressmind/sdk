@@ -11,6 +11,7 @@ use Pressmind\ORM\Object\Touristic\Housing\Package;
 use Pressmind\ORM\Object\Touristic\Option\Discount;
 use Pressmind\ORM\Object\Touristic\Startingpoint;
 use Pressmind\ORM\Object\Touristic\Startingpoint\Option;
+use Pressmind\Registry;
 use Pressmind\REST\Controller\Touristic\Date;
 
 class Ibe
@@ -24,6 +25,7 @@ class Ibe
 
     public function pressmind_ib3_v2_get_touristic_object($params)
     {
+        $config = Registry::getInstance()->get('config');
         $this->parameters = $params['data'];
         if(empty($this->parameters['params']['imo']) || empty($this->parameters['params']['idbp']) || empty($this->parameters['params']['idd'])){
             return ['success' => false, 'msg' => 'error: parameters are missing imo, idbp, idd', 'data' => null];
@@ -189,7 +191,7 @@ class Ibe
             $housing_package->name = !empty($booking_package->name) ? $booking_package->name : $result['product']['title'];
             $option = (new \Pressmind\ORM\Object\Touristic\Option())->toStdClass();
             $option->id = uniqid();
-            $option->name = 'Teilnahmegebühr';
+            $option->name = !empty($config['data']['touristic']['label_price_mix_date_transport']) ? $config['data']['touristic']['label_price_mix_date_transport'] : 'Teilnahmegebühr';
             $option->type = 'dummy';
             $option->occupancy_max = 1;
             $option->occupancy_min = 1;

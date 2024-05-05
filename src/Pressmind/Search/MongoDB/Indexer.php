@@ -191,7 +191,7 @@ class Indexer extends AbstractIndex
             }
         }
         $searchObject->code = array_filter(array_map('trim', explode(',', (string)$this->mediaObject->code)));;
-        $searchObject->description = $this->_mapDescriptions($language);
+        $searchObject->description = $this->_mapDescriptions($language, $agency);
         $searchObject->categories = $this->_mapCategories($language);
         $searchObject->groups = $this->_mapGroups($language);
         $searchObject->locations = $this->_mapLocations($language);
@@ -229,9 +229,12 @@ class Indexer extends AbstractIndex
     }
 
     /**
+     * @param string $language
+     * @param string $agency
      * @return array
+     * @throws \ReflectionException
      */
-    private function _mapDescriptions($language)
+    private function _mapDescriptions($language, $agency = null)
     {
         $data = $this->mediaObject->getDataForLanguage($language)->toStdClass();
         $description = [];
@@ -263,7 +266,7 @@ class Indexer extends AbstractIndex
                 }
             }
             if(isset($item_info['filter']) && !empty ($item_info['filter'])) {
-                $value = $this->_filterFunction($item_info, $value);
+                $value = $this->_filterFunction($item_info, $value, $agency);
             }
             $description[$index_name] = $value;
         }
@@ -274,12 +277,13 @@ class Indexer extends AbstractIndex
     /**
      * @param array $item
      * @param mixed $first_param legacy
+     * @param string $agency
      * @return void
      * @throws \ReflectionException
      */
-    private function _filterFunction($item, $first_param = null){
+    private function _filterFunction($item, $first_param = null, $agency = null){
         try {
-            return $this->_callMethod($item['filter'], !empty($item['params']) ? $item['params'] : [], $first_param);
+            return $this->_callMethod($item['filter'], !empty($item['params']) ? $item['params'] : [], $first_param, $agency);
         } catch (\Exception $e) {
             echo 'Error in filter function ' .  $item['filter'] . ': ' . $e->getMessage();
             return false;
@@ -290,13 +294,15 @@ class Indexer extends AbstractIndex
      * @param string $method
      * @param array $params
      * @param mixed $first_param legacy
+     * @param mixed $agency
      * @return mixed
      * @throws \ReflectionException
      */
-    private function _callMethod($method, $params = [], $first_param = 'undefined'){
+    private function _callMethod($method, $params = [], $first_param = 'undefined', $agency = null){
         $p = explode('::', $method);
         $Filter = new $p[0]();
         $Filter->mediaObject = $this->mediaObject;
+        $Filter->agency = $agency;
         $ReflectionMethod = new \ReflectionMethod($method);
         $atts = [];
         if($first_param != 'undefined'){

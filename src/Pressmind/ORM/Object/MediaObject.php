@@ -855,17 +855,17 @@ class MediaObject extends AbstractObject
             if(!empty($document->housing_package->id) && !isset($filter['id_housing_packages'][$document->housing_package->id])){
                 $filter['id_housing_packages'][$document->housing_package->id] = ['durations' => [], 'transport_types' => [], 'airports' => [], 'occupancies' => []];
             }
-            if(!$document->housing_package){
+            if(!empty($document->housing_package)){
                 if(!empty($document->occupancy) && !in_array($document->occupancy, $filter['id_housing_packages'][$document->housing_package->id]['occupancies'])){
                     $filter['id_housing_packages'][$document->housing_package->id]['occupancies'][] = $document->occupancy;
                 }
-                if(!empty($document->transport_type) && !empty($filter['id_housing_packages'][$document->housing_package->id]['transport_types']) && !in_array($document->transport_type, $filter['id_housing_packages'][$document->housing_package->id]['transport_types'])){
+                if(!empty($document->transport_type) && !in_array($document->transport_type, $filter['id_housing_packages'][$document->housing_package->id]['transport_types'])){
                     $filter['id_housing_packages'][$document->housing_package->id]['transport_types'][] = $document->transport_type;
                 }
                 if(!empty($document->airport) && !in_array($document->airport, $filter['id_housing_packages'][$document->housing_package->id]['airports'])){
                     $filter['id_housing_packages'][$document->housing_package->id]['airports'][] = $document->airport;
                 }
-                if(!empty($document->booking_package->duration) && !empty($filter['id_housing_packages'][$document->housing_package->id]['durations']) && !in_array($document->booking_package->duration, $filter['id_housing_packages'][$document->housing_package->id]['durations'])){
+                if(!empty($document->booking_package->duration) && !in_array($document->booking_package->duration, $filter['id_housing_packages'][$document->housing_package->id]['durations'])){
                     $filter['id_housing_packages'][$document->housing_package->id]['durations'][] = $document->booking_package->duration;
                 }
             }

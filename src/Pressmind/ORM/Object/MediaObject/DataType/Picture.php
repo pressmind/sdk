@@ -435,9 +435,11 @@ class Picture extends AbstractObject
      * @return Section|null
      */
     public function getSection($sectionName) {
-        foreach ($this->sections as $section) {
-            if($section->section_name == $sectionName) {
-                return $section;
+        if(is_array($this->sections) !== false) {
+            foreach ($this->sections as $section) {
+                if($section->section_name == $sectionName) {
+                    return $section;
+                }
             }
         }
         return null;

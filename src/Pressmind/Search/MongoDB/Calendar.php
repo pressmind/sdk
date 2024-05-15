@@ -136,15 +136,11 @@ class Calendar extends AbstractIndex
                         id_media_object = :id_media_object
                         AND (earlybird_discount = 0 OR earlybird_discount_date_to >= NOW())
                         AND (option_occupancy = :occupancy ) 
-                        AND id_origin = :id_origin
-                        AND (date_departure BETWEEN DATE_ADD(NOW(), INTERVAL :departure_offset_from DAY) 
-                        AND DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY))';
+                        AND id_origin = :id_origin';
             $values = [
                 ':id_media_object' => $this->mediaObject->id,
                 ':id_origin' => $origin,
                 ':occupancy' => $occupancy,
-                ':departure_offset_from' => $config['departure_offset_from'],
-                ':departure_offset_to' => $config['departure_offset_to']
             ];
             $results = $db->fetchAll($query, $values);
             if(!is_null($results)) {
@@ -169,16 +165,12 @@ class Calendar extends AbstractIndex
                         AND transport_type = :transport_type
                         AND (earlybird_discount = 0 OR earlybird_discount_date_to >= NOW())
                         AND (option_occupancy = :occupancy ) 
-                        AND id_origin = :id_origin
-                        AND (date_departure BETWEEN DATE_ADD(NOW(), INTERVAL :departure_offset_from DAY) 
-                        AND DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY))';
+                        AND id_origin = :id_origin';
                 $values = [
                     ':id_media_object' => $this->mediaObject->id,
                     ':id_origin' => $origin,
                     ':occupancy' => $occupancy,
-                    ':transport_type' => $item['transport_type'],
-                    ':departure_offset_from' => $config['departure_offset_from'],
-                    ':departure_offset_to' => $config['departure_offset_to']
+                    ':transport_type' => $item['transport_type']
                 ];
                 if(!empty($item['transport_1_airport'])){
                     $query .= ' AND transport_1_airport = :transport_1_airport';

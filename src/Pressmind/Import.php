@@ -81,6 +81,18 @@ class Import
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::__construct()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
         $this->_client = new Client();
         $this->_import_type = $importType;
+        $this->checkLegacyIssues();
+    }
+
+    /**
+     * Checks for legacy/upgrade issues and aborts the import.
+     * @return void
+     */
+    public function checkLegacyIssues(){
+        $config = Registry::getInstance()->get('config');
+        if(isset($config['data']['search_mongodb']['search']['touristic']['departure_offset_from']) || isset($config['data']['search_mongodb']['search']['touristic']['departure_offset_to'])){
+            exit('Legacy config issue detected: search_mongodb.touristic.departure_offset_from and search_mongodb.touristic.departure_offset_to is not longer supported. Please remove this keys and configure this in data.touristic.date_filter instead.'."\n");
+        }
     }
 
     /**

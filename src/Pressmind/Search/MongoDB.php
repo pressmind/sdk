@@ -90,6 +90,10 @@ class MongoDB extends AbstractSearch
         }
     }
 
+    public function getAgency(){
+        return $this->_agency;
+    }
+
     private function _getCollectionName(){
         return 'best_price_search_based_' . (!empty($this->_language) ? $this->_language.'_' : '') . 'origin_' . $this->_origin.(!empty($this->_agency) ? '_agency_'. $this->_agency: '') ;
     }

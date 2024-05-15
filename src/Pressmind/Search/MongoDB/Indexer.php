@@ -620,8 +620,6 @@ class Indexer extends AbstractIndex
                   AND(duration BETWEEN :duration_range_from AND :duration_range_to) 
                   AND (option_occupancy = :occupancy ) 
                   AND price_mix = 'date_housing'
-                  AND (date_departure BETWEEN DATE_ADD(NOW(), INTERVAL :departure_offset_from DAY) 
-                  AND DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY)) 
                  GROUP BY price_total ORDER BY price_total";
                 $values = [
                     ':id_media_object' => $this->mediaObject->id,
@@ -629,8 +627,6 @@ class Indexer extends AbstractIndex
                     ':duration_range_from' => $duration_range[0],
                     ':duration_range_to' => $duration_range[1].'.9',
                     ':occupancy' => $occupancy,
-                    ':departure_offset_from' => $config['departure_offset_from'],
-                    ':departure_offset_to' => $config['departure_offset_to']
                 ];
                 if(!empty($agency)){
                     $values[':agency'] = $agency;
@@ -693,16 +689,12 @@ class Indexer extends AbstractIndex
                   AND (earlybird_discount = 0 OR earlybird_discount_date_to >= NOW()) 
                   AND(duration BETWEEN :duration_range_from AND :duration_range_to) 
                   AND price_mix != 'date_housing'
-                  AND (date_departure BETWEEN DATE_ADD(NOW(), INTERVAL :departure_offset_from DAY) 
-                  AND DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY)) 
                 GROUP BY price_total ORDER BY price_total";
             $values = [
                 ':id_media_object' => $this->mediaObject->id,
                 ':id_origin' => $origin,
                 ':duration_range_from' => $duration_range[0],
                 ':duration_range_to' => $duration_range[1].'.9',
-                ':departure_offset_from' => $config['departure_offset_from'],
-                ':departure_offset_to' => $config['departure_offset_to']
             ];
             if(!empty($agency)){
                 $values[':agency'] = $agency;
@@ -836,18 +828,12 @@ class Indexer extends AbstractIndex
         $query = "SELECT cast(date_format(date_departure, '%Y') as SIGNED) as year, 
                          cast(date_format(date_departure, '%c') as SIGNED) as month 
                     FROM pmt2core_cheapest_price_speed 
-                    WHERE (date_departure BETWEEN DATE_ADD(NOW(), 
-                        INTERVAL :departure_offset_from DAY) AND DATE_ADD(NOW(), 
-                      INTERVAL :departure_offset_to DAY)) 
-                    AND id_media_object = :id_media_object 
-                    AND id_origin = :id_origin ".(
-                        empty($agency) ? "" : " AND agency = :agency"
-            )." GROUP BY year, month ORDER BY year ASC, month ASC";
+                    WHERE id_media_object = :id_media_object 
+                        AND id_origin = :id_origin ".(empty($agency) ? "" : " AND agency = :agency")." 
+                        GROUP BY year, month ORDER BY year ASC, month ASC";
         $values = [
             ':id_media_object' => $this->mediaObject->id,
             ':id_origin' => $origin,
-            ':departure_offset_from' => $config['departure_offset_from'],
-            ':departure_offset_to' => $config['departure_offset_to'],
         ];
         if(!empty($agency)){
             $values[':agency'] = $agency;
@@ -939,17 +925,13 @@ class Indexer extends AbstractIndex
                          earlybird_discount_date_to, transport_type 
                    FROM pmt2core_cheapest_price_speed 
                    WHERE 
-                       (date_departure BETWEEN DATE_ADD(NOW(), INTERVAL :departure_offset_from DAY) 
-                           AND DATE_ADD(NOW(), INTERVAL :departure_offset_to DAY)) 
-                     AND id_media_object = :id_media_object 
+                     id_media_object = :id_media_object 
                      AND id_origin = :id_origin ".(
                     empty($agency) ? "" : " AND agency = :agency")."
                    GROUP BY duration ORDER BY price_total";
         $values = [
             ':id_media_object' => $this->mediaObject->id,
             ':id_origin' => $origin,
-            ':departure_offset_from' => $config['departure_offset_from'],
-            ':departure_offset_to' => $config['departure_offset_to']
         ];
         if(!empty($agency)){
             $values[':agency'] = $agency;

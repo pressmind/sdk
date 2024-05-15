@@ -965,6 +965,9 @@ class CheapestPriceSpeed extends AbstractObject
      * @param $id_media_object
      */
     public function generateSingleRoomIndex($id_media_object){
+        if(empty($id_media_object)){
+            return;
+        }
         $items = $this->_db->fetchAll("select * from (
                                                     select round((select price_total from pmt2core_cheapest_price_speed
                                                         where

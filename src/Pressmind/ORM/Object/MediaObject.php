@@ -1154,16 +1154,41 @@ class MediaObject extends AbstractObject
         $include_negative_option_in_cheapest_price = !isset(Registry::getInstance()->get('config')['data']['touristic']['include_negative_option_in_cheapest_price']) ? true : Registry::getInstance()->get('config')['data']['touristic']['include_negative_option_in_cheapest_price'];
         $agency_based_option_and_prices_enabled = !isset(Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['enabled']) ? false : Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['enabled'];
         $agencies = empty(Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['allowed_agencies']) || $agency_based_option_and_prices_enabled === false ? [null] : Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['allowed_agencies'];
+        $travel_date_orientation = 'departure';
+        $travel_date_offset = 0;
+        $travel_date_allowed_states = [0, 1, 2, 4, 5];
+        $max_date_offset = 730;
+        if(!empty(Registry::getInstance()->get('config')['data']['touristic']['date_filter']['active'])) {
+            $travel_date_orientation = empty(Registry::getInstance()->get('config')['data']['touristic']['date_filter']['orientation']) ? 'departure' : Registry::getInstance()->get('config')['data']['touristic']['date_filter']['orientation'];
+            $travel_date_offset = empty(Registry::getInstance()->get('config')['data']['touristic']['date_filter']['offset']) ? 0 : Registry::getInstance()->get('config')['data']['touristic']['date_filter']['offset'];
+            $travel_date_allowed_states = empty(Registry::getInstance()->get('config')['data']['touristic']['date_filter']['allowed_states']) ? [0, 1, 2, 3, 4, 5] : Registry::getInstance()->get('config')['data']['touristic']['date_filter']['allowed_states'];
+            $max_date_offset = empty(Registry::getInstance()->get('config')['data']['touristic']['date_filter']['max_date_offset']) ? 730 : Registry::getInstance()->get('config')['data']['touristic']['date_filter']['max_date_offset'];
+            if (!in_array($travel_date_orientation, ['departure', 'arrival'])) {
+                throw new Exception('Error: data.touristic.date_filter.orientation must be either "departure" or "arrival" in config file.');
+            }
+            if (!is_array($travel_date_allowed_states) || count($travel_date_allowed_states) == 0) {
+                throw new Exception('Error: data.touristic.date_filter.date_filter must be an array with min one key in config file.');
+            }
+        }
+
         $CheapestPrice = new CheapestPriceSpeed();
         $CheapestPrice->deleteByMediaObjectId($this->getId());
         $booking_packages = $this->booking_packages;
         $now = new DateTime();
         $now->setTime(0, 0, 0);
+        $now->modify( $travel_date_offset . ' days');
+        $max_date = new DateTime();
+        $max_date->setTime(0, 0, 0);
+        $max_date->modify( $max_date_offset . ' days');
         $c = 0;
         foreach ($agencies as $agency) {
             foreach ($booking_packages as $booking_package) {
                 foreach ($booking_package->dates as $date) {
-                    if ($date->departure < $now || $date->state === 3) {
+                    if(($travel_date_orientation == 'departure' && $date->departure < $now) ||
+                        ($travel_date_orientation == 'arrival' && $date->arrival < $now) ||
+                        ($travel_date_orientation == 'arrival' && $date->arrival > $max_date) ||
+                        ($travel_date_orientation == 'departure' && $date->departure > $max_date) ||
+                        !in_array($date->state, $travel_date_allowed_states)) {
                         continue;
                     }
                     /** @var Item[] $early_bird_discounts */

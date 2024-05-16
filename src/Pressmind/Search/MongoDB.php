@@ -723,22 +723,13 @@ class MongoDB extends AbstractSearch
                 ]
             ];
         }elseif(array_key_first($this->_sort) == 'price_total'){
-            if($allow_invalid_offers){
-                $sort = ['$sort' => [
-                            'has_price' => -1,
-                            'prices.price_total' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1,
-                            'prices.duration' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? -1 : 1,
-                            'sales_priority' => 1
-                        ]
-                ];
-            }else{
-                $sort = ['$sort' => [
-                    'prices.price_total' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1,
-                    'prices.duration' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? -1 : 1,
-                    'sales_priority' => 1
+            $sort = [
+                    '$sort' => [
+                        'prices.price_total' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1,
+                        'prices.duration' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? -1 : 1,
+                        'sales_priority' => 1
                     ]
                 ];
-            }
         }elseif(array_key_first($this->_sort) == 'score'){
             $sort = ['$sort' => [
                         'score' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1,
@@ -787,6 +778,9 @@ class MongoDB extends AbstractSearch
                     'sales_priority' => 1
                 ]
             ];
+        }
+        if($allow_invalid_offers && isset($sort['$sort'])){
+            $sort['$sort'] = array_merge(['has_price' => -1], $sort['$sort']);
         }
 
         $facetStage['$facet']['documents'][] = $sort;

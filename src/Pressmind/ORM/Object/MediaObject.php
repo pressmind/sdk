@@ -1376,7 +1376,7 @@ class MediaObject extends AbstractObject
                                 if (!$is_bookable && !$is_request) {
                                     $cheapestPriceSpeed->state = 5;
                                 }
-                                $cheapestPriceSpeed->infotext = null;
+                                $cheapestPriceSpeed->infotext = $date->text;
                                 $cheapestPriceSpeed->id_option_auto_book = null;
                                 $cheapestPriceSpeed->id_option_required_group = null;  // @TODO deprecated
                                 $cheapestPriceSpeed->included_options_price = $included_options_price;

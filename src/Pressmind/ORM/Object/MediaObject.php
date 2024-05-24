@@ -1950,4 +1950,47 @@ class MediaObject extends AbstractObject
         return $output;
     }
 
+    /**
+     * Returns a list of all extras
+     * @param string $agency
+     * @return array
+     * @throws Exception
+     */
+    public function getExtraOptions($agency = null){
+        $options = [];
+        foreach ($this->booking_packages as $booking_package) {
+            foreach ($booking_package->dates as $date) {
+                $option_list = $date->getAllOptionsButExcludePriceMixOptions($booking_package->price_mix, true, $agency);
+                foreach ($option_list as $option) {
+                    $hash = md5(serialize([$option->name]));
+                    $options[$hash] = [
+                        'name' => $option->name,
+                        'order' => $option->order,
+                    ];
+
+                    if(!isset($options[$hash]['prices'])){
+                        $options[$hash]['prices'] = [];
+                    }
+                    $options[$hash]['prices'][] = [
+                        'price' =>  $option->price,
+                        'departure' => $date->departure,
+                        'duration' => $booking_package->duration,
+                    ];
+
+                    usort($options[$hash]['prices'], function($a, $b) {
+                        return $a['price'] <=> $b['price'];
+                    });
+                    $options[$hash]['price_range'] = [
+                        'min' => $options[$hash]['prices'][array_key_first($options[$hash]['prices'])]['price'],
+                        'max' => $options[$hash]['prices'][array_key_last($options[$hash]['prices'])]['price']
+                    ];
+                }
+            }
+        }
+        usort($options, function($a, $b) {
+            return $a['order'] <=> $b['order'];
+        });
+        return $options;
+    }
+
 }

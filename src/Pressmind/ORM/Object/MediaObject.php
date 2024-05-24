@@ -1965,6 +1965,7 @@ class MediaObject extends AbstractObject
                     $hash = md5(serialize([$option->name]));
                     $options[$hash] = [
                         'name' => $option->name,
+                        'description_long' => $option->description_long,
                         'order' => $option->order,
                     ];
 

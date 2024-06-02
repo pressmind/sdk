@@ -855,7 +855,7 @@ class MediaObject extends AbstractObject
             if(!empty($document->housing_package->id) && !isset($filter['id_housing_packages'][$document->housing_package->id])){
                 $filter['id_housing_packages'][$document->housing_package->id] = ['durations' => [], 'transport_types' => [], 'airports' => [], 'occupancies' => []];
             }
-            if(!empty($document->housing_package)){
+            if(!empty($document->housing_package->id) && isset($filter['id_housing_packages'][$document->housing_package->id])){
                 if(!empty($document->occupancy) && !in_array($document->occupancy, $filter['id_housing_packages'][$document->housing_package->id]['occupancies'])){
                     $filter['id_housing_packages'][$document->housing_package->id]['occupancies'][] = $document->occupancy;
                 }

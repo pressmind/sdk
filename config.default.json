@@ -71,6 +71,10 @@
           "offset" : 0,
           "allowed_states" : [0,1,2,4,5],
           "max_date_offset" : 730
+        },
+        "housing_option_filter" : {
+          "active" : true,
+          "allowed_states" : [0,1,2,3]
         }
       },
       "media_type_custom_import_hooks": {},

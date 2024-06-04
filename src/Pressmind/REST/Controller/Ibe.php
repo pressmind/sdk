@@ -128,8 +128,8 @@ class Ibe
         }
         $result['starting_points']['total'] = count(StartingPoint::getOptionsByZipRadius($id_starting_point, $icc, null, 20, 0, null));
         $result['starting_points']['starting_point_options'] = StartingPoint::getOptionsByZipRadius($id_starting_point, $icc, null, 20,0, $starting_points_limit, $starting_points_order_by_code_list);
-        $result['pickup_services']['total'] = count(StartingPoint::getPickupOptionByZip($id_starting_point, $icc, null, 20, 0, null));
-        $result['pickup_services']['options'] = StartingPoint::getPickupOptionByZip($id_starting_point, $icc, null, 20,10);
+        $result['pickup_services']['total'] = count(StartingPoint::getPickupOptionByZip($id_starting_point, $icc));
+        $result['pickup_services']['options'] = StartingPoint::getPickupOptionByZip($id_starting_point, $icc);
         $result['exit_points']['total'] = count(StartingPoint::getExitOptionsByZipRadius($id_exit_point, $icc, null, 20, 0, null));
         $result['exit_points']['exit_point_options'] = StartingPoint::getExitOptionsByZipRadius($id_exit_point, $icc, null, 20,0, $starting_points_limit);
         $result['has_pickup_services'] = Startingpoint::hasPickupService($id_starting_point, $icc);

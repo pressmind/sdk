@@ -1956,15 +1956,19 @@ class MediaObject extends AbstractObject
     /**
      * Returns a list of all extras
      * @param string $agency
+     * @param bool $filter_auto_book_zero_price
      * @return array
      * @throws Exception
      */
-    public function getExtraOptions($agency = null){
+    public function getExtraOptions($agency = null, $filter_auto_book_zero_price = false){
         $options = [];
         foreach ($this->booking_packages as $booking_package) {
             foreach ($booking_package->dates as $date) {
                 $option_list = $date->getAllOptionsButExcludePriceMixOptions($booking_package->price_mix, true, $agency);
                 foreach ($option_list as $option) {
+                    if($filter_auto_book_zero_price && !empty($option->auto_book) && $option->price == 0){
+                        continue;
+                    }
                     $hash = md5(serialize([$option->name]));
                     $options[$hash] = [
                         'name' => $option->name,

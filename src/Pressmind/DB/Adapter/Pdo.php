@@ -155,6 +155,17 @@ class Pdo implements AdapterInterface
     /**
      * @param string $tableName
      * @param array $data
+     * @return mixed|void
+     * @throws Exception
+     */
+    public function replace($tableName, $data)
+    {
+       return $this->insert($tableName, $data, true);
+    }
+
+    /**
+     * @param string $tableName
+     * @param array $data
      * @param array $where
      * @throws Exception
      */

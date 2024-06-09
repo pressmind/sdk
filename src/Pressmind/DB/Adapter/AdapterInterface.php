@@ -31,7 +31,7 @@ interface AdapterInterface
     public function execute($query, $params = null);
 
     /**
-     * Inserts associated array $data in table $tableName.
+     * Inserts or Replaces associated array $data in table $tableName.
      * Keys of $data array must match the table's column names
      * @param string $tableName
      * @param array $data
@@ -39,6 +39,16 @@ interface AdapterInterface
      * @return mixed
      */
     public function insert($tableName, $data, $replace_into = true);
+
+
+    /**
+     * Replaces associated array $data in table $tableName.
+     * Keys of $data array must match the table's column names
+     * @param string $tableName
+     * @param array $data
+     * @return mixed
+     */
+    public function replace($tableName, $data);
 
     /**
      * Updates associated array $data in table $tableName.

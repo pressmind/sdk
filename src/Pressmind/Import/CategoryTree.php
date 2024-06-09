@@ -64,9 +64,8 @@ class CategoryTree extends AbstractImport implements ImportInterface
                     $tree = new \Pressmind\ORM\Object\CategoryTree();
                     $tree->id = $tree_info->id;
                     $tree->name = $tree_info->name;
-                    try { // TODO optimize this.
-                        $tree->delete();
-                        $tree->create();
+                    try {
+                        $tree->replace();
                     } catch (Exception $e) {
                         $this->_log[] = 'Importer::_importCategoryTrees(): Error importing tree ID ' . $tree->id . ': ' . $e->getMessage();
                         $this->_errors[] = 'Importer::_importCategoryTrees(): Error importing tree ID ' . $tree->id . ': ' . $e->getMessage();
@@ -102,8 +101,7 @@ class CategoryTree extends AbstractImport implements ImportInterface
             $category_tree_item->code = empty($item->code) ? null : $item->code;
             $category_tree_item->sort = $sort;
             try {
-                $category_tree_item->delete();
-                $category_tree_item->create();
+                $category_tree_item->replace();
             } catch (Exception $e) {
                 $this->_log[] = ' Importer::_iterateCategoryTreeItems(): Error importing tree item ID ' . $item->id . ': '. $e->getMessage();
                 $this->_errors[] = 'Importer::_iterateCategoryTreeItems(): Error importing tree item ID ' . $item->id . ': '. $e->getMessage();

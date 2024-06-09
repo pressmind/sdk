@@ -733,6 +733,35 @@ abstract class AbstractObject
     /**
      * @throws Exception
      */
+    public function replace()
+    {
+        $required_check = $this->checkForRequiredProperties();
+        if ($required_check !== true) {
+            throw new Exception('Missing required properties (create): ' . implode(', ', $required_check) . ' in ' . get_class($this));
+        }
+        $field_list = $this->getPropertyNames();
+        $values = [];
+        foreach ($field_list as $index => $field_name) {
+            if ($field_name != $this->getDbPrimaryKey() || $this->_dont_use_autoincrement_on_primary_key == true) {
+                $values[$field_name] = $this->parsePropertyValue($field_name, $this->$field_name, 'output');
+            } else {
+                unset($field_list[$index]);
+            }
+        }
+        $id = $this->_db->insert($this->getDbTableName(), $values, true);
+        if($this->_dont_use_autoincrement_on_primary_key == false) {
+            $this->setId($id);
+        }
+        $this->_createHasManyRelations();
+        $this->_createHasOneRelations();
+        $this->_createBelongsToRelations();
+        $this->_createManyToManyRelations();
+        return true;
+    }
+
+    /**
+     * @throws Exception
+     */
     private function _createHasManyRelations()
     {
         foreach ($this->_definitions['properties'] as $property) {

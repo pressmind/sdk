@@ -21,7 +21,7 @@ class Import
         if(!isset($parameters['id_media_object']) && preg_match('/^[0-9]+$/', $parameters['id_media_object'])) {
             return [
                 'success' => false,
-                'msg' => 'Code 500: Parameter id_media_object is missing or is not a number',
+                'msg' => 'Error: Parameter id_media_object is missing or is not a number',
                 'data' => null
             ];
         }
@@ -33,23 +33,43 @@ class Import
         }
         if(file_exists($tmp_import_folder . DIRECTORY_SEPARATOR . $id_media_object)) {
             return [
-                'success' => false,
-                'msg' => 'Code 531: ID '.$id_media_object.' is already in queue',
+                'success' => true,
+                'msg' => 'Info: ID '.$id_media_object.' is already in queue',
                 'data' => null
             ];
         }
         if(!file_put_contents($tmp_import_folder . DIRECTORY_SEPARATOR . $id_media_object, 'created_from: api_import')) {
             return [
                 'success' => false,
-                'msg' => 'Code 531: Can not write file in queue storage',
+                'msg' => 'Error: Can not write file in queue storage',
                 'data' => null
             ];
         }
         return [
             'success' => true,
-            'msg' => 'object added to queue',
+            'msg' => 'Success: object added to queue',
             'data' => null
         ];
     }
+
+    public function fullimport($parameters)
+    {
+        try{
+            $Import = new \Pressmind\Import();
+            $Import->getIDsToImport();
+        }catch (Exception $e) {
+            return [
+                'success' => false,
+                'msg' => 'Error: '.$e->getMessage(),
+                'data' => null
+            ];
+        }
+        return [
+            'success' => true,
+            'msg' => 'Success: objects added to queue',
+            'data' => null
+        ];
+    }
+
 }
 

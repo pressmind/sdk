@@ -87,11 +87,12 @@ class Import
     /**
      * Checks for legacy/upgrade issues and aborts the import.
      * @return void
+     * @throws Exception
      */
     public function checkLegacyIssues(){
         $config = Registry::getInstance()->get('config');
         if(isset($config['data']['search_mongodb']['search']['touristic']['departure_offset_from']) || isset($config['data']['search_mongodb']['search']['touristic']['departure_offset_to'])){
-            exit('Legacy config issue detected: search_mongodb.touristic.departure_offset_from and search_mongodb.touristic.departure_offset_to is not longer supported. Please remove this keys and configure this in data.touristic.date_filter instead.'."\n");
+            throw new Exception('Legacy config issue detected: search_mongodb.touristic.departure_offset_from and search_mongodb.touristic.departure_offset_to is not longer supported. Please remove this keys and configure this in data.touristic.date_filter instead.'."\n");
         }
     }
 
@@ -110,6 +111,20 @@ class Import
      */
     public function import($id_pool = null, $allowed_object_types = null, $allowed_visibilities = null)
     {
+        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::import()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
+        $this->getIDsToImport($id_pool, $allowed_object_types, $allowed_visibilities);
+        $this->importMediaObjectsFromFolder();
+        $this->removeOrphans();
+    }
+
+    /**
+     * @param $id_pool
+     * @param $allowed_object_types
+     * @param $allowed_visibilities
+     * @return void
+     * @throws Exception
+     */
+    public function getIDsToImport($id_pool = null, $allowed_object_types = null, $allowed_visibilities = null){
         $conf = Registry::getInstance()->get('config');
         if(is_null($allowed_object_types)) {
             $allowed_object_types = array_keys($conf['data']['media_types']);
@@ -117,7 +132,6 @@ class Import
                 $allowed_object_types = $conf['data']['primary_media_type_ids'];
             }
         }
-        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::import()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
         foreach ($allowed_object_types as $allowed_object_type) {
             if(is_null($allowed_visibilities)) {
                 $allowed_visibilities = $conf['data']['media_types_allowed_visibilities'][$allowed_object_type];
@@ -135,8 +149,6 @@ class Import
                 }
             }
         }
-        $this->importMediaObjectsFromFolder();
-        $this->removeOrphans();
     }
 
     /**
@@ -168,6 +180,7 @@ class Import
             $this->_importIds($nextStartIndex, $params, $numItems);
         }
     }
+
 
     /**
      * @throws Exception

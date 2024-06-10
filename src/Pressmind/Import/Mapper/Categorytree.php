@@ -38,6 +38,9 @@ class Categorytree implements MapperInterface
                         $mapped_object->id_item = $item->id;
                         $mapped_object->is_tail = $level === $level_count;
                         $mapped_object->id_object_type = $pObject->id_object_type;
+                        $mapped_object->is_primary = !empty($item->is_primary);
+                        $mapped_object->valid_from = empty($item->valid_from) ? null : new \DateTime($item->valid_from);
+                        $mapped_object->valid_to = empty($item->valid_to) ? null : new \DateTime($item->valid_to);
                         $keys[] = $item->id;
                         $result[] = $mapped_object;
                         $level++;

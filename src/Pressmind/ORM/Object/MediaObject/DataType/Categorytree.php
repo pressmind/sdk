@@ -1,8 +1,10 @@
 <?php
 
 namespace Pressmind\ORM\Object\MediaObject\DataType;
+use DateTime;
 use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\CategoryTree\Item;
+use Pressmind\ORM\Object\Touristic\Date;
 
 /**
  * Class Categorytree
@@ -16,6 +18,9 @@ use Pressmind\ORM\Object\CategoryTree\Item;
  * @property integer $id_tree
  * @property string $id_item
  * @property boolean $is_tail
+ * @property boolean $is_primary
+ * @property DateTime $valid_from
+ * @property DateTime $valid_to
  * @property \Pressmind\ORM\Object\CategoryTree $tree
  * @property Item $item;
  */
@@ -161,6 +166,30 @@ class Categorytree extends AbstractObject
                 'title' => 'is_tail',
                 'name' => 'is_tail',
                 'type' => 'boolean',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+            ],
+            'is_primary' => [
+                'title' => 'is_primary',
+                'name' => 'is_primary',
+                'type' => 'boolean',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+            ],
+            'valid_from' => [
+                'title' => 'valid_from',
+                'name' => 'valid_from',
+                'type' => 'datetime',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+            ],
+            'valid_to' => [
+                'title' => 'valid_to',
+                'name' => 'valid_to',
+                'type' => 'datetime',
                 'required' => false,
                 'filters' => null,
                 'validators' => null,

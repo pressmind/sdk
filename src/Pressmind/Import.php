@@ -176,22 +176,38 @@ class Import
     {
         $config = Registry::getInstance()->get('config');
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::_importMediaObjectsFromFolder()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
-        $dir = new DirectoryIterator(str_replace('APPLICATION_PATH', APPLICATION_PATH, $config['tmp_dir']) . DIRECTORY_SEPARATOR . $this->_tmp_import_folder);
-        foreach ($dir as $file_info) {
-            if (!$file_info->isDot()) {
-                $id_media_object = $file_info->getFilename();
+        $tmp_import_folder = str_replace('APPLICATION_PATH', APPLICATION_PATH, $config['tmp_dir']) . DIRECTORY_SEPARATOR . $this->_tmp_import_folder;
+        $ids = $this->getMediaObjectsFromFolder();
+        foreach ($ids as $id_media_object) {
                 $import_linked_media_objects = false;
                 if(isset($config['data']['primary_media_type_ids']) && !empty($config['data']['primary_media_type_ids'])) {
                     $import_linked_media_objects = true;
                 }
                 if ($this->importMediaObject($id_media_object, $import_linked_media_objects)) {
-                    unlink($file_info->getPathname());
+                    unlink($tmp_import_folder. DIRECTORY_SEPARATOR . $id_media_object);
                     $this->_imported_ids[] = $id_media_object;
                 }
+
+        }
+        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . 'Fullimport finished', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function getMediaObjectsFromFolder()
+    {
+        $config = Registry::getInstance()->get('config');
+        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::_importMediaObjectsFromFolder()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
+        $dir = new DirectoryIterator(str_replace('APPLICATION_PATH', APPLICATION_PATH, $config['tmp_dir']) . DIRECTORY_SEPARATOR . $this->_tmp_import_folder);
+        $ids = [];
+        foreach ($dir as $file_info) {
+            if (!$file_info->isDot()) {
+                $id_media_object = $file_info->getFilename();
+                $ids[] = $id_media_object;
             }
         }
-
-        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . 'Fullimport finished', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        return $ids;
     }
 
     /**

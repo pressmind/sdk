@@ -5,6 +5,7 @@ namespace Pressmind\REST\Controller;
 
 
 use Exception;
+use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\MediaObject;
 use Pressmind\Registry;
 
@@ -15,43 +16,40 @@ class Import
      * @return array
      * @throws Exception
      */
-    public function index($parameters)
+    public function addToQueue($parameters)
     {
-        $config = Registry::getInstance()->get('config');
-
-        if(!isset($parameters['id_media_object'])) {
-            return ['Status' => 'Code 500: Parameter id_media_object is missing'];
-        }
-        if(isset($parameters['backgroundMode'])) {
-            $response = [
-                'status' => 200,
-                'msg' => 'BackgroundMode active: import run in background',
-                'url' => null,
-                'warnings' => null
+        if(!isset($parameters['id_media_object']) && preg_match('/^[0-9]+$/', $parameters['id_media_object'])) {
+            return [
+                'success' => false,
+                'msg' => 'Code 500: Parameter id_media_object is missing or is not a number',
+                'data' => null
             ];
-            $import_script_path = APPLICATION_PATH . '/cli/import.php';
-            $php_binary = isset($config['server']['php_cli_binary']) && !empty($config['server']['php_cli_binary']) ? $config['server']['php_cli_binary'] : 'php';
-
-            $cmd = 'bash -c "exec nohup ' . $php_binary . ' '. $import_script_path .' mediaobject ' . $parameters['id_media_object'] . ' >/dev/null 2>&1 &"';
-
-            exec($cmd);
-
-            return $response;
         }
-        $importer = new \Pressmind\Import('mediaobject');
-        $preview_url = null;
-        $importer->importMediaObject($parameters['id_media_object']);
-
-        $return = ['status' => 'Code 200: Import erfolgreich', 'url' => $preview_url, 'msg' => implode("\n", $importer->getLog())];
-        if(isset($parameters['preview']) && $parameters['preview'] == 1) {
-            $config = Registry::getInstance()->get('config');
-            $preview_url = str_replace(['{{id_media_object}}', '{{preview}}'], [$parameters['id_media_object'], '1'], $config['data']['preview_url']);
-            if (substr($preview_url, 0, 4) != 'http') {
-                $preview_url = WEBSERVER_HTTP . $preview_url;
-            }
-            $return['redirect'] = $preview_url;
+        $id_media_object = $parameters['id_media_object'];
+        $config = Registry::getInstance()->get('config');
+        $tmp_import_folder = str_replace('APPLICATION_PATH', APPLICATION_PATH, $config['tmp_dir']) . DIRECTORY_SEPARATOR . 'import_ids';
+        if(!file_exists($tmp_import_folder)) {
+            @mkdir($tmp_import_folder, 0770, true);
         }
-        return $return;
+        if(file_exists($tmp_import_folder . DIRECTORY_SEPARATOR . $id_media_object)) {
+            return [
+                'success' => false,
+                'msg' => 'Code 531: ID '.$id_media_object.' is already in queue',
+                'data' => null
+            ];
+        }
+        if(!file_put_contents($tmp_import_folder . DIRECTORY_SEPARATOR . $id_media_object, 'created_from: api_import')) {
+            return [
+                'success' => false,
+                'msg' => 'Code 531: Can not write file in queue storage',
+                'data' => null
+            ];
+        }
+        return [
+            'success' => true,
+            'msg' => 'object added to queue',
+            'data' => null
+        ];
     }
 }
 

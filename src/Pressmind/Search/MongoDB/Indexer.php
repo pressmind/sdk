@@ -440,6 +440,9 @@ class Indexer extends AbstractIndex
             if($type == 'categorytree') {
                 if(is_array($data->$varName)) {
                     foreach ($data->$varName as $treeitem) {
+                        if(empty($treeitem->item->id)){
+                            continue;
+                        }
                         $stdItem = new \stdClass();
                         $stdItem->id_item = $treeitem->item->id;
                         $stdItem->name = $treeitem->item->name;
@@ -478,7 +481,7 @@ class Indexer extends AbstractIndex
      */
     public static function getTreeDepth($serialized_list, $id, $level = 0){
         foreach($serialized_list as $item){
-            if($item->item->id == $id && !empty($item->item->id_parent)){
+            if(!empty($item->item->id) && $item->item->id == $id && !empty($item->item->id_parent)){
                 $level++;
                 return self::getTreeDepth($serialized_list, $item->item->id_parent, $level);
             }

@@ -195,7 +195,7 @@ class Indexer extends AbstractIndex
         $searchObject->categories = $this->_mapCategories($language);
         $searchObject->groups = $this->_mapGroups($language);
         $searchObject->locations = $this->_mapLocations($language);
-        $searchObject->prices = $this->_aggregatePrices($origin, $agency);
+        $searchObject->prices = $this->_aggregatePricesV2($origin, $agency);
         $searchObject->has_price = !empty($searchObject->prices);
         $searchObject->fulltext = $this->_createFulltext($language);
         $searchObject->departure_date_count = $this->_createDepartureDateCount($origin, $agency);
@@ -585,6 +585,7 @@ class Indexer extends AbstractIndex
     }
 
     /**
+     * @deprecated
      * @param int $origin
      * @param string $agency
      * @return array
@@ -667,7 +668,6 @@ class Indexer extends AbstractIndex
             }
         }
 
-
         // price mixes NOT date_housing, this price_mix type doesn't have a occupancy!
         foreach ($config['duration_ranges'] as $duration_range) {
             $query = "SELECT 
@@ -741,6 +741,204 @@ class Indexer extends AbstractIndex
 
         usort($prices, [$this, '_priceSort']);
 
+        return $prices;
+    }
+
+    /**
+     * @param int $origin
+     * @param string $agency
+     * @return array
+     * @throws \Exception
+     */
+    private function _aggregatePricesV2($origin, $agency = null)
+    {
+        $config = $this->_config['search']['touristic'];
+        $prices = [];
+        /** @var Pdo $db */
+        $db = Registry::getInstance()->get('db');
+        // price mix date_housing
+        foreach ($config['occupancies'] as $occupancy) {
+            foreach ($config['duration_ranges'] as $duration_range) {
+                $query = "select option_occupancy as occupancy,
+                                 group_concat(date_departure) as date_departures,
+                                  max(duration) as duration,
+                                  price_total,
+                                  price_regular_before_discount,
+                                  earlybird_discount,
+                                  earlybird_discount_f,
+                                  earlybird_discount_date_to,
+                                  earlybird_name,
+                                  option_board_type,
+                                  price_mix,
+                                  transport_type,
+                                  guaranteed,
+                                  CASE
+                                    WHEN state = 3 THEN 100
+                                    WHEN state = 1 THEN 200
+                                    WHEN state = 5 THEN 300
+                                  ELSE 300
+                                  END AS state
+                            from (SELECT state,
+                                         option_occupancy,
+                                         date_departure,
+                                         price_total,
+                                         price_regular_before_discount,
+                                         earlybird_discount,
+                                         earlybird_discount_f,
+                                         earlybird_discount_date_to,
+                                         earlybird_name,
+                                         option_board_type,
+                                         price_mix,
+                                         transport_type,
+                                         guaranteed,
+                                         duration,
+                                         ROW_NUMBER() OVER (PARTITION BY date_departure ORDER BY FIELD(state, 3, 1, 5, 0), price_total ASC) AS r
+                                  from pmt2core_cheapest_price_speed
+                                  where   
+                                      id_media_object = :id_media_object 
+                                    AND id_origin = :id_origin
+                                    ".(empty($agency) ? "" : " AND agency = :agency")."
+                                    AND (earlybird_discount = 0 OR earlybird_discount_date_to >= NOW())
+                                    AND(duration BETWEEN :duration_range_from AND :duration_range_to) 
+                                    AND (option_occupancy = :occupancy ) 
+                                    AND price_mix = 'date_housing') as t
+                            where r = 1
+                            group by price_total;";
+
+                $values = [
+                    ':id_media_object' => $this->mediaObject->id,
+                    ':id_origin' => $origin,
+                    ':duration_range_from' => $duration_range[0],
+                    ':duration_range_to' => $duration_range[1].'.9',
+                    ':occupancy' => $occupancy,
+                ];
+                if(!empty($agency)){
+                    $values[':agency'] = $agency;
+                }
+                $results = $db->fetchAll($query, $values);
+                if(!is_null($results)) {
+                    foreach($results as $result) {
+                        $date_departures = array_unique(explode(',', $result->date_departures));
+                        asort($date_departures);
+                        $formatted_date_departures = [];
+                        $formatted_guaranteed_departures = [];
+                        foreach ($date_departures as $k => $date_departure) {
+                            $date = \DateTime::createFromFormat('Y-m-d H:i:s', $date_departure);
+                            if (empty($date)) {
+                                echo 'error: date is not valid'; // check group_concat max size see bootstrap.php
+                                break(1);
+                            }
+                            $formatted_date_departures[] = $date->format(DATE_RFC3339_EXTENDED);
+                            if(!empty($result->guaranteed)){
+                                $formatted_guaranteed_departures[] = $date->format(DATE_RFC3339_EXTENDED);
+                            }
+                        }
+                        $result->date_departures = $formatted_date_departures;
+                        unset($result->guaranteed);
+                        $result->guaranteed_departures = $formatted_guaranteed_departures;
+                        $result->occupancy = intval($result->occupancy);
+                        $result->duration = floatval($result->duration);
+                        $result->price_total = floatval($result->price_total); // @TODO pseudo price handling is missing
+                        $result->price_regular_before_discount = floatval($result->price_regular_before_discount);
+                        $result->earlybird_discount = floatval($result->earlybird_discount);
+                        $result->earlybird_discount_f = floatval($result->earlybird_discount_f);
+                        $prices[] = $result;
+                    }
+                }
+            }
+        }
+        // price mixes NOT date_housing, this price_mix type doesn't have a occupancy!
+        foreach ($config['duration_ranges'] as $duration_range) {
+            $query = "select option_occupancy as occupancy,
+                                 group_concat(date_departure) as date_departures,
+                                  max(duration) as duration,
+                                  price_total,
+                                  price_regular_before_discount,
+                                  earlybird_discount,
+                                  earlybird_discount_f,
+                                  earlybird_discount_date_to,
+                                  earlybird_name,
+                                  option_board_type,
+                                  price_mix,
+                                  transport_type,
+                                  guaranteed,
+                                  CASE
+                                    WHEN state = 3 THEN 100
+                                    WHEN state = 1 THEN 200
+                                    WHEN state = 5 THEN 300
+                                  ELSE 300
+                                  END AS state
+                            from (SELECT state,
+                                         option_occupancy,
+                                         date_departure,
+                                         price_total,
+                                         price_regular_before_discount,
+                                         earlybird_discount,
+                                         earlybird_discount_f,
+                                         earlybird_discount_date_to,
+                                         earlybird_name,
+                                         option_board_type,
+                                         price_mix,
+                                         transport_type,
+                                         guaranteed,
+                                         duration,
+                                         ROW_NUMBER() OVER (PARTITION BY date_departure ORDER BY FIELD(state, 3, 1, 5, 0), price_total ASC) AS r
+                                  from pmt2core_cheapest_price_speed
+                                  where   
+                                      id_media_object = :id_media_object 
+                                    AND id_origin = :id_origin
+                                    ".(empty($agency) ? "" : " AND agency = :agency")."
+                                    AND (earlybird_discount = 0 OR earlybird_discount_date_to >= NOW())
+                                    AND(duration BETWEEN :duration_range_from AND :duration_range_to) 
+                                    AND price_mix != 'date_housing') as t
+                            where r = 1
+                            group by price_total;";
+            $values = [
+                ':id_media_object' => $this->mediaObject->id,
+                ':id_origin' => $origin,
+                ':duration_range_from' => $duration_range[0],
+                ':duration_range_to' => $duration_range[1].'.9',
+            ];
+            if(!empty($agency)){
+                $values[':agency'] = $agency;
+            }
+            $results = $db->fetchAll($query, $values);
+            $used_departures = [];
+            if(!is_null($results)) {
+                foreach($results as $result){
+                    $date_departures = array_unique(explode(',', $result->date_departures));
+                    asort($date_departures);
+                    $formatted_date_departures = [];
+                    $formatted_guaranteed_departures = [];
+                    foreach ($date_departures as $k => $date_departure){
+                        if(in_array($date_departure, $used_departures) ){
+                            continue;
+                        }
+                        $used_departures[] = $date_departure;
+                        $date = \DateTime::createFromFormat('Y-m-d H:i:s', $date_departure);
+                        if(empty($date)){
+                            echo 'error: date is not valid';
+                            break(1);
+                        }
+                        $formatted_date_departures[] = $date->format(DATE_RFC3339_EXTENDED);
+                        if(!empty($result->guaranteed)){
+                            $formatted_guaranteed_departures[] = $date->format(DATE_RFC3339_EXTENDED);
+                        }
+                    }
+                    $result->date_departures = $formatted_date_departures;
+                    unset($result->guaranteed);
+                    $result->guaranteed_departures = $formatted_guaranteed_departures;
+                    $result->occupancy = null;
+                    $result->duration = floatval($result->duration);
+                    $result->price_total = floatval($result->price_total);
+                    $result->price_regular_before_discount = floatval($result->price_regular_before_discount);
+                    $result->earlybird_discount = floatval($result->earlybird_discount);
+                    $result->earlybird_discount_f = floatval($result->earlybird_discount_f);
+                    $prices[] = $result;
+                }
+            }
+        }
+        usort($prices, [$this, '_priceSort']);
         return $prices;
     }
 

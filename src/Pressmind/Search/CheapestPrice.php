@@ -6,6 +6,9 @@ namespace Pressmind\Search;
 
 class CheapestPrice
 {
+    const STATE_BOOKABLE = 3;
+    const STATE_REQUEST = 1;
+    const STATE_STOP = 5;
     public $id = null;
     public $duration_from = null;
     public $duration_to = null;
@@ -23,4 +26,10 @@ class CheapestPrice
     public $transport_1_airport = [];
     public $origin = null;
     public $agency = null;
+    public $state = null;
+    /**
+     * Leave empty for no fallback
+     * @var int[] $state_fallback_order
+     */
+    public $state_fallback_order = [self::STATE_BOOKABLE, self::STATE_REQUEST, self::STATE_STOP];
 }

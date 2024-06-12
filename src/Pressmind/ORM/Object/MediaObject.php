@@ -677,6 +677,7 @@ class MediaObject extends AbstractObject
         $now = new DateTime();
         $where = "id_media_object = " . $this->getId()." AND price_total > 0";
         $occupancy_filter_is_set = false;
+        $state_filter_is_set = false;
         if(!is_null($filters)) {
             if(!empty($filters->duration_from) && !empty($filters->duration_to)) {
                 $where .= ' AND duration BETWEEN ' . $filters->duration_from . ' AND ' . $filters->duration_to;
@@ -728,16 +729,17 @@ class MediaObject extends AbstractObject
             if(!empty($filters->id)) {
                 $where .= ' AND id = ' . $filters->id;
             }
-
             if(!empty($filters->origin)) {
                 $where .= ' AND origin = ' . $filters->origin;
             }
-
             if(!empty($filters->agency)) {
                 $where .= ' AND agency = ' . $filters->agency;
             }
+            if(!empty($filters->state)) {
+                $where .= ' AND state = '.$filters->state;
+                $state_filter_is_set = true;
+            }
         }
-
         if(!$occupancy_filter_is_set && isset($filters->occupancies_disable_fallback) && $filters->occupancies_disable_fallback === false) {
             $cheapest_prices = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 2', $order, $limit);
             if (empty($cheapest_prices)) {
@@ -748,6 +750,14 @@ class MediaObject extends AbstractObject
             }
         } else {
             $cheapest_prices = CheapestPriceSpeed::listAll($where, $order, $limit);
+        }
+        if(!empty($filters->state_fallback_order) && $state_filter_is_set === true && empty($cheapest_prices)) {
+            $fallback_filter = clone $filters;
+            $fallback_filter->state_fallback_order = array_slice($filters->state_fallback_order, (int)array_search($filters->state, $filters->state_fallback_order) + 1);
+            if(!empty($fallback_filter->state_fallback_order[0])){
+                $fallback_filter->state = $fallback_filter->state_fallback_order[0];
+                $cheapest_prices = $this->getCheapestPrices($fallback_filter, $order, $limit);
+            }
         }
         return $cheapest_prices;
     }

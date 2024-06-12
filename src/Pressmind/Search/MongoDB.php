@@ -421,12 +421,18 @@ class MongoDB extends AbstractSearch
                                 'if' => [
                                     '$or' => [
                                         ['$lt' =>
-                                            ['$$this.price_total', '$$value.price_total']
+                                            ['$$this.state', '$$value.state']
                                         ],
                                         ['$and' => [
-                                            ['$eq' => ['$$this.price_total', '$$value.price_total']],
-                                            ['$gt' => ['$$this.duration', '$$value.duration']]
-                                        ]
+                                                ['$eq' => ['$$this.state', '$$value.state']],
+                                                ['$lt' => ['$$this.price_total', '$$value.price_total']]
+                                            ]
+                                        ],
+                                        ['$and' => [
+                                                ['$eq' => ['$$this.state', '$$value.state']],
+                                                ['$eq' => ['$$this.price_total', '$$value.price_total']],
+                                                ['$gt' => ['$$this.duration', '$$value.duration']]
+                                            ]
                                         ]
                                     ]
                                 ],

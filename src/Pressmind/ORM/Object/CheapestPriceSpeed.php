@@ -132,7 +132,14 @@ class CheapestPriceSpeed extends AbstractObject
                         'id_media_object',
                         'price_total'
                     ]
-                ]
+                ],
+                 'state' => [
+                    'type' => 'index',
+                    'columns' => [
+                        'state',
+                        'date_departure',
+                    ]
+                ],
             ]
         ],
         'properties' => [

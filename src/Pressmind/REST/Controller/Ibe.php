@@ -103,7 +103,11 @@ class Ibe
         }else{
             $use_ways = array_filter(array_merge($booking->id_transport_way_1, $booking->id_transport_way_2));
         }
-        $result['transport_pairs'] = $date->getTransportPairs([0,2,3], $use_ways, $use_transport_types, 1, false, $ida);
+        $transport_allowed_states = [0, 2, 3];
+        if(!empty(Registry::getInstance()->get('config')['data']['touristic']['transport_filter']['active'])) {
+            $transport_allowed_states = empty(Registry::getInstance()->get('config')['data']['touristic']['transport_filter']['allowed_states']) ? $transport_allowed_states : Registry::getInstance()->get('config')['data']['touristic']['transport_filter']['allowed_states'];
+        }
+        $result['transport_pairs'] = $date->getTransportPairs($transport_allowed_states, $use_ways, $use_transport_types, 1, false, $ida);
 
         $starting_points_limit = 10;
         $starting_points_order_by_code_list = [];

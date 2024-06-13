@@ -1182,7 +1182,11 @@ class MediaObject extends AbstractObject
         }
         $housing_option_allowed_states = [0, 1, 2, 3];
         if(!empty(Registry::getInstance()->get('config')['data']['touristic']['housing_option_filter']['active'])) {
-            $housing_option_allowed_states = empty(Registry::getInstance()->get('config')['data']['touristic']['housing_option_filter']['allowed_states']) ? [0, 1, 2, 3] : Registry::getInstance()->get('config')['data']['touristic']['housing_option_filter']['allowed_states'];
+            $housing_option_allowed_states = empty(Registry::getInstance()->get('config')['data']['touristic']['housing_option_filter']['allowed_states']) ? $housing_option_allowed_states : Registry::getInstance()->get('config')['data']['touristic']['housing_option_filter']['allowed_states'];
+        }
+        $transport_allowed_states = [0, 2, 3];
+        if(!empty(Registry::getInstance()->get('config')['data']['touristic']['transport_filter']['active'])) {
+            $transport_allowed_states = empty(Registry::getInstance()->get('config')['data']['touristic']['transport_filter']['allowed_states']) ? $transport_allowed_states : Registry::getInstance()->get('config')['data']['touristic']['transport_filter']['allowed_states'];
         }
         $CheapestPrice = new CheapestPriceSpeed();
         $CheapestPrice->deleteByMediaObjectId($this->getId());
@@ -1207,7 +1211,7 @@ class MediaObject extends AbstractObject
                     /** @var Item[] $early_bird_discounts */
                     $early_bird_discounts = is_null($date->early_bird_discount_group) ? [null] : $date->early_bird_discount_group->items;
                     /** @var Transport[] $transport_pairs */
-                    $transport_pairs = count($date->transports) > 0 ? $date->getTransportPairs([0, 2, 3], [], [], null, true, $agency) : [null];
+                    $transport_pairs = count($date->transports) > 0 ? $date->getTransportPairs($transport_allowed_states, [], [], null, true, $agency) : [null];
                     $options = [];
                     if ($booking_package->price_mix == 'date_housing') {
                         $options = $date->getHousingOptions($housing_option_allowed_states, true, $agency);

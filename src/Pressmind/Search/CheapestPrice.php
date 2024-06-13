@@ -26,7 +26,7 @@ class CheapestPrice
     public $transport_1_airport = [];
     public $origin = null;
     public $agency = null;
-    public $state = null;
+    public $state = self::STATE_BOOKABLE;
     /**
      * Leave empty for no fallback
      * @var int[] $state_fallback_order

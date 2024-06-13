@@ -75,6 +75,10 @@
         "housing_option_filter" : {
           "active" : true,
           "allowed_states" : [0,1,2,3]
+        },
+        "transport_filter" : {
+          "active" : true,
+          "allowed_states" : [0,2,3]
         }
       },
       "media_type_custom_import_hooks": {},

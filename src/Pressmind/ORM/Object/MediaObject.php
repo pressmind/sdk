@@ -931,7 +931,7 @@ class MediaObject extends AbstractObject
         $result->calendar->booking_package->created = null;
         $BookingPackage->fromStdClass($result->calendar->booking_package);
         $result->calendar->booking_package = $BookingPackage;
-        $HousingPackage = new \Pressmind\ORM\Object\Touristic\Housing\Package();
+        $HousingPackage = new Touristic\Housing\Package();
         $HousingPackage->fromStdClass($result->calendar->housing_package);
         $result->calendar->housing_package = $HousingPackage;
         foreach($result->calendar->month as $k => $departure){
@@ -1786,6 +1786,34 @@ class MediaObject extends AbstractObject
             'id_media_object' => $this->getId()
         ];
         return Step::listAll($filters, ['order' => 'asc']);
+    }
+
+    /**
+     * @param $date_code_ibe
+     * @return MediaObject[]
+     * @throws Exception
+     */
+    public static function getByIbeCodeDate($date_code_ibe){
+        $Dates = Date::listAll(['code_ibe' => $date_code_ibe]);
+        $output = [];
+        foreach($Dates as $Date){
+            $output[] = new MediaObject($Date->id_media_object);
+        }
+        return $output;
+    }
+
+    /**
+     * @param $housing_package_code_ibe
+     * @return MediaObject[]
+     * @throws Exception
+     */
+    public static function getByIbeCodeHousingPackage($housing_package_code_ibe){
+        $Dates = Touristic\Housing\Package::listAll(['code_ibe' => $housing_package_code_ibe]);
+        $output = [];
+        foreach($Dates as $Date){
+            $output[] = new MediaObject($Date->id_media_object);
+        }
+        return $output;
     }
 
     /**

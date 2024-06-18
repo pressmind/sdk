@@ -146,6 +146,9 @@ class Package extends AbstractObject
                     ],
                 ],
                 'filters' => NULL,
+                'index' => [
+                    'code_ibe' => 'index'
+                ]
             ],
             'room_type' => [
                 'title' => 'Room_type',

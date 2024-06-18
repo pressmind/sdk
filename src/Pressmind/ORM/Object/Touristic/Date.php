@@ -237,6 +237,9 @@ class Date extends AbstractObject
                     ],
                 ],
                 'filters' => NULL,
+                'index' => [
+                    'code_ibe' => 'index'
+                ]
             ],
             'id_early_bird_discount_group' => [
                 'title' => 'id_early_bird_discount_group',

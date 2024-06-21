@@ -1808,10 +1808,10 @@ class MediaObject extends AbstractObject
      * @throws Exception
      */
     public static function getByIbeCodeHousingPackage($housing_package_code_ibe){
-        $Dates = Touristic\Housing\Package::listAll(['code_ibe' => $housing_package_code_ibe]);
+        $HousingPackages = Touristic\Housing\Package::listAll(['code_ibe' => $housing_package_code_ibe]);
         $output = [];
-        foreach($Dates as $Date){
-            $output[] = new MediaObject($Date->id_media_object);
+        foreach($HousingPackages as $HousingPackage){
+            $output[] = new MediaObject($HousingPackage->id_media_object);
         }
         return $output;
     }
@@ -1999,16 +1999,20 @@ class MediaObject extends AbstractObject
      * Returns a list of all extras
      * @param string $agency
      * @param bool $filter_auto_book_zero_price
+     * @param bool $filter_auto_book_and_required
      * @return array
      * @throws Exception
      */
-    public function getExtraOptions($agency = null, $filter_auto_book_zero_price = false){
+    public function getExtraOptions($agency = null, $filter_auto_book_zero_price = false, $filter_auto_book_and_required = true){
         $options = [];
         foreach ($this->booking_packages as $booking_package) {
             foreach ($booking_package->dates as $date) {
                 $option_list = $date->getAllOptionsButExcludePriceMixOptions($booking_package->price_mix, true, $agency);
                 foreach ($option_list as $option) {
                     if($filter_auto_book_zero_price && !empty($option->auto_book) && $option->price == 0){
+                        continue;
+                    }
+                    if($filter_auto_book_and_required && !empty($option->auto_book) && !empty($option->required)){
                         continue;
                     }
                     $hash = md5(serialize([$option->name]));

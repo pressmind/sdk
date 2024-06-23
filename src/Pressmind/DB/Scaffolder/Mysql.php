@@ -29,7 +29,7 @@ class Mysql
 
     private $_columns_to_be_altered_after_create = [];
 
-    private $_maximum_columns_to_be_created_in_one_statement = 40;
+    private $_maximum_columns_to_be_created_in_one_statement = 100;
 
     private $_database_table_allready_exists = false;
 
@@ -151,7 +151,7 @@ class Mysql
                     if ($i > 0) {
                         $sql .= ", ";
                     }
-                    $sql .= "ADD COLUMN $fieldName " . $this->_mapDbFieldType($fieldName, $fieldInfo) . " " . implode(" ", $additional_sql);
+                    $sql .= "ADD COLUMN `$fieldName`" . $this->_mapDbFieldType($fieldName, $fieldInfo) . " " . implode(" ", $additional_sql);
                 } else {
                     if ($column_counter < $this->_maximum_columns_to_be_created_in_one_statement) {
                         $sql .= "`$fieldName` " . $this->_mapDbFieldType($fieldName, $fieldInfo) . " " . implode(" ", $additional_sql) . ",";

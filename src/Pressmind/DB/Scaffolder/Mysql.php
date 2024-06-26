@@ -29,7 +29,9 @@ class Mysql
 
     private $_columns_to_be_altered_after_create = [];
 
-    private $_maximum_columns_to_be_created_in_one_statement = 100;
+    private $_indexes_to_be_created = [];
+
+    private $_maximum_columns_to_be_created_in_one_statement = 40;
 
     private $_database_table_allready_exists = false;
 
@@ -67,6 +69,7 @@ class Mysql
         $sql = $this->_parseTableInfoToSQL($this->_orm_object->getPropertyDefinitions());
         $db->execute($sql);
         $this->_addAdditionalColumns();
+        $this->_addIndexes();
         $this->_log[] = 'Table ' . $this->_orm_object->getDbTableName() . ' created';
     }
 
@@ -83,6 +86,16 @@ class Mysql
                 if(!in_array($column_name, $existing_columns)) {
                     $db->execute($sql);
                 }
+            }
+        }
+    }
+
+    private function _addIndexes() {
+        /**@var AdapterInterface $db**/
+        $db = Registry::getInstance()->get('db');
+        if(count($this->_indexes_to_be_created) > 0) {
+            foreach ($this->_indexes_to_be_created as $sql) {
+                $db->execute($sql);
             }
         }
     }
@@ -173,9 +186,12 @@ class Mysql
         }
         if (count($index) > 0 && false == $pAlterTable) {
             foreach ($index as $index_name => $index_info) {
-                //foreach ($index_field_names as $index_field_name) {
-                    $sql .= ", " . strtoupper($index_info['type']) . " " . $index_name .  " (" . implode(',', $index_info['columns']) . ")";
-                //}
+                $this->_indexes_to_be_created[] = "DROP INDEX IF EXISTS " .$index_name .  " ON ".$this->_orm_object->getDbTableName();
+                if($index_info['type'] == 'index'){
+                    $this->_indexes_to_be_created[] = "CREATE INDEX " .$index_name .  " ON ".$this->_orm_object->getDbTableName()."(" . implode(',', $index_info['columns']) . ")";
+                }elseif($index_info['type'] == 'fulltext'){
+                    $this->_indexes_to_be_created[] = "CREATE FULLTEXT INDEX " .$index_name .  " ON ".$this->_orm_object->getDbTableName()."(" . implode(',', $index_info['columns']) . ")";
+                }
             }
         }
         $storage_engine = $this->_orm_object->getStorageDefinition('storage_engine');

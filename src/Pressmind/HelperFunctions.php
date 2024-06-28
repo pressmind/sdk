@@ -699,4 +699,28 @@ class HelperFunctions
             'help_wanted' => ((count($args_dictionary) == 0 && count($args_list) == 1) || in_array('h', $args_list) || in_array('help', $args_list) || isset($args_dictionary['help']))
         ];
     }
+
+    /**
+     * Converts all DateTime Objects in a object recursive to strings
+     * @param mixed $data
+     * @return mixed
+     */
+    public static function convertDateTimeToStringRecursive($data) {
+        if (is_array($data)) {
+            foreach ($data as $key => $value) {
+                $data[$key] = self::convertDateTimeToStringRecursive($value);
+            }
+        } elseif (is_object($data)) {
+            $dataClass = get_class($data);
+            if ($dataClass === 'DateTime') {
+                return $data->format('Y-m-d H:i:s');
+            } else {
+                foreach ($data as $key => $value) {
+                    $data->$key = self::convertDateTimeToStringRecursive($value);
+                }
+            }
+        }
+        return $data;
+
+    }
 }

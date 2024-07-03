@@ -203,6 +203,8 @@ class Ibe
             $option->occupancy_min = 1;
             $option->occupancy = 1;
             $option->quota = 15;
+            $option->age_from = 0;
+            $option->age_to = 130;
             $option->price_due = 'person_stay';
             $option->price = $result['transport_pairs'][0]['way1']->price + $result['transport_pairs'][0]['way2']->price;
             $result['transport_pairs'][0]['way1']->price = $result['transport_pairs'][0]['way2']->price = 0;

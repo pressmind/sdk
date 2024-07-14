@@ -114,6 +114,21 @@ class S3 implements ProviderInterface
     }
 
     /**
+     * TODO: AI generated, not tested
+     * @param $file
+     * @param $bucket
+     * @return int
+     * @throws Exception
+     */
+    public function filesize($file, $bucket){
+        $result = $this->_s3_client->headObject([
+            'Bucket' => $bucket->name,
+            'Key' => $file->name
+        ]);
+        return $result['ContentLength'];
+    }
+
+    /**
      * @param File $file
      * @param Bucket $bucket
      * @return true

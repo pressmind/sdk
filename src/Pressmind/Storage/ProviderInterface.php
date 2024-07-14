@@ -47,6 +47,14 @@ interface ProviderInterface
     public function readFile($file, $bucket);
 
     /**
+     * @param $file
+     * @param $bucket
+     * @return int
+     * @throws Exception
+     */
+    public function filesize($file, $bucket);
+
+    /**
      * @param File $file
      * @param Bucket $bucket
      * @return true

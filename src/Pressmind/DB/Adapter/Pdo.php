@@ -147,7 +147,7 @@ class Pdo implements AdapterInterface
             $logfile = Registry::getInstance()->get('config')['logging']['database_query_log_file'] ?? APPLICATION_PATH . '/logs/db_query_log.txt';
             $debug_end_time = microtime(true);
             $debug_query = $insert_statement . " INTO " . $this->table_prefix . $tableName . "(`" . implode('`, `', $columns) . "`) VALUES(" . implode(', ', array_values($values)) . ")";
-            file_put_contents(HelperFunctions::replaceConstantsFromConfig($logfile), $now->format(DATE_ISO8601) . ' - ' . ($debug_end_time - $debug_start_time) . ': ' . $debug_query . "\n", FILE_APPEND);
+            #file_put_contents(HelperFunctions::replaceConstantsFromConfig($logfile), $now->format(DATE_ISO8601) . ' - ' . ($debug_end_time - $debug_start_time) . ': ' . $debug_query . "\n", FILE_APPEND);
         }
         return $this->databaseConnection->lastInsertId();
     }

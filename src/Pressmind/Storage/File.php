@@ -97,6 +97,15 @@ class File
     }
 
     /**
+     * @return int
+     * @throws Exception
+     */
+    public function filesize()
+    {
+        return $this->_bucket->filesize($this);
+    }
+
+    /**
      * @param integer $mode
      * @return true
      * @throws Exception

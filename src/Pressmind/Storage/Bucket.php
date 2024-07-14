@@ -83,6 +83,17 @@ class Bucket
     }
 
     /**
+     * @param $file
+     * @return int
+     * @throws Exception
+     */
+    public function filesize($file)
+    {
+        $storageProvider = Factory::create($this->storage);
+        return $storageProvider->filesize($file, $this);
+    }
+
+    /**
      * @param File $file
      * @return true
      * @throws Exception

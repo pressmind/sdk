@@ -474,7 +474,6 @@ class Date extends AbstractObject
      */
     public function getTransports($state_filter = [0,2,3], $ids = [], $types = [], $is_query_offer = false, $agency = null ){
         $valid_transports = [];
-        $allowed_agencies = [];
         foreach($this->transports as $transport){
             if(!empty($agency) &&
                 $transport->agencies != null &&

@@ -118,6 +118,27 @@ class Filesystem extends AbstractProvider implements ProviderInterface
     }
 
     /**
+     * @param $file
+     * @param $bucket
+     * @return int
+     * @throws Exception
+     */
+    public function filesize($file, $bucket)
+    {
+        $bucket->name = HelperFunctions::replaceConstantsFromConfig($bucket->name);
+        if($this->fileExists($file, $bucket)) {
+            $size = filesize($bucket->name . DIRECTORY_SEPARATOR . $file->name);
+            if($size !== false) {
+                return $size;
+            } else {
+                throw new Exception('Failed to get filesize: ' . $bucket->name . DIRECTORY_SEPARATOR . $file->name);
+            }
+        } else {
+            throw new Exception('Failed to get filesize: ' . $bucket->name . DIRECTORY_SEPARATOR . $file->name . '. File does not exist.');
+        }
+    }
+
+    /**
      * @param File $file
      * @param Bucket $bucket
      * @return bool|true

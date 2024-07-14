@@ -1797,7 +1797,11 @@ class MediaObject extends AbstractObject
         $Dates = Date::listAll(['code_ibe' => $date_code_ibe]);
         $output = [];
         foreach($Dates as $Date){
-            $output[] = new MediaObject($Date->id_media_object);
+            $MediaObject = new MediaObject($Date->id_media_object);
+            if(empty($MediaObject->getId())){
+                continue;
+            }
+            $output[] = $MediaObject;
         }
         return $output;
     }
@@ -1811,7 +1815,11 @@ class MediaObject extends AbstractObject
         $HousingPackages = Touristic\Housing\Package::listAll(['code_ibe' => $housing_package_code_ibe]);
         $output = [];
         foreach($HousingPackages as $HousingPackage){
-            $output[] = new MediaObject($HousingPackage->id_media_object);
+            $MediaObject = new MediaObject($HousingPackage->id_media_object);
+            if(empty($MediaObject->getId())){
+                continue;
+            }
+            $output[] = $MediaObject;
         }
         return $output;
     }

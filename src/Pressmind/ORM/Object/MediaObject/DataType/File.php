@@ -214,8 +214,12 @@ class File extends AbstractObject
         $downloader = new \Pressmind\File\Downloader();
         $storage_file = $downloader->download($this->tmp_url, $this->file_name);
         $storage_file->save();
-        $this->mime_type = $storage_file->getMimetype();
+        $this->file_size = $storage_file->filesize();
+        if($this->file_size == 0) {
+            throw new Exception('Download failed, filesize is 0');
+        }
         $this->download_successful = true;
+        $this->mime_type = $storage_file->getMimetype();
         $this->update();
     }
 }

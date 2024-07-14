@@ -645,6 +645,10 @@ class Import
         }
         $image_processor_path = APPLICATION_PATH . '/cli/image_processor.php' . (empty($id_media_object) ? '' : ' mediaobject ' . implode(',',$id_media_object));
         $php_binary = isset($config['server']['php_cli_binary']) && !empty($config['server']['php_cli_binary']) ? $config['server']['php_cli_binary'] : 'php';
+        if(!file_exists($php_binary)) {
+            throw new Exception('can not run post import scripts, php binary not found at "' . $php_binary. '", check pm-config.php');
+            return;
+        }
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): Starting post import processes ', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): bash -c "exec nohup php ' . $image_processor_path . ' > /dev/null 2>&1 &"', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
 		if(!$this->checkRunFile($image_processor_path)) {
@@ -655,8 +659,11 @@ class Import
 		$file_downloader_path = APPLICATION_PATH . '/cli/file_downloader.php';
 		if(!$this->checkRunFile($image_processor_path))
 		{
-			exec('bash -c "exec nohup ' . $php_binary . ' ' . $file_downloader_path . ' > /dev/null 2>&1 &"');
-		}
+            $cmd = 'bash -c "exec nohup ' . $php_binary . ' ' . $file_downloader_path . ' > /dev/null 2>&1 &"';
+			exec($cmd);
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): '.$cmd, Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+
+        }
     }
 
 	/**

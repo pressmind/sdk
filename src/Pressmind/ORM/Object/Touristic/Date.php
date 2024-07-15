@@ -463,6 +463,22 @@ class Date extends AbstractObject
         return isset($option_set[$price_mix]) ? $this->getOptions($option_set[$price_mix], $is_query_offer, $agency) : [];
     }
 
+    /**
+     * @param $price_mix
+     * @param $is_query_offer
+     * @param $agency
+     * @return array|Option[]
+     * @throws Exception
+     */
+    public function getAllOptionsByPriceMix($price_mix, $is_query_offer = false, $agency = null){
+        $option_set['date_transport'] = ['transport'];
+        $option_set['date_housing'] = ['housing_option'];
+        $option_set['date_extra'] = ['extra'];
+        $option_set['date_ticket'] = ['ticket'];
+        $option_set['date_sightseeing'] = ['sightseeing'];
+        return isset($option_set[$price_mix]) ? $this->getOptions($option_set[$price_mix], $is_query_offer, $agency) : [];
+    }
+
 
     /**
      * @param array $state_filter

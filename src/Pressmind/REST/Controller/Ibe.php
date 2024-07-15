@@ -407,7 +407,7 @@ class Ibe
         if($CheapestPriceSpeed->isValid()){
             $Date = new \Pressmind\ORM\Object\Touristic\Date($CheapestPriceSpeed->id_date);
             $Options = $Date->getAllOptionsButExcludePriceMixOptions($CheapestPriceSpeed->price_mix);
-            $alternativeOptions = $Date->getOptions(['housing_option']); // TODO support different price_mixes
+            $alternativeOptions = $Date->getAllOptionsByPriceMix($CheapestPriceSpeed->price_mix);
             foreach($alternativeOptions as $k => $alternativeOption){
                 if($alternativeOption->id == $CheapestPriceSpeed->id_option){
                     unset($alternativeOptions[$k]);

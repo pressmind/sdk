@@ -363,14 +363,17 @@ class Indexer extends AbstractIndex
             echo 'Error in filter function ' .  $group_map['filter'] . ': ' . $e->getMessage();
             exit; // @TODO
         }
-
         foreach($groups as $v){
             if(empty($v)){
-                echo 'Error: "'.$v.'" is not allowed as group value';
+                /**
+                 * If this occurs and the group is build from "agencies", check these tables: pmt2core_agency_to_media_object, pmt2core_agencies
+                 * it's possible that the agency is not correct mapped to the media object
+                 * (if "pmt2core_agency_to_media_object.id_agency == 0 or pmt2core_agencies.id == 0", this is a actually a bug in the pressmind PIM)
+                 * To solve it, remap the agency to the media object
+                 */
+                echo 'Warning: "'.$v.'" is not allowed as group value. Some product are not correct mapped and maybe not visible.'."\n";
             }
         }
-
-
         return $groups;
     }
 

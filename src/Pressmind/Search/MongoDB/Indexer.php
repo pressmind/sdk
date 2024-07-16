@@ -1028,7 +1028,6 @@ class Indexer extends AbstractIndex
     {
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
-        $config = $this->_config['search']['touristic'];
         $query = "SELECT cast(date_format(date_departure, '%Y') as SIGNED) as year, 
                          cast(date_format(date_departure, '%c') as SIGNED) as month 
                     FROM pmt2core_cheapest_price_speed 

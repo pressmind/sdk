@@ -588,30 +588,30 @@ class Query
      * or
      * {relative offset from today} e.g. "+90" means today-{today+offset}
      * @param $str
-     * @return DateTime[]|bool
+     * @return \DateTime[]|bool
      * @throws Exception
      */
     public static function extractDaterange($str){
         if(preg_match('/^([0-9]{4}[0-9]{2}[0-9]{2})\-([0-9]{4}[0-9]{2}[0-9 ]{2})$/', $str, $m) > 0){
-            $from = new DateTime($m[1]);
+            $from = new \DateTime($m[1]);
             $from->setTime(0,0);
-            $to = new DateTime($m[2]);
+            $to = new \DateTime($m[2]);
             $to->setTime(0,0);
             return array($from, $to);
         }elseif(preg_match('/^([0-9]{4}[0-9]{2}[0-9]{2})$/', $str, $m) > 0){
-            $from = new DateTime($m[1]);
+            $from = new \DateTime($m[1]);
             $from->setTime(0,0);
             return array($from, null);
         }elseif(preg_match('/^([\+\-]?[0-9]+)$/', $str, $m) > 0) {
-            $to = new DateTime('now');
+            $to = new \DateTime('now');
             $to->setTime(0,0);
             $to->modify($m[1].' day');
-            return array(new DateTime('now'), $to);
+            return array(new \DateTime('now'), $to);
         }elseif(preg_match('/^([\+\-]?[0-9]+)\-([\+\-]?[0-9]+)$/', $str, $m) > 0) {
-            $from = new DateTime('now');
+            $from = new \DateTime('now');
             $from->setTime(0,0);
             $from->modify($m[1].' day');
-            $to = new DateTime('now');
+            $to = new \DateTime('now');
             $to->setTime(0,0);
             $to->modify($m[2].' day');
             return array($from, $to);

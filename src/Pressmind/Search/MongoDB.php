@@ -311,6 +311,24 @@ class MongoDB extends AbstractSearch
             $andQuery['$and'][] = $condition->getQuery('first_match', $allow_invalid_offers);
         }
 
+        // merge prices conditions
+        $fst_key = null;
+        foreach($andQuery['$and'] as $key => $item){
+            if($fst_key === null && isset($item['prices']['$elemMatch'])){
+                $fst_key = $key;
+                continue;
+            }
+            if(isset($item['prices']['$elemMatch'])){
+                $andQuery['$and'][$fst_key]['prices']['$elemMatch'] = array_merge(  $andQuery['$and'][$fst_key]['prices']['$elemMatch'], $item['prices']['$elemMatch']);
+                if(count($andQuery['$and'][$key]) == 1){
+                    unset($andQuery['$and'][$key]);
+                }else{
+                    unset($andQuery['$and'][$key]['prices']);
+                }
+            }
+        }
+        $andQuery['$and'] = array_values($andQuery['$and']);
+
         if (!empty($andQuery['$and'])) {
             $stages[] = ['$match' => $andQuery];
             if ($this->hasCondition('Fulltext')) {

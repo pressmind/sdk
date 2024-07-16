@@ -26,7 +26,7 @@ class Indexer extends AbstractIndex
                 return true;
             }
         }
-       return false;
+        return false;
     }
 
     /**
@@ -59,9 +59,9 @@ class Indexer extends AbstractIndex
         ], [
             'default_language' => 'none',
             'weights' => [
-                        'fulltext' => 5,
-                        'categories.path_str' => 10,
-                        'code' => 15
+                'fulltext' => 5,
+                'categories.path_str' => 10,
+                'code' => 15
             ],
             'name' => 'fulltext_text'
 
@@ -106,7 +106,7 @@ class Indexer extends AbstractIndex
                 continue;
             }
             foreach ($this->_config['search']['build_for'][$mediaObject->id_object_type] as $build_info) {
-                 foreach($this->_agencies as $agency) {
+                foreach($this->_agencies as $agency) {
                     $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
                     $collection = $this->db->$collection_name;
                     $document = $this->createIndex($mediaObject->id, $build_info['language'], $build_info['origin'], $agency);
@@ -535,16 +535,16 @@ class Indexer extends AbstractIndex
                 $linkedObject = new MediaObject($objectlink->id_media_object_link);
                 $linkedObjectData = $linkedObject->getDataForLanguage($language);
                 if(!is_null($linkedObjectData) ) {
-                  $stdItem = new \stdClass();
-                  $stdItem->name = $plaintextVarName == 'name' ? $linkedObject->name : $linkedObjectData->$plaintextVarName ;
-                  $stdItem->id_item = md5($objectlink->id_media_object_link.'-'.$varName.'-'.$plaintextVarName.'-'.$stdItem->name.'-'.$virtual_id_tree);
-                  $stdItem->id_tree = $virtual_id_tree;
-                  $stdItem->id_parent = null;
-                  $stdItem->field_name = $field;
-                  $stdItem->level = 0;
-                  $stdItem->path_str = [$stdItem->name];
-                  $stdItem->path_ids = [$stdItem->id_item];
-                  $categories[] = (array)$stdItem;
+                    $stdItem = new \stdClass();
+                    $stdItem->name = $plaintextVarName == 'name' ? $linkedObject->name : $linkedObjectData->$plaintextVarName ;
+                    $stdItem->id_item = md5($objectlink->id_media_object_link.'-'.$varName.'-'.$plaintextVarName.'-'.$stdItem->name.'-'.$virtual_id_tree);
+                    $stdItem->id_tree = $virtual_id_tree;
+                    $stdItem->id_parent = null;
+                    $stdItem->field_name = $field;
+                    $stdItem->level = 0;
+                    $stdItem->path_str = [$stdItem->name];
+                    $stdItem->path_ids = [$stdItem->id_item];
+                    $categories[] = (array)$stdItem;
                 }
             }
         }
@@ -1058,14 +1058,28 @@ class Indexer extends AbstractIndex
                 $object->month = (int)$month;
                 $date = new \DateTime($year . '-' . $month . '-01');
                 $max_days = $date->format('t');
-                $query = "SELECT date_departure, date_arrival, option_occupancy_min, option_occupancy_max, option_occupancy, duration, 
-                        price_total, price_regular_before_discount, earlybird_discount, earlybird_discount_f, earlybird_discount_date_to, guaranteed
-                            FROM pmt2core_cheapest_price_speed 
-                        WHERE (date_departure BETWEEN :departure_from AND :departure_to) 
-                          AND id_media_object = :id_media_object AND id_origin = :id_origin ".(
-                            empty($agency) ? "" : " AND agency = :agency").
-                          " AND ((option_occupancy = 2 AND price_mix = 'date_housing') OR (price_mix != 'date_housing'))
-                          GROUP BY date_departure, duration ORDER BY date_departure, duration";
+                $query = "select * from (select date_departure,
+                            date_arrival,
+                            option_occupancy_min,
+                            option_occupancy_max,
+                            option_occupancy,
+                            duration,
+                            price_total,
+                            price_regular_before_discount,
+                            earlybird_discount,
+                            earlybird_discount_f,
+                            earlybird_discount_date_to,
+                            guaranteed,
+                            ROW_NUMBER() OVER (PARTITION BY date_departure ORDER BY FIELD(state, 3, 1, 5, 0), FIELD(option_occupancy, 2, 1, 3, 4, 5, 6, 8, 9, 10) ASC, date_departure ASC, duration ASC) AS r
+                          from pmt2core_cheapest_price_speed
+                          where 
+                            date_departure BETWEEN :departure_from AND :departure_to
+                            AND id_media_object = :id_media_object
+                            AND id_origin = :id_origin 
+                            ".(empty($agency) ? "" : " AND agency = :agency"). " 
+                          ) as t
+                            where r = 1
+                            GROUP BY date_departure, duration";
                 $values = [
                     ':id_media_object' => $this->mediaObject->id,
                     ':id_origin' => $origin,
@@ -1099,13 +1113,7 @@ class Indexer extends AbstractIndex
                     $c++;
                 }
                 $object->five_dates_in_month = $date_list;
-                $count_query = "select count(*) as count from (SELECT distinct date_departure FROM pmt2core_cheapest_price_speed
-                                WHERE (date_departure BETWEEN :departure_from AND :departure_to) 
-                                AND id_media_object = :id_media_object AND id_origin = :id_origin ".(
-                                empty($agency) ? "" : " AND agency = :agency")."
-                                AND ((option_occupancy = 2 AND price_mix = 'date_housing') OR (price_mix != 'date_housing'))) t";
-                $result = $db->fetchRow($count_query, $values);
-                $object->dates_total = (int)$result->count;
+                $object->dates_total = $c;
                 $objects[] = $object;
             }
         }
@@ -1131,7 +1139,7 @@ class Indexer extends AbstractIndex
                    WHERE 
                      id_media_object = :id_media_object 
                      AND id_origin = :id_origin ".(
-                    empty($agency) ? "" : " AND agency = :agency")."
+            empty($agency) ? "" : " AND agency = :agency")."
                    GROUP BY duration ORDER BY price_total";
         $values = [
             ':id_media_object' => $this->mediaObject->id,

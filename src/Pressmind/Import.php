@@ -486,6 +486,9 @@ class Import
                         }
                     }
                 }
+                // reinitialize
+                $media_object = new MediaObject($id_media_object);
+                $media_object->insertCheapestPrice();
             }
 
             if($config['cache']['enabled'] == true && in_array('OBJECT', $config['cache']['types'])) {

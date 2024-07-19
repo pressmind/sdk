@@ -391,7 +391,7 @@ class Query
         if (empty($request[$prefix.'-t']) === false || empty($request[$prefix.'-loc']) === false){
             $term = !empty($request[$prefix.'-t']) ? self::sanitizeStr($request[$prefix.'-t']) : null;
             $order = array('score' => 'desc');
-            if(empty(self::$atlas_active)){
+            if(self::$atlas_active === true){
                 $gson_property = null;
                 $lat = null;
                 $lon = null;

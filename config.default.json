@@ -103,7 +103,11 @@
         "allowed": [
           "de"
         ],
-        "default": "de"
+        "default": "de",
+        "gettext" : {
+          "active" : false,
+          "dir" : "/path/to/languagefiles"
+        }
       },
       "preview_url": "/detail.php?id={{id_media_object}}&preview={{preview}}",
       "search_mongodb": {

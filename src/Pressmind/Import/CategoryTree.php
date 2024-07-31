@@ -114,8 +114,12 @@ class CategoryTree extends AbstractImport implements ImportInterface
                     if(isset($item->{$language})){
                         $translation = new \Pressmind\ORM\Object\CategoryTree\Translation\Item();
                         $translation->id = $item->id;
+                        $translation->id_tree = $id_tree;
                         $translation->name = empty($item->{$language}) ? $item->name : $item->{$language};
                         $translation->language = $language;
+                        if(empty($translation->name) || empty($translation->language) || empty($translation->id)){
+                            continue;
+                        }
                         $translation->replace();
                     }
                 }
@@ -141,7 +145,7 @@ class CategoryTree extends AbstractImport implements ImportInterface
         foreach($Orphans as $Orphan){
             $Orphan->delete();
         }
-        $Orphans = \Pressmind\ORM\Object\CategoryTree\Translation\Item::listAll('id NOT IN ("'.implode('","', $this->_imported_items).'")');
+        $Orphans = \Pressmind\ORM\Object\CategoryTree\Translation\Item::listAll('id_tree = '.$id_tree.' AND id NOT IN ("'.implode('","', $this->_imported_items).'")');
         foreach($Orphans as $Orphan){
             $db->delete('pmt2core_category_tree_item_translation', ["id = ?", $Orphan->id]);
         }

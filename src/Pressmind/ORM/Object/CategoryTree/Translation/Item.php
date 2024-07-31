@@ -7,6 +7,7 @@ use Pressmind\ORM\Object\AbstractObject;
 /**
  * Class Item
  * @property string $id
+ * @property int $id_tree
  * @property string $name
  * @property string $language
  */
@@ -37,6 +38,26 @@ class Item extends AbstractObject
                     ],
                 ],
                 'filters' => NULL,
+            ],
+            'id_tree' => [
+                'title' => 'id_tree',
+                'name' => 'id_tree',
+                'type' => 'integer',
+                'required' => true,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 22,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'filters' => NULL,
+                'index' => [
+                    'id_tree' => 'index'
+                ],
             ],
             'name' => [
                 'title' => 'name',

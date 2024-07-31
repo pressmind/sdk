@@ -7,6 +7,7 @@ namespace Pressmind\Import;
 use Exception;
 use Gettext\Generator\MoGenerator;
 use Gettext\Translation;
+use Pressmind\HelperFunctions;
 use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\CategoryTree\Item;
 use Pressmind\Registry;
@@ -165,6 +166,7 @@ class CategoryTree extends AbstractImport implements ImportInterface
             return false;
         }
         $dir = rtrim($conf['data']['languages']['gettext']['dir'], '/');
+        $dir = HelperFunctions::replaceConstantsFromConfig($dir);
         if(!is_dir($dir) && !@mkdir($dir, 0777, true)){
             $this->_errors[] = 'Importer::createGetTextFiles(): Could not create directory ' . $dir;
             return false;

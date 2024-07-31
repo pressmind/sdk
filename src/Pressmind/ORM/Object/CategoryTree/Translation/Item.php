@@ -55,7 +55,7 @@ class Item extends AbstractObject
                 'title' => 'language',
                 'name' => 'language',
                 'type' => 'string',
-                'required' => false,
+                'required' => true,
                 'validators' => [
                     [
                         'name' => 'maxlength',

@@ -931,6 +931,9 @@ abstract class AbstractObject
      */
     public function getId()
     {
+        if(is_array($this->_definitions['database']['primary_key'])){
+            throw new Exception('Primary key is an array, debug by backtrace: '.print_r(debug_backtrace(), true));
+        }
         return $this->{$this->_definitions['database']['primary_key']};
     }
 

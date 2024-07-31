@@ -18,6 +18,7 @@ class Info
         '\Geodata',
         '\CategoryTree',
         '\CategoryTree\Item',
+        '\CategoryTree\Translation\Item',
         '\CheapestPriceSpeed',
         '\DataView',
         '\DataView\SearchCondition',

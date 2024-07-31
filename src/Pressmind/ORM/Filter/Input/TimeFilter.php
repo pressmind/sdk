@@ -2,6 +2,7 @@
 
 
 namespace Pressmind\ORM\Filter\Input;
+use Exception;
 use Pressmind\ORM\Filter\FilterInterface;
 use \DateTime;
 class TimeFilter implements FilterInterface

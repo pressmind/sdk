@@ -35,10 +35,11 @@ class Mysql
      */
     public function check() {
         $type_mapper = new \Pressmind\DB\Typemapper\Mysql();
-        $table = $this->_db->fetchAll('DESCRIBE ' . $this->_object->getDbTableName());
+        $table = $this->_db->fetchAll('SHOW tables like "' . $this->_object->getDbTableName().'"');
         if(empty($table)){
             $this->_differences[] = ['action' => 'create_table', 'table' => $this->_object->getDbTableName(), 'msg' => get_class($this) . ': database table ' . $this->_object->getDbTableName() . ' does not exist in database and needs to be created'];
         }else{
+            $table = $this->_db->fetchAll('DESCRIBE ' . $this->_object->getDbTableName());
             $this->_checkPrimaryKey();
             $database_table_info = [];
             foreach ($table as $field) {

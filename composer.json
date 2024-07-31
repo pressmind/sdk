@@ -23,7 +23,8 @@
         "ext-zlib": "*",
         "ext-fileinfo": "*",
         "ext-redis": "*",
-        "ext-imagick": "*"
+        "ext-imagick": "*",
+        "gettext/gettext": "*"
     },
     "autoload": {
         "psr-4": {

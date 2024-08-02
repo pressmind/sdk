@@ -26,8 +26,8 @@ class Calendar extends AbstractIndex
      * @throws \MongoDB\Driver\Exception\Exception
      */
     public function createCollectionIndex($collection_name){
-        
-      //  $this->db->$collection_name->createIndex( ['prices.price_total' => 1]);
+
+        //  $this->db->$collection_name->createIndex( ['prices.price_total' => 1]);
 
     }
 
@@ -130,9 +130,12 @@ class Calendar extends AbstractIndex
         $collection = $this->db->$collection_name;
         $items = [];
         foreach ($config['occupancies'] as $occupancy) {
-            $query = 'select 
-                    distinct transport_type, transport_1_airport, transport_2_airport from pmt2core_cheapest_price_speed 
-                    where 
+            $query = 'select distinct 
+                        IFNULL(transport_type, \'-\') as transport_type,
+                        IFNULL(transport_1_airport, \'-\') as transport_1_airport,
+                        IFNULL(transport_2_airport, \'-\') as transport_2_airport
+                      from pmt2core_cheapest_price_speed 
+                      where 
                         id_media_object = :id_media_object
                         AND (earlybird_discount = 0 OR earlybird_discount_date_to >= NOW())
                         AND (option_occupancy = :occupancy ) 
@@ -142,14 +145,16 @@ class Calendar extends AbstractIndex
                 ':id_origin' => $origin,
                 ':occupancy' => $occupancy,
             ];
+
             $results = $db->fetchAll($query, $values);
+
             if(!is_null($results)) {
                 foreach($results as $result){
                     $items[] = [
                         'occupancy' => $occupancy,
-                        'transport_type' => $result->transport_type,
-                        'transport_1_airport' => $result->transport_1_airport,
-                        'transport_2_airport' => $result->transport_2_airport,
+                        'transport_type' => $result->transport_type == '-' ? null : $result->transport_type,
+                        'transport_1_airport' => $result->transport_1_airport == '-' ? null : $result->transport_1_airport,
+                        'transport_2_airport' => $result->transport_2_airport == '-' ? null : $result->transport_2_airport,
                         'durations' => []
                     ];
                 }
@@ -162,16 +167,18 @@ class Calendar extends AbstractIndex
                     distinct duration, id_booking_package, id_housing_package from pmt2core_cheapest_price_speed 
                     where 
                         id_media_object = :id_media_object
-                        AND transport_type = :transport_type
                         AND (earlybird_discount = 0 OR earlybird_discount_date_to >= NOW())
                         AND (option_occupancy = :occupancy ) 
                         AND id_origin = :id_origin';
                 $values = [
                     ':id_media_object' => $this->mediaObject->id,
                     ':id_origin' => $origin,
-                    ':occupancy' => $occupancy,
-                    ':transport_type' => $item['transport_type']
+                    ':occupancy' => $occupancy
                 ];
+                if(!empty($item['transport_type'])){
+                    $query .= ' AND transport_type = :transport_type';
+                    $values[':transport_type'] = $item['transport_type'];
+                }
                 if(!empty($item['transport_1_airport'])){
                     $query .= ' AND transport_1_airport = :transport_1_airport';
                     $values[':transport_1_airport'] = $item['transport_1_airport'];
@@ -211,7 +218,9 @@ class Calendar extends AbstractIndex
                 $filter->occupancies = [$item['occupancy']];
                 $filter->id_housing_package = $duration['id_housing_package'];
                 $filter->id_booking_package = $duration['id_booking_package'];
-                $filter->transport_types = [$item['transport_type']];
+                if(!empty($item['transport_type'])) {
+                    $filter->transport_types = [$item['transport_type']];
+                }
                 $offers = $this->mediaObject->getCheapestPrices($filter, ['date_departure' => 'ASC', 'price_total' => 'ASC']);
                 /**
                  * @var \Pressmind\ORM\Object\CheapestPriceSpeed[] $date_to_cheapest_price

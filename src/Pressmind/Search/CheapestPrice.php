@@ -27,6 +27,8 @@ class CheapestPrice
     public $origin = null;
     public $agency = null;
     public $state = self::STATE_BOOKABLE;
+    public $id_startingpoint_option = null;
+    public $startingpoint_option_name = null;
     /**
      * Leave empty for no fallback
      * @var int[] $state_fallback_order

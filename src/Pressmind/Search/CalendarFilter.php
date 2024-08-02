@@ -12,4 +12,6 @@ class CalendarFilter
     public $transport_type = null;
     public $duration = null;
     public $airport = null;
+    public $id_startingpoint_option = null;
+    public $agency = null;
 }

@@ -62,11 +62,13 @@ class Calendar extends AbstractIndex
                 continue;
             }
             foreach ($this->_config['search']['build_for'][$mediaObject->id_object_type] as $build_info) {
-                $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
-                $collection = $this->db->$collection_name;
-                $collection->deleteMany(['id_media_object' => $mediaObject->id]);
-                $this->createCalendar($mediaObject->id, $build_info['language'], $build_info['origin']);
-                $ids[] = $mediaObject->id;
+                foreach($this->_agencies as $agency) {
+                    $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
+                    $collection = $this->db->$collection_name;
+                    $collection->deleteMany(['id_media_object' => $mediaObject->id]);
+                    $this->createCalendar($mediaObject->id, $build_info['language'], $build_info['origin']);
+                    $ids[] = $mediaObject->id;
+                }
             }
         }
 
@@ -77,9 +79,11 @@ class Calendar extends AbstractIndex
             }
             foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
                 foreach ($build_infos as $build_info) {
-                    $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
-                    $collection = $this->db->$collection_name;
-                    $collection->deleteMany(['id_media_object' => $mediaObject->id]);
+                    foreach($this->_agencies as $agency) {
+                        $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
+                        $collection = $this->db->$collection_name;
+                        $collection->deleteMany(['id_media_object' => $mediaObject->id]);
+                    }
                 }
             }
         }
@@ -98,9 +102,11 @@ class Calendar extends AbstractIndex
         foreach($id_media_objects as $id_media_object){
             foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
                 foreach ($build_infos as $build_info) {
-                    $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language']);
-                    $collection = $this->db->$collection_name;
-                    $collection->deleteMany(['id_media_object' => $id_media_object]);
+                    foreach($this->_agencies as $agency) {
+                        $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
+                        $collection = $this->db->$collection_name;
+                        $collection->deleteMany(['id_media_object' => $id_media_object]);
+                    }
                 }
             }
         }
@@ -109,10 +115,11 @@ class Calendar extends AbstractIndex
     /**
      * @param int $origin
      * @param string $language
+     * @param string $agency
      * @return string
      */
-    public function getCollectionName($origin = 0, $language = null){
-        return 'calendar_' . (!empty($language) ? $language.'_' : '') . 'origin_' . $origin;
+    public function getCollectionName($origin = 0, $language = null, $agency = null){
+        return 'calendar_' . (!empty($language) ? $language.'_' : '') . 'origin_' . $origin.(!empty($agency) ? '_agency_'. $agency: '');
     }
 
 
@@ -133,7 +140,8 @@ class Calendar extends AbstractIndex
             $query = 'select distinct 
                         IFNULL(transport_type, \'-\') as transport_type,
                         IFNULL(transport_1_airport, \'-\') as transport_1_airport,
-                        IFNULL(transport_2_airport, \'-\') as transport_2_airport
+                        IFNULL(transport_2_airport, \'-\') as transport_2_airport,
+                        IFNULL(id_startingpoint_option, \'-\') as id_startingpoint_option
                       from pmt2core_cheapest_price_speed 
                       where 
                         id_media_object = :id_media_object
@@ -155,6 +163,7 @@ class Calendar extends AbstractIndex
                         'transport_type' => $result->transport_type == '-' ? null : $result->transport_type,
                         'transport_1_airport' => $result->transport_1_airport == '-' ? null : $result->transport_1_airport,
                         'transport_2_airport' => $result->transport_2_airport == '-' ? null : $result->transport_2_airport,
+                        'id_startingpoint_option' => $result->id_startingpoint_option == '-' ? null : $result->id_startingpoint_option,
                         'durations' => []
                     ];
                 }
@@ -187,6 +196,10 @@ class Calendar extends AbstractIndex
                     $query .= ' AND transport_2_airport = :transport_2_airport';
                     $values[':transport_2_airport'] = $item['transport_2_airport'];
                 }
+                if(!empty($item['id_startingpoint_option'])){
+                    $query .= ' AND id_startingpoint_option = :id_startingpoint_option';
+                    $values[':id_startingpoint_option'] = $item['id_startingpoint_option'];
+                }
                 $query .= ' order by duration ASC';
                 $results = $db->fetchAll($query, $values);
                 if(!is_null($results)) {
@@ -211,6 +224,7 @@ class Calendar extends AbstractIndex
                 $document->occupancy = $item['occupancy'];
                 $document->transport_type = $item['transport_type'];
                 $document->airport = $item['transport_1_airport'];
+                $document->id_startingpoint_option = $item['id_startingpoint_option'];
                 $document->booking_package = (new Booking\Package($duration['id_booking_package'], false))->toStdClass(false);
                 $document->housing_package = (new Package($duration['id_housing_package'], false))->toStdClass(false);
                 $filter = new CheapestPrice();

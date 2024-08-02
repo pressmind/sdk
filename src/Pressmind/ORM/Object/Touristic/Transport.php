@@ -39,9 +39,6 @@ use Pressmind\System\I18n;
  * @property string $flight
  * @property boolean $dont_use_for_offers
  * @property boolean $use_earlybird
- * @property DateTime $time_departure
- * @property DateTime $time_arrival
- *
  * @property Discount $discount
  * @property string $agencies
  */
@@ -442,22 +439,6 @@ class Transport extends AbstractObject
                 'title' => 'use_earlybird',
                 'name' => 'use_earlybird',
                 'type' => 'boolean',
-                'required' => false,
-                'validators' => NULL,
-                'filters' => NULL,
-            ],
-            'time_departure' => [
-                'title' => 'time_departure',
-                'name' => 'time_departure',
-                'type' => 'time',
-                'required' => false,
-                'validators' => NULL,
-                'filters' => NULL,
-            ],
-            'time_arrival' => [
-                'title' => 'time_arrival',
-                'name' => 'time_arrival',
-                'type' => 'time',
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,

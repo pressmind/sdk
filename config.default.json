@@ -62,6 +62,7 @@
         "disable_touristic_data_import": [],
         "generate_single_room_index": true,
         "max_offers_per_product": 5000,
+        "generate_offer_for_each_startingpoint_option": false,
         "ibe_client": null,
         "include_negative_option_in_cheapest_price" : true,
         "label_price_mix_date_transport" : "Teilnahmegebühr",

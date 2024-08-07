@@ -375,4 +375,21 @@ class Option extends AbstractObject
             ],
         ]
     );
+
+    public static $run_time_cache = [];
+
+    /**
+     * Cached static shorthand for getById
+     * @param $id
+     * @return Option|null
+     * @throws \Exception
+     */
+    public static function getById($id){
+        if(isset(self::$run_time_cache[$id])){
+            return self::$run_time_cache[$id];
+        }
+        $option = self::listOne('id = "'.$id.'"');
+        self::$run_time_cache[$id] = $id;
+        return $option;
+    }
 }

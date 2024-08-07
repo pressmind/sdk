@@ -696,9 +696,9 @@ class Date extends AbstractObject
         $transports_by_base_airport = [];
         foreach ($transports as $transport) {
             if($transport->way == 1){
-                $base_airport = substr($transport->code, 0, 3);
+                $base_airport = substr((string)$transport->code, 0, 3);
             }else{
-                $base_airport = substr($transport->code, -3, 3);
+                $base_airport = substr((string)$transport->code, -3, 3);
             }
             $transports_by_base_airport[$base_airport][] = $transport;
         }

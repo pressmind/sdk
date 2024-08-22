@@ -220,11 +220,15 @@ class Indexer extends AbstractIndex
         if(is_array($searchObject->prices) && count($searchObject->prices) > 0) {
             $searchObject->best_price_meta = $searchObject->prices[0];
         }
-
-        if(empty($searchObject->prices) && (empty($this->_config['search']['allow_invalid_offers']) && $searchObject->visibility != 10) ){
+        $allow_invalid_offers = false;
+        if(isset($this->_config['search']['allow_invalid_offers']) && is_bool($this->_config['search']['allow_invalid_offers'])){ // legacy
+            $allow_invalid_offers = $this->_config['search']['allow_invalid_offers'];
+        }elseif(isset($this->_config['search']['allow_invalid_offers']) && is_array($this->_config['search']['allow_invalid_offers']) && in_array($this->mediaObject->id_object_type, $this->_config['search']['allow_invalid_offers'])){
+            $allow_invalid_offers = true;
+        }
+        if(empty($searchObject->prices) && $allow_invalid_offers === false && $searchObject->visibility != 10){
             return false;
         }
-
         return json_decode(json_encode($searchObject));
     }
 

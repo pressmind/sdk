@@ -191,7 +191,7 @@
           },
           "five_dates_per_month_list": false,
           "possible_duration_list": false,
-          "allow_invalid_offers": false,
+          "allow_invalid_offers": [123,124],
           "touristic": {
             "occupancies": [
               1,

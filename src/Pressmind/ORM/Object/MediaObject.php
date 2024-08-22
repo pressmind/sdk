@@ -822,7 +822,7 @@ class MediaObject extends AbstractObject
      */
     public function getCalendar($filters, $min_columns = 3, $origin = 0, $language = null){
         $config = Registry::getInstance()->get('config');
-        $collection_name = (new Calendar())->getCollectionName($origin, $language, $filters->agency);
+        $collection_name = (new Calendar())->getCollectionName($origin, $language, !is_null($filters) ? $filters->agency : null);
         $collection = (new \MongoDB\Client($config['data']['search_mongodb']['database']['uri']))->{$config['data']['search_mongodb']['database']['db']}->{$collection_name};
         $stages = [];
         $query['$match']['id_media_object'] = $this->getId();

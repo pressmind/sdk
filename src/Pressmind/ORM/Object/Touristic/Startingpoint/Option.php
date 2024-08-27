@@ -389,7 +389,7 @@ class Option extends AbstractObject
             return self::$run_time_cache[$id];
         }
         $option = self::listOne('id = "'.$id.'"');
-        self::$run_time_cache[$id] = $id;
+        self::$run_time_cache[$id] = $option;
         return $option;
     }
 }

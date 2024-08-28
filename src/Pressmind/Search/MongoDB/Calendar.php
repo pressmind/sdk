@@ -66,7 +66,7 @@ class Calendar extends AbstractIndex
                     $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
                     $collection = $this->db->$collection_name;
                     $collection->deleteMany(['id_media_object' => $mediaObject->id]);
-                    $this->createCalendar($mediaObject->id, $build_info['language'], $build_info['origin']);
+                    $this->createCalendar($mediaObject->id, $build_info['language'], $build_info['origin'], $agency);
                     $ids[] = $mediaObject->id;
                 }
             }
@@ -124,16 +124,20 @@ class Calendar extends AbstractIndex
 
 
     /**
-     * @param integer $idMediaObject
+     * @param int $idMediaObject
+     * @param string $language
+     * @param string $origin
+     * @param string $agency
+     * @return void
      * @throws \Exception
      */
-    public function createCalendar($idMediaObject, $language, $origin)
+    public function createCalendar($idMediaObject, $language, $origin, $agency = null)
     {
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
         $config = $this->_config['search']['touristic'];
         $this->mediaObject = new MediaObject($idMediaObject, true, true);
-        $collection_name = $this->getCollectionName($origin, $language);
+        $collection_name = $this->getCollectionName($origin, $language, $agency);
         $collection = $this->db->$collection_name;
         $items = [];
         foreach ($config['occupancies'] as $occupancy) {

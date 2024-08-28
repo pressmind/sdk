@@ -1775,6 +1775,9 @@ class MediaObject extends AbstractObject
                             $values = [];
                             if ($definition['relation']['class'] == '\\Pressmind\\ORM\\Object\\MediaObject\\DataType\\Categorytree') {
                                 foreach ($data->$name as $tree) {
+                                    if(empty($tree->item->name)){
+                                        continue;
+                                    }
                                     $values[] = $tree->item->name;
                                 }
                             }

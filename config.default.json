@@ -60,6 +60,7 @@
         ],
         "my_content_class_map": {},
         "disable_touristic_data_import": [],
+        "disable_virtual_price_calculation": [],
         "generate_single_room_index": true,
         "max_offers_per_product": 5000,
         "generate_offer_for_each_startingpoint_option": false,

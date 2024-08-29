@@ -8,6 +8,7 @@ use Pressmind\Import\Brand;
 use Pressmind\Import\CategoryTree;
 use Pressmind\Import\ImportInterface;
 use Pressmind\Import\Itinerary;
+use Pressmind\Import\ManualCheapestPrice;
 use Pressmind\Import\MediaObjectCheapestPrice;
 use Pressmind\Import\MediaObjectData;
 use Pressmind\Import\MediaObjectType;
@@ -326,20 +327,16 @@ class Import
                 $touristic_data_importer->import($fake_data, $id_media_object, $this->_import_type);
             }
 
-            if(!empty($response[0]->cheapest_prices)){
+            $disable_virtual_price_calculation = (isset($config['data']['touristic']['disable_virtual_price_calculation']) && in_array($response[0]->id_media_objects_data_type, $config['data']['touristic']['disable_virtual_price_calculation']));
+            if(!empty($response[0]->cheapest_prices) && !$disable_virtual_price_calculation){
                 $touristic_data_importer = new MediaObjectCheapestPrice();
                 $touristic_data_importer->import($response[0]->cheapest_prices, $id_media_object, $this->_import_type);
             }
 
-            /*if(is_a($response[0]->insurance_group, 'stdClass') && intval($response[0]->id_insurance_group) != 0) {
-                echo 'importing insurance groups ...' . "\n";
-                $insurance_info = [];
-                foreach ($response[0]->insurance_group as $key => $value) {
-                    $insurance_info['touristic_' . $key] = $value;
-                }
-                $insurance_data_importer = new TouristicData();
-                $insurance_data_importer->import($insurance_info, $id_media_object, $this->_import_type);
-            }*/
+            if(is_array($response[0]->cheapest_prices)){
+                $manual_cheapest_price_importer = new ManualCheapestPrice($response[0]->cheapest_prices);
+                $manual_cheapest_price_importer->import();
+            }
 
             if(is_array($response[0]->my_contents_to_media_object)) {
                 $my_content_importer = new MyContent($response[0]->my_contents_to_media_object);

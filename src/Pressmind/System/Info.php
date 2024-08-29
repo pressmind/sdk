@@ -41,6 +41,7 @@ class Info
         '\MediaObject\DataType\Key_value\Row',
         '\MediaObject\DataType\Key_value\Row\Column',
         '\MediaObject\MyContent',
+        '\MediaObject\ManualCheapestPrice',
         '\Route',
         '\Search',
         '\Season',

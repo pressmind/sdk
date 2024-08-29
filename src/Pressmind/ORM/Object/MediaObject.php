@@ -6,6 +6,7 @@ use DateTime;
 use Exception;
 use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\Itinerary\Step;
+use Pressmind\ORM\Object\MediaObject\ManualCheapestPrice;
 use Pressmind\ORM\Object\MediaType\AbstractMediaType;
 use Pressmind\ORM\Object\MediaType\Factory;
 use Pressmind\DB\Adapter\Pdo;
@@ -66,6 +67,7 @@ use stdClass;
  * @property Season $season
  * @property Brand $brand
  * @property Agency[] $agencies
+ * @property ManualCheapestPrice[] $manual_cheapest_prices
  */
 class MediaObject extends AbstractObject
 {
@@ -565,7 +567,21 @@ class MediaObject extends AbstractObject
                     'related_id' => 'id_media_object',
                     'target_id' => 'id_agency'
                 ]
-            ]
+            ],
+            'manual_cheapest_prices' => [
+                'title' => 'manual_cheapest_prices',
+                'name' => 'manual_cheapest_prices',
+                'type' => 'relation',
+                'relation' => [
+                    'type' => 'hasMany',
+                    'related_id' => 'id_media_object',
+                    'class' => ManualCheapestPrice::class,
+                    'filters' => null
+                ],
+                'required' => false,
+                'validators' => null,
+                'filters' => null
+            ],
         ]
     ];
 

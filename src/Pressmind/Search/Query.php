@@ -486,8 +486,13 @@ class Query
         if (empty($request[$prefix.'-ho']) === false){
             if(preg_match('/^[0-9\,]+$/', $request[$prefix.'-ho']) > 0){
                 $occupancies = array_map('intval', explode(',', $request[$prefix.'-ho']));
-                $conditions[] = new \Pressmind\Search\Condition\MongoDB\Occupancy($occupancies);
                 $validated_search_parameters[$prefix.'-ho'] = implode(',', $occupancies);
+                $child_occupancies = [];
+                if(empty($request[$prefix.'-hoc']) === false && preg_match('/^[0-9\,]+$/', $request[$prefix.'-hoc']) > 0){
+                    $child_occupancies = array_map('intval', explode(',', $request[$prefix.'-hoc']));
+                    $validated_search_parameters[$prefix.'-hoc'] = implode(',', $child_occupancies);
+                }
+                $conditions[] = new \Pressmind\Search\Condition\MongoDB\Occupancy($occupancies, $child_occupancies);
             }
         }
         if (empty($request[$prefix.'-id']) === false){

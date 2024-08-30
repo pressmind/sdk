@@ -766,8 +766,10 @@ class Indexer extends AbstractIndex
         // price mix date_housing
         foreach ($config['occupancies'] as $occupancy) {
             foreach ($config['duration_ranges'] as $duration_range) {
-                $query = "select option_occupancy as occupancy,
-                                 group_concat(date_departure) as date_departures,
+                $query = "select 
+                                  option_occupancy as occupancy,
+                                  option_occupancy_child as occupancy_child,
+                                  group_concat(date_departure) as date_departures,
                                   max(duration) as duration,
                                   price_total,
                                   price_regular_before_discount,
@@ -787,6 +789,7 @@ class Indexer extends AbstractIndex
                                   END AS state
                             from (SELECT state,
                                          option_occupancy,
+                                         option_occupancy_child, 
                                          date_departure,
                                          price_total,
                                          price_regular_before_discount,
@@ -844,6 +847,7 @@ class Indexer extends AbstractIndex
                         unset($result->guaranteed);
                         $result->guaranteed_departures = $formatted_guaranteed_departures;
                         $result->occupancy = intval($result->occupancy);
+                        $result->occupancy_child = intval($result->occupancy_child);
                         $result->duration = floatval($result->duration);
                         $result->price_total = floatval($result->price_total); // @TODO pseudo price handling is missing
                         $result->price_regular_before_discount = floatval($result->price_regular_before_discount);
@@ -936,6 +940,7 @@ class Indexer extends AbstractIndex
                     unset($result->guaranteed);
                     $result->guaranteed_departures = $formatted_guaranteed_departures;
                     $result->occupancy = null;
+                    $result->occupancy_child = null;
                     $result->duration = floatval($result->duration);
                     $result->price_total = floatval($result->price_total);
                     $result->price_regular_before_discount = floatval($result->price_regular_before_discount);

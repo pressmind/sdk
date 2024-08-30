@@ -26,6 +26,7 @@ use DateTime;
  * @property integer $option_occupancy
  * @property integer $option_occupancy_min
  * @property integer $option_occupancy_max
+ * @property integer $option_occupancy_child
  * @property string $option_price_due
  * @property float $price_transport_total
  * @property float $price_transport_1
@@ -115,6 +116,7 @@ class CheapestPriceSpeed extends AbstractObject
                         'option_occupancy',
                         'option_occupancy_min',
                         'option_occupancy_max',
+                        'option_occupancy_child',
                         'duration'
                     ]
                 ],
@@ -356,6 +358,17 @@ class CheapestPriceSpeed extends AbstractObject
                 'validators' => null,
                 'index' => [
                     'option_occupancy_max' => 'index'
+                ]
+            ],
+            'option_occupancy_child' => [
+                'name' => 'option_occupancy_child',
+                'title' => 'option_occupancy_child',
+                'type' => 'integer',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+                'index' => [
+                    'option_occupancy_child' => 'index'
                 ]
             ],
             'price_transport_total' => [

@@ -5,16 +5,23 @@ namespace Pressmind\Search\Condition\MongoDB;
 class Occupancy
 {
     private $_occupancies;
+    private $_child_occupancies;
 
 
-    public function __construct($occupancies)
+    /**
+     * @param array|null $occupancies
+     * @param array|null $child_occupancies
+    */
+    public function __construct($occupancies, $child_occupancies)
     {
         if(!is_array($occupancies)) {
             $occupancies = [$occupancies];
         }
-
-        // we add "null" to the occupancy to match even price_mixes that have no necessary occupancy
+        if(!is_array($occupancies)) {
+            $child_occupancies = [$child_occupancies];
+        }
         $this->_occupancies = array_merge([null], $occupancies);
+        $this->_child_occupancies = array_merge([null], $child_occupancies);
     }
 
     /**
@@ -28,22 +35,38 @@ class Occupancy
     {
         if($type == 'first_match') {
             if($allow_invalid_offers === false){
-                return ['prices' => ['$elemMatch' => ['occupancy' => ['$in' => $this->_occupancies]]]];
+                $r = ['prices' => ['$elemMatch' => ['occupancy' => ['$in' => $this->_occupancies]]]];
+                if(count($this->_child_occupancies) > 1) {
+                    $r['prices']['$elemMatch']['occupancy_child'] = ['$in' => $this->_child_occupancies];
+                }
+                return $r;
             }else{
-                return ['$or' => [
-                    ['prices' => [
-                        '$elemMatch' => [
-                            'occupancy' => [
-                                '$in' => $this->_occupancies
+                $r = ['$or' => [
+                    [
+                        'prices' => [
+                            '$elemMatch' => [
+                                'occupancy' => [
+                                    '$in' => $this->_occupancies
+                                ]
                             ]
                         ]
-                    ]], [
-                        'prices.occupancy.0' => [
+                    ],
+                    [
+                        'prices.occupancy' => [
                             '$exists' => false
                         ]
+                    ],
+                    [
+                        'prices' => [
+                            '$size' => 0
+                        ]
                     ]
-                ]
+                    ]
                 ];
+                if(count($this->_child_occupancies) > 1) {
+                    $r['$or'][0]['prices']['$elemMatch']['occupancy_child'] = ['$in' => $this->_child_occupancies];
+                }
+                return $r;
             }
         } else if($type == 'prices_filter') {
             // @TODO: check if this query has an effect to $allow_invalid_offers

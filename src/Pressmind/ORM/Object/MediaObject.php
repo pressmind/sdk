@@ -1425,6 +1425,7 @@ class MediaObject extends AbstractObject
                                 $cheapestPriceSpeed->option_occupancy = empty($option->occupancy) ? 1 : $option->occupancy;
                                 $cheapestPriceSpeed->option_occupancy_min = empty($option->occupancy_min) ? $option->occupancy : $option->occupancy_min;
                                 $cheapestPriceSpeed->option_occupancy_max = empty($option->occupancy_max) ? $option->occupancy : $option->occupancy_max;
+                                $cheapestPriceSpeed->option_occupancy_child = empty($option->occupancy_child) ? $option->occupancy_child : $option->occupancy_child;
                                 $cheapestPriceSpeed->price_transport_total = $transport_price;
                                 $cheapestPriceSpeed->price_transport_1 = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->price : null;
                                 $cheapestPriceSpeed->price_transport_2 = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->price : null;

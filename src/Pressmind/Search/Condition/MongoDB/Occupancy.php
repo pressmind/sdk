@@ -12,7 +12,7 @@ class Occupancy
      * @param array|null $occupancies
      * @param array|null $child_occupancies
     */
-    public function __construct($occupancies, $child_occupancies)
+    public function __construct($occupancies, $child_occupancies = [])
     {
         if(!is_array($occupancies)) {
             $occupancies = [$occupancies];

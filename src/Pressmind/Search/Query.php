@@ -134,6 +134,8 @@ class Query
                     $item['cheapest_price']->earlybird_discount_date_to = $document['prices']['earlybird_discount_date_to'] != null ? new \DateTime($document['prices']['earlybird_discount_date_to']) : null;
                     $item['cheapest_price']->option_board_type = $document['prices']['option_board_type'];
                     $item['cheapest_price']->transport_type = $document['prices']['transport_type'];
+                    $item['cheapest_price']->occupancy = $document['prices']['occupancy'];
+                    $item['cheapest_price']->occupancy_child = $document['prices']['occupancy_child'];
                 } else {
                     $item['cheapest_price'] = null;
                     $document['prices'] = null;

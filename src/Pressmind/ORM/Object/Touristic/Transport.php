@@ -454,8 +454,8 @@ class Transport extends AbstractObject
                 'filters' => NULL,
             ],
             'time_arrival' => [
-                'title' => 'time_departure',
-                'name' => 'time_departure',
+                'title' => 'time_arrival',
+                'name' => 'time_arrival',
                 'type' => 'time',
                 'required' => false,
                 'validators' => NULL,

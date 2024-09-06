@@ -121,7 +121,7 @@ class Location extends AbstractObject
             'lat' => [
                 'title' => 'lat',
                 'name' => 'lat',
-                'type' => 'decimal',
+                'type' => 'float',
                 'required' => false,
                 'filters' => null,
                 'validators' =>
@@ -135,7 +135,7 @@ class Location extends AbstractObject
             'lng' => [
                 'title' => 'lng',
                 'name' => 'lng',
-                'type' => 'decimal',
+                'type' => 'float',
                 'required' => false,
                 'filters' => null,
                 'validators' =>

@@ -16,6 +16,7 @@ use Pressmind\ORM\Object\Touristic\Option;
  * @property string $id_booking_package
  * @property string $name
  * @property string $code
+ * @property string $anf_code
  * @property integer $nights
  * @property string $text
  * @property string $code_ibe
@@ -99,6 +100,19 @@ class Package extends AbstractObject
             'code' => [
                 'title' => 'Code',
                 'name' => 'code',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
+            'anf_code' => [
+                'title' => 'anf_code',
+                'name' => 'anf_code',
                 'type' => 'string',
                 'required' => false,
                 'validators' => [

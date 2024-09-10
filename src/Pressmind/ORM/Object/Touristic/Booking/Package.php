@@ -33,6 +33,8 @@ use Pressmind\ORM\Object\Touristic\SeasonalPeriod;
  * @property string $type_of_travel
  * @property string $variant_code
  * @property string $request_code
+ * @property string $price_group
+ * @property string $product_group
  * @property string $destination_airport
  * @property boolean $is_virtual_created_price (true if price is created from MediaObject->CheapestPrice during Import (! belongs to Pressmind > MOE -> Booking -> Prices)
  * @property datetime $created
@@ -293,6 +295,32 @@ class Package extends AbstractObject
             'request_code' => [
                 'title' => 'request_code',
                 'name' => 'request_code',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => null
+            ],
+            'price_group' => [
+                'title' => 'price_group',
+                'name' => 'price_group',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => null
+            ],
+            'product_group' => [
+                'title' => 'product_group',
+                'name' => 'product_group',
                 'type' => 'string',
                 'required' => false,
                 'validators' => [

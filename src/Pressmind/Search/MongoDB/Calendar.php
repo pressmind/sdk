@@ -241,6 +241,9 @@ class Calendar extends AbstractIndex
                     $filter->transport_types = [$item['transport_type']];
                 }
                 $offers = $this->mediaObject->getCheapestPrices($filter, ['date_departure' => 'ASC', 'price_total' => 'ASC']);
+                if(empty($offers)){
+                    continue;
+                }
                 /**
                  * @var \Pressmind\ORM\Object\CheapestPriceSpeed[] $date_to_cheapest_price
                  */

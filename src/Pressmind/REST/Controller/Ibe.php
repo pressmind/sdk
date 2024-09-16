@@ -162,7 +162,7 @@ class Ibe
             'price_mix' => $booking->getBookingPackage()->price_mix,
         ];
 
-        $extras = $booking->getAllAvailableExtras($date->departure, $date->arrival, $date->season);
+        $extras = $booking->getAllAvailableExtras($date->departure, $date->arrival, $date->season, $ida);
         $result['insurances'] = $booking->getInsurances();
         $result['insurance_price_table_packages'] = $booking->getInsurancePriceTablePackages();
         $predefined_options = [];
@@ -185,6 +185,11 @@ class Ibe
             $package = new Package($id_housing_package, true);
             $valid_options = [];
             foreach($package->options as $option){
+                if(!empty($option->agencies) && !empty($ida)){
+                    if(!in_array($ida, explode(',', $option->agencies))){
+                        continue;
+                    }
+                }
                 $current_saison = trim($option->season);
                 if(in_array($current_saison, [$date->season, '-']) || empty($option->season)){
                     $valid_options[] = new \Pressmind\ORM\Object\Touristic\Option($option->id, true);
@@ -362,6 +367,15 @@ class Ibe
         $data = [];
         $data['total'] = count(Startingpoint::getOptionsByZipRadius($id_starting_point, $ibe_client, $zip, $radius, 0, null));
         $data['starting_point_options'] = Startingpoint::getOptionsByZipRadius($id_starting_point, $ibe_client, $zip, $radius, $start, $limit, $order_by_code_list);
+        return ['success' => true, 'data' => $data];
+    }
+
+    public function pressmind_ib3_v2_get_starting_point_option_by_id($params) {
+        $this->parameters = $params['data'];
+        $id_starting_point_option = $this->parameters['id_starting_point_option'];
+        $ibe_client = isset($this->parameters['ibe_client']) ? $this->parameters['ibe_client'] : null;
+        $data = [];
+        $data['starting_point_option'] = Startingpoint::getOptionByIdPlus($id_starting_point_option, $ibe_client);
         return ['success' => true, 'data' => $data];
     }
 

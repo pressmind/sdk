@@ -625,7 +625,8 @@ class Option extends AbstractObject
                             'MIN_ONE_OF_GROUP',
                             'MAX_ONE_OF_GROUP',
                             'EXACTLY_ONE_OF_GROUP',
-                            'OPTIONAL'
+                            'OPTIONAL',
+                            'SINGLE' // legacy
                         ],
                     ],
                 ],

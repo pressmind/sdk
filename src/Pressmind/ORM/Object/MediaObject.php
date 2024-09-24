@@ -756,7 +756,7 @@ class MediaObject extends AbstractObject
                 $state_filter_is_set = true;
             }
             if(!empty($filters->id_startingpoint_option)) {
-                $where .= ' AND id_startingpoint_option = '.$filters->id_startingpoint_option;
+                $where .= ' AND id_startingpoint_option = "'.$filters->id_startingpoint_option.'"';
             }
             if(!empty($filters->startingpoint_option_name)) {
                 $where .= ' AND startingpoint_option_name like "%'.$filters->startingpoint_option_name.'%"';

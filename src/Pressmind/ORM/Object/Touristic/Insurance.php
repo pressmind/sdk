@@ -27,6 +27,7 @@ use Pressmind\ORM\Object\Touristic\Insurance\PriceTable;
  * @property integer $pax_min
  * @property integer $pax_max
  * @property string $code
+ * @property string $code_ibe
  * @property PriceTable[] $price_tables
  * @property Insurance[] $sub_insurances
  * @property string $own_contribution
@@ -191,6 +192,19 @@ class Insurance extends AbstractObject
             'code' => [
                 'title' => 'Code',
                 'name' => 'code',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
+            'code_ibe' => [
+                'title' => 'code_ibe',
+                'name' => 'code_ibe',
                 'type' => 'string',
                 'required' => false,
                 'validators' => [

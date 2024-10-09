@@ -950,6 +950,9 @@ class MediaObject extends AbstractObject
                 if(!empty($document->booking_package->duration) && !in_array($document->booking_package->duration, $filter['id_startingpoint_options'][$document->id_startingpoint_option]['durations'])){
                     $filter['id_startingpoint_options'][$document->id_startingpoint_option]['durations'][] = $document->booking_package->duration;
                 }
+                if(!empty($document->airport) && !in_array($document->airport, $filter['id_startingpoint_options'][$document->id_startingpoint_option]['airports'])){
+                    $filter['id_startingpoint_options'][$document->id_startingpoint_option]['airports'][] = $document->airport;
+                }
             }
             if(!empty($document->occupancy) && !isset($filter['occupancies'][$document->occupancy])){
                 $filter['occupancies'][$document->occupancy] = ['durations' => [], 'transport_types' => [], 'id_housing_packages' => [], 'airports' => [], 'id_startingpoint_options' => []];
@@ -1385,142 +1388,145 @@ class MediaObject extends AbstractObject
                                 }
                                 $transport_earlybird_price_base = 0;
                                 foreach ($early_bird_discounts as $early_bird_discount) {
-                                if (!is_null($transport_pair) && isset($transport_pair['way1'])) {
-                                    $transport_price = $transport_pair['way1']->price + (isset($transport_pair['way2']) ? $transport_pair['way2']->price : 0);
-                                    if ($transport_pair['way1']->use_earlybird) {
-                                        $transport_earlybird_price_base = $transport_pair['way1']->price;
+                                    if(!empty($early_bird_discount->booking_date_to)){
+                                        $early_bird_discount->booking_date_to->setTime('23', '59', '59');
                                     }
-                                    if (isset($transport_pair['way2']) && $transport_pair['way2']->use_earlybird) {
-                                        $transport_earlybird_price_base += $transport_pair['way2']->price;
+                                    if (!is_null($transport_pair) && isset($transport_pair['way1'])) {
+                                        $transport_price = $transport_pair['way1']->price + (isset($transport_pair['way2']) ? $transport_pair['way2']->price : 0);
+                                        if ($transport_pair['way1']->use_earlybird) {
+                                            $transport_earlybird_price_base = $transport_pair['way1']->price;
+                                        }
+                                        if (isset($transport_pair['way2']) && $transport_pair['way2']->use_earlybird) {
+                                            $transport_earlybird_price_base += $transport_pair['way2']->price;
+                                        }
+                                    } else {
+                                        $transport_price = 0;
                                     }
-                                } else {
-                                    $transport_price = 0;
-                                }
-                                // zero prices are not allowed in primary options
-                                if (($booking_package->price_mix == 'date_transport' && empty($transport_price)) ||
-                                    ($booking_package->price_mix != 'date_transport' && empty($option->price))
-                                ) {
-                                    continue;
-                                }
-                                $price = $option->price + $transport_price + $starting_point_price + $included_options_price;
-                                $price_base_early_bird = ($option->use_earlybird ? $option->price : 0) + $transport_earlybird_price_base + $starting_point_price + $included_options_earlybird_price_base;
-                                if ($price <= 0) {
-                                    continue;
-                                }
-                                $cheapestPriceSpeed = new CheapestPriceSpeed();
-                                $cheapestPriceSpeed->id_media_object = $this->getId();
-                                $cheapestPriceSpeed->id_booking_package = $booking_package->getId();
-                                $cheapestPriceSpeed->id_housing_package = $option->id_housing_package;
-                                $cheapestPriceSpeed->id_date = $date->getId();
-                                $cheapestPriceSpeed->id_option = $option->getId();
-                                $cheapestPriceSpeed->id_transport_1 = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->id : null;
-                                $cheapestPriceSpeed->id_transport_2 = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->id : null;
-                                $cheapestPriceSpeed->duration = $booking_package->duration;
-                                $cheapestPriceSpeed->date_departure = $date->departure;
-                                $cheapestPriceSpeed->date_arrival = $date->arrival;
-                                $cheapestPriceSpeed->option_name = $option->name;
-                                $cheapestPriceSpeed->option_description_long = $option->description_long;
-                                $cheapestPriceSpeed->option_code = $option->code;
-                                $cheapestPriceSpeed->option_board_type = $option->board_type;
-                                $cheapestPriceSpeed->option_occupancy = empty($option->occupancy) ? 1 : $option->occupancy;
-                                $cheapestPriceSpeed->option_occupancy_min = empty($option->occupancy_min) ? $option->occupancy : $option->occupancy_min;
-                                $cheapestPriceSpeed->option_occupancy_max = empty($option->occupancy_max) ? $option->occupancy : $option->occupancy_max;
-                                $cheapestPriceSpeed->option_occupancy_child = empty($option->occupancy_child) ? null: $option->occupancy_child;
-                                $cheapestPriceSpeed->price_transport_total = $transport_price;
-                                $cheapestPriceSpeed->price_transport_1 = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->price : null;
-                                $cheapestPriceSpeed->price_transport_2 = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->price : null;
-                                $cheapestPriceSpeed->price_mix = $booking_package->price_mix;
-                                $cheapestPriceSpeed->price_option = $option->price;
-                                $cheapestPriceSpeed->price_option_pseudo = $option->price_pseudo;
-                                $cheapestPriceSpeed->option_price_due = $option->price_due;
-                                $cheapestPriceSpeed->price_regular_before_discount = $price;
-                                $cheapestPriceSpeed->transport_code = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->code : null;
-                                $cheapestPriceSpeed->transport_type = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->type : null;
-                                $cheapestPriceSpeed->transport_1_way = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->way : null;
-                                $cheapestPriceSpeed->transport_2_way = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->way : null;
-                                $cheapestPriceSpeed->transport_1_description = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->description : null;
-                                $cheapestPriceSpeed->transport_2_description = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->description : null;
-                                $cheapestPriceSpeed->transport_1_airline = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way1']->airline : null;
-                                $cheapestPriceSpeed->transport_2_airline = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->airline : null;
-                                $cheapestPriceSpeed->transport_1_airport = !empty($cheapestPriceSpeed->transport_code) ? substr($cheapestPriceSpeed->transport_code, 0, 3) : null;
-                                $cheapestPriceSpeed->transport_2_airport = !empty($cheapestPriceSpeed->transport_code) ? substr($cheapestPriceSpeed->transport_code, -3, 3) : null; // TODO is not often used and needs a rework
-                                if (!empty($cheapestPriceSpeed->transport_1_airport)) {
-                                    $airport = Airport::getByIata($cheapestPriceSpeed->transport_1_airport);
-                                    $cheapestPriceSpeed->transport_1_airport_name = !empty($airport->name) ? $airport->name : null;
-                                }
-                                if (!empty($cheapestPriceSpeed->transport_2_airport)) {
-                                    $airport = Airport::getByIata($cheapestPriceSpeed->transport_2_airport);
-                                    $cheapestPriceSpeed->transport_2_airport_name = !empty($airport->name) ? $airport->name : null;
-                                }
-                                $cheapestPriceSpeed->transport_1_flight = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way1']->flight : null;
-                                $cheapestPriceSpeed->transport_2_flight = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->flight : null;
-                                $cheapestPriceSpeed->transport_1_date_from = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way1']->transport_date_from : null;
-                                $cheapestPriceSpeed->transport_1_date_to = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way1']->transport_date_to : null;
-                                $cheapestPriceSpeed->transport_2_date_from = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->transport_date_from : null;
-                                $cheapestPriceSpeed->transport_2_date_to = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->transport_date_to : null;
-                                if ($is_bookable) {
-                                    $cheapestPriceSpeed->state = 3;
-                                }
-                                if ($is_request) {
-                                    $cheapestPriceSpeed->state = 1;
-                                }
-                                if (!$is_bookable && !$is_request) {
-                                    $cheapestPriceSpeed->state = 5;
-                                }
-                                $cheapestPriceSpeed->infotext = $date->text;
-                                $cheapestPriceSpeed->id_option_auto_book = null;
-                                $cheapestPriceSpeed->id_option_required_group = null;  // @TODO deprecated
-                                $cheapestPriceSpeed->included_options_price = $included_options_price;
-                                $cheapestPriceSpeed->included_options_description = implode(',', $included_options_description);
-                                $cheapestPriceSpeed->id_included_options = implode(',', $id_included_options);
-                                $cheapestPriceSpeed->code_ibe_included_options = implode(',', $code_ibe_included_options);
-                                $cheapestPriceSpeed->id_origin = $booking_package->id_origin;
-                                $cheapestPriceSpeed->id_startingpoint = empty($StartingPointOption) ? null : $StartingPointOption->id_startingpoint;
-                                $cheapestPriceSpeed->id_startingpoint_option = empty($StartingPointOption) ? null : $StartingPointOption->id;
-                                $cheapestPriceSpeed->startingpoint_name = empty($StartingPointOption) ? null : $StartingPointOption->name;
-                                $cheapestPriceSpeed->startingpoint_code_ibe = empty($StartingPointOption) ? null : $StartingPointOption->code_ibe;
-                                $cheapestPriceSpeed->price_total = $cheapestPriceSpeed->price_regular_before_discount;
-                                $cheapestPriceSpeed->earlybird_discount = null;
-                                $cheapestPriceSpeed->earlybird_discount_date_to = null;
-                                $cheapestPriceSpeed->earlybird_discount_f = null;
-                                if ($this->_checkEarlyBirdDiscount($early_bird_discount, $date)) {
-                                    $discount = $this->_calculateEarlyBirdDiscount($early_bird_discount, $price_base_early_bird);
-                                    if ($discount > 0 || $discount < 0) {
-                                        $cheapestPriceSpeed->earlybird_discount = strtolower($early_bird_discount->type) == 'p' ? $early_bird_discount->discount_value : null;
-                                        $cheapestPriceSpeed->earlybird_discount_date_to = $early_bird_discount->booking_date_to;
-                                        $cheapestPriceSpeed->earlybird_discount_f = strtolower($early_bird_discount->type) == 'f' ? $early_bird_discount->discount_value : null;
-                                        $cheapestPriceSpeed->earlybird_name = empty($date->early_bird_discount_group->name) ? 'Frühbucher' : $date->early_bird_discount_group->name;
-                                        $cheapestPriceSpeed->price_total = $cheapestPriceSpeed->price_regular_before_discount + $discount;
+                                    // zero prices are not allowed in primary options
+                                    if (($booking_package->price_mix == 'date_transport' && empty($transport_price)) ||
+                                        ($booking_package->price_mix != 'date_transport' && empty($option->price))
+                                    ) {
+                                        continue;
+                                    }
+                                    $price = $option->price + $transport_price + $starting_point_price + $included_options_price;
+                                    $price_base_early_bird = ($option->use_earlybird ? $option->price : 0) + $transport_earlybird_price_base + $starting_point_price + $included_options_earlybird_price_base;
+                                    if ($price <= 0) {
+                                        continue;
+                                    }
+                                    $cheapestPriceSpeed = new CheapestPriceSpeed();
+                                    $cheapestPriceSpeed->id_media_object = $this->getId();
+                                    $cheapestPriceSpeed->id_booking_package = $booking_package->getId();
+                                    $cheapestPriceSpeed->id_housing_package = $option->id_housing_package;
+                                    $cheapestPriceSpeed->id_date = $date->getId();
+                                    $cheapestPriceSpeed->id_option = $option->getId();
+                                    $cheapestPriceSpeed->id_transport_1 = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->id : null;
+                                    $cheapestPriceSpeed->id_transport_2 = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->id : null;
+                                    $cheapestPriceSpeed->duration = $booking_package->duration;
+                                    $cheapestPriceSpeed->date_departure = $date->departure;
+                                    $cheapestPriceSpeed->date_arrival = $date->arrival;
+                                    $cheapestPriceSpeed->option_name = $option->name;
+                                    $cheapestPriceSpeed->option_description_long = $option->description_long;
+                                    $cheapestPriceSpeed->option_code = $option->code;
+                                    $cheapestPriceSpeed->option_board_type = $option->board_type;
+                                    $cheapestPriceSpeed->option_occupancy = empty($option->occupancy) ? 1 : $option->occupancy;
+                                    $cheapestPriceSpeed->option_occupancy_min = empty($option->occupancy_min) ? $option->occupancy : $option->occupancy_min;
+                                    $cheapestPriceSpeed->option_occupancy_max = empty($option->occupancy_max) ? $option->occupancy : $option->occupancy_max;
+                                    $cheapestPriceSpeed->option_occupancy_child = empty($option->occupancy_child) ? null: $option->occupancy_child;
+                                    $cheapestPriceSpeed->price_transport_total = $transport_price;
+                                    $cheapestPriceSpeed->price_transport_1 = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->price : null;
+                                    $cheapestPriceSpeed->price_transport_2 = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->price : null;
+                                    $cheapestPriceSpeed->price_mix = $booking_package->price_mix;
+                                    $cheapestPriceSpeed->price_option = $option->price;
+                                    $cheapestPriceSpeed->price_option_pseudo = $option->price_pseudo;
+                                    $cheapestPriceSpeed->option_price_due = $option->price_due;
+                                    $cheapestPriceSpeed->price_regular_before_discount = $price;
+                                    $cheapestPriceSpeed->transport_code = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->code : null;
+                                    $cheapestPriceSpeed->transport_type = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->type : null;
+                                    $cheapestPriceSpeed->transport_1_way = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->way : null;
+                                    $cheapestPriceSpeed->transport_2_way = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->way : null;
+                                    $cheapestPriceSpeed->transport_1_description = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->description : null;
+                                    $cheapestPriceSpeed->transport_2_description = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->description : null;
+                                    $cheapestPriceSpeed->transport_1_airline = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way1']->airline : null;
+                                    $cheapestPriceSpeed->transport_2_airline = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->airline : null;
+                                    $cheapestPriceSpeed->transport_1_airport = !empty($cheapestPriceSpeed->transport_code) ? substr($cheapestPriceSpeed->transport_code, 0, 3) : null;
+                                    $cheapestPriceSpeed->transport_2_airport = !empty($cheapestPriceSpeed->transport_code) ? substr($cheapestPriceSpeed->transport_code, -3, 3) : null; // TODO is not often used and needs a rework
+                                    if (!empty($cheapestPriceSpeed->transport_1_airport)) {
+                                        $airport = Airport::getByIata($cheapestPriceSpeed->transport_1_airport);
+                                        $cheapestPriceSpeed->transport_1_airport_name = !empty($airport->name) ? $airport->name : null;
+                                    }
+                                    if (!empty($cheapestPriceSpeed->transport_2_airport)) {
+                                        $airport = Airport::getByIata($cheapestPriceSpeed->transport_2_airport);
+                                        $cheapestPriceSpeed->transport_2_airport_name = !empty($airport->name) ? $airport->name : null;
+                                    }
+                                    $cheapestPriceSpeed->transport_1_flight = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way1']->flight : null;
+                                    $cheapestPriceSpeed->transport_2_flight = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->flight : null;
+                                    $cheapestPriceSpeed->transport_1_date_from = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way1']->transport_date_from : null;
+                                    $cheapestPriceSpeed->transport_1_date_to = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way1']->transport_date_to : null;
+                                    $cheapestPriceSpeed->transport_2_date_from = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->transport_date_from : null;
+                                    $cheapestPriceSpeed->transport_2_date_to = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->transport_date_to : null;
+                                    if ($is_bookable) {
+                                        $cheapestPriceSpeed->state = 3;
+                                    }
+                                    if ($is_request) {
+                                        $cheapestPriceSpeed->state = 1;
+                                    }
+                                    if (!$is_bookable && !$is_request) {
+                                        $cheapestPriceSpeed->state = 5;
+                                    }
+                                    $cheapestPriceSpeed->infotext = $date->text;
+                                    $cheapestPriceSpeed->id_option_auto_book = null;
+                                    $cheapestPriceSpeed->id_option_required_group = null;  // @TODO deprecated
+                                    $cheapestPriceSpeed->included_options_price = $included_options_price;
+                                    $cheapestPriceSpeed->included_options_description = implode(',', $included_options_description);
+                                    $cheapestPriceSpeed->id_included_options = implode(',', $id_included_options);
+                                    $cheapestPriceSpeed->code_ibe_included_options = implode(',', $code_ibe_included_options);
+                                    $cheapestPriceSpeed->id_origin = $booking_package->id_origin;
+                                    $cheapestPriceSpeed->id_startingpoint = empty($StartingPointOption) ? null : $StartingPointOption->id_startingpoint;
+                                    $cheapestPriceSpeed->id_startingpoint_option = empty($StartingPointOption) ? null : $StartingPointOption->id;
+                                    $cheapestPriceSpeed->startingpoint_name = empty($StartingPointOption) ? null : $StartingPointOption->name;
+                                    $cheapestPriceSpeed->startingpoint_code_ibe = empty($StartingPointOption) ? null : $StartingPointOption->code_ibe;
+                                    $cheapestPriceSpeed->price_total = $cheapestPriceSpeed->price_regular_before_discount;
+                                    $cheapestPriceSpeed->earlybird_discount = null;
+                                    $cheapestPriceSpeed->earlybird_discount_date_to = null;
+                                    $cheapestPriceSpeed->earlybird_discount_f = null;
+                                    if ($this->_checkEarlyBirdDiscount($early_bird_discount, $date)) {
+                                        $discount = $this->_calculateEarlyBirdDiscount($early_bird_discount, $price_base_early_bird);
+                                        if ($discount > 0 || $discount < 0) {
+                                            $cheapestPriceSpeed->earlybird_discount = strtolower($early_bird_discount->type) == 'p' ? $early_bird_discount->discount_value : null;
+                                            $cheapestPriceSpeed->earlybird_discount_date_to = $early_bird_discount->booking_date_to;
+                                            $cheapestPriceSpeed->earlybird_discount_f = strtolower($early_bird_discount->type) == 'f' ? $early_bird_discount->discount_value : null;
+                                            $cheapestPriceSpeed->earlybird_name = empty($date->early_bird_discount_group->name) ? 'Frühbucher' : $date->early_bird_discount_group->name;
+                                            $cheapestPriceSpeed->price_total = $cheapestPriceSpeed->price_regular_before_discount + $discount;
+                                        }
+                                    }
+                                    $cheapestPriceSpeed->date_code_ibe = $date->code_ibe;
+                                    $cheapestPriceSpeed->housing_package_code_ibe = !empty($housing_package) ? $housing_package->code_ibe : null;
+                                    $cheapestPriceSpeed->housing_package_name = !empty($housing_package) ? $housing_package->name : null;
+                                    $cheapestPriceSpeed->housing_package_code = !empty($housing_package) ? $housing_package->code : null;
+                                    $cheapestPriceSpeed->option_code_ibe = $option->code_ibe;
+                                    $cheapestPriceSpeed->option_code_ibe_board_type = $option->code_ibe_board_type;
+                                    $cheapestPriceSpeed->option_code_ibe_board_type_category = $option->code_ibe_board_type_category;
+                                    $cheapestPriceSpeed->option_code_ibe_category = $option->code_ibe_category;
+                                    $cheapestPriceSpeed->option_request_code = $option->request_code;
+                                    $cheapestPriceSpeed->transport_1_code_ibe = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->code_ibe : null;
+                                    $cheapestPriceSpeed->transport_2_code_ibe = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->code_ibe : null;
+                                    $cheapestPriceSpeed->booking_package_ibe_type = $booking_package->ibe_type;
+                                    $cheapestPriceSpeed->booking_package_product_type_ibe = $booking_package->product_type_ibe;
+                                    $cheapestPriceSpeed->booking_package_type_of_travel = $booking_package->type_of_travel;
+                                    $cheapestPriceSpeed->booking_package_variant_code = $booking_package->variant_code;
+                                    $cheapestPriceSpeed->booking_package_request_code = $booking_package->request_code;
+                                    $cheapestPriceSpeed->booking_package_name = $booking_package->name;
+                                    $cheapestPriceSpeed->is_virtual_created_price = $booking_package->is_virtual_created_price;
+                                    $cheapestPriceSpeed->guaranteed = $date->guaranteed;
+                                    $cheapestPriceSpeed->saved = $date->saved;
+                                    $cheapestPriceSpeed->agency = $agency;
+                                    $cheapestPriceSpeed->create();
+                                    unset($cheapestPriceSpeed);
+                                    $c++;
+                                    if ($c == $max_rows) {
+                                        break(5);
                                     }
                                 }
-                                $cheapestPriceSpeed->date_code_ibe = $date->code_ibe;
-                                $cheapestPriceSpeed->housing_package_code_ibe = !empty($housing_package) ? $housing_package->code_ibe : null;
-                                $cheapestPriceSpeed->housing_package_name = !empty($housing_package) ? $housing_package->name : null;
-                                $cheapestPriceSpeed->housing_package_code = !empty($housing_package) ? $housing_package->code : null;
-                                $cheapestPriceSpeed->option_code_ibe = $option->code_ibe;
-                                $cheapestPriceSpeed->option_code_ibe_board_type = $option->code_ibe_board_type;
-                                $cheapestPriceSpeed->option_code_ibe_board_type_category = $option->code_ibe_board_type_category;
-                                $cheapestPriceSpeed->option_code_ibe_category = $option->code_ibe_category;
-                                $cheapestPriceSpeed->option_request_code = $option->request_code;
-                                $cheapestPriceSpeed->transport_1_code_ibe = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->code_ibe : null;
-                                $cheapestPriceSpeed->transport_2_code_ibe = !is_null($transport_pair) && isset($transport_pair['way1']) && isset($transport_pair['way2']) ? $transport_pair['way2']->code_ibe : null;
-                                $cheapestPriceSpeed->booking_package_ibe_type = $booking_package->ibe_type;
-                                $cheapestPriceSpeed->booking_package_product_type_ibe = $booking_package->product_type_ibe;
-                                $cheapestPriceSpeed->booking_package_type_of_travel = $booking_package->type_of_travel;
-                                $cheapestPriceSpeed->booking_package_variant_code = $booking_package->variant_code;
-                                $cheapestPriceSpeed->booking_package_request_code = $booking_package->request_code;
-                                $cheapestPriceSpeed->booking_package_name = $booking_package->name;
-                                $cheapestPriceSpeed->is_virtual_created_price = $booking_package->is_virtual_created_price;
-                                $cheapestPriceSpeed->guaranteed = $date->guaranteed;
-                                $cheapestPriceSpeed->saved = $date->saved;
-                                $cheapestPriceSpeed->agency = $agency;
-                                $cheapestPriceSpeed->create();
-                                unset($cheapestPriceSpeed);
-                                $c++;
-                                if ($c == $max_rows) {
-                                    break(5);
-                                }
-                            }
                             }
                         }
                     }

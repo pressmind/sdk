@@ -6,6 +6,7 @@ use Exception;
 use Pressmind\ORM\Object\AbstractObject;
 use DateTime;
 use Pressmind\ORM\Object\Touristic\Date\Attribute;
+use Pressmind\Registry;
 
 /**
  * Class Date
@@ -707,5 +708,53 @@ class Date extends AbstractObject
         }
         return $transport_pairs;
     }
+
+
+    /**
+     * Human friendly validation
+     * @param string $prefix
+     * @return array
+     */
+    public function validate($prefix = ''){
+        $result = [];
+        $transport_allowed_states = [0, 2, 3];
+        if(!empty(Registry::getInstance()->get('config')['data']['touristic']['transport_filter']['active'])) {
+            $transport_allowed_states = empty(Registry::getInstance()->get('config')['data']['touristic']['transport_filter']['allowed_states']) ? $transport_allowed_states : Registry::getInstance()->get('config')['data']['touristic']['transport_filter']['allowed_states'];
+        }
+        $agency_based_option_and_prices_enabled = !isset(Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['enabled']) ? false : Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['enabled'];
+        $agencies = empty(Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['allowed_agencies']) || $agency_based_option_and_prices_enabled === false ? [null] : Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['allowed_agencies'];
+        foreach ($agencies as $agency) {
+            $pairs = count($this->transports) > 0 ? $this->getTransportPairs($transport_allowed_states, [], [], null, true, $agency) : [null];
+            $pair_count = count($pairs);
+            $result[] = $prefix.($pair_count > 0 ? '✅' : '❌') . '  Transport Pair Check for Agency: ' . $agency. ' ('.$pair_count.' pairs found) Date ID: ' . $this->id. ' ('.$this->departure->format('Y-m-d').')';
+            if($pair_count == 0){
+                $transport_count = count($this->transports);
+                $result[] = $prefix.''.($transport_count > 0 ? '✅' : '❌') . '  Transport Check for Agency: ' . $agency. ' ('.$transport_count.' transports found)';
+                if($transport_count > 0){
+                    $pairs = $this->getTransportPairs($transport_allowed_states, [], [], null, false, $agency);
+                    $pair_count = count($pairs);
+                    $result[] = $prefix.($pair_count > 0 ? '✅' : '❌') . '  Property transport.dont_use_for_offers valid';
+                    $pairs = $this->getTransportPairs([0,2,3], [], [], null, true, $agency);
+                    $pair_count = count($pairs);
+                    $result[] = $prefix.($pair_count > 0 ? '✅' : '❌') . '  Property transport.state valid';
+                }
+            }
+            foreach($pairs as $pair){
+                if(!empty($pair['way1'])){
+                    $result = array_merge($result, $pair['way1']->validate($prefix.'  '));
+                }else{
+                    $result[] = $prefix.' ❌ ' . '  Property transport.pair[way1] not valid';
+                }
+                if(!empty($pair['way2'])){
+                    $result = array_merge($result, $pair['way2']->validate($prefix.'  '));
+                }else{
+                    $result[] = $prefix.' ❌ ' . '  Property transport.pair[way2] not valid';
+                }
+            }
+        }
+        return $result;
+    }
+
+
 
 }

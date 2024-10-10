@@ -23,9 +23,11 @@ use Pressmind\ORM\Object\Touristic\Option;
 use Pressmind\ORM\Object\Touristic\Startingpoint;
 use Pressmind\ORM\Object\Touristic\Transport;
 use Pressmind\Registry;
+use Pressmind\Search\CalendarFilter;
 use Pressmind\Search\CheapestPrice;
 use Pressmind\Search\MongoDB\Calendar;
 use Pressmind\Search\MongoDB\Indexer;
+use Pressmind\Search\Query;
 use Pressmind\System\Info;
 use Pressmind\ValueObject\MediaObject\Result\GetByPrettyUrl;
 use Pressmind\ValueObject\MediaObject\Result\GetPrettyUrls;
@@ -1381,7 +1383,7 @@ class MediaObject extends AbstractObject
                                 $startingPointOptions = [$dummy];
                             }
                             foreach ($startingPointOptions as $StartingPointOption) {
-                                if ($StartingPointOption->price_per_day) {
+                                if (!empty($StartingPointOption->price_per_day) && $StartingPointOption->price_per_day) {
                                     $starting_point_price = $StartingPointOption->price * $booking_package->duration;
                                 } else {
                                     $starting_point_price = empty($StartingPointOption->price) ? 0 : $StartingPointOption->price;
@@ -2139,4 +2141,85 @@ class MediaObject extends AbstractObject
         return $options;
     }
 
+    /**
+     * @return bool
+     * @throws Exception
+     */
+    public function hasOffers(){
+        $CheapestPriceSpeed = new CheapestPriceSpeed();
+        $r = $CheapestPriceSpeed->loadAll(['id_media_object' => $this->getId()]);
+        if(count($r) > 0){
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isAPrimaryObject(){
+        $config = Registry::getInstance()->get('config');
+        return in_array($this->id_object_type, $config['data']['primary_media_type_ids']);
+    }
+
+    /**
+     * Human friendly validation
+     * @param string $prefix
+     * @return array
+     */
+    public function validate(){
+        $config = Registry::getInstance()->get('config');
+        $result = [];
+        $result[] = 'Validation of MediaObject: '.$this->getId().' ('.$this->name.')';
+        if($this->isAPrimaryObject()){
+            $result[] = '    ✅  Primary Object';
+        }else{
+            $result[] = '    ✅  Not a primary Object (no extended tests required)';
+            return $result;
+        }
+        if(in_array($this->visibility, $config['data']['media_types_allowed_visibilities'][$this->id_object_type])){
+            $result[] = '    ✅  allowed visibility';
+        }else{
+            $result[] = '    ❌  visibility not allowed ('.$this->visibility.'), allowed id: ('.implode(',', $config['data']['media_types_allowed_visibilities'][$this->id_object_type]).')';
+        }
+        if(!empty($this->valid_from) && $this->valid_from < (new DateTime())){
+            $result[] = '    ❌  not visible yet (valid_from: '.$this->valid_from->format('Y-m-d H:i:s').')';
+        }
+        if(!empty($this->valid_to) && $this->valid_to > (new DateTime())){
+            $result[] = '   ❌  not visible outdated by valid_to '.$this->valid_to->format('Y-m-d H:i:s').')';
+        }
+        $result[] = '    Validation: CheapestPriceSpeed (Offers)';
+        $CheapestPriceSpeed = new CheapestPriceSpeed();
+        $r = $CheapestPriceSpeed->loadAll(['id_media_object' => $this->getId()]);
+        $count = count($r);
+        $result[] = '     '.($count > 0 ? '✅' : '❌') . '  Offers (count: '.$count.')';
+        $QueryFilter = new Query\Filter();
+        $QueryFilter->request = ['pm-id' => $this->getId()];
+        $QueryFilter->occupancy = null;
+        $r = Query::getResult($QueryFilter);
+        $result[] = '     '.($r['total_result'] > 0 ? '✅' : '❌') . '  MongoIndex Results (count: '.$r['total_result'].')';
+        if($r['total_result'] == 0 && !empty($r['mongodb']['aggregation_pipeline_search'])){
+            $result[] = '    Mongo Aggregation: '.$r['mongodb']['aggregation_pipeline_search'];
+        }
+        $Filter = new CalendarFilter();
+        $Calendar = $this->getCalendar($Filter);
+        $result[] = '     '.(!empty($Calendar->calendar) ? '✅' : '❌') . '  Mongo Calendar';
+        $result = array_merge($result, $this->validateBookingPackages('    '));
+        return $result;
+    }
+    /**
+     * @return array
+     * @throws Exception
+     */
+    public function validateBookingPackages($prefix = ''){
+        $result = [];
+        $BookingPackage = new Package();
+        $Packages = $BookingPackage->loadAll(['id_media_object' => $this->getId()]);
+        foreach($Packages as $Package){
+            $r = $Package->validate($prefix);
+            $result[] = $prefix.'Booking Package `'.$Package->name. '` '. $Package->duration. '-days (id: '.$Package->id.') ' ;
+            $result = array_merge($result,  $r);
+        }
+        return $result;
+    }
 }

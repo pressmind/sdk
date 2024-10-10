@@ -2215,6 +2215,9 @@ class MediaObject extends AbstractObject
         $result = [];
         $BookingPackage = new Package();
         $Packages = $BookingPackage->loadAll(['id_media_object' => $this->getId()]);
+        if(count($Packages) == 0) {
+            $result[] = $prefix . '❌  No Booking Packages found';
+        }
         foreach($Packages as $Package){
             $r = $Package->validate($prefix);
             $result[] = $prefix.'Booking Package `'.$Package->name. '` '. $Package->duration. '-days (id: '.$Package->id.') ' ;

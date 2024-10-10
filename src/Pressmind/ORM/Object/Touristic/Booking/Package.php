@@ -552,6 +552,9 @@ class Package extends AbstractObject
     public function validateDates($prefix = '   '){
         $result = [];
         $Date = new Date();
+        /**
+         * @var Date[] $Dates
+         */
         $Dates = $Date->loadAll(['id_booking_package' => $this->getId()]);
         foreach($Dates as $DateItem){
             $result = array_merge($result, $DateItem->validate($prefix));
@@ -592,8 +595,7 @@ class Package extends AbstractObject
      */
     public function validate($prefix = ''){
         $result = $this->validateDates($prefix.' ');
-        $check = $this->hasPrimaryOptions();
-        $result[] = $prefix.' '.($check ? '✅' : '❌') . '  primary options';
+        $result[] = $prefix.' '.($this->hasPrimaryOptions() ? '✅' : '❌') . '  primary options';
         return $result;
     }
 

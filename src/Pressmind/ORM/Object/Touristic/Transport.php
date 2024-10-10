@@ -520,6 +520,19 @@ class Transport extends AbstractObject
         if($this->dont_use_for_offers === true){
             $result[] = $prefix.' ❌. Transport ID: ' . $this->id. ' is probably not available for booking (dont_use_for_offers = true)';
         }
+        if($this->type === 'BUS'){
+            if(empty($this->id_starting_point)){
+                $result[] = $prefix.' ❌. Transport ID: ' . $this->id. ' is missing a starting point';
+            }else{
+                $StartingPoint = new Startingpoint($this->id_starting_point);
+                if(empty($this->getId())){
+                    $result[] = $prefix.' ❌. Transport ID: ' . $this->id. ' starting point not found (id '.$this->id_starting_point.')';
+                }else{
+                    $r = $StartingPoint->validate($prefix);
+                    $result = array_merge($result, $r);
+                }
+            }
+        }
         if(empty($result)){
             $result[] = $prefix.' ✅. Transport ID: ' . $this->id. ' is valid';
         }

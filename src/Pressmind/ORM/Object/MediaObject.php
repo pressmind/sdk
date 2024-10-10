@@ -2214,9 +2214,12 @@ class MediaObject extends AbstractObject
     public function validateBookingPackages($prefix = ''){
         $result = [];
         $BookingPackage = new Package();
+        /**
+         * @var Package[] $Packages
+         */
         $Packages = $BookingPackage->loadAll(['id_media_object' => $this->getId()]);
         if(count($Packages) == 0) {
-            $result[] = $prefix . '❌  No Booking Packages found';
+            $result[] = $prefix . ' ❌  No Booking Packages found';
         }
         foreach($Packages as $Package){
             $r = $Package->validate($prefix);

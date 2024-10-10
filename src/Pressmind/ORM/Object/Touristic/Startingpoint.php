@@ -301,4 +301,61 @@ class Startingpoint extends AbstractObject
         return null;
     }
 
+    /**
+     * @param string $id_starting_point
+     * @param string $ibe_client
+     * @param boolean $exit
+     * @param boolean $pickup_service
+     * @return Option|false
+     * @throws \Exception
+     */
+    public static function getOptionByIdPlus($id_starting_point_option, $ibe_client = null, $exit = false, $pickup_service = false){
+        $query = 'select o.* from pmt2core_touristic_startingpoint_options o where `id` = "' . $id_starting_point_option . '"';
+        if($exit){
+            $query .= ' AND (`exit` = 1 OR (`entry` = 0 AND `exit` = 0))';
+        }else{
+            $query .= ' AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0)) ';
+        }
+        $query .= 'AND `is_pickup_service` = '.($pickup_service ? '1' : '0');
+
+        if(!empty($ibe_client)){
+            $query .= ' and FIND_IN_SET("'.$ibe_client.'",ibe_clients)';
+        }
+        $query .= ' limit 1';
+        $registry = Registry::getInstance();
+        $db = $registry->get('db');
+        $result = $db->fetchAll($query);
+        if(!empty($result)){
+            $Option = new Startingpoint\Option();
+            $Option->fromStdClass($result[0]);
+            return $Option;
+        }
+        return false;
+    }
+
+    /**
+     * Human friendly validation
+     * @param string $prefix
+     * @return array
+     */
+    public function validate($prefix = '    '): array
+    {
+        $result = [];
+        if(empty($this->options)){
+            $result[] = $prefix.' ❌. StartingPoint ID: ' . $this->id. ' starting point has no options (options are empty)';
+        }
+        $has_valid_options = false;
+        foreach($this->options as $Option){
+            if(empty($Option->entry) && empty($Option->exit)){
+                $has_valid_options = true;
+            }
+            if(empty($Option->entry)){
+                $has_valid_options = true;
+            }
+        }
+        if($has_valid_options === false){
+            $result[] = $prefix.' ❌. StartingPoint ID: ' . $this->id. ' starting point has no valid options (no entry)';
+        }
+        return $result;
+    }
 }

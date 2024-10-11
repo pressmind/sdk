@@ -30,6 +30,7 @@ use Pressmind\Registry;
  * @property boolean $saved
  * @property boolean $flex
  * @property string $touroperator
+ * @property string $agencies
  * @property Startingpoint $startingpoint
  * @property Transport[] $transports
  * @property EarlyBirdDiscountGroup $early_bird_discount_group
@@ -288,6 +289,14 @@ class Date extends AbstractObject
                 'type' => 'boolean',
                 'required' => false,
                 'validators' => null,
+                'filters' => NULL,
+            ],
+            'agencies' => [
+                'title' => 'agencies',
+                'name' => 'agencies',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
                 'filters' => NULL,
             ],
             'touroperator' => [

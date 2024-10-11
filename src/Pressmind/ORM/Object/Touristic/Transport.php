@@ -525,7 +525,7 @@ class Transport extends AbstractObject
                 $result[] = $prefix.' ❌. Transport ID: ' . $this->id. ' is missing a starting point';
             }else{
                 $StartingPoint = new Startingpoint($this->id_starting_point);
-                if(empty($this->getId())){
+                if(empty($StartingPoint->getId())){
                     $result[] = $prefix.' ❌. Transport ID: ' . $this->id. ' starting point not found (id '.$this->id_starting_point.')';
                 }else{
                     $r = $StartingPoint->validate($prefix);

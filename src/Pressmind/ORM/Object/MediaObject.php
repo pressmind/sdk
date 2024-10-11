@@ -1275,6 +1275,10 @@ class MediaObject extends AbstractObject
                         !in_array($date->state, $travel_date_allowed_states)) {
                         continue;
                     }
+                    $date_agencies = explode(',', $date->agencies);
+                    if(!empty($agency) && !empty($date_agencies) && !in_array($agency, $date_agencies)){
+                        continue;
+                    }
                     /** @var Item[] $early_bird_discounts */
                     $early_bird_discounts = is_null($date->early_bird_discount_group) ? [null] : $date->early_bird_discount_group->items;
                     /** @var Transport[] $transport_pairs */

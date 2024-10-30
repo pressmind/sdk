@@ -1495,7 +1495,7 @@ class MediaObject extends AbstractObject
                                     $cheapestPriceSpeed->earlybird_discount = null;
                                     $cheapestPriceSpeed->earlybird_discount_date_to = null;
                                     $cheapestPriceSpeed->earlybird_discount_f = null;
-                                    if ($this->_checkEarlyBirdDiscount($early_bird_discount, $date)) {
+                                    if ($price_base_early_bird > 0 && $this->_checkEarlyBirdDiscount($early_bird_discount, $date)) {
                                         $discount = $this->_calculateEarlyBirdDiscount($early_bird_discount, $price_base_early_bird);
                                         if ($discount > 0 || $discount < 0) {
                                             $cheapestPriceSpeed->earlybird_discount = strtolower($early_bird_discount->type) == 'p' ? $early_bird_discount->discount_value : null;

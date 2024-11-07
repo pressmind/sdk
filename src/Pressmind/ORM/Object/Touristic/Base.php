@@ -107,4 +107,18 @@ class Base extends AbstractObject
             ]
         ]
     ];
+
+
+    /**
+     * Human friendly validation
+     * @param string $prefix
+     * @return array
+     */
+    public function validate($prefix = ''){
+        $result = [];
+        if(!empty($this->booking_on_request)){
+            $result[] = $prefix.' ⚠️  product is only on request bookable (defined in pressmind touristic module)';
+        }
+        return $result;
+    }
 }

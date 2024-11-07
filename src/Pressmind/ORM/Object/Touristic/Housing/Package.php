@@ -227,4 +227,20 @@ class Package extends AbstractObject
         }
         return $cheapest_price[0];
     }
+
+    /**
+     * Human friendly validation
+     * @param string $prefix
+     * @return array
+     */
+    public function validate($prefix = ''){
+        $result = [];
+        if(!in_array($this->room_type, ['room', 'cabin'])){
+            $result[] = $prefix . ' ❌  room_type is not valid (' . $this->room_type . '). valid values are: room or cabin, housing package id '.$this->id;
+        }
+        if(empty($this->options)){
+            $result[] = $prefix . ' ❌  housing package has no options, id: ' . $this->getId();
+        }
+        return $result;
+    }
 }

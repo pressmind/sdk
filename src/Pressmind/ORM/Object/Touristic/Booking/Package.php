@@ -563,6 +563,32 @@ class Package extends AbstractObject
     }
 
     /**
+     * Human friendly validation
+     * @param string $prefix
+     * @return array
+     */
+    public function validateHousingPackages($prefix = '   '){
+        $result = [];
+        if(count($this->housing_packages) == 0){
+            $result[] = $prefix.' ❌ No housing packages';
+        }
+        foreach($this->housing_packages as $HousingPackage){
+            $result = array_merge($result, $HousingPackage->validate($prefix));
+        }
+        $names = [];
+        if(count($this->housing_packages) > 1){
+            foreach($this->housing_packages as $HousingPackage){
+                $names[] = $HousingPackage->name;
+            }
+            $names = array_unique($names);
+            if(count($names) != count($this->housing_packages)){
+                $result[] = $prefix.' ❌ multiple housing packages with same name or empty name';
+            }
+        }
+        return $result;
+    }
+
+    /**
      * @return bool
      * @throws Exception
      */
@@ -595,6 +621,7 @@ class Package extends AbstractObject
      */
     public function validate($prefix = ''){
         $result = $this->validateDates($prefix.' ');
+        $result = array_merge($result, $this->validateHousingPackages($prefix.' '));
         $result[] = $prefix.' '.($this->hasPrimaryOptions() ? '✅' : '❌') . '  primary options';
         return $result;
     }

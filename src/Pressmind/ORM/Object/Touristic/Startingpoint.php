@@ -336,9 +336,10 @@ class Startingpoint extends AbstractObject
     /**
      * Human friendly validation
      * @param string $prefix
+     * @param int $way
      * @return array
      */
-    public function validate($prefix = '    '): array
+    public function validate($prefix = '    ', $way = 1): array
     {
         $result = [];
         if(empty($this->options)){
@@ -350,12 +351,15 @@ class Startingpoint extends AbstractObject
             if(empty($Option->entry) && empty($Option->exit)){
                 $has_valid_options = true;
             }
-            if(empty($Option->entry)){
+            if($way == 1 && !empty($Option->entry)){
+                $has_valid_options = true;
+            }
+            if($way == 2 && !empty($Option->exit)){
                 $has_valid_options = true;
             }
         }
         if($has_valid_options === false){
-            $result[] = $prefix.' ❌. StartingPoint ID: ' . $this->id. ' starting point has no valid options (no entry)';
+            $result[] = $prefix.' ❌  StartingPoint ID: ' . $this->id. ' starting point has no valid options '.($way == 1 ? 'for entry' : 'for exit') ;
         }
         return $result;
     }

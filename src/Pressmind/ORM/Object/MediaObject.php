@@ -2208,7 +2208,11 @@ class MediaObject extends AbstractObject
         $Filter = new CalendarFilter();
         $Calendar = $this->getCalendar($Filter);
         $result[] = '     '.(!empty($Calendar->calendar) ? '✅' : '❌') . '  Mongo Calendar';
-        $result = array_merge($result, $this->validateBookingPackages('    '));
+        $result = array_merge(
+            $result,
+            $this->validateBookingPackages('    '),
+            $this->touristic_base->validate('    ')
+        );
         return $result;
     }
     /**

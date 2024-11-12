@@ -1275,7 +1275,7 @@ class MediaObject extends AbstractObject
                         !in_array($date->state, $travel_date_allowed_states)) {
                         continue;
                     }
-                    $date_agencies = explode(',', (string)$date->agencies);
+                    $date_agencies = array_filter(explode(',', (string)$date->agencies));
                     if(!empty($agency) && !empty($date_agencies) && !in_array($agency, $date_agencies)){
                         continue;
                     }

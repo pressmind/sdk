@@ -668,12 +668,6 @@ class Date extends AbstractObject
         if(is_int($max_pairs)){
            array_splice($transport_pairs, $max_pairs);
         }
-        foreach($transport_pairs as $key => $pair){
-            $transport_pairs[$key]['way1'] = new Transport();
-            $transport_pairs[$key]['way1']->fromStdClass($pair['way1']);
-            $transport_pairs[$key]['way2'] = new Transport();
-            $transport_pairs[$key]['way2']->fromStdClass($pair['way2']);
-        }
         return $transport_pairs;
     }
 

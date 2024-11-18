@@ -210,6 +210,8 @@ class Package extends AbstractObject
         ]
     );
 
+    public static $run_time_cache = [];
+
     /**
      * @return mixed
      * @throws Exception
@@ -242,5 +244,20 @@ class Package extends AbstractObject
             $result[] = $prefix . ' ❌  housing package has no options, id: ' . $this->getId();
         }
         return $result;
+    }
+
+    /**
+     * Cached static shorthand for getById
+     * @param $id
+     * @return Package|null
+     * @throws Exception
+     */
+    public static function getById($id){
+        if(isset(self::$run_time_cache[$id])){
+            return self::$run_time_cache[$id];
+        }
+        $package = self::listOne('id = "'.$id.'"');
+        self::$run_time_cache[$id] = $package;
+        return $package;
     }
 }

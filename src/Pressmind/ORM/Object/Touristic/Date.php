@@ -735,10 +735,10 @@ class Date extends AbstractObject
         foreach ($agencies as $agency) {
             $pairs = count($this->transports) > 0 ? $this->getTransportPairs($transport_allowed_states, [], [], null, true, $agency) : [null];
             $pair_count = count($pairs);
-            $result[] = $prefix.($pair_count > 0 ? '✅' : '❌') . '  Transport Pair Check for Agency: ' . $agency. ' ('.$pair_count.' pairs found) Date ID: ' . $this->id. ' ('.$this->departure->format('Y-m-d').')';
+            $result[] = $prefix.($pair_count > 0 ? '✅' : '❌') . '  Transport Pair Check'.(!empty($agency) ? ' for Agency: ' . $agency : '').' ('.$pair_count.' pairs found) Date ID: ' . $this->id. ' ('.$this->departure->format('Y-m-d').')';
             if($pair_count == 0){
                 $transport_count = count($this->transports);
-                $result[] = $prefix.''.($transport_count > 0 ? '✅' : '❌') . '  Transport Check for Agency: ' . $agency. ' ('.$transport_count.' transports found)';
+                $result[] = $prefix.''.($transport_count > 0 ? '✅' : '❌') . '  Transport Check'.(!empty($agency) ? ' for Agency: ' . $agency : '').' ('.$transport_count.' transports found)';
                 if($transport_count > 0){
                     $pairs = $this->getTransportPairs($transport_allowed_states, [], [], null, false, $agency);
                     $pair_count = count($pairs);

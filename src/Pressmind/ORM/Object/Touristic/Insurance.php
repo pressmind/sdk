@@ -32,6 +32,9 @@ use Pressmind\ORM\Object\Touristic\Insurance\PriceTable;
  * @property Insurance[] $sub_insurances
  * @property string $own_contribution
  * @property Attribute[] $attributes
+ * @property string $request_code
+ * @property string $price_group
+ * @property string $product_group
  */
 class Insurance extends AbstractObject
 {
@@ -266,6 +269,45 @@ class Insurance extends AbstractObject
             'own_contribution' => [
                 'title' => 'own_contribution',
                 'name' => 'own_contribution',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
+            'request_code' => [
+                'title' => 'request_code',
+                'name' => 'request_code',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
+            'price_group' => [
+                'title' => 'price_group',
+                'name' => 'price_group',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
+            'product_group' => [
+                'title' => 'product_group',
+                'name' => 'product_group',
                 'type' => 'string',
                 'required' => false,
                 'validators' => [

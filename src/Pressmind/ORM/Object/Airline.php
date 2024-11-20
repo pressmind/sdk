@@ -125,4 +125,19 @@ class Airline extends AbstractObject
             ],
         ],
     ];
+
+    /**
+     * Human friendly validation
+     * @return array
+     * @throws Exception
+     */
+    public static function validate($prefix = ''){
+        $result = [];
+        $Airline = new Airline();
+        $r = $Airline->getTableRowCount();
+        if($r == 0){
+            $result[] = $prefix . ' ❌ No airlines found, pls run the import script';
+        }
+        return $result;
+    }
 }

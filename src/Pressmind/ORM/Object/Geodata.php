@@ -356,5 +356,20 @@ class Geodata extends AbstractObject
         return false;
     }
 
+    /**
+     * Human friendly validation
+     * @return array
+     * @throws Exception
+     */
+    public static function validate($prefix = ''){
+        $result = [];
+        $Geodata = new Geodata();
+        $r = $Geodata->getTableRowCount();
+        if($r == 0){
+            $result[] = $prefix . ' ❌ No geodata (zips, cities, streets) found, pls run the import script';
+        }
+        return $result;
+    }
+
 
 }

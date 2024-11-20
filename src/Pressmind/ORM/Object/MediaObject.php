@@ -2186,11 +2186,11 @@ class MediaObject extends AbstractObject
         }else{
             $result[] = '    ❌  visibility not allowed ('.$this->visibility.'), allowed id: ('.implode(',', $config['data']['media_types_allowed_visibilities'][$this->id_object_type]).')';
         }
-        if(!empty($this->valid_from) && $this->valid_from < (new DateTime())){
+        if(!empty($this->valid_from) && $this->valid_from > (new DateTime())){
             $result[] = '    ❌  not visible yet (valid_from: '.$this->valid_from->format('Y-m-d H:i:s').')';
         }
-        if(!empty($this->valid_to) && $this->valid_to > (new DateTime())){
-            $result[] = '   ❌  not visible outdated by valid_to '.$this->valid_to->format('Y-m-d H:i:s').')';
+        if(!empty($this->valid_to) && $this->valid_to < (new DateTime())){
+            $result[] = '    ❌  not visible outdated by valid_to '.$this->valid_to->format('Y-m-d H:i:s').')';
         }
         $result[] = '    Validation: CheapestPriceSpeed (Offers)';
         $CheapestPriceSpeed = new CheapestPriceSpeed();
@@ -2213,9 +2213,13 @@ class MediaObject extends AbstractObject
             $this->validateBookingPackages('    '),
             $this->touristic_base->validate('    ')
         );
+        $result = array_merge($result, Airline::validate(''));
+        $result = array_merge($result, Airport::validate(''));
+        $result = array_merge($result, Geodata::validate(''));
         return $result;
     }
     /**
+     * Human friendly validation
      * @return array
      * @throws Exception
      */

@@ -2232,9 +2232,13 @@ class MediaObject extends AbstractObject
         $result[] = '     '.(!empty($Calendar->calendar) ? '✅' : '❌') . '  Mongo Calendar';
         $result = array_merge(
             $result,
-            $this->validateBookingPackages('    '),
-            $this->touristic_base->validate('    ')
+            $this->validateBookingPackages('    ')
         );
+        if(!empty($this->touristic_base)){
+            $result = array_merge(
+                $this->touristic_base->validate('    ')
+            );
+        }
         $result = array_merge($result, Airline::validate(''));
         $result = array_merge($result, Airport::validate(''));
         $result = array_merge($result, Geodata::validate(''));

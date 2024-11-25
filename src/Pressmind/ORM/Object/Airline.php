@@ -136,7 +136,7 @@ class Airline extends AbstractObject
         $Airline = new Airline();
         $r = $Airline->getTableRowCount();
         if($r == 0){
-            $result[] = $prefix . ' ❌ No airlines found, pls run the import script';
+            $result[] = $prefix . ' ❌  No airlines found, pls run the import script';
         }
         return $result;
     }

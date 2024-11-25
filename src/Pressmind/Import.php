@@ -333,7 +333,8 @@ class Import
                 $touristic_data_importer->import($response[0]->cheapest_prices, $id_media_object, $this->_import_type);
             }
 
-            if(is_array($response[0]->cheapest_prices)){
+            $disable_manual_cheapest_price_import = (isset($config['data']['touristic']['disable_manual_cheapest_price_import']) && in_array($response[0]->id_media_objects_data_type, $config['data']['touristic']['disable_manual_cheapest_price_import']));
+            if(is_array($response[0]->cheapest_prices) && !$disable_manual_cheapest_price_import){
                 $manual_cheapest_price_importer = new ManualCheapestPrice($response[0]->cheapest_prices);
                 $manual_cheapest_price_importer->import();
             }

@@ -2236,6 +2236,7 @@ class MediaObject extends AbstractObject
         );
         if(!empty($this->touristic_base)){
             $result = array_merge(
+                $result,
                 $this->touristic_base->validate('    ')
             );
         }

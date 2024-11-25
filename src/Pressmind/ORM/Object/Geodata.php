@@ -366,7 +366,7 @@ class Geodata extends AbstractObject
         $Geodata = new Geodata();
         $r = $Geodata->getTableRowCount();
         if($r == 0){
-            $result[] = $prefix . ' ❌ No geodata (zips, cities, streets) found, pls run the import script';
+            $result[] = $prefix . ' ❌   No geodata (zips, cities, streets) found, pls run the import script';
         }
         return $result;
     }

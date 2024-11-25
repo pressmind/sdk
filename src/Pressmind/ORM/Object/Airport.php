@@ -140,7 +140,7 @@ class Airport extends AbstractObject
         $Airport = new Airport();
         $r = $Airport->getTableRowCount();
         if($r == 0){
-            $result[] = $prefix . ' ❌ No airports found, pls run the import script';
+            $result[] = $prefix . ' ❌  No airports found, pls run the import script';
         }
         return $result;
     }

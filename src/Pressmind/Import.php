@@ -467,17 +467,17 @@ class Import
                     $custom_import_class = new $custom_import_class_name($id_media_object);
                     $custom_import_class->import();
                     foreach ($custom_import_class->getLog() as $log) {
-                        Writer::write($log, WRITER::OUTPUT_FILE, 'custom_import_hook', WRITER::TYPE_INFO);
+                        Writer::write($log, WRITER::OUTPUT_BOTH, 'custom_import_hook', WRITER::TYPE_INFO);
                     }
                     foreach ($custom_import_class->getErrors() as $error) {
-                        Writer::write($error, WRITER::OUTPUT_FILE, 'custom_import_hook', WRITER::TYPE_ERROR);
+                        Writer::write($error, WRITER::OUTPUT_BOTH, 'custom_import_hook', WRITER::TYPE_ERROR);
                     }
                     if(count($custom_import_class->getErrors()) > 0) {
                         $this->_errors[] = count($custom_import_class->getErrors()). ' errors in custom import hook. See log "custom_import_hook" for details';
                     }
                     if(method_exists($custom_import_class, 'getWarnings')){
                         foreach ($custom_import_class->getWarnings() as $warning) {
-                            Writer::write($warning, WRITER::OUTPUT_FILE, 'custom_import_hook', WRITER::TYPE_WARNING);
+                            Writer::write($warning, WRITER::OUTPUT_BOTH, 'custom_import_hook', WRITER::TYPE_WARNING);
                         }
                         if(count($custom_import_class->getWarnings()) > 0) {
                             $this->_errors[] = count($custom_import_class->getWarnings()). ' warnings in custom import hook. See log "custom_import_hook" for details';

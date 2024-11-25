@@ -99,9 +99,10 @@ class MediaObject extends AbstractObject
     protected $_use_cache = true;
 
     /**
+     * Stores the runtime log by id_media_object
      * @var array
      */
-    private $_insert_cheapest_price_log = [];
+    private static $_insert_cheapest_price_log = [];
 
     /**
      * @var array
@@ -1264,7 +1265,7 @@ class MediaObject extends AbstractObject
         $CheapestPrice->deleteByMediaObjectId($this->getId());
         $booking_packages = $this->booking_packages;
         if(empty($booking_packages)){
-            $this->_insert_cheapest_price_log[] = 'No booking packages found';
+            self::$_insert_cheapest_price_log[$this->id][] = 'No booking packages found';
         }
         $now = new DateTime();
         $now->setTime(0, 0, 0);
@@ -1281,12 +1282,12 @@ class MediaObject extends AbstractObject
                         ($travel_date_orientation == 'arrival' && $date->arrival > $max_date) ||
                         ($travel_date_orientation == 'departure' && $date->departure > $max_date) ||
                         !in_array($date->state, $travel_date_allowed_states)) {
-                        $this->_insert_cheapest_price_log[] = 'Skipping date ' . $date->departure->format('Y-m-d') . ' because of date filter';
+                        self::$_insert_cheapest_price_log[$this->id][] = 'Skipping date ' . $date->departure->format('Y-m-d') . ' because of date filter';
                         continue;
                     }
                     $date_agencies = array_filter(explode(',', (string)$date->agencies));
                     if(!empty($agency) && !empty($date_agencies) && !in_array($agency, $date_agencies)){
-                        $this->_insert_cheapest_price_log[] = 'Skipping date ' . $date->departure->format('Y-m-d') . ' because of agency filter';
+                        self::$_insert_cheapest_price_log[$this->id][] = 'Skipping date ' . $date->departure->format('Y-m-d') . ' because of agency filter';
                         continue;
                     }
                     /** @var Item[] $early_bird_discounts */
@@ -1349,7 +1350,7 @@ class MediaObject extends AbstractObject
                         foreach ($cheapest_options as $cheapest_option) {
                             $cheapest_option_price = $cheapest_option->calculatePrice($booking_package->duration, $nights);
                             if ($include_negative_option_in_cheapest_price === false && $cheapest_option_price < 0) {
-                                $this->_insert_cheapest_price_log[] = 'Skipping option ' . $cheapest_option->name . ' because of negative price';
+                                self::$_insert_cheapest_price_log[$this->id][] = 'Skipping option ' . $cheapest_option->name . ' because of negative price';
                                 continue;
                             }
                             $included_options_price += $cheapest_option_price;
@@ -1423,13 +1424,13 @@ class MediaObject extends AbstractObject
                                     if (($booking_package->price_mix == 'date_transport' && empty($transport_price)) ||
                                         ($booking_package->price_mix != 'date_transport' && empty($option->price))
                                     ) {
-                                        $this->_insert_cheapest_price_log[] = 'Skipping primary option ' . $option->name . ' because of zero price';
+                                        self::$_insert_cheapest_price_log[$this->id][] = 'Skipping primary option ' . $option->name . ' because of zero price';
                                         continue;
                                     }
                                     $price = $option->price + $transport_price + $starting_point_price + $included_options_price;
                                     $price_base_early_bird = ($option->use_earlybird ? $option->price : 0) + $transport_earlybird_price_base + $starting_point_price + $included_options_earlybird_price_base;
                                     if ($price <= 0) {
-                                        $this->_insert_cheapest_price_log[] = 'Skipping option ' . $option->name . ' because of zero price';
+                                        self::$_insert_cheapest_price_log[$this->id][] = 'Skipping option ' . $option->name . ' because of zero price';
                                         continue;
                                     }
                                     $cheapestPriceSpeed = new CheapestPriceSpeed();
@@ -1543,7 +1544,7 @@ class MediaObject extends AbstractObject
                                     unset($cheapestPriceSpeed);
                                     $c++;
                                     if ($c == $max_rows) {
-                                        $this->_insert_cheapest_price_log[] = 'Reached maximum number of rows (' . $max_rows . ')';
+                                        self::$_insert_cheapest_price_log[$this->id][] = 'Reached maximum number of rows (' . $max_rows . ')';
                                         break(5);
                                     }
                                 }
@@ -2215,7 +2216,7 @@ class MediaObject extends AbstractObject
         $count = count($r);
         $result[] = '     '.($count > 0 ? '✅' : '❌') . '  Offers (count: '.$count.')';
         if($count === 0){
-            foreach($this->_insert_cheapest_price_log as $log){
+            foreach(MediaObject::$_insert_cheapest_price_log[$this->id] as $log){
                 $result[] = '          > '.$log;
             }
         }

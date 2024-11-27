@@ -22,6 +22,7 @@ class CheapestPrice
     public $id_option = null;
     public $id_booking_package = null;
     public $id_housing_package = null;
+    public $housing_package_code_ibe = null;
     public $transport_types = [];
     public $transport_1_airport = [];
     public $origin = null;

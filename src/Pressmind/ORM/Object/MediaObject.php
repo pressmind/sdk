@@ -738,6 +738,9 @@ class MediaObject extends AbstractObject
             if(!empty($filters->id_housing_package)) {
                 $where .= ' AND id_housing_package = "' . $filters->id_housing_package.'"';
             }
+            if(!empty($filters->housing_package_code_ibe)) {
+                $where .= ' AND housing_package_code_ibe = "' . $filters->housing_package_code_ibe.'"';
+            }
             if(!empty($filters->transport_types)) {
                 if(is_string($filters->transport_types)){
                     $filters->transport_types = [$filters->transport_types];

@@ -24,7 +24,8 @@
         "ext-fileinfo": "*",
         "ext-redis": "*",
         "ext-imagick": "*",
-        "gettext/gettext": "*"
+        "gettext/gettext": "*",
+        "jc21/clitable": "*"
     },
     "autoload": {
         "psr-4": {

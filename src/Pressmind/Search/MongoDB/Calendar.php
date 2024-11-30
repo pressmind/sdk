@@ -135,18 +135,19 @@ class Calendar extends AbstractIndex
     {
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
-        $config = $this->_config['search']['touristic'];
         $this->mediaObject = new MediaObject($idMediaObject, true, true);
         $collection_name = $this->getCollectionName($origin, $language, $agency);
         $collection = $this->db->$collection_name;
         $items = [];
-        foreach ($config['occupancies'] as $occupancy) {
+        foreach ($this->_config['search']['touristic']['occupancies'] as $occupancy) {
             $query = 'select distinct 
                         IFNULL(transport_type, \'-\') as transport_type,
                         IFNULL(transport_1_airport, \'-\') as transport_1_airport,
-                        IFNULL(transport_2_airport, \'-\') as transport_2_airport,
-                        IFNULL(id_startingpoint_option, \'-\') as id_startingpoint_option
-                      from pmt2core_cheapest_price_speed 
+                        IFNULL(transport_2_airport, \'-\') as transport_2_airport';
+            if(!empty($this->_config['search_mongodb']['calendar']['include_startingpoint_option'])){
+                $query .= ',IFNULL(id_startingpoint_option, \'-\') as id_startingpoint_option';
+            }
+            $query .= 'from pmt2core_cheapest_price_speed 
                       where 
                         id_media_object = :id_media_object
                         AND (earlybird_discount = 0 OR earlybird_discount_date_to >= NOW())
@@ -167,7 +168,7 @@ class Calendar extends AbstractIndex
                         'transport_type' => $result->transport_type == '-' ? null : $result->transport_type,
                         'transport_1_airport' => $result->transport_1_airport == '-' ? null : $result->transport_1_airport,
                         'transport_2_airport' => $result->transport_2_airport == '-' ? null : $result->transport_2_airport,
-                        'id_startingpoint_option' => $result->id_startingpoint_option == '-' ? null : $result->id_startingpoint_option,
+                        'id_startingpoint_option' => !empty($result->id_startingpoint_option) && $result->id_startingpoint_option == '-' ? null : $result->id_startingpoint_option,
                         'durations' => []
                     ];
                 }

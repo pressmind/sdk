@@ -226,6 +226,9 @@
               ]
             ]
           }
+        },
+        "calendar" : {
+          "include_startingpoint_option" : false
         }
       },
       "media_types_allowed_visibilities": {

@@ -729,7 +729,7 @@ class Date extends AbstractObject
         $result = [];
         $BookingPackage = new Package($this->id_booking_package);
         if(in_array($BookingPackage->ibe_type, [0,1])){
-             $result[] = '✅   IBE Type is Standalone = ibe_type in(0,1) => no further transport validation needed';
+             $result[] = $prefix.'✅   IBE Type is Standalone = ibe_type in(0,1) => no further transport validation needed for date id: ' . $this->id. ' ('.$this->departure->format('Y-m-d').')';
              return $result;
          }
         $transport_allowed_states = [0, 2, 3];
@@ -741,7 +741,7 @@ class Date extends AbstractObject
         foreach ($agencies as $agency) {
             $pairs = count($this->transports) > 0 ? $this->getTransportPairs($transport_allowed_states, [], [], null, true, $agency) : [null];
             $pair_count = count($pairs);
-            $result[] = $prefix.($pair_count > 0 ? '✅' : '❌') . '  Transport Pair Check'.(!empty($agency) ? ' for Agency: ' . $agency : '').' ('.$pair_count.' pairs found) Date ID: ' . $this->id. ' ('.$this->departure->format('Y-m-d').')';
+            $result[] = $prefix.($pair_count > 0 ? '✅' : '❌') . '  Transport Pair Check'.(!empty($agency) ? ' for Agency: ' . $agency : '').' ('.$pair_count.' pairs found) date id: ' . $this->id. ' ('.$this->departure->format('Y-m-d').')';
             if($pair_count == 0){
                 $transport_count = count($this->transports);
                 $result[] = $prefix.''.($transport_count > 0 ? '✅' : '❌') . '  Transport Check'.(!empty($agency) ? ' for Agency: ' . $agency : '').' ('.$transport_count.' transports found)';

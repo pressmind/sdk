@@ -449,8 +449,8 @@ class Date extends AbstractObject
                                                         AND (season in ('" . $this->season . "','-', '') or season is null)
                                                         )
                                                     )"
-                                                    .(!empty($is_offer_query) ? " AND dont_use_for_offers = 0" : "")
-                                                    .(!empty($agency) ? " AND (FIND_IN_SET('".$agency."', agencies) > 0 or agencies is null)" : "")
+            .(!empty($is_offer_query) ? " AND dont_use_for_offers = 0" : "")
+            .(!empty($agency) ? " AND (FIND_IN_SET('".$agency."', agencies) > 0 or agencies is null)" : "")
         );
         foreach ($options_list as $option) {
             $options[] = $option;
@@ -728,7 +728,7 @@ class Date extends AbstractObject
     public function validate($prefix = ''){
         $result = [];
         $BookingPackage = new Package($this->id_booking_package);
-        if(in_array($BookingPackage->ibe_type, [0,1])){
+        if(in_array($BookingPackage->ibe_type, [0,1]) && count($this->transports) == 0){
             $result[] = $prefix.'✅   IBE Type is Standalone = ibe_type in(0,1) => no further transport validation needed for date id: ' . $this->id. ' ('.$this->departure->format('Y-m-d').')';
             return $result;
         }
@@ -748,10 +748,25 @@ class Date extends AbstractObject
                 if($transport_count > 0){
                     $pairs = $this->getTransportPairs($transport_allowed_states, [], [], null, false, $agency);
                     $pair_count = count($pairs);
-                    $result[] = $prefix.($pair_count > 0 ? '✅' : '❌') . '  Property transport.dont_use_for_offers valid';
+                    $result[] = $prefix.($pair_count > 0 ? '✅' : '❌') . '   Check with disabled dont_use_for_offers-Bit';
                     $pairs = $this->getTransportPairs([0,2,3], [], [], null, true, $agency);
                     $pair_count = count($pairs);
-                    $result[] = $prefix.($pair_count > 0 ? '✅' : '❌') . '  Property transport.state valid';
+                    $result[] = $prefix.($pair_count > 0 ? '✅' : '❌') . '   Check without custom transport.state config';
+                    $transports_by_type = [];
+                    foreach($this->getTransports([0,2,3], [], [], true, $agency) as $Transport){
+                        $transports_by_type[$Transport->type][] = $Transport;
+                    }
+                    if(!empty($transports_by_type['FLUG'])){
+                        $airportPairs = $this->_collectAirportPairs($transports_by_type['FLUG']);
+                        if(empty($airportPairs)){
+                            $result[] = $prefix.'❌   No Airport Pairs found - check if the transport.code or transport_group is correct, date id: ' . $this->id. ' ('.$this->departure->format('Y-m-d').')';
+                            $result[] = $prefix.'     : transport.code must match a IATA valid flight route (e.g. way1: FRA-MUC or FRAMUC, way2: MUC-FRA or MUCFRA)';
+                            $result[] = $prefix.'     : transport.code first 3 chars on way1 must match last 3 chars on way2';
+                            $result[] = $prefix.'     : or if the transport_group is set, it must be the same for both ways (used for mixed transport_types e.g. way1=FLUG, way1=BUS)';
+                        }else{
+                            $result[] = $prefix.'✅   Airport Pairs found';
+                        }
+                    }
                 }
             }
             foreach($pairs as $pair){

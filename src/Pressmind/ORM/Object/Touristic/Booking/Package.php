@@ -607,8 +607,13 @@ class Package extends AbstractObject
         }else{
             return false;
         }
-        $Option = new Option();
-        $r = $Option->loadAll(['type' => $type, 'id_booking_package' => $this->getId()]);
+        if($this->price_mix == 'date_transport'){
+            $Transport = new Transport();
+            $r = $Transport->loadAll(['id_booking_package' => $this->getId()]);
+        }else{
+            $Option = new Option();
+            $r = $Option->loadAll(['type' => $type, 'id_booking_package' => $this->getId()]);
+        }
         if(count($r) > 0){
             return true;
         }

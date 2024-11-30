@@ -667,7 +667,7 @@ class Date extends AbstractObject
             $transport_pairs = array_merge($transport_pairs, $this->_collectPairs($transports));
         }
         if(is_int($max_pairs)){
-           array_splice($transport_pairs, $max_pairs);
+            array_splice($transport_pairs, $max_pairs);
         }
         return $transport_pairs;
     }
@@ -729,9 +729,9 @@ class Date extends AbstractObject
         $result = [];
         $BookingPackage = new Package($this->id_booking_package);
         if(in_array($BookingPackage->ibe_type, [0,1])){
-             $result[] = $prefix.'✅   IBE Type is Standalone = ibe_type in(0,1) => no further transport validation needed for date id: ' . $this->id. ' ('.$this->departure->format('Y-m-d').')';
-             return $result;
-         }
+            $result[] = $prefix.'✅   IBE Type is Standalone = ibe_type in(0,1) => no further transport validation needed for date id: ' . $this->id. ' ('.$this->departure->format('Y-m-d').')';
+            return $result;
+        }
         $transport_allowed_states = [0, 2, 3];
         if(!empty(Registry::getInstance()->get('config')['data']['touristic']['transport_filter']['active'])) {
             $transport_allowed_states = empty(Registry::getInstance()->get('config')['data']['touristic']['transport_filter']['allowed_states']) ? $transport_allowed_states : Registry::getInstance()->get('config')['data']['touristic']['transport_filter']['allowed_states'];
@@ -756,12 +756,22 @@ class Date extends AbstractObject
             }
             foreach($pairs as $pair){
                 if(!empty($pair['way1'])){
-                    $result = array_merge($result, $pair['way1']->validate($prefix.'  '));
+                    $way1 = $pair['way1'];
+                    if(!is_a($pair['way1'], Transport::class)){
+                        $way1 = new Transport();
+                        $way1->fromStdClass($pair['way1']);
+                    }
+                    $result = array_merge($result, $way1->validate($prefix.'  '));
                 }else{
                     $result[] = $prefix.' ❌ ' . '  Property transport.pair[way1] not valid';
                 }
                 if(!empty($pair['way2'])){
-                    $result = array_merge($result, $pair['way2']->validate($prefix.'  '));
+                    $way2 = $pair['way2'];
+                    if(!is_a($pair['way1'], Transport::class)){
+                        $way2 = new Transport();
+                        $way2->fromStdClass($pair['way2']);
+                    }
+                    $result = array_merge($result, $way2->validate($prefix.'  '));
                 }else{
                     $result[] = $prefix.' ❌ ' . '  Property transport.pair[way2] not valid';
                 }

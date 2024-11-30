@@ -467,7 +467,7 @@ class Import
                     $custom_import_class = new $custom_import_class_name($id_media_object);
                     $custom_import_class->import();
                     foreach ($custom_import_class->getLog() as $log) {
-                        Writer::write($log, WRITER::OUTPUT_BOTH, 'custom_import_hook', WRITER::TYPE_INFO);
+                        Writer::write($log, WRITER::OUTPUT_FILE, 'custom_import_hook', WRITER::TYPE_INFO);
                     }
                     foreach ($custom_import_class->getErrors() as $error) {
                         Writer::write($error, WRITER::OUTPUT_BOTH, 'custom_import_hook', WRITER::TYPE_ERROR);

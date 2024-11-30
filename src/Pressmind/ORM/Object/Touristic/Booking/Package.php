@@ -625,7 +625,7 @@ class Package extends AbstractObject
         if($this->price_mix === 'date_housing'){
             $result = array_merge($result, $this->validateHousingPackages($prefix.' '));
         }
-        $result[] = $prefix.' '.($this->hasPrimaryOptions() ? '✅' : '❌') . '  primary options';
+        $result[] = $prefix.' '.($this->hasPrimaryOptions() ? '✅' : '❌') . '  primary options (price_mix = '.$this->price_mix.')';
         return $result;
     }
 

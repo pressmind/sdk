@@ -5,6 +5,7 @@ namespace Pressmind\ORM\Object\Touristic;
 use Exception;
 use Pressmind\ORM\Object\AbstractObject;
 use DateTime;
+use Pressmind\ORM\Object\Touristic\Booking\Package;
 use Pressmind\ORM\Object\Touristic\Date\Attribute;
 use Pressmind\Registry;
 
@@ -726,6 +727,11 @@ class Date extends AbstractObject
      */
     public function validate($prefix = ''){
         $result = [];
+        $BookingPackage = new Package($this->id_booking_package);
+        if(in_array($BookingPackage->ibe_type, [0,1])){
+             $result[] = '✅   IBE Type is Standalone = ibe_type in(0,1 => no further transport validation needed';
+             return $result;
+         }
         $transport_allowed_states = [0, 2, 3];
         if(!empty(Registry::getInstance()->get('config')['data']['touristic']['transport_filter']['active'])) {
             $transport_allowed_states = empty(Registry::getInstance()->get('config')['data']['touristic']['transport_filter']['allowed_states']) ? $transport_allowed_states : Registry::getInstance()->get('config')['data']['touristic']['transport_filter']['allowed_states'];

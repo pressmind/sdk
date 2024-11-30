@@ -569,6 +569,7 @@ class Package extends AbstractObject
      */
     public function validateHousingPackages($prefix = '   '){
         $result = [];
+
         if(count($this->housing_packages) == 0){
             $result[] = $prefix.' ❌ No housing packages';
         }
@@ -621,7 +622,9 @@ class Package extends AbstractObject
      */
     public function validate($prefix = ''){
         $result = $this->validateDates($prefix.' ');
-        $result = array_merge($result, $this->validateHousingPackages($prefix.' '));
+        if($this->price_mix === 'date_housing'){
+            $result = array_merge($result, $this->validateHousingPackages($prefix.' '));
+        }
         $result[] = $prefix.' '.($this->hasPrimaryOptions() ? '✅' : '❌') . '  primary options';
         return $result;
     }

@@ -147,7 +147,7 @@ class Calendar extends AbstractIndex
             if(!empty($this->_config['search_mongodb']['calendar']['include_startingpoint_option'])){
                 $query .= ',IFNULL(id_startingpoint_option, \'-\') as id_startingpoint_option';
             }
-            $query .= 'from pmt2core_cheapest_price_speed 
+            $query .= ' from pmt2core_cheapest_price_speed 
                       where 
                         id_media_object = :id_media_object
                         AND (earlybird_discount = 0 OR earlybird_discount_date_to >= NOW())

@@ -168,7 +168,7 @@ class Calendar extends AbstractIndex
                         'transport_type' => $result->transport_type == '-' ? null : $result->transport_type,
                         'transport_1_airport' => $result->transport_1_airport == '-' ? null : $result->transport_1_airport,
                         'transport_2_airport' => $result->transport_2_airport == '-' ? null : $result->transport_2_airport,
-                        'id_startingpoint_option' => !empty($result->id_startingpoint_option) && $result->id_startingpoint_option == '-' ? null : $result->id_startingpoint_option,
+                        'id_startingpoint_option' => !empty($result->id_startingpoint_option) ? ($result->id_startingpoint_option == '-' ? null : $result->id_startingpoint_option) : null,
                         'durations' => []
                     ];
                 }

@@ -3,8 +3,10 @@
 namespace Pressmind\ORM\Object\Touristic;
 
 use DateTime;
+use Pressmind\DB\Adapter\Pdo;
 use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup\Item;
+use Pressmind\Registry;
 
 /**
  * Class Earlybird
@@ -70,4 +72,21 @@ class EarlyBirdDiscountGroup extends AbstractObject
             ],
         ]
     );
+
+    /**
+     * @return void
+     * @throws \Exception
+     */
+    public static function removeOrphans() {
+        /** @var Pdo $db */
+        $db = Registry::getInstance()->get('db');
+        $db->execute('delete from pmt2core_touristic_early_bird_discount_group where id in (
+                                select g.id from pmt2core_touristic_early_bird_discount_group g
+                                    left join pmt2core_touristic_dates d on g.id = d.id_early_bird_discount_group
+                                where d.id is null);');
+        $db->execute('delete from pmt2core_touristic_early_bird_discount_group_item where id in (
+                                select i.id from pmt2core_touristic_early_bird_discount_group_item i
+                                    left join pmt2core_touristic_early_bird_discount_group g on g.id = i.id_early_bird_discount_group
+                                where g.id is null);');
+    }
 }

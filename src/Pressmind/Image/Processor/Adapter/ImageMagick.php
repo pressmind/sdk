@@ -24,6 +24,9 @@ class ImageMagick implements AdapterInterface
      */
     public function process($config, $file, $derivativeName)
     {
+        if(is_a($file, File::class) === false) {
+            throw new ImagickException('Error: $file must be of type ' . File::class);
+        }
         $path_info = pathinfo($file->name);
         //$new_name = $path_info['filename'] . '_' . $derivativeName . '.' . $path_info['extension'];
         $new_name = $path_info['filename'] . '_' . $derivativeName . '.jpg';

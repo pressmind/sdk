@@ -30,7 +30,7 @@ class MediaObjectCheapestPrice extends AbstractImport
                 $validData[] = $priceObject;
             }
         }
-        if(count($validData)){
+        if(count($validData) === 0){
             $this->_log[] = ' Importer::_importMediaObjectCheapestPrice(' . $id_media_object . '): no valid prices found';
             return;
         }

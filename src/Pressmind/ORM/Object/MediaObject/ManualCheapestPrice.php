@@ -12,15 +12,16 @@ use Pressmind\ORM\Object\AbstractObject;
  * @package Pressmind\ORM\Object\MediaObject
  * @property integer $id
  * @property integer $id_media_object
- * @property integer $id_my_content
- * @property string $import_id
- * @property string $editor_link
- * @property string $detail_link
- * @property string $detail_name
- * @property string $detail_code
- * @property string $detail_checksum
- * @property boolean $is_intern
- * @property DateTime $last_update
+ * @property DateTime $valid_from
+ * @property DateTime $valid_to
+ * @property int duration
+ * @property int occupancy_min
+ * @property int occupancy
+ * @property int occupancy_max
+ * @property string description_1
+ * @property string description_2
+ * @property float price
+ * @property float price_pseudo
  */
 class ManualCheapestPrice extends AbstractObject
 {

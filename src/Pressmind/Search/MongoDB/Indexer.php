@@ -173,10 +173,11 @@ class Indexer extends AbstractIndex
      * @param string $language
      * @param int $origin
      * @param string $agency
+     * @param bool $force
      * @return false|mixed
      * @throws \Exception
      */
-    public function createIndex($idMediaObject, $language, $origin, $agency = null)
+    public function createIndex($idMediaObject, $language, $origin, $agency = null, $force = false)
     {
         $searchObject = new \stdClass();
         $this->mediaObject = new MediaObject($idMediaObject, true, true);
@@ -204,12 +205,10 @@ class Indexer extends AbstractIndex
         $searchObject->visibility = $this->mediaObject->visibility;
         $searchObject->recommendation_rate = $this->mediaObject->recommendation_rate;
         $searchObject->sales_priority = $this->mediaObject->sales_priority.$this->mediaObject->sales_position;
-
         //$searchObject->dates_per_month = null;
         if(!empty($this->_config['search']['five_dates_per_month_list'])){
             $searchObject->dates_per_month = $this->_createDatesPerMonth($origin, $agency);
         }
-
         //$searchObject->possible_durations = null;
         if(!empty($this->_config['search']['possible_duration_list'])){
             $searchObject->possible_durations = $this->_createPossibleDurations($origin, $agency);
@@ -219,6 +218,9 @@ class Indexer extends AbstractIndex
         $searchObject->last_modified_date = $now->format(DATE_RFC3339_EXTENDED);
         if(is_array($searchObject->prices) && count($searchObject->prices) > 0) {
             $searchObject->best_price_meta = $searchObject->prices[0];
+        }
+        if($force === true){
+            return json_decode(json_encode($searchObject));
         }
         $allow_invalid_offers = false;
         if(isset($this->_config['search']['allow_invalid_offers']) && is_bool($this->_config['search']['allow_invalid_offers'])){ // legacy

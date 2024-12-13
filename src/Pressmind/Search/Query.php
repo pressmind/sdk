@@ -136,6 +136,8 @@ class Query
                     $item['cheapest_price']->transport_type = $document['prices']['transport_type'];
                     $item['cheapest_price']->occupancy = $document['prices']['occupancy'];
                     $item['cheapest_price']->occupancy_child = $document['prices']['occupancy_child'];
+                    $item['cheapest_price']->startingpoint_name = !empty($document['prices']['startingpoint_option']['name']) ? $document['prices']['startingpoint_option']['name'] : null;
+                    $item['cheapest_price']->id_startingpoint_option = !empty($document['prices']['startingpoint_option']['id']) ? $document['prices']['startingpoint_option']['id'] : null;
                 } else {
                     $item['cheapest_price'] = null;
                     $document['prices'] = null;
@@ -229,6 +231,35 @@ class Query
                 $board_types[$item->_id] = $item;
             }
         }
+
+       $startingpoint_options = [];
+       if(!empty($result_filter->startingPointsGrouped)){
+           $matching_startingpoints_map = [];
+           if(!$QueryFilter->returnFiltersOnly){
+               $matching_startingpoints = json_decode(json_encode($result->startingPointsGrouped));
+               foreach($matching_startingpoints as $item){
+                   if(empty($item->_id->id)){
+                       continue;
+                   }
+                   $matching_startingpoints_map[$item->_id->id] = $item;
+               }
+           }
+           foreach(json_decode(json_encode($result_filter->startingPointsGrouped)) as $item){
+               $newItem = new \stdClass();
+               if(empty($item->_id->id)){
+                   continue;
+               }
+               $newItem->count_in_system = $item->count;
+               $newItem->count_in_search = 0;
+               $newItem->name = $item->_id->name;
+               $newItem->id = $item->_id->id;
+               if(isset($matching_startingpoints_map[$item->_id->id])){
+                   $newItem->count_in_search = $matching_startingpoints_map[$item->_id->id]->count;
+               }
+               $startingpoint_options[$item->_id->id] = $newItem;
+           }
+       }
+
         $transport_types = [];
         if(!empty($result_filter->transportTypesGrouped)){
             $matching_transport_types_map = [];
@@ -333,6 +364,7 @@ class Query
             'categories' => $categories,
             'board_types' => $board_types,
             'transport_types' => $transport_types,
+            'startingpoint_options' => $startingpoint_options,
             'duration_min' => !empty($result_filter->minDuration) ? $result_filter->minDuration : null,
             'duration_max' => !empty($result_filter->maxDuration) ? $result_filter->maxDuration : null,
             'departure_min' => !empty($result_filter->minDeparture) ? new \DateTime($result_filter->minDeparture) : null,
@@ -366,6 +398,13 @@ class Query
      * $request['pm-url'] url like /travel/5-italia/
      * $request['pm-loc'] location like 50.123,12.123,10.5 (lng,lat,radius in km)
      * $request['pm-gr'] groups
+     * $request['pm-du'] duration range 3-14
+     * $request['pm-tr'] transport type
+     * $request['pm-bt'] board type
+     * $request['pm-ho'] occupancy
+     * $request['pm-hoc'] occupancy child
+     * $request['pm-loc'] location
+     * $request['pm-dl'] departure location (zip codes)
      * $request['pm-l'] limit 0,10
      * $request['pm-o'] order
      * @param $request
@@ -464,6 +503,11 @@ class Query
             $transport_types = self::extractTransportTypes($request[$prefix.'-tr']);
             $conditions[] = new \Pressmind\Search\Condition\MongoDB\TransportType($transport_types);
             $validated_search_parameters[$prefix.'-tr'] = implode(',', $transport_types);
+        }
+        if (empty($request[$prefix.'-dl']) === false){
+            $departure_location = self::extractDepartureLocation($request[$prefix.'-dl']);
+            $conditions[] = new \Pressmind\Search\Condition\MongoDB\DepartureLocation($departure_location);
+            $validated_search_parameters[$prefix.'-dl'] = implode(',', $departure_location);
         }
         if (isset($request[$prefix.'-c']) === true && is_array($request[$prefix.'-c']) === true) {
             $search_item = $request[$prefix.'-c'];
@@ -733,6 +777,17 @@ class Query
      */
     public static function sanitizeStr($str){
         return trim(preg_replace( '/[^a-zA-Z0-9_\-\.ÁÀȦÂÄǞǍĂĀÃÅǺǼǢĆĊĈČĎḌḐḒÉÈĖÊËĚĔĒẼE̊ẸǴĠĜǦĞG̃ĢĤḤáàȧâäǟǎăāãåǻǽǣćċĉčďḍḑḓéèėêëěĕēẽe̊ẹǵġĝǧğg̃ģĥḥÍÌİÎÏǏĬĪĨỊĴĶǨĹĻĽĿḼM̂M̄ʼNŃN̂ṄN̈ŇN̄ÑŅṊÓÒȮȰÔÖȪǑŎŌÕȬŐỌǾƠíìiîïǐĭīĩịĵķǩĺļľŀḽm̂m̄ŉńn̂ṅn̈ňn̄ñņṋóòôȯȱöȫǒŏōõȭőọǿơP̄ŔŘŖŚŜṠŠȘṢŤȚṬṰÚÙÛÜǓŬŪŨŰŮỤẂẀŴẄÝỲŶŸȲỸŹŻŽẒǮp̄ŕřŗśŝṡšşṣťțṭṱúùûüǔŭūũűůụẃẁŵẅýỳŷÿȳỹźżžẓǯßœŒçÇ\s]/', '', $str));
+    }
+
+    /**
+     * @param $str
+     * @return array
+     */
+    public static function extractDepartureLocation($str){
+        if(preg_match('/^([0-9\,]+)$/', $str) > 0){
+            return array_filter(explode(',', $str));
+        }
+        return [];
     }
 
 }

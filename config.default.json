@@ -224,7 +224,10 @@
                 8,
                 99
               ]
-            ]
+            ],
+            "startingpoint_options" : {
+              "active": false
+            }
           }
         },
         "calendar" : {

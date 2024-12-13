@@ -547,8 +547,8 @@ class Import
         }
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::removeOrphans()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
         foreach ($allowed_object_types as $allowed_object_type) {
-            $allowed_visibilities = [60]; // the hidden visibility is always allowed
             $allowed_visibilities = $conf['data']['media_types_allowed_visibilities'][$allowed_object_type];
+            $allowed_visibilities[] = 60; // the hidden visibility is always allowed
             if(is_array($allowed_visibilities)) {
                 foreach ($allowed_visibilities as $allowed_visibility) {
                     $params = [

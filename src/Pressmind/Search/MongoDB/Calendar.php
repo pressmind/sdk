@@ -144,7 +144,7 @@ class Calendar extends AbstractIndex
                         IFNULL(transport_type, \'-\') as transport_type,
                         IFNULL(transport_1_airport, \'-\') as transport_1_airport,
                         IFNULL(transport_2_airport, \'-\') as transport_2_airport';
-            if(!empty($this->_config['search_mongodb']['calendar']['include_startingpoint_option'])){
+            if(!empty($this->_config['calendar']['include_startingpoint_option'])){
                 $query .= ',IFNULL(id_startingpoint_option, \'-\') as id_startingpoint_option';
             }
             $query .= ' from pmt2core_cheapest_price_speed 

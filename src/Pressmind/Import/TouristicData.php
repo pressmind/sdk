@@ -1,16 +1,17 @@
 <?php
-
-
 namespace Pressmind\Import;
 
-
-
 use Exception;
+use Pressmind\DB\Adapter\AdapterInterface;
 use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup\Item;
 use Pressmind\ORM\Object\Touristic\Housing\Package;
+use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToGroup;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToInsurance;
+use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToPriceTable;
 use Pressmind\ORM\Object\Touristic\Option\Discount;
+use Pressmind\ORM\Object\Touristic\Startingpoint;
+use Pressmind\Registry;
 
 class TouristicData extends AbstractImport
 {
@@ -143,6 +144,8 @@ class TouristicData extends AbstractImport
                 }
             }
         }
+        $this->_removeInsuranceOrphans($data);
+        $this->_removeStartingPointOrphans($data);
         $starting_point_ids = [];
         foreach ($touristic_data_to_import as $touristic_object_to_import) {
             $this->_log[] = ' Importer::_importMediaObjectTouristicData(' . $id_media_object . '): inserting touristic data for ' . get_class($touristic_object_to_import);
@@ -169,5 +172,94 @@ class TouristicData extends AbstractImport
             'linked_media_object_ids' => $linked_media_object_ids,
             'starting_point_ids' => $starting_point_ids
         ];
+    }
+
+    /**
+     * @param $data
+     * @return void
+     * @throws Exception
+     */
+    private function _removeInsuranceOrphans($data){
+        /**
+         * @var $db AdapterInterface
+         */
+        $db = Registry::getInstance()->get('db');
+        $insurance_to_group = [];
+        $insurances_to_price_table = [];
+        foreach($data as $touristic_object_name => $touristic_objects){
+            if($touristic_object_name == 'touristic_insurance_to_group'){
+                foreach($touristic_objects as $item){
+                    $insurance_to_group[$item->id_insurance_group][] = $item;
+                }
+            }
+            if($touristic_object_name == 'touristic_insurances_to_price_table'){
+                foreach($touristic_objects as $item){
+                    $insurances_to_price_table[$item->id_insurance][] = $item;
+                }
+            }
+        }
+        if(!empty($insurance_to_group)){
+            foreach($insurance_to_group as $id_insurance_group => $groupItem){
+                $storedItems = InsuranceToGroup::listAll(['id_insurance_group' => $id_insurance_group]);
+                foreach($storedItems as $storedItem){
+                    $id_insurance = $storedItem->id_insurance;
+                    $result = array_filter($groupItem, function($v) use ($id_insurance) {
+                        return $v->id_insurance == $id_insurance;
+                    });
+                    if(count($result) == 0) {
+                        $db->execute('delete from pmt2core_touristic_insurance_to_group where id_insurance = ? and id_insurance_group = ?', [$storedItem->id_insurance, $id_insurance_group]);
+                    }
+                }
+            }
+        }
+        if(!empty($insurances_to_price_table)){
+            foreach($insurances_to_price_table as $id_insurance => $groupItem){
+                $storedItems = InsuranceToPriceTable::listAll(['id_insurance' => $id_insurance]);
+                foreach($storedItems as $storedItem){
+                    $id_price_table = $storedItem->id_price_table;
+                    $result = array_filter($groupItem, function($v) use ($id_price_table) {
+                        return $v->id_price_table == $id_price_table;
+                    });
+                    if(count($result) == 0) {
+                        $db->execute('delete from pmt2core_touristic_insurance_to_price_table where id_insurance = ? and id_price_table = ?', [$id_insurance, $storedItem->id_price_table]);
+                    }
+                }
+            }
+        }
+        $db->execute('delete from pmt2core_touristic_insurances_price_tables where id not in (select id_price_table from pmt2core_touristic_insurance_to_price_table)');
+    }
+
+    /**
+     * @param $data
+     * @return void
+     * @throws Exception
+     */
+    private function _removeStartingPointOrphans($data){
+        /**
+         * @var $db AdapterInterface
+         */
+        $db = Registry::getInstance()->get('db');
+        $startingpoints_options = [];
+        foreach($data as $touristic_object_name => $touristic_objects){
+            if($touristic_object_name == 'touristic_startingpoints_options'){
+                foreach($touristic_objects as $item){
+                    $startingpoints_options[$item->id_starting_point][] = $item;
+                }
+            }
+        }
+        if(!empty($startingpoints_options)){
+            foreach($startingpoints_options as $id_startingpoint => $startingPointOption){
+                $storedItems = Startingpoint\Option::listAll(['id_startingpoint' => $id_startingpoint]);
+                foreach($storedItems as $storedItem){
+                    $id_startingpoint_option = $storedItem->id;
+                    $result = array_filter($startingPointOption, function($v) use ($id_startingpoint_option) {
+                        return $v->id == $id_startingpoint_option;
+                    });
+                    if(count($result) == 0) {
+                        $db->execute('delete from pmt2core_touristic_startingpoint_options where id = ? ', [$storedItem->id]);
+                    }
+                }
+            }
+        }
     }
 }

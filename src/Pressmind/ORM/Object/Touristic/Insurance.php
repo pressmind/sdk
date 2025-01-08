@@ -6,10 +6,15 @@ use DateTime;
 use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\Touristic\Insurance\Attribute;
 use Pressmind\ORM\Object\Touristic\Insurance\Calculated;
+use Pressmind\ORM\Object\Touristic\Insurance\Group;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToAttribute;
+use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToGroup;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToInsurance;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToPriceTable;
+use Pressmind\ORM\Object\Touristic\Insurance\Package;
 use Pressmind\ORM\Object\Touristic\Insurance\PriceTable;
+use Pressmind\ORM\Object\Touristic\Insurance\PriceTableToPackage;
+use Pressmind\Registry;
 
 /**
  * Class Insurance
@@ -433,5 +438,34 @@ class Insurance extends AbstractObject
             echo $e->getMessage();
         }
         return false;
+    }
+
+    /**
+     * @return void
+     * @throws \Exception
+     */
+    public static function resetInsurances () {
+        /** @var \Pressmind\DB\Adapter\Pdo $db */
+        $db = Registry::getInstance()->get('db');
+        $insurance_group = new Group();
+        $insurance = new Insurance();
+        $insurance_to_group = new InsuranceToGroup();
+        $price_table = new PriceTable();
+        $insurance_to_price_table = new InsuranceToPriceTable();
+        $insurance_to_insurance = new InsuranceToInsurance();
+        $price_table_package = new Package();
+        $price_table_to_package = new PriceTableToPackage();
+        $insurance_to_attribute = new InsuranceToAttribute();
+        $insurance_attribute = new Attribute();
+        $db->truncate($insurance_group->getDbTableName());
+        $db->truncate($insurance->getDbTableName());
+        $db->truncate($insurance_to_group->getDbTableName());
+        $db->truncate($price_table->getDbTableName());
+        $db->truncate($insurance_to_price_table->getDbTableName());
+        $db->truncate($insurance_to_insurance->getDbTableName());
+        $db->truncate($price_table_package->getDbTableName());
+        $db->truncate($price_table_to_package->getDbTableName());
+        $db->truncate($insurance_to_attribute->getDbTableName());
+        $db->truncate($insurance_attribute->getDbTableName());
     }
 }

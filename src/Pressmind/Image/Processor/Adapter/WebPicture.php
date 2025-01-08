@@ -40,4 +40,13 @@ class WebPicture implements AdapterInterface
         }
         return null;
     }
+
+    /**
+     * @TODO
+     * @param File $file
+     * @return mixed
+     */
+    public function isImageCorrupted($file){
+        return false;
+    }
 }

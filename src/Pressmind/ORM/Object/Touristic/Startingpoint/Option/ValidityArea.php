@@ -6,7 +6,7 @@ use Pressmind\ORM\Object\AbstractObject;
 
 /**
  * Class ValidityArea
- * @TODO unused???
+ * @deprecated
  * @property string $id_startingpoint_option
  * @property string $zip
  * @property integer $id_startingpoint

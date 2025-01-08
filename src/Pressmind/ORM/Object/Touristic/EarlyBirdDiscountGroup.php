@@ -9,7 +9,7 @@ use Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup\Item;
 use Pressmind\Registry;
 
 /**
- * Class Earlybird
+ * Class EarlyBirdDiscountGroup
  * @property integer $id
  * @property string $name
  * @property Item[] $items

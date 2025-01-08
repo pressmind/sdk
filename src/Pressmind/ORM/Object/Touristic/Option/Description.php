@@ -11,7 +11,7 @@ use Pressmind\ORM\Object\AbstractObject;
  * @property string $type
  * @property string $name
  * @property string $text
- * @property boolean $necessary
+ * @property boolean $necessary /@deprecated
  */
 class Description extends AbstractObject
 {

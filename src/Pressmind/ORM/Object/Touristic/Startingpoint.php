@@ -13,7 +13,7 @@ use Pressmind\Registry;
  * @property string $code
  * @property string $name
  * @property string $text
- * @property integer $logic
+ * @property integer $logic \@deprecated
  * @property Option[] $options
  */
 class Startingpoint extends AbstractObject

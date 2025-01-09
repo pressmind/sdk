@@ -307,6 +307,7 @@ class MongoDB extends AbstractSearch
     {
         $config = Registry::getInstance()->get('config');
         $allow_invalid_offers = !empty($config['data']['search_mongodb']['search']['allow_invalid_offers']);
+        $has_startingpoint_index = !empty($config['data']['touristic']['generate_offer_for_each_startingpoint_option']);
         $stages = [];
 
         // stage zero, lucene atlas search
@@ -418,9 +419,9 @@ class MongoDB extends AbstractSearch
                 }
             }
         }
+        // TODO remove if empty
         $prices_filter['$addFields']['prices']['$filter']['cond']['$and'] = $addFieldsConditions;
         $prices_filter_cleanup['$addFields']['prices']['$filter']['cond']['$and'] = $addFieldsConditions;
-
 
         // stage 4-x, filter by departure dates
         if($this->hasCondition('DateRange')){
@@ -429,6 +430,39 @@ class MongoDB extends AbstractSearch
             $stages = array_merge($stages, $condition->getQuery('departure_filter', $allow_invalid_offers));
         }
         $stages[] = $prices_filter;
+
+        // stage 4.1 - respect starting_point_options
+        if($has_startingpoint_index){
+            $stages[] = [
+                '$group' => [
+                    '_id' => '$_id',
+                    'startingpoint_options' => [
+                        '$push' => '$prices.startingpoint_option'
+                    ],
+                    'doc' => [
+                        '$first' => '$$ROOT'
+                    ]
+                ]
+            ];
+            $stages[] = [
+                '$addFields' => [
+                    'doc.startingpoint_options' => [
+                        '$reduce' => [
+                            'input' => '$startingpoint_options',
+                            'initialValue' => [],
+                            'in' => [
+                                '$setUnion' => ['$$value', '$$this']
+                            ]
+                        ]
+                    ]
+                ]
+            ];
+            $stages[] = [
+                '$replaceRoot' => [
+                    'newRoot' => '$doc'
+                ]
+            ];
+        }
 
         // stage n projection split board_types, transports and prices
         $projectStage = [
@@ -445,6 +479,7 @@ class MongoDB extends AbstractSearch
                 'last_modified_date' => 1,
                 'recommendation_rate' => 1,
                 'possible_durations' => 1,
+                'startingpoint_options' => 1,
                 'url' => 1,
                 'valid_from' => 1,
                 'valid_to' => 1,
@@ -649,7 +684,7 @@ class MongoDB extends AbstractSearch
                 ];
                 $facetStage['$facet']['startingPointsGrouped'] = [
                     [
-                        '$sortByCount' => '$prices.startingpoint_option'
+                        '$sortByCount' => '$startingpoint_options'
                     ],
                     [
                         '$sort' => [
@@ -660,10 +695,10 @@ class MongoDB extends AbstractSearch
             }else{
                 $facetStage['$facet']['startingPointsGrouped'] = [
                     [
-                        '$unwind' => '$prices'
+                        '$unwind' => '$startingpoint_options'
                     ],
                     [
-                        '$sortByCount' => '$prices.startingpoint_option'
+                        '$sortByCount' => '$startingpoint_options'
                     ],
                     [
                         '$sort' => [

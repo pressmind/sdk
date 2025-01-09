@@ -92,6 +92,9 @@ use DateTime;
  * @property boolean $guaranteed
  * @property boolean $saved
  * @property string $startingpoint_name
+ * @property string $startingpoint_zip
+ * @property string $startingpoint_city
+ * @property string $startingpoint_id_city
  * @property string $agency
  */
 class CheapestPriceSpeed extends AbstractObject
@@ -140,6 +143,19 @@ class CheapestPriceSpeed extends AbstractObject
                     'columns' => [
                         'state',
                         'date_departure',
+                    ]
+                ],
+                'startingpoint_id_city_index_1' => [
+                    'type' => 'index',
+                    'columns' => [
+                        'startingpoint_id_city',
+                    ]
+                ],
+                'startingpoint_id_city_index_2' => [
+                    'type' => 'index',
+                    'columns' => [
+                        'date_departure',
+                        'startingpoint_id_city',
                     ]
                 ],
             ]
@@ -1120,6 +1136,45 @@ class CheapestPriceSpeed extends AbstractObject
                         'params' => 255,
                     ]
                 ],
+            ],
+            'startingpoint_zip' => [
+                'name' => 'startingpoint_zip',
+                'title' => 'startingpoint_zip',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 5,
+                    ]
+                ]
+            ],
+            'startingpoint_city' => [
+                'name' => 'startingpoint_city',
+                'title' => 'startingpoint_city',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 100,
+                    ]
+                ]
+            ],
+            'startingpoint_id_city' => [
+                'name' => 'startingpoint_id_city',
+                'title' => 'startingpoint_id_city',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ]
             ],
             'agency' => [
                 'name' => 'agency',

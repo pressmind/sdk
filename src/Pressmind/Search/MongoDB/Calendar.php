@@ -145,7 +145,7 @@ class Calendar extends AbstractIndex
                         IFNULL(transport_1_airport, \'-\') as transport_1_airport,
                         IFNULL(transport_2_airport, \'-\') as transport_2_airport';
             if(!empty($this->_config['calendar']['include_startingpoint_option'])){
-                $query .= ',IFNULL(id_startingpoint_option, \'-\') as id_startingpoint_option';
+                $query .= ',IFNULL(startingpoint_id_city, \'-\') as startingpoint_id_city';
             }
             $query .= ' from pmt2core_cheapest_price_speed 
                       where 
@@ -168,7 +168,7 @@ class Calendar extends AbstractIndex
                         'transport_type' => $result->transport_type == '-' ? null : $result->transport_type,
                         'transport_1_airport' => $result->transport_1_airport == '-' ? null : $result->transport_1_airport,
                         'transport_2_airport' => $result->transport_2_airport == '-' ? null : $result->transport_2_airport,
-                        'id_startingpoint_option' => !empty($result->id_startingpoint_option) ? ($result->id_startingpoint_option == '-' ? null : $result->id_startingpoint_option) : null,
+                        'startingpoint_id_city' => !empty($result->startingpoint_id_city) ? ($result->startingpoint_id_city == '-' ? null : $result->startingpoint_id_city) : null,
                         'durations' => []
                     ];
                 }
@@ -201,9 +201,9 @@ class Calendar extends AbstractIndex
                     $query .= ' AND transport_2_airport = :transport_2_airport';
                     $values[':transport_2_airport'] = $item['transport_2_airport'];
                 }
-                if(!empty($item['id_startingpoint_option'])){
-                    $query .= ' AND id_startingpoint_option = :id_startingpoint_option';
-                    $values[':id_startingpoint_option'] = $item['id_startingpoint_option'];
+                if(!empty($item['startingpoint_id_city'])){
+                    $query .= ' AND startingpoint_id_city = :startingpoint_id_city';
+                    $values[':startingpoint_id_city'] = $item['startingpoint_id_city'];
                 }
                 $query .= ' order by duration ASC';
                 $results = $db->fetchAll($query, $values);
@@ -229,7 +229,7 @@ class Calendar extends AbstractIndex
                 $document->occupancy = $item['occupancy'];
                 $document->transport_type = $item['transport_type'];
                 $document->airport = $item['transport_1_airport'];
-                $document->id_startingpoint_option = $item['id_startingpoint_option'];
+                $document->startingpoint_id_city = $item['startingpoint_id_city'];
                 $document->booking_package = (new Booking\Package($duration['id_booking_package'], false))->toStdClass(false);
                 $document->housing_package = (new Package($duration['id_housing_package'], false))->toStdClass(false);
                 $filter = new CheapestPrice();
@@ -237,7 +237,7 @@ class Calendar extends AbstractIndex
                 $filter->occupancies = [$item['occupancy']];
                 $filter->id_housing_package = $duration['id_housing_package'];
                 $filter->id_booking_package = $duration['id_booking_package'];
-                $filter->id_startingpoint_option = $item['id_startingpoint_option'];
+                $filter->startingpoint_id_city = $item['startingpoint_id_city'];
                 if(!empty($item['transport_type'])) {
                     $filter->transport_types = [$item['transport_type']];
                 }
@@ -300,7 +300,6 @@ class Calendar extends AbstractIndex
                             $cheapestPriceReduced->price_total = $date_to_cheapest_price[$current_date]->price_total;
                             $cheapestPriceReduced->date_arrival = $date_to_cheapest_price[$current_date]->date_arrival->format(DATE_RFC3339_EXTENDED);
                             $cheapestPriceReduced->date_departure = $date_to_cheapest_price[$current_date]->date_departure->format(DATE_RFC3339_EXTENDED);
-                            $cheapestPriceReduced->earlybird_discount_date_to = $date_to_cheapest_price[$current_date]->earlybird_discount_date_to;
                             $cheapestPriceReduced->guaranteed = $date_to_cheapest_price[$current_date]->guaranteed;
                             $cheapestPriceReduced->saved = $date_to_cheapest_price[$current_date]->saved;
                             $cheapestPriceReduced->id_option = $date_to_cheapest_price[$current_date]->id_option;

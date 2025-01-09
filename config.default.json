@@ -62,7 +62,7 @@
         "disable_touristic_data_import": [],
         "disable_virtual_price_calculation": [],
         "disable_manual_cheapest_price_import": [],
-        "generate_single_room_index": true,
+        "generate_single_room_index": false,
         "max_offers_per_product": 5000,
         "generate_offer_for_each_startingpoint_option": false,
         "ibe_client": null,
@@ -224,10 +224,7 @@
                 8,
                 99
               ]
-            ],
-            "startingpoint_options" : {
-              "active": false
-            }
+            ]
           }
         },
         "calendar" : {

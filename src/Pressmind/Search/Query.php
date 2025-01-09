@@ -136,8 +136,9 @@ class Query
                     $item['cheapest_price']->transport_type = $document['prices']['transport_type'];
                     $item['cheapest_price']->occupancy = $document['prices']['occupancy'];
                     $item['cheapest_price']->occupancy_child = $document['prices']['occupancy_child'];
-                    $item['cheapest_price']->startingpoint_name = !empty($document['prices']['startingpoint_option']['name']) ? $document['prices']['startingpoint_option']['name'] : null;
-                    $item['cheapest_price']->id_startingpoint_option = !empty($document['prices']['startingpoint_option']['id']) ? $document['prices']['startingpoint_option']['id'] : null;
+                    $item['cheapest_price']->startingpoint_id_city = !empty($document['prices']['startingpoint_option']['id']) ? $document['prices']['startingpoint_option']['id'] : null;
+                    $item['cheapest_price']->startingpoint_city = !empty($document['prices']['startingpoint_option']['city']) ? $document['prices']['startingpoint_option']['city'] : null;
+                    $item['cheapest_price']->startingpoint_zip = !empty($document['prices']['startingpoint_option']['zip']) ? $document['prices']['startingpoint_option']['zip'] : null;
                 } else {
                     $item['cheapest_price'] = null;
                     $document['prices'] = null;
@@ -231,35 +232,36 @@ class Query
                 $board_types[$item->_id] = $item;
             }
         }
-
-       $startingpoint_options = [];
-       if(!empty($result_filter->startingPointsGrouped)){
+        $startingpoint_options = [];
+        if(!empty($result_filter->startingPointsGrouped)){
            $matching_startingpoints_map = [];
            if(!$QueryFilter->returnFiltersOnly){
                $matching_startingpoints = json_decode(json_encode($result->startingPointsGrouped));
                foreach($matching_startingpoints as $item){
-                   if(empty($item->_id->id)){
+                   if(empty($item->_id->id_city)){
                        continue;
                    }
-                   $matching_startingpoints_map[$item->_id->id] = $item;
+                   $matching_startingpoints_map[$item->_id->id_city] = $item;
                }
            }
            foreach(json_decode(json_encode($result_filter->startingPointsGrouped)) as $item){
                $newItem = new \stdClass();
-               if(empty($item->_id->id)){
+               if(empty($item->_id->id_city)){
                    continue;
                }
                $newItem->count_in_system = $item->count;
                $newItem->count_in_search = 0;
-               $newItem->name = $item->_id->name;
-               $newItem->id = $item->_id->id;
-               if(isset($matching_startingpoints_map[$item->_id->id])){
-                   $newItem->count_in_search = $matching_startingpoints_map[$item->_id->id]->count;
+               $newItem->id = $item->_id->id_city;
+               $newItem->city = $item->_id->city;
+               if(isset($matching_startingpoints_map[$item->_id->id_city])){
+                   $newItem->count_in_search = $matching_startingpoints_map[$item->_id->id_city]->count;
                }
-               $startingpoint_options[$item->_id->id] = $newItem;
+               $startingpoint_options[$item->_id->id_city] = $newItem;
            }
-       }
-
+           usort($startingpoint_options, function($a, $b) {
+               return $a->city <=> $b->city;
+           });
+        }
         $transport_types = [];
         if(!empty($result_filter->transportTypesGrouped)){
             $matching_transport_types_map = [];
@@ -404,7 +406,7 @@ class Query
      * $request['pm-ho'] occupancy
      * $request['pm-hoc'] occupancy child
      * $request['pm-loc'] location
-     * $request['pm-dl'] departure location (zip codes)
+     * $request['pm-sc'] startingpoint option city ids separated by comma
      * $request['pm-l'] limit 0,10
      * $request['pm-o'] order
      * @param $request
@@ -504,10 +506,10 @@ class Query
             $conditions[] = new \Pressmind\Search\Condition\MongoDB\TransportType($transport_types);
             $validated_search_parameters[$prefix.'-tr'] = implode(',', $transport_types);
         }
-        if (empty($request[$prefix.'-dl']) === false){
-            $departure_location = self::extractDepartureLocation($request[$prefix.'-dl']);
-            $conditions[] = new \Pressmind\Search\Condition\MongoDB\DepartureLocation($departure_location);
-            $validated_search_parameters[$prefix.'-dl'] = implode(',', $departure_location);
+        if (empty($request[$prefix.'-sc']) === false){
+            $id_cities = self::extractIdStartingPointOptionCity($request[$prefix.'-sc']);
+            $conditions[] = new \Pressmind\Search\Condition\MongoDB\StartingPointOptionCity($id_cities);
+            $validated_search_parameters[$prefix.'-sc'] = implode(',', $id_cities);
         }
         if (isset($request[$prefix.'-c']) === true && is_array($request[$prefix.'-c']) === true) {
             $search_item = $request[$prefix.'-c'];
@@ -783,8 +785,8 @@ class Query
      * @param $str
      * @return array
      */
-    public static function extractDepartureLocation($str){
-        if(preg_match('/^([0-9\,]+)$/', $str) > 0){
+    public static function extractIdStartingPointOptionCity($str){
+        if(preg_match('/^([a-z0-9\,]+)$/', $str) > 0){
             return array_filter(explode(',', $str));
         }
         return [];

@@ -343,7 +343,7 @@ class Startingpoint extends AbstractObject
     {
         $result = [];
         if(empty($this->options)){
-            $result[] = $prefix.' ❌. StartingPoint ID: ' . $this->id. ' starting point has no options (options are empty)';
+            $result[] = $prefix.' ❌ StartingPoint ID: ' . $this->id. ' starting point has no options (options are empty)';
             return $result;
         }
         $has_valid_options = false;

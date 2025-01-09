@@ -117,9 +117,6 @@ class Indexer extends AbstractIndex
                     }
                     $collection->updateOne(['_id' => $mediaObject->id], ['$set' => $document], ['upsert' => true]);
                     $ids[] = $mediaObject->id;
-                    if(!empty($this->_config['search']['touristic']['startingpoint_options']['active'])){
-                        $this->_createStartingPointOptionMap($mediaObject->id, $build_info['language'], $build_info['origin'], $agency);
-                    }
                 }
             }
         }
@@ -139,78 +136,9 @@ class Indexer extends AbstractIndex
         }
     }
 
-    public function create_startingPointOptionZipIndex(){
-        $language = null;
-        $origin = 0;
-        $agency = null;
-        $zip_index_temp = $this->getCollectionName($origin, $language, $agency, 'temp_'.uniqid().'_departure_startingpoint_zip_index_');
-        $zip_index = $this->getCollectionName($origin, $language, $agency, 'departure_startingpoint_zip_index_');
-        $zip_map_collection = $this->getCollectionName($origin, $language, $agency, 'startingpoint_option_to_zip_range_');
-        $pipeline = [
-            ['$unwind' => '$zip_ranges'],
-            ['$group' => [
-                '_id' => null,
-                'zip_ranges' => [
-                    '$addToSet' => '$zip_ranges'
-                ]
-            ]],
-            ['$project' => [
-                '_id' => 0,
-                'zip_ranges' => 1
-            ]]
-        ];
-        $result = $this->db->$zip_map_collection->aggregate($pipeline)->toArray();
-        if(empty($result)){
-            $this->db->$zip_index->drop();
-            return;
-        }
-        $imported = [];
-        $documents = [];
-        foreach($result[0]->zip_ranges as $zip_range){
-            $from = $zip_range['f'];
-            $to = $zip_range['t'];
-            $db = Registry::getInstance()->get('db');
-            $query = "SELECT DISTINCT ort_id, gemeinde_name, ort_name, postleitzahl FROM pmt2core_geodata 
-                      WHERE CAST(postleitzahl AS SIGNED) BETWEEN :from AND :to";
-            $values = [':from' => $from, ':to' => $to];
-            $result1 = $db->fetchAll($query, $values);
-            foreach($result1 as $item){
-                if(in_array($item->ort_id, $imported)){
-                    continue;
-                }
-                $documents[] = [
-                    '_id' => $item->ort_id,
-                    'zip' => $item->postleitzahl,
-                    'municipality' => $item->gemeinde_name,
-                    'city' => $item->ort_name
-                ];
-                $imported[] = $item->ort_id;
-            }
-        }
-        if(!empty($documents)){
-            $this->db->$zip_index_temp->insertMany($documents);
-        }
-        $this->db->$zip_index_temp->createIndex(['zip' => 1]);
-        $this->db->$zip_index_temp->createIndex(['municipality' => 1]);
-        $this->db->$zip_index_temp->createIndex(['city' => 1]);
-        $this->db->$zip_index_temp->createIndex(['_id' => 1]);
-        $admin_db = $this->client->selectDatabase('admin');
-        if($this->collectionExists($zip_index)) {
-            $admin_db->command(['renameCollection' => $this->db->getDatabaseName() . '.' . $zip_index, 'to' => $this->db->getDatabaseName() . '.' . $zip_index . '_old']);
-        }
-        try {
-            $admin_db->command(['renameCollection' => $this->db->getDatabaseName() . '.' . $zip_index_temp, 'to' => $this->db->getDatabaseName() . '.' . $zip_index]);
-        }catch (\Exception $e){
-            // rollback
-            $admin_db->command(['renameCollection' => $this->db->getDatabaseName() . '.' . $zip_index.'_old', 'to' => $this->db->getDatabaseName() . '.' . $zip_index]);
-            echo $e->getMessage();
-        }
-        if($this->collectionExists($zip_index.'_old')) {
-            $this->db->{$zip_index.'_old'}->drop();
-        }
-        $this->removeTempCollections();
-    }
-
+    /**
+     * @return int
+     */
     public function removeTempCollections(){
         $collections = $this->db->listCollections();
         $c = 0;
@@ -222,63 +150,6 @@ class Indexer extends AbstractIndex
             }
         }
         return $c;
-    }
-
-    private function _createStartingPointOptionMap($idMediaObject, $language, $origin, $agency = null){
-        if(empty($this->_config_touristic['generate_offer_for_each_startingpoint_option'])) {
-            return;
-        }
-        global $_RUNTIME_IMPORTED_ZIP_RANGE_TO_STARTINGPOINT_OPTION_IDS;
-        if(!is_array($_RUNTIME_IMPORTED_ZIP_RANGE_TO_STARTINGPOINT_OPTION_IDS)){
-            $_RUNTIME_IMPORTED_ZIP_RANGE_TO_STARTINGPOINT_OPTION_IDS = [];
-        }
-        /** @var Pdo $db */
-        $db = Registry::getInstance()->get('db');
-        $query = "select o.zip as default_zip, z.from, z.to, o.id
-                  from pmt2core_touristic_startingpoint_options o
-                  left join pmt2core_touristic_startingpoint_options_zip_ranges z on o.id = z.id_option
-                  left join pmt2core_touristic_transports t on t.id_starting_point = o.id_startingpoint
-                  where t.id_media_object = :id_media_object";
-        if(!empty($_RUNTIME_IMPORTED_ZIP_RANGE_TO_STARTINGPOINT_OPTION_IDS)){
-            $query .= " and o.id not in (\"".implode('","', $_RUNTIME_IMPORTED_ZIP_RANGE_TO_STARTINGPOINT_OPTION_IDS)."\")";
-        }
-        $values = [':id_media_object' => $idMediaObject];
-        $documents = [];
-        $results = $db->fetchAll($query, $values);
-        foreach ($results as $k => $result){
-            $documents[$result->id]['_id'] = $result->id;
-            if($k == 0){ // legacy
-                $documents[$result->id]['zip_ranges'] = [];
-                if(is_numeric($result->default_zip)){
-                    $documents[$result->id]['zip_ranges'][] = [
-                        'f' => $result->default_zip,
-                        't' => $result->default_zip
-                    ];
-                }
-                continue;
-              }
-              if(is_numeric($result->from) && is_numeric($result->to)) {
-                  $documents[$result->id]['zip_ranges'][] = [
-                      'f' => $result->from,
-                      't' => $result->to
-                  ];
-                  $documents[$result->id]['zip_ranges'] = array_map("unserialize", array_unique(array_map("serialize", $documents[$result->id]['zip_ranges'] )));
-              }
-        }
-        $valid_documents = [];
-        foreach($documents as $document){
-            if(!empty($document['zip_ranges'])){
-                $valid_documents[] = $document;
-                if(!isset($_RUNTIME_IMPORTED_ZIP_RANGE_TO_STARTINGPOINT_OPTION_IDS[$document['_id']])){
-                    $_RUNTIME_IMPORTED_ZIP_RANGE_TO_STARTINGPOINT_OPTION_IDS[$document['_id']] = $document['_id'];
-                }
-            }
-        }
-        $collection_name = $this->getCollectionName($origin, $language, $agency, 'startingpoint_option_to_zip_range_');
-        $collection = $this->db->$collection_name;
-        foreach($valid_documents as $document){
-            $collection->updateOne(['_id' => $document['_id']], ['$set' => $document], ['upsert' => true]);
-        }
     }
 
     /**
@@ -598,7 +469,7 @@ class Indexer extends AbstractIndex
                 $filter = $additionalInfo['filter'];
             }
             if($type == 'categorytree') {
-                if(is_array($data->$varName)) {
+                if(!empty($data->$varName) && is_array($data->$varName)) {
                     foreach ($data->$varName as $treeitem) {
                         if(empty($treeitem->item->id)){
                             continue;
@@ -786,8 +657,8 @@ class Indexer extends AbstractIndex
                                   price_mix,
                                   transport_type,
                                   guaranteed,
-                                  id_startingpoint_option,
-                                  startingpoint_name,
+                                  startingpoint_id_city,
+                                  startingpoint_city,
                                   CASE
                                     WHEN state = 3 THEN 100
                                     WHEN state = 1 THEN 200
@@ -809,10 +680,10 @@ class Indexer extends AbstractIndex
                                          transport_type,
                                          guaranteed,
                                          duration,
-                                         id_startingpoint_option,
-                                         startingpoint_name,
+                                         startingpoint_city,
+                                         startingpoint_id_city,
                                          ROW_NUMBER() OVER (PARTITION BY date_departure 
-                                             ".(empty($this->_config_touristic['generate_offer_for_each_startingpoint_option']) ? "" : ", id_startingpoint_option")." 
+                                             ".(empty($this->_config_touristic['generate_offer_for_each_startingpoint_option']) ? "" : ", startingpoint_id_city")." 
                                              ORDER BY FIELD(state, 3, 1, 5, 0), price_total ASC) AS r
                                   from pmt2core_cheapest_price_speed
                                   where   
@@ -825,7 +696,6 @@ class Indexer extends AbstractIndex
                                     AND price_mix = 'date_housing') as t
                             where r = 1
                             group by price_total;";
-
                 $values = [
                     ':id_media_object' => $this->mediaObject->id,
                     ':id_origin' => $origin,
@@ -864,18 +734,13 @@ class Indexer extends AbstractIndex
                         $result->price_regular_before_discount = floatval($result->price_regular_before_discount);
                         $result->earlybird_discount = floatval($result->earlybird_discount);
                         $result->earlybird_discount_f = floatval($result->earlybird_discount_f);
-                        if(!empty($result->id_startingpoint_option)){
+                        if(!empty($result->startingpoint_id_city)){
                             $result->startingpoint_option = new \stdClass();
-                            $result->startingpoint_option->id = $result->id_startingpoint_option;
-                            if(!empty($result->startingpoint_name)){
-                                $result->startingpoint_option->name = $result->startingpoint_name;
-                            }
+                            $result->startingpoint_option->id_city = $result->startingpoint_id_city;
+                            $result->startingpoint_option->city = $result->startingpoint_city;
                         }
-                        unset($result->id_startingpoint_option);
-                        unset($result->startingpoint_name);
-
-
-
+                        unset($result->startingpoint_id_city);
+                        unset($result->startingpoint_city);
                         $prices[] = $result;
                     }
                 }
@@ -896,8 +761,8 @@ class Indexer extends AbstractIndex
                                   price_mix,
                                   transport_type,
                                   guaranteed,
-                                  id_startingpoint_option,
-                                  startingpoint_name,
+                                  startingpoint_city,
+                                  startingpoint_id_city,
                                   CASE
                                     WHEN state = 3 THEN 100
                                     WHEN state = 1 THEN 200
@@ -918,10 +783,10 @@ class Indexer extends AbstractIndex
                                          transport_type,
                                          guaranteed,
                                          duration,
-                                         id_startingpoint_option,
-                                         startingpoint_name,
+                                         startingpoint_city,
+                                         startingpoint_id_city,
                                          ROW_NUMBER() OVER (PARTITION BY date_departure 
-                                         ".(empty($this->_config_touristic['generate_offer_for_each_startingpoint_option']) ? "" : ", id_startingpoint_option")."
+                                         ".(empty($this->_config_touristic['generate_offer_for_each_startingpoint_option']) ? "" : ", startingpoint_id_city")."
                                          ORDER BY FIELD(state, 3, 1, 5, 0), price_total ASC) AS r
                                   from pmt2core_cheapest_price_speed
                                   where   
@@ -975,15 +840,13 @@ class Indexer extends AbstractIndex
                     $result->price_regular_before_discount = floatval($result->price_regular_before_discount);
                     $result->earlybird_discount = floatval($result->earlybird_discount);
                     $result->earlybird_discount_f = floatval($result->earlybird_discount_f);
-                    if(!empty($result->id_startingpoint_option)){
+                    if(!empty($result->startingpoint_city)){
                         $result->startingpoint_option = new \stdClass();
-                        $result->startingpoint_option->id = $result->id_startingpoint_option;
-                        if(!empty($result->startingpoint_name)){
-                            $result->startingpoint_option->name = $result->startingpoint_name;
-                        }
+                        $result->startingpoint_option->id_city = $result->startingpoint_id_city;
+                        $result->startingpoint_option->city = $result->startingpoint_city;
                     }
-                    unset($result->id_startingpoint_option);
-                    unset($result->startingpoint_name);
+                    unset($result->startingpoint_id_city);
+                    unset($result->startingpoint_city);
                     $prices[] = $result;
                 }
             }

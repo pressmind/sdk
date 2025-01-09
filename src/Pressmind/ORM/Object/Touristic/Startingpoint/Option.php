@@ -385,11 +385,34 @@ class Option extends AbstractObject
      * @throws \Exception
      */
     public static function getById($id){
-        if(isset(self::$run_time_cache[$id])){
-            return self::$run_time_cache[$id];
+        if(isset(self::$run_time_cache[__FUNCTION__][$id])){
+            return self::$run_time_cache[__FUNCTION__][$id];
         }
         $option = self::listOne('id = "'.$id.'"');
-        self::$run_time_cache[$id] = $option;
+        self::$run_time_cache[__FUNCTION__][$id] = $option;
         return $option;
     }
+
+    /**
+     * @return string
+     */
+    public function getCityId(){
+        return md5($this->city);
+    }
+
+    /**
+     * @param $id (md5 of city)
+     * @return Option[]
+     * @throws \Exception
+     */
+    public static function getByCityId($id){
+        if(isset(self::$run_time_cache[__FUNCTION__][$id])){
+            return self::$run_time_cache[__FUNCTION__][$id];
+        }
+        $options = self::listAll('md5(city) = "'.$id.'"');
+        self::$run_time_cache[__FUNCTION__][$id] = $options;
+        return $options;
+    }
+
+
 }

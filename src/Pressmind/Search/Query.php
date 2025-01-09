@@ -738,9 +738,10 @@ class Query
 
     /**
      * @param $str
-     * @return null
+     * @param $default
+     * @return mixed|null
      */
-    public static function extractHousingPackageId($str){
+    public static function extractHousingPackageId($str, $default = null){
         if(preg_match('/^[0-9a-zA-Z\-\+]+$/', $str) > 0){
             return $str;
         }
@@ -783,13 +784,16 @@ class Query
 
     /**
      * @param $str
-     * @return array
+     * @param $default
+     * @param $first_key_as_string
+     * @return array|mixed|string|string[]
      */
-    public static function extractIdStartingPointOptionCity($str){
+    public static function extractIdStartingPointOptionCity($str, $default = [], $first_key_as_string = false){
         if(preg_match('/^([a-z0-9\,]+)$/', $str) > 0){
-            return array_filter(explode(',', $str));
+            $v = array_filter(explode(',', $str));
+            return $first_key_as_string ? $v[0] : $v;
         }
-        return [];
+        return $default;
     }
 
 }

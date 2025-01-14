@@ -695,7 +695,7 @@ class Indexer extends AbstractIndex
                                     AND (option_occupancy = :occupancy ) 
                                     AND price_mix = 'date_housing') as t
                             where r = 1
-                            group by price_total;";
+                            group by price_total".(empty($this->_config_touristic['generate_offer_for_each_startingpoint_option']) ? "" : ", startingpoint_id_city").";";
                 $values = [
                     ':id_media_object' => $this->mediaObject->id,
                     ':id_origin' => $origin,
@@ -797,7 +797,7 @@ class Indexer extends AbstractIndex
                                     AND(duration BETWEEN :duration_range_from AND :duration_range_to) 
                                     AND price_mix != 'date_housing') as t
                             where r = 1
-                            group by price_total;";
+                            group by price_total".(empty($this->_config_touristic['generate_offer_for_each_startingpoint_option']) ? "" : ", startingpoint_id_city").";";
             $values = [
                 ':id_media_object' => $this->mediaObject->id,
                 ':id_origin' => $origin,

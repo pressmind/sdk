@@ -481,7 +481,7 @@ class Indexer extends AbstractIndex
                         $stdItem->id_parent = $treeitem->item->id_parent;
                         $stdItem->code = $treeitem->item->code;
                         $stdItem->sort = $treeitem->item->sort;
-                        $stdItem->field_name = $varName;
+                        $stdItem->field_name = !empty($additionalInfo['field']) ? $field : $varName;
                         $stdItem->level = self::getTreeDepth($data->$varName, $treeitem->id_item);
                         $stdItem->path_str = self::getTreePath($data->$varName, $treeitem->id_item, 'name');
                         krsort($stdItem->path_str);

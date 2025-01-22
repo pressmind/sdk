@@ -2230,17 +2230,49 @@ class MediaObject extends AbstractObject
                 $result[] = '          > '.$log;
             }
         }
-        $QueryFilter = new Query\Filter();
-        $QueryFilter->request = ['pm-id' => $this->getId()];
-        $QueryFilter->occupancy = null;
-        $r = Query::getResult($QueryFilter);
-        $result[] = '     '.($r['total_result'] > 0 ? '✅' : '❌') . '  MongoIndex Results (count: '.$r['total_result'].')';
-        if($r['total_result'] == 0 && !empty($r['mongodb']['aggregation_pipeline_search'])){
-            $result[] = '    Mongo Aggregation: '.$r['mongodb']['aggregation_pipeline_search'];
+        $agency_based_option_and_prices_enabled = !isset($config['data']['touristic']['agency_based_option_and_prices']['enabled']) ? false : $config['data']['touristic']['agency_based_option_and_prices']['enabled'];
+        if($agency_based_option_and_prices_enabled){
+            $agencies = empty($config['data']['touristic']['agency_based_option_and_prices']['allowed_agencies']) ? null : $config['data']['touristic']['agency_based_option_and_prices']['allowed_agencies'];
+            if(empty($agencies)) {
+                $result[] = '     ❌  No agencies defined in config.touristic.agency_based_option_and_prices.allowed_agencies but config.touristic.agency_based_option_and_prices.enabled is true';
+            }else{
+                $agencies_with_listings = [];
+                foreach($agencies as $agency){
+                    $QueryFilter = new Query\Filter();
+                    $QueryFilter->request = ['pm-id' => $this->getId()];
+                    $QueryFilter->occupancy = null;
+                    Query::$agency_id_price_index = $agency;
+                    $r = Query::getResult($QueryFilter);
+                    if($r['total_result'] > 0){
+                        $agencies_with_listings[] = $agency;
+                    }
+                }
+                Query::$agency_id_price_index = null;
+                $result[] = '     '.($agencies_with_listings > 0 ? '✅' : '❌') . '  MongoIndex Results (agencies with listings: '.implode(',', $agencies_with_listings).')';
+                $agencies_with_calendar = [];
+                foreach($agencies as $agency) {
+                    $Filter = new CalendarFilter();
+                    $Filter->agency = $agency;
+                    $Calendar = $this->getCalendar($Filter);
+                    if(!empty($Calendar->calendar)){
+                        $agencies_with_calendar[] = $agency;
+                    }
+                }
+                $result[] = '     ' . (count($agencies_with_calendar) > 0 ? '✅' : '❌') . '  Mongo Calendar';
+            }
+        }else{
+            $QueryFilter = new Query\Filter();
+            $QueryFilter->request = ['pm-id' => $this->getId()];
+            $QueryFilter->occupancy = null;
+            $r = Query::getResult($QueryFilter);
+            $result[] = '     '.($r['total_result'] > 0 ? '✅' : '❌') . ' MongoIndex Results (count: '.$r['total_result'].')';
+            if($r['total_result'] == 0 && !empty($r['mongodb']['aggregation_pipeline_search'])){
+                $result[] = '    Mongo Aggregation: '.$r['mongodb']['aggregation_pipeline_search'];
+            }
+            $Filter = new CalendarFilter();
+            $Calendar = $this->getCalendar($Filter);
+            $result[] = '     '.(!empty($Calendar->calendar) ? '✅' : '❌') . '  Mongo Calendar';
         }
-        $Filter = new CalendarFilter();
-        $Calendar = $this->getCalendar($Filter);
-        $result[] = '     '.(!empty($Calendar->calendar) ? '✅' : '❌') . '  Mongo Calendar';
         $result = array_merge(
             $result,
             $this->validateBookingPackages('    ')

@@ -50,6 +50,8 @@ use Pressmind\ORM\Object\Touristic\Option\Discount;
  * @property string $selection_type
  * @property integer $use_earlybird
  * @property string $request_code
+ * @property string $price_group
+ * @property string $product_group
  * @property string $currency
  * @property integer $occupancy_min
  * @property integer $occupancy_max
@@ -642,6 +644,32 @@ class Option extends AbstractObject
             'request_code' => [
                 'title' => 'Request_code',
                 'name' => 'request_code',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
+            'price_group' => [
+                'title' => 'price_group',
+                'name' => 'price_group',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
+            'product_group' => [
+                'title' => 'product_group',
+                'name' => 'product_group',
                 'type' => 'string',
                 'required' => false,
                 'validators' => [

@@ -24,6 +24,9 @@ class ImageMagick implements AdapterInterface
      */
     public function process($config, $file, $derivativeName)
     {
+        if(is_a($file, File::class) === false) {
+            throw new ImagickException('Error: $file must be of type ' . File::class);
+        }
         $path_info = pathinfo($file->name);
         //$new_name = $path_info['filename'] . '_' . $derivativeName . '.' . $path_info['extension'];
         $new_name = $path_info['filename'] . '_' . $derivativeName . '.jpg';
@@ -53,4 +56,40 @@ class ImageMagick implements AdapterInterface
         Writer::write('Derivative ' . $derivative_file->name . ' for file ' . $file->name . ' generated', WRITER::OUTPUT_FILE, 'image_processor', WRITER::TYPE_INFO);
         return $derivative_file;
     }
+
+    /**
+     * @TODO improve this: it does actually not work with some graphics (like maps)...
+     * Checks an image for visual corruption
+     * @param File $file
+     * @return bool
+     * @throws ImagickException
+     */
+   public function isImageCorrupted($file) {
+        if(is_a($file, File::class) === false) {
+            throw new ImagickException('Error: $file must be of type ' . File::class);
+        }
+        if (!$file->exists()) {
+            throw new \Exception('File not found: ' . $file->name);
+        }
+        try {
+            $image = new Imagick();
+            $file->read();
+            $image->readImageBlob($file->content);
+            $histogram = $image->getImageHistogram();
+            $totalPixels = $image->getImageWidth() * $image->getImageHeight();
+            $threshold = 0.7;
+            foreach ($histogram as $pixel) {
+                $count = $pixel->getColorCount();
+                if ($count / $totalPixels > $threshold) {
+                    Writer::write('Image is corrupted: '.$file->name, WRITER::OUTPUT_BOTH, 'image_processor', WRITER::TYPE_ERROR);
+                    return true;
+                }
+            }
+        } catch (\Exception $e) {
+            Writer::write('ImageMagick:isImageCorrupted() Exception:'.$e->getMessage(), WRITER::OUTPUT_BOTH, 'image_processor', WRITER::TYPE_ERROR);
+            return true;
+        }
+        return false;
+    }
+
 }

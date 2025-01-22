@@ -13,6 +13,7 @@ use Pressmind\ORM\Object\Touristic\Insurance;
 use Pressmind\ORM\Object\Touristic\Option;
 use Pressmind\ORM\Object\Touristic\Pickupservice;
 use Pressmind\ORM\Object\Touristic\SeasonalPeriod;
+use Pressmind\ORM\Object\Touristic\Transport;
 
 /**
  * Class TouristicBookingPackage
@@ -542,4 +543,95 @@ class Package extends AbstractObject
     {
         return count($this->getValidDates($dateFrom, $offsetDays)) > 0;
     }
+
+    /**
+     * @param $prefix
+     * @return array
+     * @throws Exception
+     */
+    public function validateDates($prefix = '   '){
+        $result = [];
+        $Date = new Date();
+        /**
+         * @var Date[] $Dates
+         */
+        $Dates = $Date->loadAll(['id_booking_package' => $this->getId()]);
+        foreach($Dates as $DateItem){
+            $result = array_merge($result, $DateItem->validate($prefix));
+        }
+        return $result;
+    }
+
+    /**
+     * Human friendly validation
+     * @param string $prefix
+     * @return array
+     */
+    public function validateHousingPackages($prefix = '   '){
+        $result = [];
+
+        if(count($this->housing_packages) == 0){
+            $result[] = $prefix.' ❌ No housing packages';
+        }
+        foreach($this->housing_packages as $HousingPackage){
+            $result = array_merge($result, $HousingPackage->validate($prefix));
+        }
+        $names = [];
+        if(count($this->housing_packages) > 1){
+            foreach($this->housing_packages as $HousingPackage){
+                $names[] = $HousingPackage->name;
+            }
+            $names = array_unique($names);
+            if(count($names) != count($this->housing_packages)){
+                $result[] = $prefix.' ❌ multiple housing packages with same name or empty name';
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * @return bool
+     * @throws Exception
+     */
+    public function hasPrimaryOptions(){
+        $map = [
+            'date_startingpoint' => 'startingpoint',
+            'date_transport' => 'transport',
+            'date_housing' => 'housing_option',
+            'date_extra' => 'extra',
+            'date_ticket' => 'ticket',
+            'date_sightseeing' => 'sightseeing'
+        ];
+        if(isset($map[$this->price_mix])){
+            $type = $map[$this->price_mix];
+        }else{
+            return false;
+        }
+        if($this->price_mix == 'date_transport'){
+            $Transport = new Transport();
+            $r = $Transport->loadAll(['id_booking_package' => $this->getId()]);
+        }else{
+            $Option = new Option();
+            $r = $Option->loadAll(['type' => $type, 'id_booking_package' => $this->getId()]);
+        }
+        if(count($r) > 0){
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Human friendly validation
+     * @param string $prefix
+     * @return array
+     */
+    public function validate($prefix = ''){
+        $result = $this->validateDates($prefix.' ');
+        if($this->price_mix === 'date_housing'){
+            $result = array_merge($result, $this->validateHousingPackages($prefix.' '));
+        }
+        $result[] = $prefix.' '.($this->hasPrimaryOptions() ? '✅' : '❌') . '  primary options (price_mix = '.$this->price_mix.')';
+        return $result;
+    }
+
 }

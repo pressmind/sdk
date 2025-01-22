@@ -333,7 +333,8 @@ class Import
                 $touristic_data_importer->import($response[0]->cheapest_prices, $id_media_object, $this->_import_type);
             }
 
-            if(is_array($response[0]->cheapest_prices)){
+            $disable_manual_cheapest_price_import = (isset($config['data']['touristic']['disable_manual_cheapest_price_import']) && in_array($response[0]->id_media_objects_data_type, $config['data']['touristic']['disable_manual_cheapest_price_import']));
+            if(is_array($response[0]->cheapest_prices) && !$disable_manual_cheapest_price_import){
                 $manual_cheapest_price_importer = new ManualCheapestPrice($response[0]->cheapest_prices);
                 $manual_cheapest_price_importer->import();
             }
@@ -469,14 +470,14 @@ class Import
                         Writer::write($log, WRITER::OUTPUT_FILE, 'custom_import_hook', WRITER::TYPE_INFO);
                     }
                     foreach ($custom_import_class->getErrors() as $error) {
-                        Writer::write($error, WRITER::OUTPUT_FILE, 'custom_import_hook', WRITER::TYPE_ERROR);
+                        Writer::write($error, WRITER::OUTPUT_BOTH, 'custom_import_hook', WRITER::TYPE_ERROR);
                     }
                     if(count($custom_import_class->getErrors()) > 0) {
                         $this->_errors[] = count($custom_import_class->getErrors()). ' errors in custom import hook. See log "custom_import_hook" for details';
                     }
                     if(method_exists($custom_import_class, 'getWarnings')){
                         foreach ($custom_import_class->getWarnings() as $warning) {
-                            Writer::write($warning, WRITER::OUTPUT_FILE, 'custom_import_hook', WRITER::TYPE_WARNING);
+                            Writer::write($warning, WRITER::OUTPUT_BOTH, 'custom_import_hook', WRITER::TYPE_WARNING);
                         }
                         if(count($custom_import_class->getWarnings()) > 0) {
                             $this->_errors[] = count($custom_import_class->getWarnings()). ' warnings in custom import hook. See log "custom_import_hook" for details';
@@ -546,8 +547,8 @@ class Import
         }
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::removeOrphans()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
         foreach ($allowed_object_types as $allowed_object_type) {
-            $allowed_visibilities = [60]; // the hidden visibility is always allowed
             $allowed_visibilities = $conf['data']['media_types_allowed_visibilities'][$allowed_object_type];
+            $allowed_visibilities[] = 60; // the hidden visibility is always allowed
             if(is_array($allowed_visibilities)) {
                 foreach ($allowed_visibilities as $allowed_visibility) {
                     $params = [

@@ -496,4 +496,46 @@ class Transport extends AbstractObject
         ];
         return I18n::translate($mapping[$this->type]);
     }
+
+    /**
+     * @return string[]
+     */
+    public function getValidTypes(){
+        return ['BUS', 'PKW', 'FLUG', 'SCHIFF', 'BAH'];
+    }
+
+    /**
+     * Human friendly validation
+     * @param string $prefix
+     * @return array
+     */
+    public function validate($prefix){
+        $result = [];
+        if(in_array($this->type, $this->getValidTypes()) === false){
+            $result[] = $prefix.' ❌. Transport type is not valid Transport ID: ' . $this->id. ' has not a valid type ('.$this->type.') , allowed ('.implode(', ',  $this->getValidTypes() ).')';
+        }
+        if($this->type === 'FLUG' && strlen((string)$this->code) < 6){
+            $result[] = $prefix.' ❌. Flight is not valid Transport ID: ' . $this->id. ' has not a valid IATA code (2x 3 Letters)';
+        }
+        if($this->dont_use_for_offers === true){
+            $result[] = $prefix.' ❌. Transport ID: ' . $this->id. ' is probably not available for booking (dont_use_for_offers = true)';
+        }
+        if($this->type === 'BUS'){
+            if(empty($this->id_starting_point)){
+                $result[] = $prefix.' ❌. Transport ID: ' . $this->id. ' is missing a starting point';
+            }else{
+                $StartingPoint = new Startingpoint($this->id_starting_point);
+                if(empty($StartingPoint->getId())){
+                    $result[] = $prefix.' ❌. Transport ID: ' . $this->id. ' starting point not found (id '.$this->id_starting_point.')';
+                }else{
+                    $r = $StartingPoint->validate($prefix, $this->way);
+                    $result = array_merge($result, $r);
+                }
+            }
+        }
+        if(empty($result)){
+            $result[] = $prefix.' ✅. Transport ID: ' . $this->id. ' is valid';
+        }
+        return $result;
+    }
 }

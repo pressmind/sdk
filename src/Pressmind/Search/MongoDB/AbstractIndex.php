@@ -24,6 +24,11 @@ class AbstractIndex
     public $db;
 
     /**
+     * @var \MongoDB\Client
+     */
+    public $client;
+
+    /**
      * @var \MongoDB\Collection
      */
     public $collection;
@@ -32,6 +37,11 @@ class AbstractIndex
      * @var array
      */
     protected $_config;
+
+    /**
+     * @var array
+     */
+    protected $_config_touristic;
 
     /**
      * @var array
@@ -55,14 +65,15 @@ class AbstractIndex
 
     public function __construct() {
         $this->_config = Registry::getInstance()->get('config')['data']['search_mongodb'];
+        $this->_config_touristic = Registry::getInstance()->get('config')['data']['touristic'];
         $this->_allowed_visibilities = Registry::getInstance()->get('config')['data']['media_types_allowed_visibilities'];
         $this->_allowed_fulltext_fields = Registry::getInstance()->get('config')['data']['media_types_fulltext_index_fields'];
         $this->_agency_based_option_and_prices = isset(Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['enabled']) ? Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['enabled'] : false;
         $this->_agencies = $this->_agency_based_option_and_prices && isset(Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['allowed_agencies']) && is_array(Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['allowed_agencies']) ? Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['allowed_agencies'] : [null];
         $uri = $this->_config['database']['uri'];
         $db_name = $this->_config['database']['db'];
-        $client = new \MongoDB\Client($uri);
-        $this->db = $client->$db_name;
+        $this->client = new \MongoDB\Client($uri);
+        $this->db = $this->client->$db_name;
     }
 
     /**

@@ -5,6 +5,7 @@ namespace Pressmind\ORM\Object\Touristic;
 use Pressmind\ORM\Object\AbstractObject;
 /**
  * Class Booking
+ * @deprecated
  * @property integer $id
  * @property \DateTime $booking_date
  * @property string $code

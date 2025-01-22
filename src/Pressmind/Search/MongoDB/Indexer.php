@@ -21,8 +21,9 @@ class Indexer extends AbstractIndex
      * @return bool
      */
     public function collectionExists($collection_name){
-        foreach($this->db->collection_names as $collection){
-            if($collection === $collection_name){
+        $collections = $this->db->listCollections();
+        foreach($collections as $collection){
+            if($collection->getName() === $collection_name){
                 return true;
             }
         }
@@ -47,6 +48,7 @@ class Indexer extends AbstractIndex
         $this->db->$collection_name->createIndex( ['prices.duration' => 1]);
         $this->db->$collection_name->createIndex( ['prices.occupancy' => 1]);
         $this->db->$collection_name->createIndex( ['prices.occupancy_additional' => 1]);
+        $this->db->$collection_name->createIndex( ['prices.id_startingpoint_option' => 1]);
         $this->db->$collection_name->createIndex( ['prices.price_total' => 1, 'prices.duration' => 1, 'prices.occupancy' => 1]);
         $this->db->$collection_name->createIndex( ['categories.it_item' => 1]);
         $this->db->$collection_name->createIndex( ['categories.name' => 1]);
@@ -134,6 +136,21 @@ class Indexer extends AbstractIndex
         }
     }
 
+    /**
+     * @return int
+     */
+    public function removeTempCollections(){
+        $collections = $this->db->listCollections();
+        $c = 0;
+        foreach($collections as $collection){
+            $collection_name = $collection->getName();
+            if(strpos($collection_name, 'temp_') === 0){
+                $this->db->$collection_name->drop();
+                $c++;
+            }
+        }
+        return $c;
+    }
 
     /**
      * @param string|int|array $id_media_object
@@ -161,10 +178,11 @@ class Indexer extends AbstractIndex
      * @param int $origin
      * @param string $language
      * @param string $agency
+     * @param string $prefix
      * @return string
      */
-    public function getCollectionName($origin = 0, $language = null, $agency = null){
-        return 'best_price_search_based_' . (!empty($language) ? $language.'_' : '') . 'origin_' . $origin.(!empty($agency) ? '_agency_'. $agency: '');
+    public function getCollectionName($origin = 0, $language = null, $agency = null, $prefix = 'best_price_search_based_'){
+        return $prefix . (!empty($language) ? $language.'_' : '') . 'origin_' . $origin.(!empty($agency) ? '_agency_'. $agency: '');
     }
 
 
@@ -173,10 +191,11 @@ class Indexer extends AbstractIndex
      * @param string $language
      * @param int $origin
      * @param string $agency
+     * @param bool $force
      * @return false|mixed
      * @throws \Exception
      */
-    public function createIndex($idMediaObject, $language, $origin, $agency = null)
+    public function createIndex($idMediaObject, $language, $origin, $agency = null, $force = false)
     {
         $searchObject = new \stdClass();
         $this->mediaObject = new MediaObject($idMediaObject, true, true);
@@ -195,7 +214,7 @@ class Indexer extends AbstractIndex
         $searchObject->categories = $this->_mapCategories($language);
         $searchObject->groups = $this->_mapGroups($language);
         $searchObject->locations = $this->_mapLocations($language);
-        $searchObject->prices = $this->_aggregatePricesV2($origin, $agency);
+        $searchObject->prices = $this->_aggregatePrices($origin, $agency);
         $searchObject->has_price = !empty($searchObject->prices);
         $searchObject->fulltext = $this->_createFulltext($language);
         $searchObject->departure_date_count = $this->_createDepartureDateCount($origin, $agency);
@@ -203,13 +222,11 @@ class Indexer extends AbstractIndex
         $searchObject->valid_to = !is_null($this->mediaObject->valid_to) ? $this->mediaObject->valid_to->format(DATE_RFC3339_EXTENDED) : null;
         $searchObject->visibility = $this->mediaObject->visibility;
         $searchObject->recommendation_rate = $this->mediaObject->recommendation_rate;
-        $searchObject->sales_priority = $this->mediaObject->sales_priority.$this->mediaObject->sales_position;
-
+        $searchObject->sales_priority = $this->mediaObject->sales_priority.str_pad($this->mediaObject->sales_position, 6, '0');
         //$searchObject->dates_per_month = null;
         if(!empty($this->_config['search']['five_dates_per_month_list'])){
             $searchObject->dates_per_month = $this->_createDatesPerMonth($origin, $agency);
         }
-
         //$searchObject->possible_durations = null;
         if(!empty($this->_config['search']['possible_duration_list'])){
             $searchObject->possible_durations = $this->_createPossibleDurations($origin, $agency);
@@ -219,6 +236,9 @@ class Indexer extends AbstractIndex
         $searchObject->last_modified_date = $now->format(DATE_RFC3339_EXTENDED);
         if(is_array($searchObject->prices) && count($searchObject->prices) > 0) {
             $searchObject->best_price_meta = $searchObject->prices[0];
+        }
+        if($force === true){
+            return json_decode(json_encode($searchObject));
         }
         $allow_invalid_offers = false;
         if(isset($this->_config['search']['allow_invalid_offers']) && is_bool($this->_config['search']['allow_invalid_offers'])){ // legacy
@@ -430,6 +450,7 @@ class Indexer extends AbstractIndex
             }
             $type = 'categorytree';
             $object_link_field = null;
+            $filter = null;
             $varName = $field;
             if(!empty($additionalInfo['field'])){
                 $varName = $additionalInfo['field'];
@@ -444,8 +465,11 @@ class Indexer extends AbstractIndex
             if(!empty($additionalInfo['virtual_id_tree'])){
                 $virtual_id_tree = $additionalInfo['virtual_id_tree'];
             }
+            if(!empty($additionalInfo['filter'])){
+                $filter = $additionalInfo['filter'];
+            }
             if($type == 'categorytree') {
-                if(is_array($data->$varName)) {
+                if(!empty($data->$varName) && is_array($data->$varName)) {
                     foreach ($data->$varName as $treeitem) {
                         if(empty($treeitem->item->id)){
                             continue;
@@ -457,7 +481,7 @@ class Indexer extends AbstractIndex
                         $stdItem->id_parent = $treeitem->item->id_parent;
                         $stdItem->code = $treeitem->item->code;
                         $stdItem->sort = $treeitem->item->sort;
-                        $stdItem->field_name = $varName;
+                        $stdItem->field_name = !empty($additionalInfo['field']) ? $field : $varName;
                         $stdItem->level = self::getTreeDepth($data->$varName, $treeitem->id_item);
                         $stdItem->path_str = self::getTreePath($data->$varName, $treeitem->id_item, 'name');
                         krsort($stdItem->path_str);
@@ -471,7 +495,7 @@ class Indexer extends AbstractIndex
                     $categories[] = $linkedCategory;
                 }
             }elseif($type == 'plaintext_from_objectlink') {
-                foreach ($this->_mapPlaintextFromObjectLinks($object_link_field, $varName, $field, $virtual_id_tree, $language) as $linkedCategory) {
+                foreach ($this->_mapPlaintextFromObjectLinks($object_link_field, $varName, $field, $virtual_id_tree, $language, $filter) as $linkedCategory) {
                     $categories[] = $linkedCategory;
                 }
             }
@@ -525,7 +549,7 @@ class Indexer extends AbstractIndex
      * @return array
      * @throws \Exception
      */
-    private function _mapPlaintextFromObjectLinks($varName, $plaintextVarName, $field, $virtual_id_tree, $language) {
+    private function _mapPlaintextFromObjectLinks($varName, $plaintextVarName, $field, $virtual_id_tree, $language, $filter) {
         if(empty($virtual_id_tree)){
             throw new \Exception('virtual_id_tree is required for plaintext_from_objectlink');
         }
@@ -540,10 +564,22 @@ class Indexer extends AbstractIndex
                 $linkedObjectData = $linkedObject->getDataForLanguage($language);
                 if(!is_null($linkedObjectData) ) {
                     $stdItem = new \stdClass();
-                    $stdItem->name = $plaintextVarName == 'name' ? $linkedObject->name : $linkedObjectData->$plaintextVarName ;
+                    $stdItem->name = $plaintextVarName == 'name' ? $linkedObject->name : $linkedObjectData->$plaintextVarName;
+                    if(!empty($filter)){
+                        $r = $this->_filterFunction([
+                            'filter' => $filter,
+                            'params' => [
+                                'mediaObject' => $linkedObject
+                            ]
+                        ]);
+                        if(!empty($r)){
+                            $stdItem->name = $r;
+                        }
+                    }
                     $stdItem->id_item = md5($objectlink->id_media_object_link.'-'.$varName.'-'.$plaintextVarName.'-'.$stdItem->name.'-'.$virtual_id_tree);
                     $stdItem->id_tree = $virtual_id_tree;
                     $stdItem->id_parent = null;
+                    $stdItem->id_media_object = $objectlink->id_media_object_link;
                     $stdItem->field_name = $field;
                     $stdItem->level = 0;
                     $stdItem->path_str = [$stdItem->name];
@@ -592,172 +628,12 @@ class Indexer extends AbstractIndex
     }
 
     /**
-     * @deprecated
      * @param int $origin
      * @param string $agency
      * @return array
      * @throws \Exception
      */
     private function _aggregatePrices($origin, $agency = null)
-    {
-        $config = $this->_config['search']['touristic'];
-        $prices = [];
-        /** @var Pdo $db */
-        $db = Registry::getInstance()->get('db');
-
-        // price mix date_housing
-        foreach ($config['occupancies'] as $occupancy) {
-            foreach ($config['duration_ranges'] as $duration_range) {
-                $query = "SELECT 
-                option_occupancy as occupancy, 
-                group_concat(date_departure) as date_departures,
-                max(duration) as duration, 
-                price_total, 
-                price_regular_before_discount, 
-                earlybird_discount, 
-                earlybird_discount_f, 
-                earlybird_discount_date_to, 
-                earlybird_name, 
-                option_board_type, 
-                price_mix,
-                transport_type,
-                guaranteed
-                FROM pmt2core_cheapest_price_speed 
-                WHERE 
-                id_media_object = :id_media_object 
-                  AND id_origin = :id_origin
-                  ".(empty($agency) ? "" : " AND agency = :agency")."
-                  AND (earlybird_discount = 0 OR earlybird_discount_date_to >= NOW()) 
-                  AND(duration BETWEEN :duration_range_from AND :duration_range_to) 
-                  AND (option_occupancy = :occupancy ) 
-                  AND price_mix = 'date_housing'
-                 GROUP BY price_total ORDER BY price_total";
-                $values = [
-                    ':id_media_object' => $this->mediaObject->id,
-                    ':id_origin' => $origin,
-                    ':duration_range_from' => $duration_range[0],
-                    ':duration_range_to' => $duration_range[1].'.9',
-                    ':occupancy' => $occupancy,
-                ];
-                if(!empty($agency)){
-                    $values[':agency'] = $agency;
-                }
-                $results = $db->fetchAll($query, $values);
-                if(!is_null($results)) {
-                    foreach($results as $result) {
-                        $date_departures = array_unique(explode(',', $result->date_departures));
-                        asort($date_departures);
-                        $formatted_date_departures = [];
-                        $formatted_guaranteed_departures = [];
-                        foreach ($date_departures as $k => $date_departure) {
-                            $date = \DateTime::createFromFormat('Y-m-d H:i:s', $date_departure);
-                            if (empty($date)) {
-                                echo 'error: date is not valid'; // check group_concat max size see bootstrap.php
-                                break(1);
-                            }
-                            $formatted_date_departures[] = $date->format(DATE_RFC3339_EXTENDED);
-                            if(!empty($result->guaranteed)){
-                                $formatted_guaranteed_departures[] = $date->format(DATE_RFC3339_EXTENDED);
-                            }
-                        }
-                        $result->date_departures = $formatted_date_departures;
-                        unset($result->guaranteed);
-                        $result->guaranteed_departures = $formatted_guaranteed_departures;
-                        $result->occupancy = intval($result->occupancy);
-                        $result->duration = floatval($result->duration);
-                        $result->price_total = floatval($result->price_total); // @TODO pseudo price handling is missing
-                        $result->price_regular_before_discount = floatval($result->price_regular_before_discount);
-                        $result->earlybird_discount = floatval($result->earlybird_discount);
-                        $result->earlybird_discount_f = floatval($result->earlybird_discount_f);
-                        $prices[] = $result;
-                    }
-                }
-            }
-        }
-
-        // price mixes NOT date_housing, this price_mix type doesn't have a occupancy!
-        foreach ($config['duration_ranges'] as $duration_range) {
-            $query = "SELECT 
-                option_occupancy as occupancy, 
-                group_concat(date_departure) as date_departures,
-                max(duration) as duration, 
-                price_total, 
-                price_regular_before_discount, 
-                earlybird_discount, 
-                earlybird_discount_f, 
-                earlybird_discount_date_to, 
-                earlybird_name,
-                option_board_type, 
-                price_mix,
-                transport_type,
-                guaranteed
-                FROM pmt2core_cheapest_price_speed 
-                WHERE 
-                id_media_object = :id_media_object 
-                  AND id_origin = :id_origin
-                  ".(empty($agency) ? "" : " AND agency = :agency")."
-                  AND (earlybird_discount = 0 OR earlybird_discount_date_to >= NOW()) 
-                  AND(duration BETWEEN :duration_range_from AND :duration_range_to) 
-                  AND price_mix != 'date_housing'
-                GROUP BY price_total ORDER BY price_total";
-            $values = [
-                ':id_media_object' => $this->mediaObject->id,
-                ':id_origin' => $origin,
-                ':duration_range_from' => $duration_range[0],
-                ':duration_range_to' => $duration_range[1].'.9',
-            ];
-            if(!empty($agency)){
-                $values[':agency'] = $agency;
-            }
-            $results = $db->fetchAll($query, $values);
-            $used_departures = [];
-            if(!is_null($results)) {
-                foreach($results as $result){
-                    $date_departures = array_unique(explode(',', $result->date_departures));
-                    asort($date_departures);
-                    $formatted_date_departures = [];
-                    $formatted_guaranteed_departures = [];
-                    foreach ($date_departures as $k => $date_departure){
-                        if(in_array($date_departure, $used_departures) ){
-                            continue;
-                        }
-                        $used_departures[] = $date_departure;
-                        $date = \DateTime::createFromFormat('Y-m-d H:i:s', $date_departure);
-                        if(empty($date)){
-                            echo 'error: date is not valid';
-                            break(1);
-                        }
-                        $formatted_date_departures[] = $date->format(DATE_RFC3339_EXTENDED);
-                        if(!empty($result->guaranteed)){
-                            $formatted_guaranteed_departures[] = $date->format(DATE_RFC3339_EXTENDED);
-                        }
-                    }
-                    $result->date_departures = $formatted_date_departures;
-                    unset($result->guaranteed);
-                    $result->guaranteed_departures = $formatted_guaranteed_departures;
-                    $result->occupancy = null;
-                    $result->duration = floatval($result->duration);
-                    $result->price_total = floatval($result->price_total);
-                    $result->price_regular_before_discount = floatval($result->price_regular_before_discount);
-                    $result->earlybird_discount = floatval($result->earlybird_discount);
-                    $result->earlybird_discount_f = floatval($result->earlybird_discount_f);
-                    $prices[] = $result;
-                }
-            }
-        }
-
-        usort($prices, [$this, '_priceSort']);
-
-        return $prices;
-    }
-
-    /**
-     * @param int $origin
-     * @param string $agency
-     * @return array
-     * @throws \Exception
-     */
-    private function _aggregatePricesV2($origin, $agency = null)
     {
         $config = $this->_config['search']['touristic'];
         $prices = [];
@@ -781,6 +657,8 @@ class Indexer extends AbstractIndex
                                   price_mix,
                                   transport_type,
                                   guaranteed,
+                                  startingpoint_id_city,
+                                  startingpoint_city,
                                   CASE
                                     WHEN state = 3 THEN 100
                                     WHEN state = 1 THEN 200
@@ -802,7 +680,11 @@ class Indexer extends AbstractIndex
                                          transport_type,
                                          guaranteed,
                                          duration,
-                                         ROW_NUMBER() OVER (PARTITION BY date_departure ORDER BY FIELD(state, 3, 1, 5, 0), price_total ASC) AS r
+                                         startingpoint_city,
+                                         startingpoint_id_city,
+                                         ROW_NUMBER() OVER (PARTITION BY date_departure 
+                                             ".(empty($this->_config_touristic['generate_offer_for_each_startingpoint_option']) ? "" : ", startingpoint_id_city")." 
+                                             ORDER BY FIELD(state, 3, 1, 5, 0), price_total ASC) AS r
                                   from pmt2core_cheapest_price_speed
                                   where   
                                       id_media_object = :id_media_object 
@@ -813,8 +695,7 @@ class Indexer extends AbstractIndex
                                     AND (option_occupancy = :occupancy ) 
                                     AND price_mix = 'date_housing') as t
                             where r = 1
-                            group by price_total;";
-
+                            group by price_total".(empty($this->_config_touristic['generate_offer_for_each_startingpoint_option']) ? "" : ", startingpoint_id_city").";";
                 $values = [
                     ':id_media_object' => $this->mediaObject->id,
                     ':id_origin' => $origin,
@@ -853,6 +734,13 @@ class Indexer extends AbstractIndex
                         $result->price_regular_before_discount = floatval($result->price_regular_before_discount);
                         $result->earlybird_discount = floatval($result->earlybird_discount);
                         $result->earlybird_discount_f = floatval($result->earlybird_discount_f);
+                        if(!empty($result->startingpoint_id_city)){
+                            $result->startingpoint_option = new \stdClass();
+                            $result->startingpoint_option->id_city = $result->startingpoint_id_city;
+                            $result->startingpoint_option->city = $result->startingpoint_city;
+                        }
+                        unset($result->startingpoint_id_city);
+                        unset($result->startingpoint_city);
                         $prices[] = $result;
                     }
                 }
@@ -873,6 +761,8 @@ class Indexer extends AbstractIndex
                                   price_mix,
                                   transport_type,
                                   guaranteed,
+                                  startingpoint_city,
+                                  startingpoint_id_city,
                                   CASE
                                     WHEN state = 3 THEN 100
                                     WHEN state = 1 THEN 200
@@ -893,7 +783,11 @@ class Indexer extends AbstractIndex
                                          transport_type,
                                          guaranteed,
                                          duration,
-                                         ROW_NUMBER() OVER (PARTITION BY date_departure ORDER BY FIELD(state, 3, 1, 5, 0), price_total ASC) AS r
+                                         startingpoint_city,
+                                         startingpoint_id_city,
+                                         ROW_NUMBER() OVER (PARTITION BY date_departure 
+                                         ".(empty($this->_config_touristic['generate_offer_for_each_startingpoint_option']) ? "" : ", startingpoint_id_city")."
+                                         ORDER BY FIELD(state, 3, 1, 5, 0), price_total ASC) AS r
                                   from pmt2core_cheapest_price_speed
                                   where   
                                       id_media_object = :id_media_object 
@@ -903,7 +797,7 @@ class Indexer extends AbstractIndex
                                     AND(duration BETWEEN :duration_range_from AND :duration_range_to) 
                                     AND price_mix != 'date_housing') as t
                             where r = 1
-                            group by price_total;";
+                            group by price_total".(empty($this->_config_touristic['generate_offer_for_each_startingpoint_option']) ? "" : ", startingpoint_id_city").";";
             $values = [
                 ':id_media_object' => $this->mediaObject->id,
                 ':id_origin' => $origin,
@@ -946,6 +840,13 @@ class Indexer extends AbstractIndex
                     $result->price_regular_before_discount = floatval($result->price_regular_before_discount);
                     $result->earlybird_discount = floatval($result->earlybird_discount);
                     $result->earlybird_discount_f = floatval($result->earlybird_discount_f);
+                    if(!empty($result->startingpoint_city)){
+                        $result->startingpoint_option = new \stdClass();
+                        $result->startingpoint_option->id_city = $result->startingpoint_id_city;
+                        $result->startingpoint_option->city = $result->startingpoint_city;
+                    }
+                    unset($result->startingpoint_id_city);
+                    unset($result->startingpoint_city);
                     $prices[] = $result;
                 }
             }

@@ -25,6 +25,9 @@ class Picture implements MapperInterface
                 if(empty($object->image->filename)){
                     continue;
                 }
+                if($object->image->visibility == 10){
+                    continue;
+                }
                 $mapped_object = new stdClass();
                 $mapped_object->sections = [];
                 $mapped_object->id_picture = $object->id_media_object;

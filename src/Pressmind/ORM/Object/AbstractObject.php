@@ -174,6 +174,16 @@ abstract class AbstractObject
     }
 
     /**
+     * @return int
+     */
+    public function getTableRowCount()
+    {
+        $query = "SELECT count(*) as count FROM " . $this->getDbTableName();
+        $dataset = $this->_db->execute($query);
+        return empty($dataset[0]->count) ? 0 : $dataset[0]->count;
+    }
+
+    /**
      * @param string|array $where
      * @param array $order
      * @param array $limit

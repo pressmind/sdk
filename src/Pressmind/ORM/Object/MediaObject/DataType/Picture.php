@@ -364,9 +364,7 @@ class Picture extends AbstractObject
         $onlyheight = false;
         $onlywidth = false;
         $crop = $config['image_handling']['processor']['derivatives'][$derivativeName]['crop'] ?? false;
-
-        // Bildverhältnis und Crop-Einstellungen überprüfen
-        if(!$crop && !empty($config['image_handling']['processor']['derivatives'][$derivativeName]['preserve_aspect_ratio'])) {
+        if(!empty($image_height) && !$crop && !empty($config['image_handling']['processor']['derivatives'][$derivativeName]['preserve_aspect_ratio'])) {
             $aspectRatio = $image_width / $image_height;
             if ($image_max_width / $aspectRatio < $image_max_height) {
                 $onlywidth = true;
@@ -374,7 +372,6 @@ class Picture extends AbstractObject
                 $onlyheight = true;
             }
         }
-
         $tmp_url = $this->tmp_url;
         if(!is_null($sectionName)){
             $section = $this->getSection($sectionName);
@@ -382,32 +379,25 @@ class Picture extends AbstractObject
                 $tmp_url = $section->tmp_url;
             }
         }
-
         $parsed_query = [];
         $parsed_url = parse_url($tmp_url);
         parse_str($parsed_url['query'], $parsed_query);
         unset($parsed_query['v']);
-
         if(!is_null($derivativeName)) {
-            // Wenn 'crop' aktiv ist, werden sowohl 'w' als auch 'h' unabhängig vom Bildformat gesetzt
             if($crop) {
                 $parsed_query['w'] = $image_max_width;
                 $parsed_query['h'] = $image_max_height;
             } else {
-                // Nur 'w' setzen, wenn nur die Breite angepasst werden soll und 'h' entfernen
                 if($onlywidth || !$onlyheight){
                     $parsed_query['w'] = $image_max_width;
                     unset($parsed_query['h']);
                 }
-
-                // Nur 'h' setzen, wenn nur die Höhe angepasst werden soll und 'w' entfernen
                 if($onlyheight ||!$onlywidth){
                     $parsed_query['h'] = $image_max_height;
                     unset($parsed_query['w']);
                 }
             }
         }
-
         return $parsed_url['scheme'] . '://' . $parsed_url['host'] . $parsed_url['path'] . '?' . http_build_query($parsed_query);
     }
 

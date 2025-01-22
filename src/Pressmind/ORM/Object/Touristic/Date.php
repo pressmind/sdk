@@ -5,7 +5,9 @@ namespace Pressmind\ORM\Object\Touristic;
 use Exception;
 use Pressmind\ORM\Object\AbstractObject;
 use DateTime;
+use Pressmind\ORM\Object\Touristic\Booking\Package;
 use Pressmind\ORM\Object\Touristic\Date\Attribute;
+use Pressmind\Registry;
 
 /**
  * Class Date
@@ -29,6 +31,7 @@ use Pressmind\ORM\Object\Touristic\Date\Attribute;
  * @property boolean $saved
  * @property boolean $flex
  * @property string $touroperator
+ * @property string $agencies
  * @property Startingpoint $startingpoint
  * @property Transport[] $transports
  * @property EarlyBirdDiscountGroup $early_bird_discount_group
@@ -289,6 +292,14 @@ class Date extends AbstractObject
                 'validators' => null,
                 'filters' => NULL,
             ],
+            'agencies' => [
+                'title' => 'agencies',
+                'name' => 'agencies',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
             'touroperator' => [
                 'title' => 'Touroperator',
                 'name' => 'touroperator',
@@ -438,8 +449,8 @@ class Date extends AbstractObject
                                                         AND (season in ('" . $this->season . "','-', '') or season is null)
                                                         )
                                                     )"
-                                                    .(!empty($is_offer_query) ? " AND dont_use_for_offers = 0" : "")
-                                                    .(!empty($agency) ? " AND (FIND_IN_SET('".$agency."', agencies) > 0 or agencies is null)" : "")
+            .(!empty($is_offer_query) ? " AND dont_use_for_offers = 0" : "")
+            .(!empty($agency) ? " AND (FIND_IN_SET('".$agency."', agencies) > 0 or agencies is null)" : "")
         );
         foreach ($options_list as $option) {
             $options[] = $option;
@@ -656,7 +667,7 @@ class Date extends AbstractObject
             $transport_pairs = array_merge($transport_pairs, $this->_collectPairs($transports));
         }
         if(is_int($max_pairs)){
-           array_splice($transport_pairs, $max_pairs);
+            array_splice($transport_pairs, $max_pairs);
         }
         return $transport_pairs;
     }
@@ -707,5 +718,83 @@ class Date extends AbstractObject
         }
         return $transport_pairs;
     }
+
+
+    /**
+     * Human friendly validation
+     * @param string $prefix
+     * @return array
+     */
+    public function validate($prefix = ''){
+        $result = [];
+        $BookingPackage = new Package($this->id_booking_package);
+        if(in_array($BookingPackage->ibe_type, [0,1]) && count($this->transports) == 0){
+            $result[] = $prefix.'✅   IBE Type is Standalone = ibe_type in(0,1) => no further transport validation needed for date id: ' . $this->id. ' ('.$this->departure->format('Y-m-d').')';
+            return $result;
+        }
+        $transport_allowed_states = [0, 2, 3];
+        if(!empty(Registry::getInstance()->get('config')['data']['touristic']['transport_filter']['active'])) {
+            $transport_allowed_states = empty(Registry::getInstance()->get('config')['data']['touristic']['transport_filter']['allowed_states']) ? $transport_allowed_states : Registry::getInstance()->get('config')['data']['touristic']['transport_filter']['allowed_states'];
+        }
+        $agency_based_option_and_prices_enabled = !isset(Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['enabled']) ? false : Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['enabled'];
+        $agencies = empty(Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['allowed_agencies']) || $agency_based_option_and_prices_enabled === false ? [null] : Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['allowed_agencies'];
+        foreach ($agencies as $agency) {
+            $pairs = count($this->transports) > 0 ? $this->getTransportPairs($transport_allowed_states, [], [], null, true, $agency) : [null];
+            $pair_count = count($pairs);
+            $result[] = $prefix.($pair_count > 0 ? '✅' : '❌') . '  Transport Pair Check'.(!empty($agency) ? ' for Agency: ' . $agency : '').' ('.$pair_count.' pairs found) date id: ' . $this->id. ' ('.$this->departure->format('Y-m-d').')';
+            if($pair_count == 0){
+                $transport_count = count($this->transports);
+                $result[] = $prefix.''.($transport_count > 0 ? '✅' : '❌') . '  Transport Check'.(!empty($agency) ? ' for Agency: ' . $agency : '').' ('.$transport_count.' transports found)';
+                if($transport_count > 0){
+                    $pairs = $this->getTransportPairs($transport_allowed_states, [], [], null, false, $agency);
+                    $pair_count = count($pairs);
+                    $result[] = $prefix.($pair_count > 0 ? '✅' : '❌') . '   Check with disabled dont_use_for_offers-Bit';
+                    $pairs = $this->getTransportPairs([0,2,3], [], [], null, true, $agency);
+                    $pair_count = count($pairs);
+                    $result[] = $prefix.($pair_count > 0 ? '✅' : '❌') . '   Check without custom transport.state config';
+                    $transports_by_type = [];
+                    foreach($this->getTransports([0,2,3], [], [], true, $agency) as $Transport){
+                        $transports_by_type[$Transport->type][] = $Transport;
+                    }
+                    if(!empty($transports_by_type['FLUG'])){
+                        $airportPairs = $this->_collectAirportPairs($transports_by_type['FLUG']);
+                        if(empty($airportPairs)){
+                            $result[] = $prefix.'❌   No Airport Pairs found - check if the transport.code or transport_group is correct, date id: ' . $this->id. ' ('.$this->departure->format('Y-m-d').')';
+                            $result[] = $prefix.'     : transport.code must match a IATA valid flight route (e.g. way1: FRA-MUC or FRAMUC, way2: MUC-FRA or MUCFRA)';
+                            $result[] = $prefix.'     : transport.code first 3 chars on way1 must match last 3 chars on way2';
+                            $result[] = $prefix.'     : or if the transport_group is set, it must be the same for both ways (used for mixed transport_types e.g. way1=FLUG, way1=BUS)';
+                        }else{
+                            $result[] = $prefix.'✅   Airport Pairs found';
+                        }
+                    }
+                }
+            }
+            foreach($pairs as $pair){
+                if(!empty($pair['way1'])){
+                    $way1 = $pair['way1'];
+                    if(!is_a($pair['way1'], Transport::class)){
+                        $way1 = new Transport();
+                        $way1->fromStdClass($pair['way1']);
+                    }
+                    $result = array_merge($result, $way1->validate($prefix.'  '));
+                }else{
+                    $result[] = $prefix.' ❌ ' . '  Property transport.pair[way1] not valid';
+                }
+                if(!empty($pair['way2'])){
+                    $way2 = $pair['way2'];
+                    if(!is_a($pair['way1'], Transport::class)){
+                        $way2 = new Transport();
+                        $way2->fromStdClass($pair['way2']);
+                    }
+                    $result = array_merge($result, $way2->validate($prefix.'  '));
+                }else{
+                    $result[] = $prefix.' ❌ ' . '  Property transport.pair[way2] not valid';
+                }
+            }
+        }
+        return $result;
+    }
+
+
 
 }

@@ -136,6 +136,9 @@ class Query
                     $item['cheapest_price']->transport_type = $document['prices']['transport_type'];
                     $item['cheapest_price']->occupancy = $document['prices']['occupancy'];
                     $item['cheapest_price']->occupancy_child = $document['prices']['occupancy_child'];
+                    $item['cheapest_price']->startingpoint_id_city = !empty($document['prices']['startingpoint_option']['id']) ? $document['prices']['startingpoint_option']['id'] : null;
+                    $item['cheapest_price']->startingpoint_city = !empty($document['prices']['startingpoint_option']['city']) ? $document['prices']['startingpoint_option']['city'] : null;
+                    $item['cheapest_price']->startingpoint_zip = !empty($document['prices']['startingpoint_option']['zip']) ? $document['prices']['startingpoint_option']['zip'] : null;
                 } else {
                     $item['cheapest_price'] = null;
                     $document['prices'] = null;
@@ -228,6 +231,36 @@ class Query
                 }
                 $board_types[$item->_id] = $item;
             }
+        }
+        $startingpoint_options = [];
+        if(!empty($result_filter->startingPointsGrouped)){
+           $matching_startingpoints_map = [];
+           if(!$QueryFilter->returnFiltersOnly){
+               $matching_startingpoints = json_decode(json_encode($result->startingPointsGrouped));
+               foreach($matching_startingpoints as $item){
+                   if(empty($item->_id->id_city)){
+                       continue;
+                   }
+                   $matching_startingpoints_map[$item->_id->id_city] = $item;
+               }
+           }
+           foreach(json_decode(json_encode($result_filter->startingPointsGrouped)) as $item){
+               $newItem = new \stdClass();
+               if(empty($item->_id->id_city)){
+                   continue;
+               }
+               $newItem->count_in_system = $item->count;
+               $newItem->count_in_search = 0;
+               $newItem->id = $item->_id->id_city;
+               $newItem->city = $item->_id->city;
+               if(isset($matching_startingpoints_map[$item->_id->id_city])){
+                   $newItem->count_in_search = $matching_startingpoints_map[$item->_id->id_city]->count;
+               }
+               $startingpoint_options[$item->_id->id_city] = $newItem;
+           }
+           usort($startingpoint_options, function($a, $b) {
+               return $a->city <=> $b->city;
+           });
         }
         $transport_types = [];
         if(!empty($result_filter->transportTypesGrouped)){
@@ -333,6 +366,7 @@ class Query
             'categories' => $categories,
             'board_types' => $board_types,
             'transport_types' => $transport_types,
+            'startingpoint_options' => $startingpoint_options,
             'duration_min' => !empty($result_filter->minDuration) ? $result_filter->minDuration : null,
             'duration_max' => !empty($result_filter->maxDuration) ? $result_filter->maxDuration : null,
             'departure_min' => !empty($result_filter->minDeparture) ? new \DateTime($result_filter->minDeparture) : null,
@@ -366,6 +400,13 @@ class Query
      * $request['pm-url'] url like /travel/5-italia/
      * $request['pm-loc'] location like 50.123,12.123,10.5 (lng,lat,radius in km)
      * $request['pm-gr'] groups
+     * $request['pm-du'] duration range 3-14
+     * $request['pm-tr'] transport type
+     * $request['pm-bt'] board type
+     * $request['pm-ho'] occupancy
+     * $request['pm-hoc'] occupancy child
+     * $request['pm-loc'] location
+     * $request['pm-sc'] startingpoint option city ids separated by comma
      * $request['pm-l'] limit 0,10
      * $request['pm-o'] order
      * @param $request
@@ -464,6 +505,11 @@ class Query
             $transport_types = self::extractTransportTypes($request[$prefix.'-tr']);
             $conditions[] = new \Pressmind\Search\Condition\MongoDB\TransportType($transport_types);
             $validated_search_parameters[$prefix.'-tr'] = implode(',', $transport_types);
+        }
+        if (empty($request[$prefix.'-sc']) === false){
+            $id_cities = self::extractIdStartingPointOptionCity($request[$prefix.'-sc']);
+            $conditions[] = new \Pressmind\Search\Condition\MongoDB\StartingPointOptionCity($id_cities);
+            $validated_search_parameters[$prefix.'-sc'] = implode(',', $id_cities);
         }
         if (isset($request[$prefix.'-c']) === true && is_array($request[$prefix.'-c']) === true) {
             $search_item = $request[$prefix.'-c'];
@@ -692,9 +738,10 @@ class Query
 
     /**
      * @param $str
-     * @return null
+     * @param $default
+     * @return mixed|null
      */
-    public static function extractHousingPackageId($str){
+    public static function extractHousingPackageId($str, $default = null){
         if(preg_match('/^[0-9a-zA-Z\-\+]+$/', $str) > 0){
             return $str;
         }
@@ -733,6 +780,20 @@ class Query
      */
     public static function sanitizeStr($str){
         return trim(preg_replace( '/[^a-zA-Z0-9_\-\.ÁÀȦÂÄǞǍĂĀÃÅǺǼǢĆĊĈČĎḌḐḒÉÈĖÊËĚĔĒẼE̊ẸǴĠĜǦĞG̃ĢĤḤáàȧâäǟǎăāãåǻǽǣćċĉčďḍḑḓéèėêëěĕēẽe̊ẹǵġĝǧğg̃ģĥḥÍÌİÎÏǏĬĪĨỊĴĶǨĹĻĽĿḼM̂M̄ʼNŃN̂ṄN̈ŇN̄ÑŅṊÓÒȮȰÔÖȪǑŎŌÕȬŐỌǾƠíìiîïǐĭīĩịĵķǩĺļľŀḽm̂m̄ŉńn̂ṅn̈ňn̄ñņṋóòôȯȱöȫǒŏōõȭőọǿơP̄ŔŘŖŚŜṠŠȘṢŤȚṬṰÚÙÛÜǓŬŪŨŰŮỤẂẀŴẄÝỲŶŸȲỸŹŻŽẒǮp̄ŕřŗśŝṡšşṣťțṭṱúùûüǔŭūũűůụẃẁŵẅýỳŷÿȳỹźżžẓǯßœŒçÇ\s]/', '', $str));
+    }
+
+    /**
+     * @param $str
+     * @param $default
+     * @param $first_key_as_string
+     * @return array|mixed|string|string[]
+     */
+    public static function extractIdStartingPointOptionCity($str, $default = [], $first_key_as_string = false){
+        if(preg_match('/^([a-z0-9\,]+)$/', $str) > 0){
+            $v = array_filter(explode(',', $str));
+            return $first_key_as_string ? $v[0] : $v;
+        }
+        return $default;
     }
 
 }

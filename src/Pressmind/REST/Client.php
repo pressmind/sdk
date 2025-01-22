@@ -113,6 +113,11 @@ class Client
             $debug_str .= '== DEBUG END =='."\n";
             Writer::write($debug_str, Writer::OUTPUT_SCREEN, 'restclient', Writer::TYPE_INFO);
         }
+        $status_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        if($status_code != 200) {
+            Writer::write('Response status code for: ' . $this->_api_endpoint . $this->_api_key . '/' . $controller . '/' . $action . $get_params . ' is: ' . $status_code, Writer::OUTPUT_FILE, 'restclient', Writer::TYPE_ERROR);
+            throw new Exception('Response status code is: ' . $status_code. "\nResponse: ".$response);
+        }
         $json = json_decode($response);
         if(is_null($json)) {
             switch(json_last_error()) {

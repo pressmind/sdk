@@ -158,6 +158,10 @@ class Ibe
             'services_box_content' => $services_box_content,
             'duration' => $booking->getBookingPackage()->duration,
             'booking_package_name' => $booking->getBookingPackage()->name,
+            'booking_package_code' => $booking->getBookingPackage()->code,
+            'price_group' => $booking->getBookingPackage()->price_group,
+            'product_group' => $booking->getBookingPackage()->product_group,
+            'request_code' => $booking->getBookingPackage()->request_code,
             'transport_type' => !empty($booking->transport_type) ? $booking->transport_type : null,
             'price_mix' => $booking->getBookingPackage()->price_mix,
         ];

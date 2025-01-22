@@ -210,6 +210,8 @@ class Package extends AbstractObject
         ]
     );
 
+    public static $run_time_cache = [];
+
     /**
      * @return mixed
      * @throws Exception
@@ -226,5 +228,36 @@ class Package extends AbstractObject
             $cheapest_price = CheapestPriceSpeed::listAll($where, ['price_total' => 'ASC']);
         }
         return $cheapest_price[0];
+    }
+
+    /**
+     * Human friendly validation
+     * @param string $prefix
+     * @return array
+     */
+    public function validate($prefix = ''){
+        $result = [];
+        if(!in_array($this->room_type, ['room', 'cabin'])){
+            $result[] = $prefix . ' ❌  room_type is not valid (' . $this->room_type . '). valid values are: room or cabin, housing package id '.$this->id;
+        }
+        if(empty($this->options)){
+            $result[] = $prefix . ' ❌  housing package has no options, id: ' . $this->getId();
+        }
+        return $result;
+    }
+
+    /**
+     * Cached static shorthand for getById
+     * @param $id
+     * @return Package|null
+     * @throws Exception
+     */
+    public static function getById($id){
+        if(isset(self::$run_time_cache[$id])){
+            return self::$run_time_cache[$id];
+        }
+        $package = self::listOne('id = "'.$id.'"');
+        self::$run_time_cache[$id] = $package;
+        return $package;
     }
 }

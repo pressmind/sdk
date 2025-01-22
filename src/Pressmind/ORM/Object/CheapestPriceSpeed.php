@@ -92,6 +92,9 @@ use DateTime;
  * @property boolean $guaranteed
  * @property boolean $saved
  * @property string $startingpoint_name
+ * @property string $startingpoint_zip
+ * @property string $startingpoint_city
+ * @property string $startingpoint_id_city
  * @property string $agency
  */
 class CheapestPriceSpeed extends AbstractObject
@@ -140,6 +143,19 @@ class CheapestPriceSpeed extends AbstractObject
                     'columns' => [
                         'state',
                         'date_departure',
+                    ]
+                ],
+                'startingpoint_id_city_index_1' => [
+                    'type' => 'index',
+                    'columns' => [
+                        'startingpoint_id_city',
+                    ]
+                ],
+                'startingpoint_id_city_index_2' => [
+                    'type' => 'index',
+                    'columns' => [
+                        'date_departure',
+                        'startingpoint_id_city',
                     ]
                 ],
             ]
@@ -301,7 +317,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ]
+                ],
             ],
             'option_description_long' => [
                 'name' => 'option_description_long',
@@ -317,7 +338,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ],
             ],
             'option_board_type' => [
                 'name' => 'option_board_type',
@@ -325,7 +351,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ],
             ],
             'option_occupancy' => [
                 'name' => 'option_occupancy',
@@ -401,7 +432,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ],
             ],
             'price_option' => [
                 'name' => 'price_option',
@@ -467,7 +503,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 10,
+                    ]
+                ],
             ],
             'transport_type' => [
                 'name' => 'transport_type',
@@ -475,7 +516,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 10,
+                    ]
+                ],
             ],
             'transport_1_way' => [
                 'name' => 'transport_1_way',
@@ -499,7 +545,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ]
+                ],
             ],
             'transport_2_description' => [
                 'name' => 'transport_2_description',
@@ -507,7 +558,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ]
+                ],
             ],
             'transport_1_airport' => [
                 'name' => 'transport_1_airport',
@@ -531,7 +587,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ]
+                ],
             ],
             'transport_2_airport' => [
                 'name' => 'transport_2_airport',
@@ -555,7 +616,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ]
+                ],
             ],
             'transport_1_airline' => [
                 'name' => 'transport_1_airline',
@@ -563,7 +629,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 10,
+                    ]
+                ],
             ],
             'transport_2_airline' => [
                 'name' => 'transport_2_airline',
@@ -571,7 +642,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 10,
+                    ]
+                ],
             ],
             'transport_1_flight' => [
                 'name' => 'transport_1_flight',
@@ -579,7 +655,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 10,
+                    ]
+                ],
             ],
             'transport_2_flight' => [
                 'name' => 'transport_2_flight',
@@ -587,7 +668,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 10,
+                    ]
+                ],
             ],
 
             'transport_1_date_from' => [
@@ -636,7 +722,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ]
+                ],
             ],
             'earlybird_discount' => [
                 'name' => 'earlybird_discount',
@@ -668,7 +759,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ]
+                ],
             ],
             'id_option_auto_book' => [
                 'name' => 'id_option_auto_book',
@@ -726,7 +822,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ],
             ],
             'housing_package_code_ibe' => [
                 'name' => 'housing_package_code_ibe',
@@ -734,7 +835,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ],
             ],
             'option_code_ibe' => [
                 'name' => 'option_code_ibe',
@@ -742,7 +848,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ],
             ],
             'option_code_ibe_board_type' => [
                 'name' => 'option_code_ibe_board_type',
@@ -750,7 +861,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ],
             ],
             'option_code_ibe_board_type_category' => [
                 'name' => 'option_code_ibe_board_type_category',
@@ -758,7 +874,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ],
             ],
             'option_code_ibe_category' => [
                 'name' => 'option_code_ibe_category',
@@ -766,7 +887,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ],
             ],
             'option_request_code' => [
                 'name' => 'option_request_code',
@@ -774,7 +900,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ],
             ],
             'transport_1_code_ibe' => [
                 'name' => 'transport_1_code_ibe',
@@ -782,7 +913,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ],
             ],
             'transport_2_code_ibe' => [
                 'name' => 'transport_2_code_ibe',
@@ -790,7 +926,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ],
             ],
             'startingpoint_code_ibe' => [
                 'name' => 'startingpoint_code_ibe',
@@ -798,7 +939,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ],
             ],
             'booking_package_ibe_type' => [
                 'name' => 'booking_package_ibe_type',
@@ -814,7 +960,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 3,
+                    ]
+                ],
             ],
             'booking_package_type_of_travel' => [
                 'name' => 'booking_package_type_of_travel',
@@ -822,7 +973,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ],
             ],
             'booking_package_variant_code' => [
                 'name' => 'booking_package_variant_code',
@@ -830,7 +986,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ],
             ],
             'booking_package_request_code' => [
                 'name' => 'booking_package_request_code',
@@ -838,7 +999,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 10,
+                    ]
+                ],
             ],
             'booking_package_name' => [
                 'name' => 'booking_package_name',
@@ -846,7 +1012,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ]
+                ],
             ],
             'housing_package_code' => [
                 'name' => 'housing_package_code',
@@ -854,7 +1025,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ],
             ],
             'housing_package_name' => [
                 'name' => 'housing_package_name',
@@ -862,7 +1038,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ]
+                ],
             ],
             'diff_to_single_room' => [
                 'name' => 'diff_to_single_room',
@@ -886,7 +1067,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ]
+                ],
             ],
             'id_included_options' => [
                 'name' => 'id_included_options',
@@ -894,7 +1080,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ]
+                ],
             ],
             'code_ibe_included_options' => [
                 'name' => 'code_ibe_included_options',
@@ -902,7 +1093,12 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ]
+                ],
             ],
             'is_virtual_created_price' => [
                 'title' => 'is_virtual_created_price',
@@ -934,7 +1130,51 @@ class CheapestPriceSpeed extends AbstractObject
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,
-                'validators' => null
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ]
+                ],
+            ],
+            'startingpoint_zip' => [
+                'name' => 'startingpoint_zip',
+                'title' => 'startingpoint_zip',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 5,
+                    ]
+                ]
+            ],
+            'startingpoint_city' => [
+                'name' => 'startingpoint_city',
+                'title' => 'startingpoint_city',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 100,
+                    ]
+                ]
+            ],
+            'startingpoint_id_city' => [
+                'name' => 'startingpoint_id_city',
+                'title' => 'startingpoint_id_city',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ]
             ],
             'agency' => [
                 'name' => 'agency',

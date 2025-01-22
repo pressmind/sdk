@@ -6,6 +6,7 @@ use Pressmind\ORM\Object\AbstractObject;
 
 /**
  * Class Pickupservice
+ * @deprecated
  * @property integer $id
  * @property string $code
  * @property string $name

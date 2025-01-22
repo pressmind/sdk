@@ -24,11 +24,18 @@ class MediaObjectCheapestPrice extends AbstractImport
             return;
         }
         $this->_log[] = ' Importer::_importMediaObjectCheapestPrice(' . $id_media_object . '): converting manual price infos to touristic data';
+        $validData = [];
+        foreach($data as $priceObject){
+            if(!empty($priceObject->price)){
+                $validData[] = $priceObject;
+            }
+        }
+        if(count($validData) === 0){
+            $this->_log[] = ' Importer::_importMediaObjectCheapestPrice(' . $id_media_object . '): no valid prices found';
+            return;
+        }
         \Pressmind\ORM\Object\MediaObject::deleteTouristic($id_media_object);
-       foreach ($data as $priceObject) {
-           if(empty($priceObject->price)){
-               continue;
-           }
+        foreach ($validData as $priceObject) {
            if($priceObject->valid_from == '1970-01-01 00:00:00'){
                $date  = new \DateTime();
                $date->setTime(0,0,0);

@@ -129,4 +129,19 @@ class Airport extends AbstractObject
         return $airport;
 
     }
+
+    /**
+     * Human friendly validation
+     * @return array
+     * @throws Exception
+     */
+    public static function validate($prefix = ''){
+        $result = [];
+        $Airport = new Airport();
+        $r = $Airport->getTableRowCount();
+        if($r == 0){
+            $result[] = $prefix . ' ❌  No airports found, pls run the import script';
+        }
+        return $result;
+    }
 }

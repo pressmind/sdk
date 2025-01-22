@@ -61,7 +61,8 @@
         "my_content_class_map": {},
         "disable_touristic_data_import": [],
         "disable_virtual_price_calculation": [],
-        "generate_single_room_index": true,
+        "disable_manual_cheapest_price_import": [],
+        "generate_single_room_index": false,
         "max_offers_per_product": 5000,
         "generate_offer_for_each_startingpoint_option": false,
         "ibe_client": null,
@@ -81,6 +82,10 @@
         "transport_filter" : {
           "active" : true,
           "allowed_states" : [0,2,3]
+        },
+        "agency_based_option_and_prices" : {
+          "enabled" : false,
+          "allowed_agencies" : [0,1,2,3]
         }
       },
       "media_type_custom_import_hooks": {},
@@ -221,6 +226,9 @@
               ]
             ]
           }
+        },
+        "calendar" : {
+          "include_startingpoint_option" : false
         }
       },
       "media_types_allowed_visibilities": {

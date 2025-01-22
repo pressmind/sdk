@@ -3,7 +3,9 @@
 
 namespace Pressmind\ORM\Object\Touristic;
 
-
+/**
+ * @deprecated
+ */
 class CheapestPrice
 {
     /**

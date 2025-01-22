@@ -15,4 +15,10 @@ interface AdapterInterface
      * @return File
      */
     public function process($config, $file, $derivativeName);
+
+    /**
+     * @param File $file
+     * @return mixed
+     */
+    public function isImageCorrupted($file);
 }

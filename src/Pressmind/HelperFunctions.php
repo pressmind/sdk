@@ -1,8 +1,7 @@
 <?php
-
-
 namespace Pressmind;
 
+use jc21\CliTable;
 
 class HelperFunctions
 {
@@ -721,6 +720,32 @@ class HelperFunctions
             }
         }
         return $data;
+    }
+
+    /**
+     * Dumps a orm based object to a nice cli table
+     * @param $ormObjectList
+     * @return void
+     */
+    public static function toCliTable($ormObjectList){
+        /**
+         * @var $ormObject \Pressmind\ORM\Object\AbstractObject
+         */
+        $table = new CliTable();
+        $table->
+        $rows = [];
+        foreach($ormObjectList as $i =>$ormObject){
+            $stdClass = $ormObject->toStdClass();
+            foreach($stdClass as $key => $value){
+                if($i == 0){
+                    $table->addField($key, $key);
+                }
+                $rows[$i][$key] = is_string($value) ? $value : '-';
+            }
+        }
+        $table->injectData($rows);
+        $table->display();
+
 
     }
 }

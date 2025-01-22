@@ -68,6 +68,8 @@ class MongoDB extends AbstractSearch
      */
     private $_skip_cache = false;
 
+    private $_collection_name = null;
+
     /**
      * @param array $conditions
      */
@@ -88,14 +90,15 @@ class MongoDB extends AbstractSearch
         }elseif(!is_null($language)){
             $this->_language = $language;
         }
+        $this->_collection_name = self::getCollectionName('best_price_search_based_', $this->_language, $this->_origin, $this->_agency);
     }
 
     public function getAgency(){
         return $this->_agency;
     }
 
-    private function _getCollectionName(){
-        return 'best_price_search_based_' . (!empty($this->_language) ? $this->_language.'_' : '') . 'origin_' . $this->_origin.(!empty($this->_agency) ? '_agency_'. $this->_agency: '') ;
+    public static function getCollectionName($prefix = 'best_price_search_based_', $language = null, $origin = null, $agency = null){
+        return $prefix . (!empty($language) ? $language.'_' : '') . 'origin_' . $origin.(!empty($agency) ? '_agency_'. $agency: '') ;
     }
 
     private function _addLog($text) {
@@ -216,9 +219,9 @@ class MongoDB extends AbstractSearch
         $this->setReturnFiltersOnly($returnFiltersOnly);
         $client = new \MongoDB\Client($this->_db_uri);
         $db_name = $this->_db_name;
-        $collection_name = $this->_getCollectionName();
         $db = $client->$db_name;
-        $collection = $db->$collection_name;
+        $collection = $db->{$this->_collection_name};
+        $prepare = $this->prepareQuery();
         $query = $this->buildQuery($output, $preview_date, $allowed_visibilities);
         try{
             $result = $collection->aggregate($query, ['allowDiskUse' => true])->toArray()[0];
@@ -262,9 +265,8 @@ class MongoDB extends AbstractSearch
             try {
                 $client = new \MongoDB\Client($this->_db_uri);
                 $db_name = $this->_db_name;
-                $collection_name = $this->_getCollectionName();
                 $db = $client->$db_name;
-                $collection = $db->$collection_name;
+                $collection = $db->{$this->_collection_name};
                 $result = $collection->aggregate($params->aggregate)->toArray()[0];
                 $info = new \stdClass();
                 $info->type = 'MONGODB';
@@ -282,6 +284,19 @@ class MongoDB extends AbstractSearch
     }
 
     /**
+     * @return array
+     */
+    public function prepareQuery(){
+        $output = [];
+        foreach ($this->_conditions as $condition_name => $condition) {
+            if(method_exists($condition, 'prepare')){
+                $output[$condition_name] = $condition->prepare($this->_language, $this->_origin, $this->_agency);
+            }
+        }
+        return $output;
+    }
+
+    /**
      * @TODO Refactor!
      * @param null $output
      * @param \DateTime|null $preview_date
@@ -292,6 +307,7 @@ class MongoDB extends AbstractSearch
     {
         $config = Registry::getInstance()->get('config');
         $allow_invalid_offers = !empty($config['data']['search_mongodb']['search']['allow_invalid_offers']);
+        $has_startingpoint_index = !empty($config['data']['touristic']['generate_offer_for_each_startingpoint_option']);
         $stages = [];
 
         // stage zero, lucene atlas search
@@ -334,6 +350,13 @@ class MongoDB extends AbstractSearch
             if ($this->hasCondition('Fulltext')) {
                 $condition = $this->getConditionByType('Fulltext');
                 $stages[] = $condition->getQuery('project');
+            }
+        }
+
+        // stage 1.1 dynamic stages from conditions
+        foreach ($this->_conditions as $condition_name => $condition) {
+            if (!empty($condition->getQuery('stage_after_match'))) {
+                $stages[] = $condition->getQuery('stage_after_match');
             }
         }
 
@@ -396,9 +419,9 @@ class MongoDB extends AbstractSearch
                 }
             }
         }
+        // TODO remove if empty
         $prices_filter['$addFields']['prices']['$filter']['cond']['$and'] = $addFieldsConditions;
         $prices_filter_cleanup['$addFields']['prices']['$filter']['cond']['$and'] = $addFieldsConditions;
-
 
         // stage 4-x, filter by departure dates
         if($this->hasCondition('DateRange')){
@@ -407,6 +430,39 @@ class MongoDB extends AbstractSearch
             $stages = array_merge($stages, $condition->getQuery('departure_filter', $allow_invalid_offers));
         }
         $stages[] = $prices_filter;
+
+        // stage 4.1 - respect starting_point_options
+        if($has_startingpoint_index){
+            $stages[] = [
+                '$group' => [
+                    '_id' => '$_id',
+                    'startingpoint_options' => [
+                        '$push' => '$prices.startingpoint_option'
+                    ],
+                    'doc' => [
+                        '$first' => '$$ROOT'
+                    ]
+                ]
+            ];
+            $stages[] = [
+                '$addFields' => [
+                    'doc.startingpoint_options' => [
+                        '$reduce' => [
+                            'input' => '$startingpoint_options',
+                            'initialValue' => [],
+                            'in' => [
+                                '$setUnion' => ['$$value', '$$this']
+                            ]
+                        ]
+                    ]
+                ]
+            ];
+            $stages[] = [
+                '$replaceRoot' => [
+                    'newRoot' => '$doc'
+                ]
+            ];
+        }
 
         // stage n projection split board_types, transports and prices
         $projectStage = [
@@ -423,6 +479,7 @@ class MongoDB extends AbstractSearch
                 'last_modified_date' => 1,
                 'recommendation_rate' => 1,
                 'possible_durations' => 1,
+                'startingpoint_options' => 1,
                 'url' => 1,
                 'valid_from' => 1,
                 'valid_to' => 1,
@@ -625,7 +682,30 @@ class MongoDB extends AbstractSearch
                         ]
                     ]
                 ];
+                $facetStage['$facet']['startingPointsGrouped'] = [
+                    [
+                        '$sortByCount' => '$startingpoint_options'
+                    ],
+                    [
+                        '$sort' => [
+                            '_id' => 1
+                        ]
+                    ]
+                ];
             }else{
+                $facetStage['$facet']['startingPointsGrouped'] = [
+                    [
+                        '$unwind' => '$startingpoint_options'
+                    ],
+                    [
+                        '$sortByCount' => '$startingpoint_options'
+                    ],
+                    [
+                        '$sort' => [
+                            '_id' => 1
+                        ]
+                    ]
+                ];
                 $facetStage['$facet']['boardTypesGrouped'] = [
                     [
                         '$unwind' => '$board_types'
@@ -701,6 +781,7 @@ class MongoDB extends AbstractSearch
                     'maxPrice' => 1,
                     'total' => 1,
                     'categoriesGrouped' => 1,
+                    'startingPointsGrouped' => 1,
                     'boardTypesGrouped' => 1,
                     'transportTypesGrouped' => 1
                 ]
@@ -768,8 +849,8 @@ class MongoDB extends AbstractSearch
                         ]
                 ];
             }else{
-                $addFieldsForDepatureSort = ['$addFields' => ['fst_date_departure' => ['$first' => '$prices.date_departures']]];
-                $stages[] = $addFieldsForDepatureSort;
+                $addFieldsForDepartureSort = ['$addFields' => ['fst_date_departure' => ['$first' => '$prices.date_departures']]];
+                $stages[] = $addFieldsForDepartureSort;
                 $sort = ['$sort' => [
                                 'fst_date_departure' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1,
                                 'sales_priority' => 1

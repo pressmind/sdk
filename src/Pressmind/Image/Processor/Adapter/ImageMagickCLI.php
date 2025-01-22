@@ -67,4 +67,13 @@ class ImageMagickCLI implements AdapterInterface
         }
         return $derivative_file;
     }
+
+    /**
+     * @TODO
+     * @param File $file
+     * @return mixed
+     */
+    public function isImageCorrupted($file){
+        return false;
+    }
 }

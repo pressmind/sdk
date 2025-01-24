@@ -21,6 +21,7 @@ use Pressmind\ORM\Object\Touristic\Option;
  * @property string $text
  * @property string $code_ibe
  * @property string $room_type
+ * @property integer $min_age
  * @property Option[] $options
  * @property DescriptionLink[] $description_links
  */
@@ -206,6 +207,14 @@ class Package extends AbstractObject
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,
+            ],
+            'min_age' => [
+                'title' => 'min_age',
+                'name' => 'min_age',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => null,
+                'filters' => null
             ],
         ]
     );

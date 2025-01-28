@@ -109,6 +109,9 @@ class Indexer extends AbstractIndex
             }
             foreach ($this->_config['search']['build_for'][$mediaObject->id_object_type] as $build_info) {
                 foreach($this->_agencies as $agency) {
+                    if(!isset($ids[$agency])){
+                        $ids[$agency] = [];
+                    }
                     $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
                     $collection = $this->db->$collection_name;
                     $document = $this->createIndex($mediaObject->id, $build_info['language'], $build_info['origin'], $agency);
@@ -116,17 +119,17 @@ class Indexer extends AbstractIndex
                         continue;
                     }
                     $collection->updateOne(['_id' => $mediaObject->id], ['$set' => $document], ['upsert' => true]);
-                    $ids[] = $mediaObject->id;
+                    $ids[$agency][] = $mediaObject->id;
                 }
             }
         }
-        foreach($id_media_objects as $id_media_object){
-            if(in_array($id_media_object, $ids)){
-                continue;
-            }
-            foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
-                foreach ($build_infos as $build_info) {
-                    foreach($this->_agencies as $agency) {
+        foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
+            foreach ($build_infos as $build_info) {
+                foreach($this->_agencies as $agency) {
+                    foreach($id_media_objects as $id_media_object){
+                        if(in_array($id_media_object, $ids[$agency])){
+                            continue;
+                        }
                         $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
                         $collection = $this->db->$collection_name;
                         $collection->deleteOne(['_id' => $id_media_object]);

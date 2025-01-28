@@ -515,7 +515,7 @@ class Transport extends AbstractObject
             $result[] = $prefix.' ❌. Transport type is not valid Transport ID: ' . $this->id. ' has not a valid type ('.$this->type.') , allowed ('.implode(', ',  $this->getValidTypes() ).')';
         }
         if($this->type === 'FLUG' && strlen((string)$this->code) < 6){
-            $result[] = $prefix.' ❌. Flight is not valid Transport ID: ' . $this->id. ' has not a valid IATA flight route ('.$this->code.') (does not match 2x 3 Letters)';
+            $result[] = $prefix.' ❌. Flight is not valid Transport ID: ' . $this->id. ' has not a valid IATA flight route ('.$this->code.') (does not match min 2x3 Letters)';
         }
         if($this->dont_use_for_offers === true){
             $result[] = $prefix.' ❌. Transport ID: ' . $this->id. ' is probably not available for booking (dont_use_for_offers = true)';

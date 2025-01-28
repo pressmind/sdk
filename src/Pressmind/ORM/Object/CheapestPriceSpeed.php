@@ -851,7 +851,7 @@ class CheapestPriceSpeed extends AbstractObject
                 'validators' => [
                     [
                         'name' => 'maxlength',
-                        'params' => 32,
+                        'params' => 255,
                     ]
                 ],
             ],

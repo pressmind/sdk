@@ -18,7 +18,8 @@
       "client": {
         "api_key": "",
         "api_user": "",
-        "api_password": ""
+        "api_password": "",
+        "api_endpoint_overwrite_default": ""
       },
       "server": {
         "api_endpoint": "/rest",

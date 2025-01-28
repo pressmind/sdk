@@ -101,6 +101,13 @@ class MongoDB extends AbstractSearch
         return $prefix . (!empty($language) ? $language.'_' : '') . 'origin_' . $origin.(!empty($agency) ? '_agency_'. $agency: '') ;
     }
 
+    /**
+     * @return mixed|string
+     */
+    public function getCurrentCollectionName(){
+        return $this->_collection_name;
+    }
+
     private function _addLog($text) {
         $config = Registry::getInstance()->get('config');
         if(isset($config['logging']['enable_advanced_object_log']) && $config['logging']['enable_advanced_object_log'] == true) {

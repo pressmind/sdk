@@ -380,7 +380,9 @@ class Query
                 'duration_filter_ms' => $duration_filter_ms,
                 'duration_search_ms' => $duration_search_ms,
                 'aggregation_pipeline_filter' => !empty($filter) ? $filter->buildQueryAsJson($QueryFilter->getFilters, $QueryFilter->output, $QueryFilter->preview_date, $QueryFilter->allowed_visibilities) : null,
-                'aggregation_pipeline_search' => !empty($search) ? $search->buildQueryAsJson($QueryFilter->getFilters, $QueryFilter->output, $QueryFilter->preview_date, $QueryFilter->allowed_visibilities) : null
+                'aggregation_pipeline_search' => !empty($search) ? $search->buildQueryAsJson($QueryFilter->getFilters, $QueryFilter->output, $QueryFilter->preview_date, $QueryFilter->allowed_visibilities) : null,
+                'collection_name_filter' => !empty($filter) ? $filter->getCurrentCollectionName() : null,
+                'collection_name_search' => !empty($search) ? $search->getCurrentCollectionName() : null
             ]
         ];
         self::$_run_time_cache_full[$cache_key] = $result;

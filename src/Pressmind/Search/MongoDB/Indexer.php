@@ -199,6 +199,10 @@ class Indexer extends AbstractIndex
     {
         $searchObject = new \stdClass();
         $this->mediaObject = new MediaObject($idMediaObject, true, true);
+        $searchObject->departure_date_count = $this->_createDepartureDateCount($origin, $agency);
+        if(empty($searchObject->departure_date_count) && !empty($agency)){
+            return false;
+        }
         $searchObject->_id = $this->mediaObject->id;
         $searchObject->id_object_type = $this->mediaObject->id_object_type;
         $searchObject->id_media_object = $this->mediaObject->id;
@@ -217,7 +221,6 @@ class Indexer extends AbstractIndex
         $searchObject->prices = $this->_aggregatePrices($origin, $agency);
         $searchObject->has_price = !empty($searchObject->prices);
         $searchObject->fulltext = $this->_createFulltext($language);
-        $searchObject->departure_date_count = $this->_createDepartureDateCount($origin, $agency);
         $searchObject->valid_from = !is_null($this->mediaObject->valid_from) ?  $this->mediaObject->valid_from->format(DATE_RFC3339_EXTENDED) : null;
         $searchObject->valid_to = !is_null($this->mediaObject->valid_to) ? $this->mediaObject->valid_to->format(DATE_RFC3339_EXTENDED) : null;
         $searchObject->visibility = $this->mediaObject->visibility;

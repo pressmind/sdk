@@ -127,7 +127,7 @@ class Indexer extends AbstractIndex
             foreach ($build_infos as $build_info) {
                 foreach($this->_agencies as $agency) {
                     foreach($id_media_objects as $id_media_object){
-                        if(in_array($id_media_object, $ids[$agency])){
+                        if(!empty($ids[$agency]) && in_array($id_media_object, $ids[$agency])){
                             continue;
                         }
                         $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);

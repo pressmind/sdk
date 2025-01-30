@@ -127,6 +127,35 @@ class AbstractIndex
         }
     }
 
+    /**
+     * @param $collection_name
+     * @param $index_name
+     * @return bool
+     */
+    public function indexExists($collection_name, $index_name)
+    {
+        $indexes = $this->db->$collection_name->listIndexes();
+        foreach ($indexes as $index) {
+            if ($index->getName() == $index_name) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param $collection_name
+     * @param $keys
+     * @param $options
+     * @return void
+     */
+    public function createCollectionIndexIfNotExists($collection_name, $keys, $options = [])
+    {
+        if (!$this->indexExists($collection_name, $options['name'])) {
+            $this->db->$collection_name->createIndex($keys, $options);
+        }
+    }
+
     public function flushCollections()
     {
         foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {

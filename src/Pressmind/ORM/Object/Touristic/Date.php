@@ -435,7 +435,7 @@ class Date extends AbstractObject
     public function getOptions($types, $is_offer_query = false, $agency = null)
     {
         $options = [];
-        $options_list = Option::listAll("id_booking_package = '" . $this->id_booking_package . "' 
+        $query = "id_booking_package = '" . $this->id_booking_package . "' 
                                                 AND type in ('".implode("','", $types)."')
                                                 AND (   
                                                         (          
@@ -449,9 +449,9 @@ class Date extends AbstractObject
                                                         AND (season in ('" . $this->season . "','-', '') or season is null)
                                                         )
                                                     )"
-            .(!empty($is_offer_query) ? " AND dont_use_for_offers = 0" : "")
-            .(!empty($agency) ? " AND (FIND_IN_SET('".$agency."', agencies) > 0 or agencies is null)" : "")
-        );
+                .(!empty($is_offer_query) ? " AND dont_use_for_offers = 0" : "")
+                .(!empty($agency) ? " AND (FIND_IN_SET('".$agency."', agencies) > 0 or agencies is null or agencies = '')" : "");
+        $options_list = Option::listAll($query);
         foreach ($options_list as $option) {
             $options[] = $option;
         }

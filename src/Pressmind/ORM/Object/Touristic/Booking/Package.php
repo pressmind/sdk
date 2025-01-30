@@ -626,11 +626,14 @@ class Package extends AbstractObject
      * @return array
      */
     public function validate($prefix = ''){
-        $result = $this->validateDates($prefix.' ');
+        $result = [];
+        if(!$this->hasPrimaryOptions()){
+            $result[] = $prefix.' ❌  primary option is missing!!! (price_mix is = '.$this->price_mix.')';
+        }
+        $result = array_merge($result, $this->validateDates($prefix.' '));
         if($this->price_mix === 'date_housing'){
             $result = array_merge($result, $this->validateHousingPackages($prefix.' '));
         }
-        $result[] = $prefix.' '.($this->hasPrimaryOptions() ? '✅' : '❌') . '  primary options (price_mix = '.$this->price_mix.')';
         return $result;
     }
 

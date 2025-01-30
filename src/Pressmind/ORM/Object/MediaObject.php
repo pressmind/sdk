@@ -1060,20 +1060,25 @@ class MediaObject extends AbstractObject
     {
         $config = Registry::getInstance()->get('config');
         $is_legancy = !isset($config['data']['media_types_pretty_url'][array_key_first($config['data']['media_types_pretty_url'])]['id_object_type']);
+        $fields = [];
+        $separator = '-';
+        $strategy = 'unique';
+        $prefix = '/';
+        $suffix = '';
         if($is_legancy){
             $fields = $config['data']['media_types_pretty_url'][$this->id_object_type]['fields'] ?? ['name'];
-            $separator = $config['data']['media_types_pretty_url'][$this->id_object_type]['separator'] ?? '-';
-            $strategy = $config['data']['media_types_pretty_url'][$this->id_object_type]['strategy'] ?? 'unique';
-            $prefix = $config['data']['media_types_pretty_url'][$this->id_object_type]['prefix'] ?? '/';
-            $suffix = $config['data']['media_types_pretty_url'][$this->id_object_type]['suffix'] ?? '';
+            $separator = $config['data']['media_types_pretty_url'][$this->id_object_type]['separator'] ?? $separator;
+            $strategy = $config['data']['media_types_pretty_url'][$this->id_object_type]['strategy'] ?? $strategy;
+            $prefix = $config['data']['media_types_pretty_url'][$this->id_object_type]['prefix'] ?? $prefix;
+            $suffix = $config['data']['media_types_pretty_url'][$this->id_object_type]['suffix'] ?? $suffix;
         }else{
             foreach($config['data']['media_types_pretty_url'] as $v){
                 if($v['id_object_type'] == $this->id_object_type && $v['language'] == $language){
                     $fields = $v['field'] ?? ['name'];
-                    $separator = $v['separator'] ?? '-';
-                    $strategy = $v['strategy'] ?? 'unique';
-                    $prefix = $v['prefix'] ?? '/';
-                    $suffix = $v['suffix'] ?? '';
+                    $separator = $v['separator'] ?? $separator;
+                    $strategy = $v['strategy'] ?? $strategy;
+                    $prefix = $v['prefix'] ?? $prefix;
+                    $suffix = $v['suffix'] ?? $suffix;
                     break;
                 }
             }
@@ -1238,6 +1243,7 @@ class MediaObject extends AbstractObject
      */
     public function insertCheapestPrice()
     {
+        self::$_insert_cheapest_price_log[$this->id][] = 'Creating index for media_object: '.$this->id;
         $max_rows = empty(Registry::getInstance()->get('config')['data']['touristic']['max_offers_per_product']) ? 5000 : Registry::getInstance()->get('config')['data']['touristic']['max_offers_per_product'];
         $ibe_client = empty(Registry::getInstance()->get('config')['data']['touristic']['ibe_client']) ? null : Registry::getInstance()->get('config')['data']['touristic']['ibe_client'];
         $include_negative_option_in_cheapest_price = !isset(Registry::getInstance()->get('config')['data']['touristic']['include_negative_option_in_cheapest_price']) ? true : Registry::getInstance()->get('config')['data']['touristic']['include_negative_option_in_cheapest_price'];
@@ -1281,8 +1287,11 @@ class MediaObject extends AbstractObject
         $max_date->setTime(0, 0, 0);
         $max_date->modify( $max_date_offset . ' days');
         $c = 0;
+        self::$_insert_cheapest_price_log[$this->id][] = 'Creating index for this agencies: '.implode(',',$agencies);
         foreach ($agencies as $agency) {
+            self::$_insert_cheapest_price_log[$this->id][] = 'Current agency id = '.$agency;
             foreach ($booking_packages as $booking_package) {
+                self::$_insert_cheapest_price_log[$this->id][] = 'current booking_package id = '.$booking_package->id.', price_mix = '.$booking_package->price_mix;
                 foreach ($booking_package->dates as $date) {
                     if(($travel_date_orientation == 'departure' && $date->departure < $now) ||
                         ($travel_date_orientation == 'arrival' && $date->arrival < $now) ||
@@ -1294,7 +1303,7 @@ class MediaObject extends AbstractObject
                     }
                     $date_agencies = array_filter(explode(',', (string)$date->agencies));
                     if(!empty($agency) && !empty($date_agencies) && !in_array($agency, $date_agencies)){
-                        self::$_insert_cheapest_price_log[$this->id][] = 'Skipping date ' . $date->departure->format('Y-m-d') . ' because of agency filter';
+                        self::$_insert_cheapest_price_log[$this->id][] = 'Skipping date ' . $date->departure->format('Y-m-d') . ' because of agency filter (current agency = '.$agency.') (agencies allowed for this date = '.implode(',',$date_agencies).')';
                         continue;
                     }
                     /** @var Item[] $early_bird_discounts */
@@ -1319,6 +1328,10 @@ class MediaObject extends AbstractObject
                         $tmpOption->name = '';
                         $tmpOption->price = 0;
                         $options[] = $tmpOption;
+                    }
+                    if(empty($options)){
+                        self::$_insert_cheapest_price_log[$this->id][] = 'Skipping date ' . $date->departure->format('Y-m-d').' (season = '.$date->season.', agency = '.$agency.') because of no options found for price_mix = '.$booking_package->price_mix;
+                        continue;
                     }
                     $cheapest_options = [];
                     $check_group_validity = [];

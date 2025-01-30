@@ -37,38 +37,21 @@ class Indexer extends AbstractIndex
      * @throws \MongoDB\Driver\Exception\Exception
      */
     public function createCollectionIndex($collection_name){
-
-        if($this->collectionExists($collection_name)){
-            $this->db->$collection_name->dropIndexes();
-        }
-        $this->db->$collection_name->createIndex( ['prices.price_total' => 1]);
-        $this->db->$collection_name->createIndex( ['prices.price_total' => -1]);
-        $this->db->$collection_name->createIndex( ['prices.date_departure' => 1]);
-        $this->db->$collection_name->createIndex( ['prices.date_departure' => -1]);
-        $this->db->$collection_name->createIndex( ['prices.duration' => 1]);
-        $this->db->$collection_name->createIndex( ['prices.occupancy' => 1]);
-        $this->db->$collection_name->createIndex( ['prices.occupancy_additional' => 1]);
-        $this->db->$collection_name->createIndex( ['prices.id_startingpoint_option' => 1]);
-        $this->db->$collection_name->createIndex( ['prices.price_total' => 1, 'prices.duration' => 1, 'prices.occupancy' => 1]);
-        $this->db->$collection_name->createIndex( ['categories.it_item' => 1]);
-        $this->db->$collection_name->createIndex( ['categories.name' => 1]);
-        $this->db->$collection_name->createIndex( ['categories.it_item' => 1, 'categories.field_name' => 1]);
-        $this->db->$collection_name->createIndex( ['id_media_object' => 1], ['unique' => 1]);
-        $this->db->$collection_name->createIndex( [
-            'fulltext' => 'text',
-            'categories.path_str' => 'text',
-            'code' => 'text'
-        ], [
-            'default_language' => 'none',
-            'weights' => [
-                'fulltext' => 5,
-                'categories.path_str' => 10,
-                'code' => 15
-            ],
-            'name' => 'fulltext_text'
-
-        ]);
-        $this->db->$collection_name->createIndex( ['groups' => 1]);
+        $this->createCollectionIndexIfNotExists($collection_name, ['groups' => 1], ['name' => 'groups_1']);
+        $this->createCollectionIndexIfNotExists($collection_name, ['prices.price_total' => 1], ['name' => 'prices.price_total_1']);
+        $this->createCollectionIndexIfNotExists($collection_name, ['prices.price_total' => -1], ['name' => 'prices.price_total_-1']);
+        $this->createCollectionIndexIfNotExists($collection_name, ['prices.date_departure' => 1], ['name' => 'prices.date_departure_1']);
+        $this->createCollectionIndexIfNotExists($collection_name, ['prices.date_departure' => -1], ['name' => 'prices.date_departure_-1']);
+        $this->createCollectionIndexIfNotExists($collection_name, ['prices.duration' => 1], ['name' => 'prices.duration_1']);
+        $this->createCollectionIndexIfNotExists($collection_name, ['prices.occupancy' => 1], ['name' => 'prices.occupancy_1']);
+        $this->createCollectionIndexIfNotExists($collection_name, ['prices.occupancy_additional' => 1], ['name' => 'prices.occupancy_additional_1']);
+        $this->createCollectionIndexIfNotExists($collection_name, ['prices.id_startingpoint_option' => 1], ['name' => 'prices.id_startingpoint_option_1']);
+        $this->createCollectionIndexIfNotExists($collection_name, ['prices.price_total' => 1, 'prices.duration' => 1, 'prices.occupancy' => 1], ['name' => 'prices.price_total_1_prices.duration_1_prices.occupancy_1']);
+        $this->createCollectionIndexIfNotExists($collection_name, ['categories.it_item' => 1], ['name' => 'categories.it_item_1']);
+        $this->createCollectionIndexIfNotExists($collection_name, ['categories.name' => 1], ['name' => 'categories.name_1']);
+        $this->createCollectionIndexIfNotExists($collection_name, ['categories.it_item' => 1, 'categories.field_name' => 1], ['name' => 'categories.it_item_1_categories.field_name_1']);
+        $this->createCollectionIndexIfNotExists($collection_name, ['id_media_object' => 1], ['name' => 'id_media_object_1', 'unique' => 1]);
+        $this->createCollectionIndexIfNotExists($collection_name, ['fulltext' => 'text', 'categories.path_str' => 'text', 'code' => 'text'], ['default_language' => 'none', 'weights' => ['fulltext' => 5, 'categories.path_str' => 10, 'code' => 15], 'name' => 'fulltext_text']);
     }
 
     public function createIndexes()

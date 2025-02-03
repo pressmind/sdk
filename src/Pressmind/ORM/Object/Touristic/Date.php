@@ -778,7 +778,7 @@ class Date extends AbstractObject
                     }
                     $result = array_merge($result, $way1->validate($prefix.'  '));
                 }else{
-                    $result[] = $prefix.' ❌ ' . '  Property transport.pair[way1] not valid';
+                    $result[] = $prefix.' ❌   Property transport.pair[way1] not valid';
                 }
                 if(!empty($pair['way2'])){
                     $way2 = $pair['way2'];
@@ -788,10 +788,19 @@ class Date extends AbstractObject
                     }
                     $result = array_merge($result, $way2->validate($prefix.'  '));
                 }else{
-                    $result[] = $prefix.' ❌ ' . '  Property transport.pair[way2] not valid';
+                    $result[] = $prefix.' ❌   Property transport.pair[way2] not valid';
                 }
             }
         }
+
+        if(!empty($this->early_bird_discount_group) || !empty($this->id_early_bird_discount_group)){
+            $Option = new Option();
+            $options = $Option->listAll(['use_earlybird' => 1]);
+            if(empty($options)){
+                $result[] = $prefix.' ❌   Early Bird Discount Group found but no options with use_earlybird = 1 found';
+            }
+        }
+
         return $result;
     }
 

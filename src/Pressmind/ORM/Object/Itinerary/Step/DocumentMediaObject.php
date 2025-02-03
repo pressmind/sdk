@@ -19,6 +19,7 @@ use Pressmind\Storage\Bucket;
 use Pressmind\Storage\File;
 
 /**
+ * TODO id_picture is missing, this is not required but in some cases very useful.
  * Class DocumentMediaObject
  * @package Pressmind\ORM\Object\Itinerary\Variant\Step
  * @property integer $id

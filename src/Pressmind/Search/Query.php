@@ -284,6 +284,50 @@ class Query
                 $transport_types[$item->_id] = $item;
             }
         }
+        $sold_out = [];
+        if(!empty($result_filter->transportTypesGrouped)){
+            $matching_sold_out_map = [];
+            if(!$QueryFilter->returnFiltersOnly){
+                $matching_sold_out = json_decode(json_encode($result->sold_out));
+                foreach($matching_sold_out as $item){
+                    $item->_id = $item->_id ? '1' : '0';
+                    $matching_transport_types_map[$item->_id] = $item;
+                }
+            }
+            foreach(json_decode(json_encode($result_filter->sold_out)) as $item){
+                $item->_id = $item->_id ? '1' : '0';
+                $item->count_in_system = $item->count;
+                //$item->count_in_search = 0;
+                $item->name = $item->_id;
+                unset($item->count);
+                //if(isset($matching_sold_out_map[$item->_id])){
+                //    $item->count_in_search = $matching_sold_out_map[$item->_id]->count;
+                //}
+                $sold_out[$item->_id] = $item;
+            }
+        }
+        $is_running = [];
+        if(!empty($result_filter->transportTypesGrouped)){
+            $matching_is_running_map = [];
+            if(!$QueryFilter->returnFiltersOnly){
+                $matching_is_running = json_decode(json_encode($result->is_running));
+                foreach($matching_is_running as $item){
+                    $item->_id = $item->_id ? '1' : '0';
+                    $matching_transport_types_map[$item->_id] = $item;
+                }
+            }
+            foreach(json_decode(json_encode($result_filter->is_running)) as $item){
+                $item->_id = $item->_id ? '1' : '0';
+                $item->count_in_system = $item->count;
+                //$item->count_in_search = 0;
+                $item->name = $item->_id;
+                unset($item->count);
+                //if(isset($matching_is_running_map[$item->_id])){
+                //    $item->count_in_search = $matching_is_running_map[$item->_id]->count;
+                //}
+                $is_running[$item->_id] = $item;
+            }
+        }
         if(self::$calendar_show_departures === true && empty($result_filter) === false){
             $start_time = microtime(true);
             $filter_departures = [];
@@ -366,6 +410,7 @@ class Query
             'categories' => $categories,
             'board_types' => $board_types,
             'transport_types' => $transport_types,
+            'sold_out' => $sold_out,
             'startingpoint_options' => $startingpoint_options,
             'duration_min' => !empty($result_filter->minDuration) ? $result_filter->minDuration : null,
             'duration_max' => !empty($result_filter->maxDuration) ? $result_filter->maxDuration : null,
@@ -409,6 +454,8 @@ class Query
      * $request['pm-hoc'] occupancy child
      * $request['pm-loc'] location
      * $request['pm-sc'] startingpoint option city ids separated by comma
+     * $request['pm-so'] sold out (0 or 1)
+     * $request['pm-ir'] is running (0 or 1)
      * $request['pm-l'] limit 0,10
      * $request['pm-o'] order
      * @param $request
@@ -512,6 +559,16 @@ class Query
             $id_cities = self::extractIdStartingPointOptionCity($request[$prefix.'-sc']);
             $conditions[] = new \Pressmind\Search\Condition\MongoDB\StartingPointOptionCity($id_cities);
             $validated_search_parameters[$prefix.'-sc'] = implode(',', $id_cities);
+        }
+        if (isset($request[$prefix.'-so']) === true){
+            $sold_out = self::extractBoolean($request[$prefix.'-so']);
+            $conditions[] = new \Pressmind\Search\Condition\MongoDB\SoldOut($sold_out);
+            $validated_search_parameters[$prefix.'-so'] = $sold_out ? '1' : '0';
+        }
+        if (isset($request[$prefix.'-ir']) === true){
+            $is_running = self::extractBoolean($request[$prefix.'-ir']);
+            $conditions[] = new \Pressmind\Search\Condition\MongoDB\Running($is_running);
+            $validated_search_parameters[$prefix.'-ir'] = $is_running ? '1' : '0';
         }
         if (isset($request[$prefix.'-c']) === true && is_array($request[$prefix.'-c']) === true) {
             $search_item = $request[$prefix.'-c'];
@@ -796,6 +853,17 @@ class Query
             return $first_key_as_string ? $v[0] : $v;
         }
         return $default;
+    }
+
+    /**
+     * @param $str
+     * @return bool
+     */
+    public static function extractBoolean($str){
+        if(preg_match('/^(0|1)$/', $str) > 0){
+            return (bool)$str;
+        }
+        return false;
     }
 
 }

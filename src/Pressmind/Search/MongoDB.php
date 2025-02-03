@@ -68,7 +68,15 @@ class MongoDB extends AbstractSearch
      */
     private $_skip_cache = false;
 
+    /**
+     * @var string
+     */
     private $_collection_name = null;
+
+    /**
+     * @var string
+     */
+    private $_collection_name_description = null;
 
     /**
      * @param array $conditions
@@ -91,6 +99,7 @@ class MongoDB extends AbstractSearch
             $this->_language = $language;
         }
         $this->_collection_name = self::getCollectionName('best_price_search_based_', $this->_language, $this->_origin, $this->_agency);
+        $this->_collection_name_description = self::getCollectionName('description_', $this->_language, $this->_origin, $this->_agency);
     }
 
     public function getAgency(){
@@ -232,6 +241,33 @@ class MongoDB extends AbstractSearch
         $query = $this->buildQuery($output, $preview_date, $allowed_visibilities);
         try{
             $result = $collection->aggregate($query, ['allowDiskUse' => true])->toArray()[0];
+            // avoid $facet limit
+            $ids = [];
+            foreach ($result->documents as $document) {
+                $document = json_decode(json_encode($document), true);
+                $ids[] = $document['_id'];
+            }
+            $collection_description = $db->{$this->_collection_name_description};
+            $query_description = [
+                [
+                    '$match' => [
+                        '_id' => [
+                            '$in' => $ids
+                        ]
+                    ]
+                ]
+            ];
+            $result_description = $collection_description->aggregate($query_description, ['allowDiskUse' => true])->toArray();
+            $mapped_result = [];
+            foreach ($result_description as $document) {
+                $mapped_result[$document['_id']] = $document;
+            }
+            foreach ($result->documents as $key => $document) {
+                if(!empty($mapped_result[$document['_id']])) {
+                    $document['description'] = !empty($mapped_result[$document['_id']]->description) ? $mapped_result[$document['_id']]->description : '';
+                    $result->documents[$key] = $document;
+                }
+            }
         }catch (\Exception $exception){
             echo $exception->getMessage();
             if(!empty($_GET['debug']) || (defined('PM_SDK_DEBUG') && PM_SDK_DEBUG)) {
@@ -493,6 +529,8 @@ class MongoDB extends AbstractSearch
                 'visibility' => 1,
                 'dates_per_month' => 1,
                 'sales_priority' => 1,
+                'sold_out' => 1,
+                'is_running' => 1,
                 'has_price' => ['$gt' => [['$size' => '$prices'], 0 ] ],
                 'prices' => [
                     '$reduce' => [
@@ -584,6 +622,8 @@ class MongoDB extends AbstractSearch
                 'valid_to' => ['$first' => '$$ROOT.valid_to'],
                 'visibility' => ['$first' => '$$ROOT.visibility'],
                 'has_price' => ['$first' => '$$ROOT.has_price'],
+                'sold_out' => ['$first' => '$$ROOT.sold_out'],
+                'is_running' => ['$first' => '$$ROOT.is_running'],
                 'dates_per_month' => ['$first' => '$$ROOT.dates_per_month'],
                 'prices' => ['$push' => '$$ROOT.prices'],
             ]
@@ -667,7 +707,26 @@ class MongoDB extends AbstractSearch
                     ]
                 ]
             ];
-
+            $facetStage['$facet']['sold_out'] = [
+                [
+                    '$group' => [
+                        '_id' => '$sold_out',
+                        'count' => [
+                            '$sum' => 1
+                        ]
+                    ]
+                ]
+            ];
+            $facetStage['$facet']['is_running'] = [
+                [
+                    '$group' => [
+                        '_id' => '$is_running',
+                        'count' => [
+                            '$sum' => 1
+                        ]
+                    ]
+                ]
+            ];
             if($output == 'date_list'){
                 $facetStage['$facet']['boardTypesGrouped'] = [
                     [
@@ -790,7 +849,9 @@ class MongoDB extends AbstractSearch
                     'categoriesGrouped' => 1,
                     'startingPointsGrouped' => 1,
                     'boardTypesGrouped' => 1,
-                    'transportTypesGrouped' => 1
+                    'transportTypesGrouped' => 1,
+                    'sold_out' => 1,
+                    'is_running' => 1
                 ]
             ];
         } else { // stage n, if we don't need the filter, we use just the required methods

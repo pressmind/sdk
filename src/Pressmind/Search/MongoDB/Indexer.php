@@ -7,6 +7,7 @@ use Pressmind\HelperFunctions;
 use Pressmind\ORM\Object\MediaObject;
 use Pressmind\ORM\Object\Touristic\Date;
 use Pressmind\Registry;
+use Pressmind\Search\CheapestPrice;
 
 class Indexer extends AbstractIndex
 {
@@ -52,6 +53,7 @@ class Indexer extends AbstractIndex
         $this->createCollectionIndexIfNotExists($collection_name, ['categories.it_item' => 1, 'categories.field_name' => 1], ['name' => 'categories.it_item_1_categories.field_name_1']);
         $this->createCollectionIndexIfNotExists($collection_name, ['id_media_object' => 1], ['name' => 'id_media_object_1', 'unique' => 1]);
         $this->createCollectionIndexIfNotExists($collection_name, ['fulltext' => 'text', 'categories.path_str' => 'text', 'code' => 'text'], ['default_language' => 'none', 'weights' => ['fulltext' => 5, 'categories.path_str' => 10, 'code' => 15], 'name' => 'fulltext_text']);
+        $this->createCollectionIndexIfNotExists($collection_name, ['sold_out' => 1], ['name' => 'sold_out_1']);
     }
 
     public function createIndexes()
@@ -97,11 +99,19 @@ class Indexer extends AbstractIndex
                     }
                     $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
                     $collection = $this->db->$collection_name;
+                    $collection_name_description = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency, 'description_');
+                    $collection_description = $this->db->$collection_name_description;
                     $document = $this->createIndex($mediaObject->id, $build_info['language'], $build_info['origin'], $agency);
                     if ($document === false) {
                         continue;
                     }
+                    // remove description from document and store it in a separate collection (avoids $facet stage limit)
+                    $document_description = new \stdClass();
+                    $document_description->_id = $mediaObject->id;
+                    $document_description->description = $document->description;
+                    unset($document->description);
                     $collection->updateOne(['_id' => $mediaObject->id], ['$set' => $document], ['upsert' => true]);
+                    $collection_description->updateOne(['_id' => $mediaObject->id], ['$set' => $document_description], ['upsert' => true]);
                     $ids[$agency][] = $mediaObject->id;
                 }
             }
@@ -116,6 +126,9 @@ class Indexer extends AbstractIndex
                         $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
                         $collection = $this->db->$collection_name;
                         $collection->deleteOne(['_id' => $id_media_object]);
+                        $collection_name_description = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency, 'description_');
+                        $collection_description = $this->db->$collection_name_description;
+                        $collection_description->deleteOne(['_id' => $id_media_object]);
                     }
                 }
             }
@@ -207,6 +220,11 @@ class Indexer extends AbstractIndex
         $searchObject->prices = $this->_aggregatePrices($origin, $agency);
         $searchObject->has_price = !empty($searchObject->prices);
         $searchObject->fulltext = $this->_createFulltext($language);
+        $searchObject->sold_out = $this->_soldOut($origin, $agency);
+        $searchObject->is_running = $this->_isRunning($origin, $agency);
+        $searchObject->ports = $this->_getPorts();
+        $searchObject->departure_ports = $this->_getDeparturePorts();
+        $searchObject->arrival_ports = $this->_getArrivalPorts();
         $searchObject->valid_from = !is_null($this->mediaObject->valid_from) ?  $this->mediaObject->valid_from->format(DATE_RFC3339_EXTENDED) : null;
         $searchObject->valid_to = !is_null($this->mediaObject->valid_to) ? $this->mediaObject->valid_to->format(DATE_RFC3339_EXTENDED) : null;
         $searchObject->visibility = $this->mediaObject->visibility;
@@ -614,6 +632,160 @@ class Indexer extends AbstractIndex
             }
         }
         return $categories;
+    }
+
+
+    /**
+     * @param $origin
+     * @param $agency
+     * @return bool
+     * @throws \Exception
+     */
+    private function _soldOut($origin, $agency = null)
+    {
+        /** @var Pdo $db */
+        $db = Registry::getInstance()->get('db');
+        $query = "select distinct state from pmt2core_cheapest_price_speed where 
+                         id_media_object = :id_media_object AND
+                         id_origin = :id_origin".(empty($agency) ? "" : " AND agency = :agency");
+        $values = [
+            ':id_media_object' => $this->mediaObject->id,
+            ':id_origin' => $origin,
+        ];
+        if(!empty($agency)){
+            $values[':agency'] = $agency;
+        }
+        $results = $db->fetchAll($query, $values);
+        $sold_out = true;
+        if(!is_null($results)) {
+            foreach($results as $result) {
+                if($result->state === CheapestPrice::STATE_BOOKABLE || $result->state === CheapestPrice::STATE_REQUEST){
+                    $sold_out = false;
+                }
+            }
+        }
+        return $sold_out;
+    }
+
+    private function _getDeparturePorts()
+    {
+        /** @var Pdo $db */
+        $db = Registry::getInstance()->get('db');
+        $query = "select p.id, p.name from pmt2core_itinerary_steps s
+                    left join pmt2core_itinerary_step_ports sp on (s.id = sp.id_step)
+                    left join pmt2core_ports p on (sp.id_port = p.id)
+                    where s.id_media_object = :id_media_object
+                          and s.order = 0
+                          and (s.type = 'course_port' OR s.type = 'port')
+                    limit 1;";
+        $values = [
+            ':id_media_object' => $this->mediaObject->id,
+        ];
+        $results = $db->fetchAll($query, $values);
+        $ports = [];
+        if(!is_null($results)) {
+            foreach($results as $result) {
+                if(empty($result->id)){
+                    continue;
+                }
+                $port = new \stdClass();
+                $port->id = $result->id;
+                $port->name = $result->name;
+                $ports[] = $port;
+            }
+        }
+        return $ports;
+    }
+
+    /**
+     * Notice: if the itinerary has no port in the last step,
+     * @return array
+     * @throws \Exception
+     */
+    private function _getArrivalPorts()
+    {
+        /** @var Pdo $db */
+        $db = Registry::getInstance()->get('db');
+        $query = "select p.id, p.name from pmt2core_itinerary_steps s
+                    left join pmt2core_itinerary_step_ports sp on (s.id = sp.id_step)
+                    left join pmt2core_ports p on (sp.id_port = p.id)
+                    where s.id_media_object = :id_media_object
+                        and s.order = (select MAX(`order`) from pmt2core_itinerary_steps where id_media_object = :id_media_object and (type = 'course_port' OR type = 'port'))
+                        order by sp.id DESC -- missing order attribute
+                    limit 1;";
+        $values = [
+            ':id_media_object' => $this->mediaObject->id,
+        ];
+        $results = $db->fetchAll($query, $values);
+        $ports = [];
+        if(!is_null($results)) {
+            foreach($results as $result) {
+                if(empty($result->id)){
+                    continue;
+                }
+                $port = new \stdClass();
+                $port->id = $result->id;
+                $port->name = $result->name;
+                $ports[] = $port;
+            }
+        }
+        return $ports;
+    }
+
+    /**
+     * @return array
+     * @throws \Exception
+     */
+    private function _getPorts()
+    {
+        /** @var Pdo $db */
+        $db = Registry::getInstance()->get('db');
+        $query = "select p.id, p.name from pmt2core_itinerary_steps s
+                    left join pmt2core_itinerary_step_ports sp on (s.id = sp.id_step)
+                    left join pmt2core_ports p on (sp.id_port = p.id)
+                    where s.id_media_object = :id_media_object and (s.type = 'course_port' OR s.type = 'port')";
+        $values = [
+            ':id_media_object' => $this->mediaObject->id,
+        ];
+        $results = $db->fetchAll($query, $values);
+        $ports = [];
+        if(!is_null($results)) {
+            foreach($results as $result) {
+                if(empty($result->id)){
+                    continue;
+                }
+                $port = new \stdClass();
+                $port->id = $result->id;
+                $port->name = $result->name;
+                $ports[$port->id] = $port;
+            }
+        }
+        return array_values($ports);
+    }
+
+    /**
+     * @param $origin
+     * @param $agency
+     * @return bool
+     * @throws \Exception
+     */
+    private function _isRunning($origin, $agency = null)
+    {
+        /** @var Pdo $db */
+        $db = Registry::getInstance()->get('db');
+        $query = "select * from pmt2core_cheapest_price_speed where id_media_object = :id_media_object and current_date BETWEEN date_departure AND date_arrival and id_origin = :id_origin".(empty($agency) ? "" : " AND agency = :agency");
+        $values = [
+            ':id_media_object' => $this->mediaObject->id,
+            ':id_origin' => $origin,
+        ];
+        if(!empty($agency)){
+            $values[':agency'] = $agency;
+        }
+        $results = $db->fetchAll($query, $values);
+        if(!is_null($results) && count($results) > 0) {
+            return true;
+        }
+        return false;
     }
 
     /**

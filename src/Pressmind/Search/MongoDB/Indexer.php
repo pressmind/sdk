@@ -579,7 +579,9 @@ class Indexer extends AbstractIndex
                             'params' => [
                                 'mediaObject' => $linkedObject
                             ]
-                        ]);
+                        ],
+                            $stdItem->name
+                        );
                         if(!empty($r)){
                             $stdItem->name = $r;
                         }

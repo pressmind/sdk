@@ -229,7 +229,7 @@ class Indexer extends AbstractIndex
         $searchObject->valid_to = !is_null($this->mediaObject->valid_to) ? $this->mediaObject->valid_to->format(DATE_RFC3339_EXTENDED) : null;
         $searchObject->visibility = $this->mediaObject->visibility;
         $searchObject->recommendation_rate = $this->mediaObject->recommendation_rate;
-        $searchObject->sales_priority = $this->mediaObject->sales_priority.str_pad($this->mediaObject->sales_position, 6, '0');
+        $searchObject->sales_priority = $this->mediaObject->sales_priority.str_pad($this->mediaObject->sales_position, 6, '0', STR_PAD_LEFT);
         //$searchObject->dates_per_month = null;
         if(!empty($this->_config['search']['five_dates_per_month_list'])){
             $searchObject->dates_per_month = $this->_createDatesPerMonth($origin, $agency);

@@ -7,7 +7,7 @@ class SalesPriority
     /**
      * @var string
      */
-    private $_sales_sales_priority;
+    private $_sales_priority;
 
     /**
      * @param string $sales_priority

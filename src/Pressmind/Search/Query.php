@@ -459,6 +459,7 @@ class Query
      * $request['pm-sc'] startingpoint option city ids separated by comma
      * $request['pm-so'] sold out (0 or 1)
      * $request['pm-ir'] is running (0 or 1)
+     * $request['pm-sp'] sales priority (A000001)
      * $request['pm-l'] limit 0,10
      * $request['pm-o'] order
      * @param $request
@@ -567,6 +568,13 @@ class Query
             $sold_out = self::extractBoolean($request[$prefix.'-so']);
             $conditions[] = new \Pressmind\Search\Condition\MongoDB\SoldOut($sold_out);
             $validated_search_parameters[$prefix.'-so'] = $sold_out ? '1' : '0';
+        }
+        if (isset($request[$prefix.'-sp']) === true){
+            $sales_priority = self::extractSalesPriority($request[$prefix.'-sp']);
+            if(!empty($sales_priority)) {
+                $conditions[] = new \Pressmind\Search\Condition\MongoDB\SalesPriority($sales_priority);
+                $validated_search_parameters[$prefix . '-sp'] = $sales_priority;
+            }
         }
         if (isset($request[$prefix.'-ir']) === true){
             $is_running = self::extractBoolean($request[$prefix.'-ir']);
@@ -867,6 +875,18 @@ class Query
             return (bool)$str;
         }
         return false;
+    }
+
+    /**
+     * Matches A000001 (A,B or C and 6 digits, with trailing zeros)
+     * @param $str
+     * @return string|null
+     */
+    public static function extractSalesPriority($str){
+        if(preg_match('/^[A-C]{1}[0-9]{6}$/', $str) > 0){
+            return $str;
+        }
+        return null;
     }
 
 }

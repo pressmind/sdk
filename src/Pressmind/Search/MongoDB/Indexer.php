@@ -54,6 +54,7 @@ class Indexer extends AbstractIndex
         $this->createCollectionIndexIfNotExists($collection_name, ['id_media_object' => 1], ['name' => 'id_media_object_1', 'unique' => 1]);
         $this->createCollectionIndexIfNotExists($collection_name, ['fulltext' => 'text', 'categories.path_str' => 'text', 'code' => 'text'], ['default_language' => 'none', 'weights' => ['fulltext' => 5, 'categories.path_str' => 10, 'code' => 15], 'name' => 'fulltext_text']);
         $this->createCollectionIndexIfNotExists($collection_name, ['sold_out' => 1], ['name' => 'sold_out_1']);
+        $this->createCollectionIndexIfNotExists($collection_name, ['sales_priority' => 1], ['name' => 'sales_priority_1']);
     }
 
     public function createIndexes()

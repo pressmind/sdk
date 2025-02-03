@@ -103,6 +103,8 @@ class Query
                 $item['id_object_type'] = $document['id_object_type'];
                 $item['url'] = $document['url'];
                 $item['recommendation_rate'] = !empty($document['recommendation_rate']) ? $document['recommendation_rate'] : null;
+                $item['is_running'] = empty($document['is_running'])  ? false : true;
+                $item['sold_out'] = empty($document['sold_out'])  ? false : true;
                 $item['dates_per_month'] = [];
                 $item['fst_date_departure'] = !empty($document['fst_date_departure']) ? new \DateTime($document['fst_date_departure']) : null;
                 $item['possible_durations'] = !empty($document['possible_durations']) ? $document['possible_durations'] : [];
@@ -411,6 +413,7 @@ class Query
             'board_types' => $board_types,
             'transport_types' => $transport_types,
             'sold_out' => $sold_out,
+            'is_running' => $is_running,
             'startingpoint_options' => $startingpoint_options,
             'duration_min' => !empty($result_filter->minDuration) ? $result_filter->minDuration : null,
             'duration_max' => !empty($result_filter->maxDuration) ? $result_filter->maxDuration : null,

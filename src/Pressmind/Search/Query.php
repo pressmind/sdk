@@ -472,7 +472,7 @@ class Query
     public static function fromRequest($request, $prefix = 'pm', $paginator = true, $page_size = 10, $custom_conditions = [])
     {
         array_walk_recursive($request, function(&$item){
-            $item = urldecode($item);
+            $item = rawurldecode($item);
         });
         $validated_search_parameters = [];
         $conditions = array();

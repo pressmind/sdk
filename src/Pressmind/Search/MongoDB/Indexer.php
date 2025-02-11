@@ -848,7 +848,8 @@ class Indexer extends AbstractIndex
                                          startingpoint_id_city,
                                          ROW_NUMBER() OVER (PARTITION BY date_departure
                                              ".(empty($this->_config_touristic['generate_offer_for_each_transport_type']) ? "" : ", transport_type")."
-                                             ".(empty($this->_config_touristic['generate_offer_for_each_startingpoint_option']) ? "" : ", startingpoint_id_city")." 
+                                             ".(empty($this->_config_touristic['generate_offer_for_each_startingpoint_option']) ? "" : ", startingpoint_id_city")."
+                                             ".(empty($this->_config_touristic['generate_offer_for_each_option_board_type']) ? "" : ", option_board_type")."
                                              ORDER BY FIELD(state, 3, 1, 5, 0), price_total ASC) AS r
                                   from pmt2core_cheapest_price_speed
                                   where   
@@ -953,6 +954,7 @@ class Indexer extends AbstractIndex
                                          ROW_NUMBER() OVER (PARTITION BY date_departure
                                          ".(empty($this->_config_touristic['generate_offer_for_each_transport_type']) ? "" : ", transport_type")."
                                          ".(empty($this->_config_touristic['generate_offer_for_each_startingpoint_option']) ? "" : ", startingpoint_id_city")."
+                                         ".(empty($this->_config_touristic['generate_offer_for_each_option_board_type']) ? "" : ", option_board_type")."
                                          ORDER BY FIELD(state, 3, 1, 5, 0), price_total ASC) AS r
                                   from pmt2core_cheapest_price_speed
                                   where   

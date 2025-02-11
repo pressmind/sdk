@@ -67,6 +67,7 @@
         "max_offers_per_product": 5000,
         "generate_offer_for_each_startingpoint_option": false,
         "generate_offer_for_each_transport_type": false,
+        "generate_offer_for_each_option_board_type": false,
         "ibe_client": null,
         "include_negative_option_in_cheapest_price" : true,
         "label_price_mix_date_transport" : "Teilnahmegebühr",

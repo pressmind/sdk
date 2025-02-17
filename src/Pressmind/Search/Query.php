@@ -52,7 +52,7 @@ class Query
             $QueryFilter->request['pm-ho'] = is_array($QueryFilter->occupancy) ? implode(',', $QueryFilter->occupancy) : $QueryFilter->occupancy;
         }
         $id_object_type = empty($QueryFilter->request['pm-ot']) ? false : self::extractObjectType($QueryFilter->request['pm-ot']);
-        $order = empty($Filter->request['pm-o']) ? 'price-asc' : $Filter->request['pm-o'];
+        $order = empty($QueryFilter->request['pm-o']) ? 'price-asc' : $QueryFilter->request['pm-o'];
         if($QueryFilter->getFilters){
             $FilterCondition = [];
             if(!empty($QueryFilter->request['pm-ot'])){

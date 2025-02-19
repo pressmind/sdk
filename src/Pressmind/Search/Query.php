@@ -330,77 +330,81 @@ class Query
                 $is_running[$item->_id] = $item;
             }
         }
-        if(self::$calendar_show_departures === true && empty($result_filter) === false){
+        if(self::$calendar_show_departures === true){
             $start_time = microtime(true);
             $filter_departures = [];
             $filter_months = [];
             /**
              * be aware, the count_in_search and ids_in_search properties contains only the count of the current (limited) search result
              */
-            foreach ($result->documents as $document) {
-                $document = json_decode(json_encode($document), true);
-                if (!empty($document['prices']['date_departures'])) {
-                    if(!is_array($document['prices']['date_departures'])){
-                        $document['prices']['date_departures'] = [$document['prices']['date_departures']];
-                    }
-                    foreach ($document['prices']['date_departures'] as $date_departure) {
-                        $date_departure = new \DateTime($date_departure);
-                        if(isset($filter_departures[$date_departure->format('Y-m-d')])){
-                            $filter_departures[$date_departure->format('Y-m-d')]->count_in_search++;
-                            $filter_departures[$date_departure->format('Y-m-d')]->date = $date_departure->format('Y-m-d');
-                        }else{
-                            $filter_departures[$date_departure->format('Y-m-d')] = new \stdClass();
-                            $filter_departures[$date_departure->format('Y-m-d')]->count_in_system = 0;
-                            $filter_departures[$date_departure->format('Y-m-d')]->count_in_search = 1;
-                            $filter_departures[$date_departure->format('Y-m-d')]->date = $date_departure->format('Y-m-d');
+            if(!empty($result)){
+                foreach ($result->documents as $document) {
+                    $document = json_decode(json_encode($document), true);
+                    if (!empty($document['prices']['date_departures'])) {
+                        if(!is_array($document['prices']['date_departures'])){
+                            $document['prices']['date_departures'] = [$document['prices']['date_departures']];
                         }
-                        $fst_day_in_month = clone $date_departure;
-                        $fst_day_in_month->modify('first day of this month');
-                        if(isset($filter_months[$fst_day_in_month->format('Y-m-d')])){
-                            $filter_months[$fst_day_in_month->format('Y-m-d')]->count_in_search++;
-                            $filter_months[$fst_day_in_month->format('Y-m-d')]->date = $fst_day_in_month;
-                            $filter_months[$fst_day_in_month->format('Y-m-d')]->ids_in_search[] = $document['id_media_object'];
-                            $filter_months[$fst_day_in_month->format('Y-m-d')]->ids_in_search = array_unique($filter_months[$fst_day_in_month->format('Y-m-d')]->ids_in_search);
-                        }else{
-                            $filter_months[$fst_day_in_month->format('Y-m-d')] = new \stdClass();
-                            $filter_months[$fst_day_in_month->format('Y-m-d')]->date = $fst_day_in_month;
-                            $filter_months[$fst_day_in_month->format('Y-m-d')]->count_in_system = 0;
-                            $filter_months[$fst_day_in_month->format('Y-m-d')]->count_in_search = 1;
-                            $filter_months[$fst_day_in_month->format('Y-m-d')]->ids_in_search = [$document['id_media_object']];
+                        foreach ($document['prices']['date_departures'] as $date_departure) {
+                            $date_departure = new \DateTime($date_departure);
+                            if(isset($filter_departures[$date_departure->format('Y-m-d')])){
+                                $filter_departures[$date_departure->format('Y-m-d')]->count_in_search++;
+                                $filter_departures[$date_departure->format('Y-m-d')]->date = $date_departure->format('Y-m-d');
+                            }else{
+                                $filter_departures[$date_departure->format('Y-m-d')] = new \stdClass();
+                                $filter_departures[$date_departure->format('Y-m-d')]->count_in_system = 0;
+                                $filter_departures[$date_departure->format('Y-m-d')]->count_in_search = 1;
+                                $filter_departures[$date_departure->format('Y-m-d')]->date = $date_departure->format('Y-m-d');
+                            }
+                            $fst_day_in_month = clone $date_departure;
+                            $fst_day_in_month->modify('first day of this month');
+                            if(isset($filter_months[$fst_day_in_month->format('Y-m-d')])){
+                                $filter_months[$fst_day_in_month->format('Y-m-d')]->count_in_search++;
+                                $filter_months[$fst_day_in_month->format('Y-m-d')]->date = $fst_day_in_month;
+                                $filter_months[$fst_day_in_month->format('Y-m-d')]->ids_in_search[] = $document['id_media_object'];
+                                $filter_months[$fst_day_in_month->format('Y-m-d')]->ids_in_search = array_unique($filter_months[$fst_day_in_month->format('Y-m-d')]->ids_in_search);
+                            }else{
+                                $filter_months[$fst_day_in_month->format('Y-m-d')] = new \stdClass();
+                                $filter_months[$fst_day_in_month->format('Y-m-d')]->date = $fst_day_in_month;
+                                $filter_months[$fst_day_in_month->format('Y-m-d')]->count_in_system = 0;
+                                $filter_months[$fst_day_in_month->format('Y-m-d')]->count_in_search = 1;
+                                $filter_months[$fst_day_in_month->format('Y-m-d')]->ids_in_search = [$document['id_media_object']];
+                            }
                         }
                     }
                 }
             }
-            foreach ($result_filter->documents as $document) {
-                $document = json_decode(json_encode($document), true);
-                if (!empty($document['prices']['date_departures'])) {
-                    if(!is_array($document['prices']['date_departures'])){
-                        $document['prices']['date_departures'] = [$document['prices']['date_departures']];
-                    }
-                    foreach ($document['prices']['date_departures'] as $date_departure) {
-                        $date_departure = new \DateTime($date_departure);
-                        if(isset($filter_departures[$date_departure->format('Y-m-d')])){
-                            $filter_departures[$date_departure->format('Y-m-d')]->count_in_system++;
-                            $filter_departures[$date_departure->format('Y-m-d')]->date = $date_departure->format('Y-m-d');
-                        }else{
-                            $filter_departures[$date_departure->format('Y-m-d')] = new \stdClass();
-                            $filter_departures[$date_departure->format('Y-m-d')]->count_in_system = 1;
-                            $filter_departures[$date_departure->format('Y-m-d')]->count_in_search = 0;
-                            $filter_departures[$date_departure->format('Y-m-d')]->date = $date_departure->format('Y-m-d');
+            if(!empty($result_filter)) {
+                foreach ($result_filter->documents as $document) {
+                    $document = json_decode(json_encode($document), true);
+                    if (!empty($document['prices']['date_departures'])) {
+                        if (!is_array($document['prices']['date_departures'])) {
+                            $document['prices']['date_departures'] = [$document['prices']['date_departures']];
                         }
-                        $fst_day_in_month = clone $date_departure;
-                        $fst_day_in_month->modify('first day of this month');
-                        if(isset($filter_months[$fst_day_in_month->format('Y-m-d')])){
-                            $filter_months[$fst_day_in_month->format('Y-m-d')]->count_in_system++;
-                            $filter_months[$fst_day_in_month->format('Y-m-d')]->date = $fst_day_in_month;
-                            $filter_months[$fst_day_in_month->format('Y-m-d')]->ids_in_system[] = $document['id_media_object'];
-                            $filter_months[$fst_day_in_month->format('Y-m-d')]->ids_in_system = array_unique($filter_months[$fst_day_in_month->format('Y-m-d')]->ids_in_system);
-                        }else{
-                            $filter_months[$fst_day_in_month->format('Y-m-d')] = new \stdClass();
-                            $filter_months[$fst_day_in_month->format('Y-m-d')]->date = $fst_day_in_month;
-                            $filter_months[$fst_day_in_month->format('Y-m-d')]->count_in_system = 1;
-                            $filter_months[$fst_day_in_month->format('Y-m-d')]->count_in_search = 0;
-                            $filter_months[$fst_day_in_month->format('Y-m-d')]->ids_in_system = [$document['id_media_object']];
+                        foreach ($document['prices']['date_departures'] as $date_departure) {
+                            $date_departure = new \DateTime($date_departure);
+                            if (isset($filter_departures[$date_departure->format('Y-m-d')])) {
+                                $filter_departures[$date_departure->format('Y-m-d')]->count_in_system++;
+                                $filter_departures[$date_departure->format('Y-m-d')]->date = $date_departure->format('Y-m-d');
+                            } else {
+                                $filter_departures[$date_departure->format('Y-m-d')] = new \stdClass();
+                                $filter_departures[$date_departure->format('Y-m-d')]->count_in_system = 1;
+                                $filter_departures[$date_departure->format('Y-m-d')]->count_in_search = 0;
+                                $filter_departures[$date_departure->format('Y-m-d')]->date = $date_departure->format('Y-m-d');
+                            }
+                            $fst_day_in_month = clone $date_departure;
+                            $fst_day_in_month->modify('first day of this month');
+                            if (isset($filter_months[$fst_day_in_month->format('Y-m-d')])) {
+                                $filter_months[$fst_day_in_month->format('Y-m-d')]->count_in_system++;
+                                $filter_months[$fst_day_in_month->format('Y-m-d')]->date = $fst_day_in_month;
+                                $filter_months[$fst_day_in_month->format('Y-m-d')]->ids_in_system[] = $document['id_media_object'];
+                                $filter_months[$fst_day_in_month->format('Y-m-d')]->ids_in_system = array_unique($filter_months[$fst_day_in_month->format('Y-m-d')]->ids_in_system);
+                            } else {
+                                $filter_months[$fst_day_in_month->format('Y-m-d')] = new \stdClass();
+                                $filter_months[$fst_day_in_month->format('Y-m-d')]->date = $fst_day_in_month;
+                                $filter_months[$fst_day_in_month->format('Y-m-d')]->count_in_system = 1;
+                                $filter_months[$fst_day_in_month->format('Y-m-d')]->count_in_search = 0;
+                                $filter_months[$fst_day_in_month->format('Y-m-d')]->ids_in_system = [$document['id_media_object']];
+                            }
                         }
                     }
                 }

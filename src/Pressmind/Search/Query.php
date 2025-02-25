@@ -121,6 +121,7 @@ class Query
                     $item['cheapest_price']->earlybird_discount = $document['prices']['earlybird_discount'];
                     $item['cheapest_price']->earlybird_discount_f = $document['prices']['earlybird_discount_f'];
                     $item['cheapest_price']->earlybird_name = empty($document['prices']['earlybird_name']) ? null : $document['prices']['earlybird_name'];
+                    $item['cheapest_price']->state = $document['prices']['state'];
                     $item['cheapest_price']->date_departures = [];
                     if (!empty($document['prices']['date_departures'])) {
                         foreach ($document['prices']['date_departures'] as $date_departure) {

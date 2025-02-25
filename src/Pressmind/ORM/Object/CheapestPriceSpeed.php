@@ -162,7 +162,7 @@ class CheapestPriceSpeed extends AbstractObject
                 'housing_package_id_name_index' => [
                     'type' => 'index',
                     'columns' => [
-                        'housing_package_id_name_index'
+                        'housing_package_id_name'
                     ]
                 ]
             ]

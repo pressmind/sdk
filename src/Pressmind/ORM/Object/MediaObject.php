@@ -865,7 +865,8 @@ class MediaObject extends AbstractObject
             'id_housing_packages' => [],
             'airports' => [],
             'occupancies' => [],
-            'startingpoint_id_cities' => []
+            'startingpoint_id_cities' => [],
+            'housing_package_id_names' => []
         ];
         $documents = json_decode(json_encode($result), false);
 
@@ -873,7 +874,7 @@ class MediaObject extends AbstractObject
         foreach ($documents as $document) {
             if (!empty($document->transport_type)) {
                 if (!isset($filter['transport_types'][$document->transport_type])) {
-                    $filter['transport_types'][$document->transport_type] = ['durations' => [], 'airports' => [], 'id_housing_packages' => [], 'occupancies' => [], 'startingpoint_id_cities' => []];
+                    $filter['transport_types'][$document->transport_type] = ['durations' => [], 'airports' => [], 'id_housing_packages' => [], 'occupancies' => [], 'startingpoint_id_cities' => [], 'housing_package_id_names' => []];
                 }
                 if (!empty($document->booking_package->duration) && !in_array($document->booking_package->duration, $filter['transport_types'][$document->transport_type]['durations'])) {
                     $filter['transport_types'][$document->transport_type]['durations'][] = $document->booking_package->duration;
@@ -890,9 +891,12 @@ class MediaObject extends AbstractObject
                 if (!empty($document->housing_package->id) && !in_array($document->housing_package->id, $filter['transport_types'][$document->transport_type]['id_housing_packages'])) {
                     $filter['transport_types'][$document->transport_type]['id_housing_packages'][] = $document->housing_package->id;
                 }
+                if (!empty($document->housing_package_id_name) && !in_array($document->housing_package_id_name, $filter['transport_types'][$document->transport_type]['housing_package_id_names'])) {
+                    $filter['transport_types'][$document->transport_type]['housing_package_id_names'][] = $document->housing_package_id_name;
+                }
             }
             if (!empty($document->booking_package->duration) && !isset($filter['durations'][$document->booking_package->duration])) {
-                $filter['durations'][$document->booking_package->duration] = ['transport_types' => [], 'airports' => [], 'id_housing_packages' => [], 'occupancies' => [], 'startingpoint_id_cities' => []];
+                $filter['durations'][$document->booking_package->duration] = ['transport_types' => [], 'airports' => [], 'id_housing_packages' => [], 'occupancies' => [], 'startingpoint_id_cities' => [], 'housing_package_id_names' => []];
             }
             if (!empty($document->occupancy) && !in_array($document->occupancy, $filter['durations'][$document->booking_package->duration]['occupancies'])) {
                 $filter['durations'][$document->booking_package->duration]['occupancies'][] = $document->occupancy;
@@ -909,8 +913,11 @@ class MediaObject extends AbstractObject
             if (!empty($document->housing_package->id) && !in_array($document->housing_package->id, $filter['durations'][$document->booking_package->duration]['id_housing_packages'])) {
                 $filter['durations'][$document->booking_package->duration]['id_housing_packages'][] = $document->housing_package->id;
             }
+            if (!empty($document->housing_package_id_name) && !in_array($document->housing_package->id, $filter['durations'][$document->booking_package->duration]['housing_package_id_names'])) {
+                $filter['durations'][$document->booking_package->duration]['housing_package_id_names'][] = $document->housing_package_id_name;
+            }
             if (!empty($document->housing_package->id) && !isset($filter['id_housing_packages'][$document->housing_package->id])) {
-                $filter['id_housing_packages'][$document->housing_package->id] = ['durations' => [], 'transport_types' => [], 'airports' => [], 'occupancies' => [], 'startingpoint_id_cities' => []];
+                $filter['id_housing_packages'][$document->housing_package->id] = ['durations' => [], 'transport_types' => [], 'airports' => [], 'occupancies' => [], 'startingpoint_id_cities' => [], 'housing_package_id_names' => []];
             }
             if (!empty($document->housing_package->id) && isset($filter['id_housing_packages'][$document->housing_package->id])) {
                 if (!empty($document->occupancy) && !in_array($document->occupancy, $filter['id_housing_packages'][$document->housing_package->id]['occupancies'])) {
@@ -928,10 +935,13 @@ class MediaObject extends AbstractObject
                 if (!empty($document->booking_package->duration) && !in_array($document->booking_package->duration, $filter['id_housing_packages'][$document->housing_package->id]['durations'])) {
                     $filter['id_housing_packages'][$document->housing_package->id]['durations'][] = $document->booking_package->duration;
                 }
+                if (!empty($document->housing_package_id_name) && !in_array($document->housing_package_id_name, $filter['id_housing_packages'][$document->housing_package->id]['housing_package_id_names'])) {
+                    $filter['id_housing_packages'][$document->housing_package->id]['housing_package_id_names'][] = $document->housing_package_id_name;
+                }
             }
             if (!empty($document->airport)) {
                 if (!isset($filter['airports'][$document->airport])) {
-                    $filter['airports'][$document->airport] = ['durations' => [], 'transport_types' => [], 'id_housing_packages' => [], 'occupancies' => [], 'startingpoint_id_cities' => []];
+                    $filter['airports'][$document->airport] = ['durations' => [], 'transport_types' => [], 'id_housing_packages' => [], 'occupancies' => [], 'startingpoint_id_cities' => [], 'housing_package_id_names' => []];
                 }
                 if (!empty($document->occupancy) && !in_array($document->occupancy, $filter['airports'][$document->airport]['occupancies'])) {
                     $filter['airports'][$document->airport]['occupancies'][] = $document->occupancy;
@@ -948,10 +958,13 @@ class MediaObject extends AbstractObject
                 if (!empty($document->booking_package->duration) && !in_array($document->booking_package->duration, $filter['airports'][$document->airport]['durations'])) {
                     $filter['airports'][$document->airport]['durations'][] = $document->booking_package->duration;
                 }
+                if (!empty($document->housing_package_id_name) && !in_array($document->housing_package_id_name, $filter['airports'][$document->housing_package_id_name]['housing_package_id_names'])) {
+                    $filter['airports'][$document->airport]['housing_package_id_names'][] = $document->housing_package_id_name;
+                }
             }
             if (!empty($document->startingpoint_id_city)) {
                 if (!isset($filter['startingpoint_id_cities'][$document->startingpoint_id_city])) {
-                    $filter['startingpoint_id_cities'][$document->startingpoint_id_city] = ['durations' => [], 'transport_types' => [], 'id_housing_packages' => [], 'occupancies' => [], 'airports' => []];
+                    $filter['startingpoint_id_cities'][$document->startingpoint_id_city] = ['durations' => [], 'transport_types' => [], 'id_housing_packages' => [], 'occupancies' => [], 'airports' => [], 'housing_package_id_names' => []];
                 }
                 if (!empty($document->occupancy) && !in_array($document->occupancy, $filter['startingpoint_id_cities'][$document->startingpoint_id_city]['occupancies'])) {
                     $filter['startingpoint_id_cities'][$document->startingpoint_id_city]['occupancies'][] = $document->occupancy;
@@ -968,9 +981,32 @@ class MediaObject extends AbstractObject
                 if (!empty($document->airport) && !in_array($document->airport, $filter['startingpoint_id_cities'][$document->startingpoint_id_city]['airports'])) {
                     $filter['startingpoint_id_cities'][$document->startingpoint_id_city]['airports'][] = $document->airport;
                 }
+                if (!empty($document->housing_package_id_name) && !in_array($document->housing_package_id_name, $filter['startingpoint_id_cities'][$document->startingpoint_id_city]['housing_package_id_names'])) {
+                    $filter['startingpoint_id_cities'][$document->startingpoint_id_city]['housing_package_id_names'][] = $document->housing_package_id_name;
+                }
+            }
+            if (!empty($document->housing_package_id_name)) {
+                if (!isset($filter['housing_package_id_names'][$document->housing_package_id_name])) {
+                    $filter['housing_package_id_names'][$document->housing_package_id_name] = ['durations' => [], 'transport_types' => [], 'id_housing_packages' => [], 'occupancies' => [], 'airports' => []];
+                }
+                if (!empty($document->occupancy) && !in_array($document->occupancy, $filter['housing_package_id_names'][$document->housing_package_id_name]['occupancies'])) {
+                    $filter['housing_package_id_names'][$document->housing_package_id_name]['occupancies'][] = $document->occupancy;
+                }
+                if (!empty($document->transport_type) && !in_array($document->transport_type, $filter['housing_package_id_names'][$document->housing_package_id_name]['transport_types'])) {
+                    $filter['housing_package_id_names'][$document->housing_package_id_name]['transport_types'][] = $document->transport_type;
+                }
+                if (!empty($document->housing_package->id) && !in_array($document->housing_package->id, $filter['housing_package_id_names'][$document->housing_package_id_name]['id_housing_packages'])) {
+                    $filter['housing_package_id_names'][$document->housing_package_id_name]['id_housing_packages'][] = $document->housing_package->id;
+                }
+                if (!empty($document->booking_package->duration) && !in_array($document->booking_package->duration, $filter['housing_package_id_names'][$document->housing_package_id_name]['durations'])) {
+                    $filter['housing_package_id_names'][$document->housing_package_id_name]['durations'][] = $document->booking_package->duration;
+                }
+                if (!empty($document->airport) && !in_array($document->airport, $filter['housing_package_id_names'][$document->housing_package_id_name]['airports'])) {
+                    $filter['housing_package_id_names'][$document->housing_package_id_name]['airports'][] = $document->airport;
+                }
             }
             if (!empty($document->occupancy) && !isset($filter['occupancies'][$document->occupancy])) {
-                $filter['occupancies'][$document->occupancy] = ['durations' => [], 'transport_types' => [], 'id_housing_packages' => [], 'airports' => [], 'startingpoint_id_cities' => []];
+                $filter['occupancies'][$document->occupancy] = ['durations' => [], 'transport_types' => [], 'id_housing_packages' => [], 'airports' => [], 'startingpoint_id_cities' => [], 'housing_package_id_names' => []];
             }
             if (!empty($document->transport_type) && !in_array($document->transport_type, $filter['occupancies'][$document->occupancy]['transport_types'])) {
                 $filter['occupancies'][$document->occupancy]['transport_types'][] = $document->transport_type;
@@ -986,6 +1022,9 @@ class MediaObject extends AbstractObject
             }
             if (!empty($document->startingpoint_id_city) && !in_array($document->startingpoint_id_city, $filter['occupancies'][$document->occupancy]['startingpoint_id_cities'])) {
                 $filter['occupancies'][$document->occupancy]['startingpoint_id_cities'][] = $document->startingpoint_id_city;
+            }
+            if (!empty($document->housing_package_id_name) && !in_array($document->housing_package_id_name, $filter['occupancies'][$document->occupancy]['housing_package_id_names'])) {
+                $filter['occupancies'][$document->occupancy]['housing_package_id_names'][] = $document->housing_package_id_name;
             }
             if (
                 (empty($filters->occupancy) || $filters->occupancy == $document->occupancy) &&
@@ -1457,6 +1496,7 @@ class MediaObject extends AbstractObject
                                     $cheapestPriceSpeed->id_media_object = $this->getId();
                                     $cheapestPriceSpeed->id_booking_package = $booking_package->getId();
                                     $cheapestPriceSpeed->id_housing_package = $option->id_housing_package;
+                                    $cheapestPriceSpeed->housing_package_id_name = empty($housing_package->name) ? null : md5($housing_package->name);
                                     $cheapestPriceSpeed->id_date = $date->getId();
                                     $cheapestPriceSpeed->id_option = $option->getId();
                                     $cheapestPriceSpeed->id_transport_1 = !is_null($transport_pair) && isset($transport_pair['way1']) ? $transport_pair['way1']->id : null;

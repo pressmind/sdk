@@ -823,6 +823,7 @@ class Indexer extends AbstractIndex
                                   guaranteed,
                                   startingpoint_id_city,
                                   startingpoint_city,
+                                  housing_package_id_name,
                                   CASE
                                     WHEN state = 3 THEN 100
                                     WHEN state = 1 THEN 200
@@ -846,6 +847,7 @@ class Indexer extends AbstractIndex
                                          duration,
                                          startingpoint_city,
                                          startingpoint_id_city,
+                                         housing_package_id_name,
                                          ROW_NUMBER() OVER (PARTITION BY date_departure
                                              ".(empty($this->_config_touristic['generate_offer_for_each_transport_type']) ? "" : ", transport_type")."
                                              ".(empty($this->_config_touristic['generate_offer_for_each_startingpoint_option']) ? "" : ", startingpoint_id_city")."
@@ -929,6 +931,7 @@ class Indexer extends AbstractIndex
                                   guaranteed,
                                   startingpoint_city,
                                   startingpoint_id_city,
+                                  housing_package_id_name,
                                   CASE
                                     WHEN state = 3 THEN 100
                                     WHEN state = 1 THEN 200
@@ -951,6 +954,7 @@ class Indexer extends AbstractIndex
                                          duration,
                                          startingpoint_city,
                                          startingpoint_id_city,
+                                         housing_package_id_name,
                                          ROW_NUMBER() OVER (PARTITION BY date_departure
                                          ".(empty($this->_config_touristic['generate_offer_for_each_transport_type']) ? "" : ", transport_type")."
                                          ".(empty($this->_config_touristic['generate_offer_for_each_startingpoint_option']) ? "" : ", startingpoint_id_city")."

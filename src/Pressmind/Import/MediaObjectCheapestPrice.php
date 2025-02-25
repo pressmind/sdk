@@ -36,13 +36,13 @@ class MediaObjectCheapestPrice extends AbstractImport
         }
         \Pressmind\ORM\Object\MediaObject::deleteTouristic($id_media_object);
         foreach ($validData as $priceObject) {
-           if($priceObject->valid_from == '1970-01-01 00:00:00'){
+           if($priceObject->valid_from == '1970-01-01 00:00:00' || empty($priceObject->valid_from)){
                $date  = new \DateTime();
                $date->setTime(0,0,0);
                $date->add(new \DateInterval('P1D'));
                $priceObject->valid_from = $date->format('Y-m-d 00:00:00');
            }
-           if($priceObject->valid_to == '1970-01-01 00:00:00'){
+           if($priceObject->valid_to == '1970-01-01 00:00:00' || empty($priceObject->valid_to)){
                $date  = new \DateTime();
                $date->setTime(0,0,0);
                $date->add(new \DateInterval('P90D'));

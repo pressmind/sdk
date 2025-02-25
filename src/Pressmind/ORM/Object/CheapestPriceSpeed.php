@@ -96,6 +96,7 @@ use DateTime;
  * @property string $startingpoint_city
  * @property string $startingpoint_id_city
  * @property string $agency
+ * @property string $housing_package_id_name
  */
 class CheapestPriceSpeed extends AbstractObject
 {
@@ -158,6 +159,12 @@ class CheapestPriceSpeed extends AbstractObject
                         'startingpoint_id_city',
                     ]
                 ],
+                'housing_package_id_name_index' => [
+                    'type' => 'index',
+                    'columns' => [
+                        'housing_package_id_name_index'
+                    ]
+                ]
             ]
         ],
         'properties' => [
@@ -1179,6 +1186,19 @@ class CheapestPriceSpeed extends AbstractObject
             'agency' => [
                 'name' => 'agency',
                 'title' => 'agency',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ]
+            ],
+            'housing_package_id_name' => [
+                'name' => 'housing_package_id_name',
+                'title' => 'housing_package_id_name',
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,

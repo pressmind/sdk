@@ -262,11 +262,32 @@ class Package extends AbstractObject
      * @throws Exception
      */
     public static function getById($id){
-        if(isset(self::$run_time_cache[$id])){
-            return self::$run_time_cache[$id];
+        if(isset(self::$run_time_cache[__FUNCTION__][$id])){
+            return self::$run_time_cache[__FUNCTION__][$id];
         }
         $package = self::listOne('id = "'.$id.'"');
-        self::$run_time_cache[$id] = $package;
+        self::$run_time_cache[__FUNCTION__][$id] = $package;
+        return $package;
+    }
+
+    /**
+     * @return string
+     */
+    public function getNameId(){
+        return md5($this->name);
+    }
+
+    /**
+     * @param $id
+     * @return mixed|null
+     * @throws Exception
+     */
+    public static function getByNameId($id){
+        if(isset(self::$run_time_cache[__FUNCTION__][$id])){
+            return self::$run_time_cache[__FUNCTION__][$id];
+        }
+        $package = self::listOne('md5(name) = "'.$id.'"');
+        self::$run_time_cache[__FUNCTION__][$id] = $package;
         return $package;
     }
 }

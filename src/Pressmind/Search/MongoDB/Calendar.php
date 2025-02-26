@@ -233,7 +233,7 @@ class Calendar extends AbstractIndex
                 $document->startingpoint_id_city = $item['startingpoint_id_city'];
                 $document->booking_package = (new Booking\Package($duration['id_booking_package'], false))->toStdClass(false);
                 $document->housing_package = (new Package($duration['id_housing_package'], false))->toStdClass(false);
-                $document->housing_package_id_name = $item['housing_package_id_name'];
+                $document->housing_package_id_name = $duration['housing_package_id_name'];
                 $filter = new CheapestPrice();
                 $filter->occupancies_disable_fallback = false;
                 $filter->occupancies = [$item['occupancy']];

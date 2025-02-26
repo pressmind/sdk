@@ -178,7 +178,7 @@ class Calendar extends AbstractIndex
             }
             foreach($items as $k => $item){
                 $query = 'select 
-                    distinct duration, id_booking_package, id_housing_package from pmt2core_cheapest_price_speed 
+                    distinct duration, id_booking_package, id_housing_package, housing_package_id_name from pmt2core_cheapest_price_speed 
                     where 
                         id_media_object = :id_media_object
                         AND (earlybird_discount = 0 OR earlybird_discount_date_to >= NOW())
@@ -232,6 +232,7 @@ class Calendar extends AbstractIndex
                 $document->startingpoint_id_city = $item['startingpoint_id_city'];
                 $document->booking_package = (new Booking\Package($duration['id_booking_package'], false))->toStdClass(false);
                 $document->housing_package = (new Package($duration['id_housing_package'], false))->toStdClass(false);
+                $document->housing_package_id_name = $item['housing_package_id_name'];
                 $filter = new CheapestPrice();
                 $filter->occupancies_disable_fallback = false;
                 $filter->occupancies = [$item['occupancy']];

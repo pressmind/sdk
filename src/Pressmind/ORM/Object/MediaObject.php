@@ -958,7 +958,7 @@ class MediaObject extends AbstractObject
                 if (!empty($document->booking_package->duration) && !in_array($document->booking_package->duration, $filter['airports'][$document->airport]['durations'])) {
                     $filter['airports'][$document->airport]['durations'][] = $document->booking_package->duration;
                 }
-                if (!empty($document->housing_package_id_name) && !in_array($document->housing_package_id_name, $filter['airports'][$document->housing_package_id_name]['housing_package_id_names'])) {
+                if (!empty($document->housing_package_id_name) && !in_array($document->housing_package_id_name, $filter['airports'][$document->airport]['housing_package_id_names'])) {
                     $filter['airports'][$document->airport]['housing_package_id_names'][] = $document->housing_package_id_name;
                 }
             }

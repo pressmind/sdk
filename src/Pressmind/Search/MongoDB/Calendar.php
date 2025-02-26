@@ -212,7 +212,8 @@ class Calendar extends AbstractIndex
                         $items[$k]['durations'][] = [
                             'duration' => $result->duration,
                             'id_booking_package' => $result->id_booking_package,
-                            'id_housing_package' => $result->id_housing_package
+                            'id_housing_package' => $result->id_housing_package,
+                            'housing_package_id_name' => $result->housing_package_id_name
                         ];
                     }
                 }

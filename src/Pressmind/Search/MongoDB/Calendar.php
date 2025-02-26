@@ -158,7 +158,10 @@ class Calendar extends AbstractIndex
                 ':id_origin' => $origin,
                 ':occupancy' => $occupancy,
             ];
-
+            if(!empty($agency)){
+                $query .= ' AND agency = :agency';
+                $values[':agency'] = $agency;
+            }
             $results = $db->fetchAll($query, $values);
 
             if(!is_null($results)) {
@@ -204,6 +207,10 @@ class Calendar extends AbstractIndex
                 if(!empty($item['startingpoint_id_city'])){
                     $query .= ' AND startingpoint_id_city = :startingpoint_id_city';
                     $values[':startingpoint_id_city'] = $item['startingpoint_id_city'];
+                }
+                if(!empty($agency)){
+                    $query .= ' AND agency = :agency';
+                    $values[':agency'] = $agency;
                 }
                 $query .= ' order by duration ASC';
                 $results = $db->fetchAll($query, $values);

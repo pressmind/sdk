@@ -829,10 +829,26 @@ class MongoDB extends AbstractSearch
                 ];
             }else{
                 $addFieldsStage['$addFields']['minDeparture'] = [
-                    '$first' => [ '$min' => '$prices.prices.date_departures']
+                    '$min' => [
+                        '$reduce' => [
+                            'input' => '$prices.prices.date_departures',
+                            'initialValue' => [],
+                            'in' => [
+                                '$concatArrays' => ['$$value', '$$this']
+                            ]
+                        ]
+                    ]
                 ];
                 $addFieldsStage['$addFields']['maxDeparture'] = [
-                    '$first' => [ '$max' => '$prices.prices.date_departures']
+                    '$max' => [
+                        '$reduce' => [
+                            'input' => '$prices.prices.date_departures',
+                            'initialValue' => [],
+                            'in' => [
+                              '$concatArrays' => ['$$value', '$$this']
+                            ]
+                        ]
+                    ]
                 ];
             }
 

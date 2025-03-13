@@ -1346,7 +1346,7 @@ class MediaObject extends AbstractObject
                         continue;
                     }
                     /** @var Item[] $early_bird_discounts */
-                    $early_bird_discounts = is_null($date->early_bird_discount_group) ? [null] : $date->early_bird_discount_group->items;
+                    $early_bird_discounts = empty($date->early_bird_discount_group->items) ? [null] : $date->early_bird_discount_group->items;
                     /** @var Transport[] $transport_pairs */
                     $transport_pairs = count($date->transports) > 0 ? $date->getTransportPairs($transport_allowed_states, [], [], null, true, $agency) : [null];
                     $options = [];

@@ -929,12 +929,14 @@ class Indexer extends AbstractIndex
                                   earlybird_discount_f,
                                   earlybird_discount_date_to,
                                   earlybird_name,
+                                  option_name,
                                   option_board_type,
                                   price_mix,
                                   transport_type,
                                   guaranteed,
                                   startingpoint_city,
                                   startingpoint_id_city,
+                                  housing_package_name,
                                   housing_package_id_name,
                                   CASE
                                     WHEN state = 3 THEN 100
@@ -951,6 +953,7 @@ class Indexer extends AbstractIndex
                                          earlybird_discount_f,
                                          earlybird_discount_date_to,
                                          earlybird_name,
+                                         option_name,
                                          option_board_type,
                                          price_mix,
                                          transport_type,
@@ -958,6 +961,7 @@ class Indexer extends AbstractIndex
                                          duration,
                                          startingpoint_city,
                                          startingpoint_id_city,
+                                         housing_package_name,
                                          housing_package_id_name,
                                          ROW_NUMBER() OVER (PARTITION BY date_departure
                                          ".(empty($this->_config_touristic['generate_offer_for_each_transport_type']) ? "" : ", transport_type")."

@@ -824,6 +824,7 @@ class Indexer extends AbstractIndex
                                   guaranteed,
                                   startingpoint_id_city,
                                   startingpoint_city,
+                                  housing_package_name,
                                   housing_package_id_name,
                                   CASE
                                     WHEN state = 3 THEN 100
@@ -849,6 +850,7 @@ class Indexer extends AbstractIndex
                                          duration,
                                          startingpoint_city,
                                          startingpoint_id_city,
+                                         housing_package_name,
                                          housing_package_id_name,
                                          ROW_NUMBER() OVER (PARTITION BY date_departure
                                              ".(empty($this->_config_touristic['generate_offer_for_each_transport_type']) ? "" : ", transport_type")."

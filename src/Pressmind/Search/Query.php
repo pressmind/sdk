@@ -629,10 +629,10 @@ class Query
             $search_item = $request[$prefix.'-c'];
             foreach($search_item as $property_name => $item_ids){
                 if(preg_match('/^[0-9a-zA-Z\-\_]+$/', $property_name) > 0){ // valid property name
-                    if(preg_match('/^[0-9a-zA-Z\-\,]+$/', $item_ids) > 0){ // search by OR, marked by ","
+                    if(preg_match('/^[0-9a-zA-Z\-\_,]+$/', $item_ids) > 0){ // search by OR, marked by ","
                         $delimiter = ',';
                         $operator = 'OR';
-                    }elseif(preg_match('/^[0-9a-zA-Z\-\+]+$/', $item_ids) > 0){ // search by AND, marked by "+"
+                    }elseif(preg_match('/^[0-9a-zA-Z\-\_+]+$/', $item_ids) > 0){ // search by AND, marked by "+"
                         $delimiter = '+'; // be aware, this sign is reserverd by php. urls must use the escaped sign %2B
                         $operator = 'AND';
                     }else{ // not valid

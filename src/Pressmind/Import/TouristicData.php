@@ -92,27 +92,6 @@ class TouristicData extends AbstractImport
                         $insuranceToinsurance->delete();
                         $insuranceToinsurance->create();
                     }
-                    if($touristic_object_name == 'touristic_booking_earlybirds') {
-                        $items = (isset($touristic_object->scales) && is_array($touristic_object->scales)) ? $touristic_object->scales : [];
-                        if(!isset($touristic_object->name)) {
-                            $touristic_object->name = $touristic_object->import_code;
-                        }
-                        unset($touristic_object->id_date);
-                        unset($touristic_object->import_code);
-                        unset($touristic_object->scales);
-                        foreach ($items as $item) {
-                            $new_item = new Item();
-                            $item->id_early_bird_discount_group = $touristic_object->id;
-                            unset($item->id_booking_package);
-                            unset($item->id_media_object);
-                            $new_item->fromStdClass($item);
-                            $new_item->create();
-                        }
-                        /*$touristic_object->id_early_bird_discount_group = md5($touristic_object->id_booking_package);
-                        unset($touristic_object->id_booking_package);
-                        unset($touristic_object->id_media_object);*/
-
-                    }
                     if($touristic_object_name == 'touristic_option_discounts') {
                         unset($touristic_object->import_code);
                     }

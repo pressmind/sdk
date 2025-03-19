@@ -6,6 +6,7 @@ use Pressmind\DB\Adapter\Pdo;
 use Pressmind\Import\Agency;
 use Pressmind\Import\Brand;
 use Pressmind\Import\CategoryTree;
+use Pressmind\Import\EarlyBird;
 use Pressmind\Import\ImportInterface;
 use Pressmind\Import\Itinerary;
 use Pressmind\Import\ManualCheapestPrice;
@@ -357,6 +358,9 @@ class Import
                     $this->_errors[] = 'Error in agency import. See log "agency_import" for details';
                 }
             }
+
+            $early_bird_importer = new EarlyBird();
+            $early_bird_importer->import();
 
             $brands_importer = new Brand();
             $brands_importer->import();

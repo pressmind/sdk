@@ -32,6 +32,7 @@ class CalendarFilter
             'duration',
             'airport',
             'startingpoint_id_city',
+            'housing_package_id_name',
             'agency'
         ];
         foreach ($params as $param) {

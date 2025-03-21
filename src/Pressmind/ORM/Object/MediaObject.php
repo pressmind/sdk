@@ -1033,8 +1033,9 @@ class MediaObject extends AbstractObject
                 (empty($filters->id_housing_package) || $filters->id_housing_package == $document->housing_package->id) &&
                 (empty($filters->airport) || $filters->airport == $document->airport) &&
                 (empty($filters->housing_package_code_ibe) || $filters->housing_package_code_ibe == $document->housing_package->code_ibe) &&
-                (empty($filters->startingpoint_id_city) || $filters->startingpoint_id_city == $document->startingpoint_id_city)
-            ) {
+                (empty($filters->startingpoint_id_city) || $filters->startingpoint_id_city == $document->startingpoint_id_city) &&
+                (empty($filters->housing_package_id_name) || $filters->housing_package_id_name == $document->housing_package_id_name)
+            ){
                 $filtered_documents[] = $document;
             }
         }
@@ -1332,6 +1333,7 @@ class MediaObject extends AbstractObject
             foreach ($booking_packages as $booking_package) {
                 self::$_insert_cheapest_price_log[$this->id][] = 'current booking_package id = '.$booking_package->id.', price_mix = '.$booking_package->price_mix;
                 foreach ($booking_package->dates as $date) {
+                    $calculated_earlybirds = [];
                     if(($travel_date_orientation == 'departure' && $date->departure < $now) ||
                         ($travel_date_orientation == 'arrival' && $date->arrival < $now) ||
                         ($travel_date_orientation == 'arrival' && $date->arrival > $max_date) ||
@@ -1468,6 +1470,19 @@ class MediaObject extends AbstractObject
                                     if(!empty($early_bird_discount->booking_date_to)){
                                         $early_bird_discount->booking_date_to->setTime('23', '59', '59');
                                     }
+
+                                    /**
+                                     * Prevent ugly duplicates
+                                     */
+                                    $checksum_earlybird_stdClass = $early_bird_discount->toStdClass();
+                                    unset($checksum_earlybird_stdClass->id);
+                                    unset($checksum_earlybird_stdClass->id_early_bird_discount_group);
+                                    $checksum_earlybird = serialize($checksum_earlybird_stdClass);
+                                    if(in_array($checksum_earlybird, $calculated_earlybirds)){
+                                        continue;
+                                    }
+                                    $calculated_earlybirds[] = $checksum_earlybird;
+
                                     if (!is_null($transport_pair) && isset($transport_pair['way1'])) {
                                         $transport_price = $transport_pair['way1']->price + (isset($transport_pair['way2']) ? $transport_pair['way2']->price : 0);
                                         if ($transport_pair['way1']->use_earlybird) {

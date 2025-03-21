@@ -13,6 +13,7 @@ class CalendarFilter
     public $duration = null;
     public $airport = null;
     public $startingpoint_id_city = null;
+    public $housing_package_id_name = null;
     public $agency = null;
 
     /**

@@ -1050,9 +1050,6 @@ class MediaObject extends AbstractObject
         $result->calendar->booking_package->created = null;
         $BookingPackage->fromStdClass($result->calendar->booking_package);
         $result->calendar->booking_package = $BookingPackage;
-        $HousingPackage = new Touristic\Housing\Package();
-        $HousingPackage->fromStdClass($result->calendar->housing_package);
-        $result->calendar->housing_package = $HousingPackage;
         foreach ($result->calendar->month as $k => $departure) {
             foreach ($departure->days as $k1 => $day) {
                 $result->calendar->month[$k]->days[$k1]->date = new \DateTime($day->date);

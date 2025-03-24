@@ -913,7 +913,7 @@ class MediaObject extends AbstractObject
             if (!empty($document->housing_package->id) && !in_array($document->housing_package->id, $filter['durations'][$document->booking_package->duration]['id_housing_packages'])) {
                 $filter['durations'][$document->booking_package->duration]['id_housing_packages'][] = $document->housing_package->id;
             }
-            if (!empty($document->housing_package_id_name) && !in_array($document->housing_package->id, $filter['durations'][$document->booking_package->duration]['housing_package_id_names'])) {
+            if (!empty($document->housing_package_id_name) && !in_array($document->housing_package_id_name, $filter['durations'][$document->booking_package->duration]['housing_package_id_names'])) {
                 $filter['durations'][$document->booking_package->duration]['housing_package_id_names'][] = $document->housing_package_id_name;
             }
             if (!empty($document->housing_package->id) && !isset($filter['id_housing_packages'][$document->housing_package->id])) {

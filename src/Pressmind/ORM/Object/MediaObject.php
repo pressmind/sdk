@@ -1474,6 +1474,7 @@ class MediaObject extends AbstractObject
                                     /**
                                      * Prevent ugly duplicates
                                      */
+                                    /**
                                     $checksum_earlybird_stdClass = $early_bird_discount->toStdClass();
                                     unset($checksum_earlybird_stdClass->id);
                                     unset($checksum_earlybird_stdClass->id_early_bird_discount_group);
@@ -1482,6 +1483,7 @@ class MediaObject extends AbstractObject
                                         continue;
                                     }
                                     $calculated_earlybirds[] = $checksum_earlybird;
+                                    */
 
                                     if (!is_null($transport_pair) && isset($transport_pair['way1'])) {
                                         $transport_price = $transport_pair['way1']->price + (isset($transport_pair['way2']) ? $transport_pair['way2']->price : 0);

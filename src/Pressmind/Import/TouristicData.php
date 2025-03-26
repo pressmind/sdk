@@ -73,7 +73,9 @@ class TouristicData extends AbstractImport
         $this->_log[] = ' Importer::_importMediaObjectTouristicData(' . $id_media_object . '): parsing touristic data';
         $linked_media_object_ids = [];
         $touristic_data_to_import = [];
-        unset($data['touristic_housing_packages_description_links']); // orphaned in pm2, will be removed in pm2 soon.
+        if(isset($data->touristic_housing_packages_description_links)){
+            unset($data->touristic_housing_packages_description_links); // orphaned in pm2, will be removed in pm2 soon.
+        }
         foreach ($data as $touristic_object_name => $touristic_objects) {
             $this->_log[] = ' Importer::_importMediaObjectTouristicData(' . $id_media_object . '): Mapping ' . $touristic_object_name;
             if (is_array($touristic_objects) && count($touristic_objects) == 0) {

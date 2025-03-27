@@ -1149,6 +1149,7 @@ class Indexer extends AbstractIndex
                 $max_days = $date->format('t');
                 $query = "select * from (select date_departure,
                             date_arrival,
+                            state,
                             option_occupancy_min,
                             option_occupancy_max,
                             option_occupancy,
@@ -1189,6 +1190,7 @@ class Indexer extends AbstractIndex
                     $v->option_occupancy_min = (int)$v->option_occupancy_min;
                     $v->option_occupancy_max = (int)$v->option_occupancy_max;
                     $v->option_occupancy = (int)$v->option_occupancy;
+                    $v->state = (int)$v->state;
                     $v->duration = (int)$v->duration;
                     if(!isset($date_list[$v->date_departure])){
                         if($c <  5){

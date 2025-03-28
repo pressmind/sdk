@@ -31,6 +31,7 @@ class CheapestPrice
     public $id_startingpoint_option = null;
     public $startingpoint_option_name = null;
     public $startingpoint_id_city = null;
+    public $housing_package_id_name = null;
     /**
      * Leave empty for no fallback
      * @var int[] $state_fallback_order
@@ -64,7 +65,8 @@ class CheapestPrice
             'state',
             'id_startingpoint_option',
             'startingpoint_option_name',
-            'startingpoint_id_city'
+            'startingpoint_id_city',
+            'housing_package_id_name'
         ];
         foreach ($params as $param) {
             if (property_exists($this, $param) && !empty($_GET[$param])) {

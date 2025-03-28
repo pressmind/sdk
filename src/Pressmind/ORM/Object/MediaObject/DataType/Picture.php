@@ -338,15 +338,20 @@ class Picture extends AbstractObject
      */
     public function getSizes($derivativeName, $asHTMLAttributes = true) {
         $config = Registry::getInstance()->get('config');
-        $width = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'];
-        $height = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'];
-        if(true === $asHTMLAttributes) {
-            return 'width="' .$width . '" height="' . $height . '"';
+        $str = [];
+        $array = [];
+        if(!empty($config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'])) {
+            $str[] = 'width="' .$config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'] . '"';
+            $array['width'] = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_width'];
         }
-        return [
-            'width' => $width,
-            'height' => $height
-        ];
+        if(!empty($config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'])) {
+            $str[] = 'height="' .$config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'] . '"';
+            $array['height'] = $config['image_handling']['processor']['derivatives'][$derivativeName]['max_height'];
+        }
+        if($asHTMLAttributes === true) {
+            return implode(' ', $str);
+        }
+        return $array;
     }
 
     /**

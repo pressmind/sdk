@@ -249,6 +249,9 @@ class Calendar extends AbstractIndex
         if(!empty($item['transport_type'])) {
           $filter->transport_types = [$item['transport_type']];
         }
+        if(!empty($agency)){
+            $filter->agency = $agency;
+        }
         $offers = $this->mediaObject->getCheapestPrices($filter, ['date_departure' => 'ASC', 'price_total' => 'ASC']);
         if(empty($offers)){
           continue;

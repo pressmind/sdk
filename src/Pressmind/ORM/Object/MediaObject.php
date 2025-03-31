@@ -958,7 +958,7 @@ class MediaObject extends AbstractObject
             }
             if (!empty($document->housing_package_id_name)) {
                 if (!isset($filter['housing_package_id_names'][$document->housing_package_id_name])) {
-                    $filter['housing_package_id_names'][$document->housing_package_id_name] = ['durations' => [], 'transport_types' => [], 'occupancies' => [], 'airports' => []];
+                    $filter['housing_package_id_names'][$document->housing_package_id_name] = ['durations' => [], 'transport_types' => [], 'occupancies' => [], 'airports' => [], 'startingpoint_id_cities' => []];
                 }
                 if (!empty($document->occupancy) && !in_array($document->occupancy, $filter['housing_package_id_names'][$document->housing_package_id_name]['occupancies'])) {
                     $filter['housing_package_id_names'][$document->housing_package_id_name]['occupancies'][] = $document->occupancy;

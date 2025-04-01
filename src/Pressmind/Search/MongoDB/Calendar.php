@@ -246,6 +246,7 @@ class Calendar extends AbstractIndex
         $filter->startingpoint_id_city = $item['startingpoint_id_city'];
         $filter->housing_package_id_name = $item['housing_package_id_name'];
         $filter->state = null;
+        $filter->transport_1_airport = $item['transport_1_airport'];
         if(!empty($item['transport_type'])) {
           $filter->transport_types = [$item['transport_type']];
         }

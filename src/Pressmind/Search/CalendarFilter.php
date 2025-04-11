@@ -6,7 +6,6 @@ class CalendarFilter
 {
     public $id = null;
     public $id_booking_package = null;
-    public $id_housing_package = null;
     public $housing_package_code_ibe = null;
     public $occupancy = null;
     public $transport_type = null;
@@ -25,7 +24,6 @@ class CalendarFilter
         $params = [
             'id',
             'id_booking_package',
-            'id_housing_package',
             'housing_package_code_ibe',
             'occupancy',
             'transport_type',

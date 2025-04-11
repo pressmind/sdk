@@ -315,7 +315,7 @@ class Calendar extends AbstractIndex
               $cheapestPriceReduced->guaranteed = $date_to_cheapest_price[$current_date]->guaranteed;
               $cheapestPriceReduced->saved = $date_to_cheapest_price[$current_date]->saved;
               $cheapestPriceReduced->id_option = $date_to_cheapest_price[$current_date]->id_option;
-              $cheapestPriceReduced->earlybird_discount_date_to = $date_to_cheapest_price[$current_date]->earlybird_discount_date_to;
+              $cheapestPriceReduced->earlybird_discount_date_to = !empty($date_to_cheapest_price[$current_date]->earlybird_discount_date_to) ? $date_to_cheapest_price[$current_date]->earlybird_discount_date_to->format(DATE_RFC3339_EXTENDED) : null;
               $cheapestPriceReduced->earlybird_discount = $date_to_cheapest_price[$current_date]->earlybird_discount;
               $cheapestPriceReduced->earlybird_discount_f = $date_to_cheapest_price[$current_date]->earlybird_discount_f;
               $cheapestPriceReduced->earlybird_name = $date_to_cheapest_price[$current_date]->earlybird_name;

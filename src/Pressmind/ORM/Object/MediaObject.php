@@ -1009,7 +1009,37 @@ class MediaObject extends AbstractObject
         if (count($filtered_documents) == 0) {
             return $result;
         }
-        $result->calendar = $filtered_documents[0];
+        $merged_calendar_object = null;
+        foreach($filtered_documents as $document) {
+          if(empty($merged_calendar_object)) {
+            $merged_calendar_object = clone $document;
+            $merged_calendar_object->month = [];
+          }
+          foreach($document->month as $month) {
+            $month_key = $month->year . '-' . $month->month;
+            if(empty($merged_calendar_object->month[$month_key])) {
+              $merged_calendar_object->month[$month_key] = $month;
+            } else {
+              foreach($month->days as $key => $day) {
+                $existing_day = !empty($merged_calendar_object->month[$month_key]->days[$key]) ? $merged_calendar_object->month[$month_key]->days[$key] : null;
+                if(!empty($existing_day->cheapest_price)) {
+                  if(!empty($day->cheapest_price)) {
+                    if($existing_day->cheapest_price->price_total > $day->cheapest_price->price_total) {
+                      $merged_calendar_object->month[$month_key]->days[$key]->cheapest_price = $day->cheapest_price;
+                    }
+                  }
+                } else {
+                  $merged_calendar_object->month[$month_key]->days[$key] = $day;
+                  if(!empty($day->cheapest_price)) {
+                    $merged_calendar_object->bookable_date_count ++;
+                  }
+                }
+              }
+            }
+          }
+        }
+        $merged_calendar_object->month = array_values($merged_calendar_object->month);
+        $result->calendar = $merged_calendar_object;
         $BookingPackage = new Package();
         $result->calendar->booking_package->created = null;
         $BookingPackage->fromStdClass($result->calendar->booking_package);

@@ -262,14 +262,17 @@ class Calendar extends AbstractIndex
          */
         $date_to_cheapest_price = [];
         foreach($offers as $offer){
-          // if the date has multiple prices, display only the cheapest
           if (!empty($date_to_cheapest_price[$offer->date_departure->format('Y-m-d')]) &&
-            $offer->price_total < $date_to_cheapest_price[$offer->date_departure->format('Y-m-d')]->price_total
+              (
+                $offer->price_total < $date_to_cheapest_price[$offer->date_departure->format('Y-m-d')]->price_total ||
+                (
+                    $offer->price_total == $date_to_cheapest_price[$offer->date_departure->format('Y-m-d')]->price_total &&
+                    array_search($offer->state, CheapestPrice::STATE_ORDER_BY_PRIO) < array_search($date_to_cheapest_price[$offer->date_departure->format('Y-m-d')]->state, CheapestPrice::STATE_ORDER_BY_PRIO)
+                )
+              )
           ) {
-            // set the cheapier price
             $date_to_cheapest_price[$offer->date_departure->format('Y-m-d')] = $offer;
-          } elseif (empty($date_to_cheapest_price[$offer->date_departure->format('Y-m-d')])
-          ){
+          } elseif (empty($date_to_cheapest_price[$offer->date_departure->format('Y-m-d')])){
             $date_to_cheapest_price[$offer->date_departure->format('Y-m-d')] = $offer;
           }
         }

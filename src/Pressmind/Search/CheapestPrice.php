@@ -9,6 +9,12 @@ class CheapestPrice
     const STATE_BOOKABLE = 3;
     const STATE_REQUEST = 1;
     const STATE_STOP = 5;
+    const STATE_ORDER_BY_PRIO = [
+        self::STATE_BOOKABLE,
+        self::STATE_REQUEST,
+        self::STATE_STOP,
+    ];
+
     public $id = null;
     public $duration_from = null;
     public $duration_to = null;

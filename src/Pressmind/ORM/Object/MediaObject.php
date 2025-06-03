@@ -1003,19 +1003,7 @@ class MediaObject extends AbstractObject
                 $filtered_documents[] = $document;
             }
         }
-        function clearSingleElementArrays(&$data) {
-          if (!is_array($data)) {
-            return;
-          }
-          foreach ($data as $key => &$value) {
-            if ($key === 'housing_package_id_names' && is_array($value) && count($value) === 1) {
-              $value = [];
-            } elseif (is_array($value)) {
-              clearSingleElementArrays($value);
-            }
-          }
-        }
-        clearSingleElementArrays($filter);
+        $this->_removeUnnecessaryHousingPackageIdNames($filter);
         $result = new stdClass();
         $result->filter = $filter;
         $result->calendar = null;
@@ -1095,6 +1083,22 @@ class MediaObject extends AbstractObject
         return $result;
     }
 
+    /**
+     * @param $data
+     * @return void
+     */
+    private function _removeUnnecessaryHousingPackageIdNames(&$data) {
+        if (!is_array($data)) {
+            return;
+        }
+        foreach ($data as $key => &$value) {
+            if ($key === 'housing_package_id_names' && is_array($value) && count($value) === 1) {
+                $value = [];
+            } elseif (is_array($value)) {
+                $this->_removeUnnecessaryHousingPackageIdNames($value);
+            }
+        }
+    }
 
     /**
      * @return string[]

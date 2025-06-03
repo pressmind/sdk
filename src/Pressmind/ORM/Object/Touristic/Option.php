@@ -48,7 +48,7 @@ use Pressmind\ORM\Object\Touristic\Option\Discount;
  * @property integer $age_from
  * @property integer $age_to
  * @property string $selection_type
- * @property integer $use_earlybird
+ * @property boolean $use_earlybird
  * @property string $request_code
  * @property string $price_group
  * @property string $product_group

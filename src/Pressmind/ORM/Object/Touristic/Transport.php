@@ -23,6 +23,7 @@ use Pressmind\System\I18n;
  * @property integer $state
  * @property integer $quota
  * @property string $code_ibe
+ * @property string $request_code
  * @property integer $auto_book
  * @property integer $required
  * @property string $required_group
@@ -43,6 +44,7 @@ use Pressmind\System\I18n;
  * @property string $time_arrival
  * @property Discount $discount
  * @property string $agencies
+ * @property string $crs_meta_data
  */
 class Transport extends AbstractObject
 {
@@ -282,6 +284,19 @@ class Transport extends AbstractObject
                 ],
                 'filters' => NULL,
             ],
+            'request_code' => [
+                'title' => 'request_code',
+                'name' => 'request_code',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 25,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
             'auto_book' => [
                 'title' => 'Auto_book',
                 'name' => 'auto_book',
@@ -479,6 +494,14 @@ class Transport extends AbstractObject
                 'title' => 'agencies',
                 'name' => 'agencies',
                 'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'crs_meta_data' => [
+                'title' => 'crs_meta_data',
+                'name' => 'crs_meta_data',
+                'type' => 'longtext',
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,

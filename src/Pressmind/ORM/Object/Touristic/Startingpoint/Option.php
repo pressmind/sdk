@@ -40,6 +40,7 @@ use Pressmind\ORM\Object\Touristic\Startingpoint\Option\ZipRange;
  * @property string $pickup_service_street
  * @property string $pickup_service_house_number
  * @property boolean $price_per_day
+ * @property string $code_pickup_service_destination
  */
 class Option extends AbstractObject
 {
@@ -369,6 +370,14 @@ class Option extends AbstractObject
                 'title' => 'price_per_day',
                 'name' => 'price_per_day',
                 'type' => 'boolean',
+                'required' => false,
+                'validators' => null,
+                'filters' => NULL,
+            ],
+            'code_pickup_service_destination' => [
+                'title' => 'code_pickup_service_destination',
+                'name' => 'code_pickup_service_destination',
+                'type' => 'string',
                 'required' => false,
                 'validators' => null,
                 'filters' => NULL,

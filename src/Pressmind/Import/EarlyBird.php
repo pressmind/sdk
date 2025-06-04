@@ -24,7 +24,7 @@ class EarlyBird extends AbstractImport implements ImportInterface
             $this->_checkApiResponse($response);
             $earlybird_group_ids = [];
             $earlybird_group_item_ids = [];
-            if (isset($response->result) && is_array($response->result)) {
+            if (!empty($response->result) && is_array($response->result)) {
                 foreach ($response->result as $result) {
                     try {
                         if(empty($result->scales)){

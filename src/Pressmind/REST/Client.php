@@ -48,7 +48,8 @@ class Client
             $config = Registry::getInstance()->get('config');
             if(isset($config['rest']) && is_array($config['rest'])) {
                 if(!empty($config['rest']['client']['api_endpoint_overwrite_default'])){
-                    $this->_api_endpoint = $config['rest']['client']['api_endpoint_overwrite_default'];
+                    trigger_error('The config option rest.client.api_endpoint_overwrite_default is deprecated and will be removed in a future version. 
+                    Please use rest.client.api_endpoint instead. Current endpoint is: '.$this->_api_endpoint, E_USER_NOTICE);
                 }
                 $this->_api_key = $config['rest']['client']['api_key'];
                 $this->_api_user = $config['rest']['client']['api_user'];

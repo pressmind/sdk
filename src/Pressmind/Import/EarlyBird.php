@@ -19,6 +19,8 @@ class EarlyBird extends AbstractImport implements ImportInterface
     public function import()
     {
         $client = new Client();
+        $today = new \DateTime();
+        $today->setTime(0, 0, 0);
         try {
             $response = $client->sendRequest('EarlyBird', 'search');
             $this->_checkApiResponse($response);
@@ -36,6 +38,12 @@ class EarlyBird extends AbstractImport implements ImportInterface
                         $EarlyBirdGroup->create();
                         $earlybird_group_ids[] = $EarlyBirdGroup->getId();
                         foreach($result->scales as $scale){
+                            if($scale->travel_date_to <  $today){
+                                continue;
+                            }
+                            if($scale->booking_date_to <  $today){
+                                continue;
+                            }
                             $Item = new EarlyBirdDiscountGroup\Item();
                             $Item->id = $scale->id;
                             $Item->id_early_bird_discount_group = $EarlyBirdGroup->getId();
@@ -49,6 +57,9 @@ class EarlyBird extends AbstractImport implements ImportInterface
                             $Item->early_payer = $scale->early_payer;
                             $Item->create();
                             $earlybird_group_item_ids[] = $Item->getId();
+                        }
+                        if(empty($earlybird_group_item_ids)){
+                            $EarlyBirdGroup->delete();
                         }
                     } catch (Exception $e) {
                         $this->_errors[] = $e->getMessage();

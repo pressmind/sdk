@@ -359,9 +359,6 @@ class Import
                 }
             }
 
-            $early_bird_importer = new EarlyBird();
-            $early_bird_importer->import();
-
             $brands_importer = new Brand();
             $brands_importer->import();
 
@@ -381,6 +378,8 @@ class Import
 
             if(false == $disable_touristic_data_import) {
                 $db = Registry::getInstance()->get('db');
+                $early_bird_importer = new EarlyBird();
+                $early_bird_importer->import();
                 $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Deleting CheapestPriceSpeed entries';
                 $db->delete('pmt2core_cheapest_price_speed', ['id_media_object = ?', $media_object->id]);
                 $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Inserting CheapestPriceSpeed entries';
@@ -647,8 +646,8 @@ class Import
                     }
                 }
             }
-        }
-        $image_processor_path = APPLICATION_PATH . '/cli/image_processor.php' . (empty($id_media_object) ? '' : ' mediaobject ' . implode(',',$id_media_object));
+        }        $image_processor_path = APPLICATION_PATH . '/cli/image_processor.php' . (empty($id_media_object) ? '' : ' mediaobject ' . implode(',',$id_media_object));
+
         $php_binary = isset($config['server']['php_cli_binary']) && !empty($config['server']['php_cli_binary']) ? $config['server']['php_cli_binary'] : 'php';
         if(php_sapi_name() === 'cli' && !file_exists($php_binary)) {
             throw new Exception('can not run post import scripts, php binary not found at "' . $php_binary. '", check pm-config.php');

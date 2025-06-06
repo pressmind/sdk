@@ -96,11 +96,14 @@ class Query
             $result = $search->getResult(true, false, $QueryFilter->ttl_search, $QueryFilter->output, $QueryFilter->preview_date, $QueryFilter->allowed_visibilities);
             $end_time = microtime(true);
             $duration_search_ms = ($end_time - $start_time) * 1000;
+            $item_count = 0;
             foreach ($result->documents as $document) {
                 $document = json_decode(json_encode($document), true);
                 $item = (array)$document['description'];
                 $item['id_media_object'] = $document['id_media_object'];
                 $item['id_object_type'] = $document['id_object_type'];
+                $item_count++;
+                $item['position'] = (($result->currentPage - 1) * self::getPageSize()) + $item_count;
                 $item['url'] = $document['url'];
                 $item['recommendation_rate'] = !empty($document['recommendation_rate']) ? $document['recommendation_rate'] : null;
                 $item['is_running'] = empty($document['is_running'])  ? false : true;
@@ -705,15 +708,28 @@ class Query
             self::$agency_id_price_index
         );
         if($paginator){ // @TODO this needs a refactoring
-            $page = 0;
-            //$page_size = 10;
+            self::$page  = 0;
             if (isset($request[$prefix.'-l']) === true && preg_match('/^([0-9]+)\,([0-9]+)$/', $request[$prefix.'-l'], $m) > 0) {
-                $page = intval($m[1]);
-                $page_size = intval($m[2]);
+                self::$page = intval($m[1]);
+                self::$page_size = intval($m[2]);
             }
-            $Search->setPaginator(Paginator::create($page_size, $page));
+            $Search->setPaginator(Paginator::create(self::$page_size, self::$page));
         }
         return $Search;
+    }
+
+    /**
+     * @return int
+     */
+    public static function getCurrentPage(){
+        return self::$page;
+    }
+
+    /**
+     * @return int
+     */
+    public static function getPageSize(){
+        return self::$page_size;
     }
 
     /**

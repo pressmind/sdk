@@ -274,23 +274,29 @@ class Import
         $import_error = false;
 
         if (is_array($response) && count($response) > 0) {
-
             $this->_start_time = microtime(true);
-
             $current_object = new ORM\Object\MediaObject($id_media_object, false, true);
-
             $disable_touristic_data_import = (isset($config['data']['touristic']['disable_touristic_data_import']) && in_array($response[0]->id_media_objects_data_type, $config['data']['touristic']['disable_touristic_data_import']));
-
             if(false == $disable_touristic_data_import) {
                 foreach($current_object->booking_packages as $booking_package) {
                     $booking_package->delete(true);
                 }
             }
-
             $current_object->delete(true);
 
-            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): parsing data', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+            if(!empty($response[0]->insurance_group) && is_a($response[0]->insurance_group, 'stdClass')) {
+                Writer::write('import insurances from main media_object (alternative booking tab in pm)', WRITER::OUTPUT_SCREEN, 'media_object_insurance_import', WRITER::TYPE_INFO);
+                $tmpObject = new \stdClass();
+                $tmpObject->touristic_insurance_groups = !empty($response[0]->insurance_group->insurance_groups) ? $response[0]->insurance_group->insurance_groups : [];
+                $tmpObject->touristic_insurance_to_group = !empty($response[0]->insurance_group->insurance_to_group) ? $response[0]->insurance_group->insurance_to_group : [];
+                $tmpObject->touristic_insurances = !empty($response[0]->insurance_group->insurances) ? $response[0]->insurance_group->insurances : [];
+                $tmpObject->touristic_insurances_to_price_table = !empty($response[0]->insurance_group->insurances_to_price_table) ? $response[0]->insurance_group->insurances_to_price_table : [];
+                $tmpObject->touristic_insurances_price_tables = !empty($response[0]->insurance_group->insurances_price_tables) ? $response[0]->insurance_group->insurances_price_tables : [];
+                $touristic_data_importer = new TouristicData();
+                $touristic_data_importer->import($tmpObject, $id_media_object, $this->_import_type);
+            }
 
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): parsing data', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             if (is_a($response[0]->touristic, 'stdClass') && false == $disable_touristic_data_import) {
                 $touristic_data_importer = new TouristicData();
                 $touristic_data_importer_result = $touristic_data_importer->import($response[0]->touristic, $id_media_object, $this->_import_type);

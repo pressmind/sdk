@@ -110,7 +110,13 @@ class Client
             $debug_str = '== DEBUG =='."\n";
             $debug_str .= $this->_api_user . ":" . $this->_api_password."\n";
             $debug_str .= $this->_api_endpoint . $this->_api_key . '/' . $controller . '/' . $action . $get_params."\n";
-            $debug_str .= $response."\n";
+            if(strlen($response) > 60000) {
+                $debug_str .= 'Response is too long, saving to file...'."\n";
+                file_put_contents('/tmp/restclient_response_' . time() . '.json', json_encode(json_decode($response), JSON_PRETTY_PRINT));
+                $debug_str .= 'Response is too long, saved to /tmp/restclient_response_' . time() . '.json'."\n";
+            } else{
+                $debug_str .= $response."\n";
+            }
             $debug_str .= '== DEBUG END =='."\n";
             Writer::write($debug_str, Writer::OUTPUT_SCREEN, 'restclient', Writer::TYPE_INFO);
         }

@@ -323,44 +323,19 @@
         "bucket": "WEBSERVER_DOCUMENT_ROOT/assets/images",
         "credentials": {}
       },
-      "http_src": "WEBSERVER_HTTP/assets/images"
-    },
-    "scheduled_tasks": [
-      {
-        "name": "Log Clean Up",
-        "class_name": "\\Pressmind\\Log\\Service",
-        "schedule": {
-          "type": "Daily",
-          "time": "Fixed",
-          "value": "23:30",
-          "max_running_time_in_minutes": 1440
-        },
-        "methods": [
-          {
-            "method": "cleanUp",
-            "parameters": null,
-            "position": 1
-          }
-        ]
+      "EXAMPLE_storage": {
+        "provider": "S3",
+        "bucket": "pressmind",
+        "region": "eu-west-1",
+        "version" : "latest",
+        "endpoint" : "",
+        "credentials": {
+          "key" : "",
+          "secret" : ""
+        }
       },
-      {
-        "name": "Cache Clean Up",
-        "class_name": "\\Pressmind\\Cache\\Service",
-        "schedule": {
-          "type": "Minutely",
-          "time": "Period",
-          "value": "5",
-          "max_running_time_in_minutes": 1440
-        },
-        "methods": [
-          {
-            "method": "cleanUp",
-            "parameters": null,
-            "position": 1
-          }
-        ]
-      }
-    ]
+      "http_src": "WEBSERVER_HTTP/assets/images"
+    }
   },
   "testing": [],
   "production": []

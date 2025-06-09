@@ -29,11 +29,16 @@ class S3 implements ProviderInterface
     public function __construct($storage)
     {
         $config = Registry::getInstance()->get('config');
-        $this->_s3_client = new S3Client([
+        $clientSetup = [
             'version' => $storage['version'],
             'region' => $storage['region'],
             'credentials' => $storage['credentials']
-        ]);
+        ];
+        if (!empty($storage['endpoint'])) {
+            $clientSetup['endpoint'] = $storage['endpoint'];
+            $clientSetup['use_path_style_endpoint'] = true;
+        }
+        $this->_s3_client = new S3Client($clientSetup);
     }
 
     /**
@@ -53,7 +58,7 @@ class S3 implements ProviderInterface
                 'ContentType' => $file->getMimetype(),
                 'ACL' => 'public-read'
             ]);
-        } catch (S3Exception $e) {
+        } catch (Exception $e) {
             Writer::write($e->getMessage(), Writer::OUTPUT_FILE, $this->_log_file_name, Writer::TYPE_ERROR);
         }
     }
@@ -78,11 +83,32 @@ class S3 implements ProviderInterface
     }
 
     /**
-     * @TODO
      * @param Bucket $bucket
      * @return bool
      */
     public function deleteAll($bucket){
+        try {
+            $result = $this->_s3_client->listObjectsV2([
+                'Bucket' => $bucket->name
+            ]);
+            if (empty($result['Contents'])) {
+                return true; // No objects to delete
+            }
+            $objects = [];
+            foreach ($result['Contents'] as $content) {
+                $objects[] = ['Key' => $content['Key']];
+            }
+            $result = $this->_s3_client->deleteObjects([
+                'Bucket' => $bucket->name,
+                'Delete' => [
+                    'Objects' => $objects,
+                    'Quiet' => true
+                ]
+            ]);
+        } catch (Exception $e) {
+            Writer::write($e->getMessage(), Writer::OUTPUT_FILE, $this->_log_file_name, Writer::TYPE_ERROR);
+            return false;
+        }
         return true;
     }
 
@@ -114,7 +140,6 @@ class S3 implements ProviderInterface
     }
 
     /**
-     * TODO: AI generated, not tested
      * @param $file
      * @param $bucket
      * @return int

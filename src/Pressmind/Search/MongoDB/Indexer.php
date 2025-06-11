@@ -1231,7 +1231,7 @@ class Indexer extends AbstractIndex
                      id_media_object = :id_media_object 
                      AND id_origin = :id_origin ".(
             empty($agency) ? "" : " AND agency = :agency")."
-                   GROUP BY duration ORDER BY price_total";
+                   GROUP BY duration, transport_type ORDER BY price_total";
         $values = [
             ':id_media_object' => $this->mediaObject->id,
             ':id_origin' => $origin,

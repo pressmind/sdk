@@ -241,6 +241,9 @@ class MongoDB extends AbstractSearch
         $query = $this->buildQuery($output, $preview_date, $allowed_visibilities);
         try{
             $result = $collection->aggregate($query, ['allowDiskUse' => true])->toArray()[0];
+            if(!isset($result->documents)){
+                $result->documents = [];
+            }
             // avoid $facet limit
             $ids = [];
             foreach ($result->documents as $document) {
@@ -870,6 +873,9 @@ class MongoDB extends AbstractSearch
                     'is_running' => 1
                 ]
             ];
+            if($this->_return_filters_only === true){
+                unset($project['$project']['documents']);
+            }
         } else { // stage n, if we don't need the filter, we use just the required methods
             $facetStage = [
                 '$facet' => [

@@ -12,6 +12,7 @@ use Pressmind\Import\Itinerary;
 use Pressmind\Import\ManualCheapestPrice;
 use Pressmind\Import\MediaObjectCheapestPrice;
 use Pressmind\Import\MediaObjectData;
+use Pressmind\Import\MediaObjectDiscount;
 use Pressmind\Import\MediaObjectType;
 use Pressmind\Import\MyContent;
 use Pressmind\Import\Port;
@@ -345,6 +346,9 @@ class Import
                 $manual_cheapest_price_importer = new ManualCheapestPrice($response[0]->cheapest_prices);
                 $manual_cheapest_price_importer->import();
             }
+
+            $discount_importer = new MediaObjectDiscount();
+            $discount_importer->import($response[0]->discounts, $id_media_object, $this->_import_type);
 
             if(is_array($response[0]->my_contents_to_media_object)) {
                 $my_content_importer = new MyContent($response[0]->my_contents_to_media_object);

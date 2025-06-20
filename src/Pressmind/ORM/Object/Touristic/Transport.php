@@ -13,7 +13,7 @@ use Pressmind\System\I18n;
  * @property string $id_date
  * @property integer $id_media_object
  * @property string $id_booking_package
- * @property integer $id_early_bird_discount_group
+ * @property integer $id_early_bird_discount_group // deprecated, use date.id_early_bird_discount_group relation instead
  * @property string $code
  * @property string $description
  * @property string $type

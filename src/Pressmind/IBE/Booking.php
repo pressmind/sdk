@@ -377,13 +377,14 @@ class Booking
     /**
      * @return \Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup|null
      */
-    public function getEarlyBird(){
+    public function getEarlyBird($agency = null){
         $group = null;
         if(empty($this->date->early_bird_discount_group)){
             return $group;
         }
         $MediaObject = new MediaObject();
-        $item = $MediaObject->getEarlyBirdDiscount($this->date->early_bird_discount_group->items, $this->date);
+
+        $item = $MediaObject->getEarlyBirdDiscount($this->date->getEarlybirds($agency), $this->date);
         if(!empty($item)){
             $group = $this->date->early_bird_discount_group->toStdClass();
             $group->items = [$item->toStdClass()];

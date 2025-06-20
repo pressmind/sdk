@@ -256,7 +256,7 @@ class Ibe
 
         $result['housing_packages'] = $this->filterValidHousingPackages($housing_packages, $date->departure);
         $result['option_discounts'] = $this->getOptionDiscounts($housing_packages, $date->departure);
-        $result['earlybird'] = $booking->getEarlyBird();
+        $result['earlybird'] = $booking->getEarlyBird($ida);
         $result['extras'] = $booking->calculateExtras($extras, $booking->getBookingPackage()->duration, $housing_packages[0]->nights);
         $result['id_ibe'] = $booking->getBookingPackage()->ibe_type;
         $result['code_ibe'] = is_null($booking->getHousingPackage()) ? null : $booking->getHousingPackage()->code_ibe;

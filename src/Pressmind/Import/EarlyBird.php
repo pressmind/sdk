@@ -6,6 +6,7 @@ namespace Pressmind\Import;
 
 use Exception;
 use Pressmind\DB\Adapter\Pdo;
+use Pressmind\HelperFunctions;
 use Pressmind\ORM\Object\Touristic\Date;
 use Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup;
 use Pressmind\Registry;
@@ -37,25 +38,31 @@ class EarlyBird extends AbstractImport implements ImportInterface
                         $EarlyBirdGroup->id = $result->id;
                         $EarlyBirdGroup->name = empty($result->name) ? $result->import_code : $result->name;
                         $EarlyBirdGroup->create();
+                        $earlybird_group_item_ids = [];
                         foreach($result->scales as $scale){
-                            if($scale->travel_date_to <  $today){
+                            $travel_date_to = !empty($scale->travel_date_to) ? new \DateTime($scale->travel_date_to. ' 00:00:00') : null;
+                            $booking_date_to = !empty($scale->booking_date_to) ? new \DateTime($scale->booking_date_to.' 00:00:00') : null;
+                            $travel_date_from = !empty($scale->travel_date_from) ? new \DateTime($scale->travel_date_from.' 00:00:00') : null;
+                            $booking_date_from = !empty($scale->booking_date_from) ? new \DateTime($scale->booking_date_from.' 00:00:00') : null;
+                            if(is_a($travel_date_to, 'DateTime') && $travel_date_to < $today){
                                 continue;
                             }
-                            if($scale->booking_date_to <  $today){
+                            if(is_a($booking_date_to, 'DateTime') && $booking_date_to < $today){
                                 continue;
                             }
                             $Item = new EarlyBirdDiscountGroup\Item();
                             $Item->id = $scale->id;
                             $Item->id_early_bird_discount_group = $EarlyBirdGroup->getId();
-                            $Item->travel_date_from = $scale->travel_date_from;
-                            $Item->travel_date_to = $scale->travel_date_to;
-                            $Item->booking_date_from = $scale->booking_date_from;
-                            $Item->booking_date_to = $scale->booking_date_to;
+                            $Item->travel_date_from = $travel_date_from;
+                            $Item->travel_date_to = $travel_date_to;
+                            $Item->booking_date_from = $booking_date_from;
+                            $Item->booking_date_to = $booking_date_to;
                             $Item->discount_value = $scale->discount_value;
                             $Item->type = $scale->type;
                             $Item->round = $scale->round;
                             $Item->early_payer = $scale->early_payer;
                             $Item->create();
+                            $earlybird_group_item_ids[] = $Item->getId();
                         }
                         if(empty($earlybird_group_item_ids)){
                             $EarlyBirdGroup->delete();

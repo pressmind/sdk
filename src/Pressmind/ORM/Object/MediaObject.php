@@ -1623,6 +1623,9 @@ class MediaObject extends AbstractObject
                                             $cheapestPriceSpeed->earlybird_discount_date_to = $early_bird_discount->booking_date_to;
                                             $cheapestPriceSpeed->earlybird_discount_f = strtolower($early_bird_discount->type) == 'f' ? $early_bird_discount->discount_value : null;
                                             $cheapestPriceSpeed->earlybird_name = empty($date->early_bird_discount_group->name) ? 'Frühbucher' : $date->early_bird_discount_group->name;
+                                            if(!empty($early_bird_discount->name)) {
+                                                $cheapestPriceSpeed->earlybird_name = $early_bird_discount->name;
+                                            }
                                             $cheapestPriceSpeed->price_total = $cheapestPriceSpeed->price_regular_before_discount + $discount;
                                         }
                                     }

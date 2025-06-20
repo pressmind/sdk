@@ -7,6 +7,7 @@ use Exception;
 use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\Itinerary\Step;
 use Pressmind\ORM\Object\MediaObject\ManualCheapestPrice;
+use Pressmind\ORM\Object\MediaObject\ManualDiscount;
 use Pressmind\ORM\Object\MediaType\AbstractMediaType;
 use Pressmind\ORM\Object\MediaType\Factory;
 use Pressmind\DB\Adapter\Pdo;
@@ -70,6 +71,7 @@ use stdClass;
  * @property Brand $brand
  * @property Agency[] $agencies
  * @property ManualCheapestPrice[] $manual_cheapest_prices
+ * @property ManualDiscount[] $manual_discounts
  */
 class MediaObject extends AbstractObject
 {
@@ -579,6 +581,20 @@ class MediaObject extends AbstractObject
             'manual_cheapest_prices' => [
                 'title' => 'manual_cheapest_prices',
                 'name' => 'manual_cheapest_prices',
+                'type' => 'relation',
+                'relation' => [
+                    'type' => 'hasMany',
+                    'related_id' => 'id_media_object',
+                    'class' => ManualCheapestPrice::class,
+                    'filters' => null
+                ],
+                'required' => false,
+                'validators' => null,
+                'filters' => null
+            ],
+            'manual_discounts' => [
+                'title' => 'manual_discounts',
+                'name' => 'manual_discounts',
                 'type' => 'relation',
                 'relation' => [
                     'type' => 'hasMany',
@@ -1356,7 +1372,10 @@ class MediaObject extends AbstractObject
                         continue;
                     }
                     /** @var Item[] $early_bird_discounts */
-                    $early_bird_discounts = empty($date->early_bird_discount_group->items) ? [null] : $date->early_bird_discount_group->items;
+                    $early_bird_discounts = $date->getEarlybirds($agency);
+                    if(empty($early_bird_discounts)){
+                        $early_bird_discounts = [null];
+                    }
                     /** @var Transport[] $transport_pairs */
                     $transport_pairs = count($date->transports) > 0 ? $date->getTransportPairs($transport_allowed_states, [], [], null, true, $agency) : [null];
                     $options = [];
@@ -1659,8 +1678,11 @@ class MediaObject extends AbstractObject
         $now = new DateTime();
         $now->setTime(0,0,0);
         if(!is_null($discount) &&
-            (($now >= $discount->booking_date_from || is_null($discount->booking_date_from)) && $now <= $discount->booking_date_to) &&
-            ($date->departure >= $discount->travel_date_from && $date->departure <= $discount->travel_date_to)) {
+                ($now >= $discount->booking_date_from || is_null($discount->booking_date_from)) &&
+                ($now <= $discount->booking_date_to || is_null($discount->booking_date_to)) &&
+                ($date->departure >= $discount->travel_date_from || is_null($discount->travel_date_from)) &&
+                ($date->departure <= $discount->travel_date_to || is_null($discount->travel_date_to))
+        ) {
             return true;
         }
         return false;

@@ -17,6 +17,9 @@ use Pressmind\ORM\Object\AbstractObject;
  * @property string $type
  * @property boolean $round
  * @property boolean $early_payer
+ * @property string $origin
+ * @property string $agency
+ * @property string $name
  */
 class Item extends AbstractObject
 {
@@ -67,7 +70,7 @@ class Item extends AbstractObject
                 'title' => 'Travel_date_from',
                 'name' => 'travel_date_from',
                 'type' => 'datetime',
-                'required' => true,
+                'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,
             ],
@@ -75,7 +78,7 @@ class Item extends AbstractObject
                 'title' => 'Travel_date_to',
                 'name' => 'travel_date_to',
                 'type' => 'datetime',
-                'required' => true,
+                'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,
             ],
@@ -91,7 +94,7 @@ class Item extends AbstractObject
                 'title' => 'Booking_date_to',
                 'name' => 'booking_date_to',
                 'type' => 'datetime',
-                'required' => true,
+                'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,
             ],
@@ -133,6 +136,30 @@ class Item extends AbstractObject
                 'type' => 'boolean',
                 'required' => false,
                 'validators' => null,
+                'filters' => NULL,
+            ],
+            'origin' => [
+                'title' => 'origin',
+                'name' => 'origin',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'agency' => [
+                'title' => 'agency',
+                'name' => 'agency',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'name' => [
+                'title' => 'name',
+                'name' => 'name',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
                 'filters' => NULL,
             ],
         ]

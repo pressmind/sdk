@@ -6,6 +6,7 @@ namespace Pressmind\Import;
 
 use Exception;
 use Pressmind\DB\Adapter\Pdo;
+use Pressmind\ORM\Object\Touristic\Date;
 use Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup;
 use Pressmind\Registry;
 use Pressmind\REST\Client;
@@ -36,7 +37,6 @@ class EarlyBird extends AbstractImport implements ImportInterface
                         $EarlyBirdGroup->id = $result->id;
                         $EarlyBirdGroup->name = empty($result->name) ? $result->import_code : $result->name;
                         $EarlyBirdGroup->create();
-                        $earlybird_group_ids[] = $EarlyBirdGroup->getId();
                         foreach($result->scales as $scale){
                             if($scale->travel_date_to <  $today){
                                 continue;
@@ -56,16 +56,17 @@ class EarlyBird extends AbstractImport implements ImportInterface
                             $Item->round = $scale->round;
                             $Item->early_payer = $scale->early_payer;
                             $Item->create();
-                            $earlybird_group_item_ids[] = $Item->getId();
                         }
                         if(empty($earlybird_group_item_ids)){
                             $EarlyBirdGroup->delete();
+                        }else{
+                            $earlybird_group_ids[] = $EarlyBirdGroup->getId();
                         }
                     } catch (Exception $e) {
                         $this->_errors[] = $e->getMessage();
                     }
                 }
-                $this->remove_orphans($earlybird_group_ids, $earlybird_group_item_ids);
+                $this->remove_orphans($earlybird_group_ids);
             }
         } catch (Exception $e) {
             $this->_errors[] = $e->getMessage();
@@ -74,26 +75,26 @@ class EarlyBird extends AbstractImport implements ImportInterface
 
     /**
      * @param $earlybird_group_ids
-     * @param $earlybird_group_item_ids
      * @return void
      * @throws Exception
      */
-    public function remove_orphans($earlybird_group_ids, $earlybird_group_item_ids)
+    public function remove_orphans($earlybird_group_ids)
     {
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
-        if(empty($earlybird_group_ids)){
-            $earlybird_group_ids = [-1];
-        }
-        if(empty($earlybird_group_item_ids)){
-            $earlybird_group_item_ids = [-1];
-        }
         $EarlyBirdGroup = new EarlyBirdDiscountGroup();
-        $earlybird_group_ids_str = '"'.implode('","', $earlybird_group_ids).'"';
-        $db->execute('delete from '.$EarlyBirdGroup->getDbTableName().' where id not in('.$earlybird_group_ids_str.')');
-
+        $Date = new Date();
+        $sql = 'DELETE FROM '.$EarlyBirdGroup->getDbTableName().'
+                WHERE NOT EXISTS (
+                SELECT 1 FROM '.$Date->getDbTableName().' WHERE '.$Date->getDbTableName().'.id_early_bird_discount_group = '.$EarlyBirdGroup->getDbTableName().'.id)';
+        if(!empty($earlybird_group_ids)) {
+            $sql .= ' and ' . $EarlyBirdGroup->getDbTableName() . '.id not in("'.implode('","', $earlybird_group_ids).'")';
+        }
+        $db->execute($sql);
         $EarlyBirdGroupItem = new EarlyBirdDiscountGroup\Item();
-        $earlybird_group_item_str = '"'.implode('","', $earlybird_group_item_ids).'"';
-        $db->execute('delete from '.$EarlyBirdGroupItem->getDbTableName().' where id not in('.$earlybird_group_item_str.')');
+        $sql = 'DELETE FROM '.$EarlyBirdGroupItem->getDbTableName().'
+                WHERE NOT EXISTS (
+                SELECT 1 FROM '.$EarlyBirdGroup->getDbTableName().' WHERE '.$EarlyBirdGroupItem->getDbTableName().'.id_early_bird_discount_group = '.$EarlyBirdGroup->getDbTableName().'.id)';
+        $db->execute($sql);
     }
 }

@@ -7,6 +7,7 @@ use Pressmind\ORM\Object\AbstractObject;
 use DateTime;
 use Pressmind\ORM\Object\Touristic\Booking\Package;
 use Pressmind\ORM\Object\Touristic\Date\Attribute;
+use Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup\Item;
 use Pressmind\Registry;
 
 /**
@@ -719,6 +720,21 @@ class Date extends AbstractObject
         return $transport_pairs;
     }
 
+    /**
+     * @param $agency
+     * @return Item[]
+     */
+    public function getEarlybirds($agency = null){
+        $valid_items = [];
+        if(!empty($this->early_bird_discount_group->items)){
+            foreach($this->early_bird_discount_group->items as $item){
+                if(empty($item->agency) || $item->agency == $agency){
+                    $valid_items[] = $item;
+                }
+            }
+        }
+        return $valid_items;
+    }
 
     /**
      * Human friendly validation

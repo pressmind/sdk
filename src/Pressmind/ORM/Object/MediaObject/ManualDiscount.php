@@ -1,7 +1,11 @@
 <?php
 namespace Pressmind\ORM\Object\MediaObject;
 use DateTime;
+use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\AbstractObject;
+use Pressmind\ORM\Object\Touristic\Date;
+use Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup;
+use Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup\Item;
 
 /**
  * Class ManualDiscount
@@ -152,4 +156,55 @@ class ManualDiscount extends AbstractObject
 
         ]
     ];
+
+
+    /**
+     * @param $id_media_object
+     * @return void
+     */
+    public static function convertManualDiscountsToEarlyBird($id_media_object){
+        $typeMap = [
+            'fixed_price' => 'F',
+            'percent' => 'P'
+        ];
+        /**
+         * @var ManualDiscount[] $manualDiscounts
+         */
+        try{
+            $manualDiscounts = self::listAll(['id_media_object' => $id_media_object]);
+            if (count($manualDiscounts) > 0) {
+                $earlyBirdGroup = new EarlyBirdDiscountGroup();
+                $earlyBirdGroup->id = uniqid();
+                $earlyBirdGroup->name = 'undefined group name for ' . $id_media_object; // The item.name is relevant, so we have to use a placeholder here
+                $earlyBirdGroup->create();
+                foreach ($manualDiscounts as $manualDiscount) {
+                    $item = new Item();
+                    $item->id = uniqid();
+                    $item->id_early_bird_discount_group = $earlyBirdGroup->id;
+                    $item->travel_date_from = $manualDiscount->travel_date_from;
+                    $item->travel_date_to = $manualDiscount->travel_date_to;
+                    $item->booking_date_from = $manualDiscount->booking_date_from;
+                    $item->booking_date_to = $manualDiscount->booking_date_to;
+                    $item->discount_value = $manualDiscount->value;
+                    $item->type = $typeMap[$manualDiscount->type];
+                    $item->agency = $manualDiscount->agency;
+                    $item->origin = 'manual_discount';
+                    $item->name = $manualDiscount->description;
+                    $item->create();
+                }
+                $Dates = Date::listAll(['id_media_object' => $id_media_object]);
+                foreach ($Dates as $Date) {
+                    if(!empty($Date->id_early_bird_discount_group)){
+                        echo 'Date ' . $Date->id . ' already has an early bird discount group assigned, skipping.' . PHP_EOL;
+                        continue;
+                    }
+                    $Date->id_early_bird_discount_group = $earlyBirdGroup->getId();
+                    $Date->update();
+                }
+            }
+        }catch (Exception $e) {
+            Writer::write('Error converting manual discounts to early bird discounts for media object ' . $id_media_object . ': ' . $e->getMessage(), WRITER::OUTPUT_BOTH, 'touristic_data', WRITER::TYPE_INFO);
+        }
+    }
+
 }

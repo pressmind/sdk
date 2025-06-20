@@ -347,9 +347,6 @@ class Import
                 $manual_cheapest_price_importer->import();
             }
 
-            $discount_importer = new MediaObjectDiscount();
-            $discount_importer->import($response[0]->discounts, $id_media_object, $this->_import_type);
-
             if(is_array($response[0]->my_contents_to_media_object)) {
                 $my_content_importer = new MyContent($response[0]->my_contents_to_media_object);
                 $my_content_importer->import();
@@ -386,10 +383,13 @@ class Import
 
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): media object imported', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
 
-            if(false == $disable_touristic_data_import) {
+            if(false == $disable_touristic_data_import && count($_RUNTIME_IMPORTED_IDS) === 1) {
                 $db = Registry::getInstance()->get('db');
                 $early_bird_importer = new EarlyBird();
                 $early_bird_importer->import();
+                $discount_importer = new MediaObjectDiscount();
+                $discount_importer->import($response[0]->discounts, $id_media_object, $this->_import_type);
+                MediaObject\ManualDiscount::convertManualDiscountsToEarlyBird($id_media_object);
                 $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Deleting CheapestPriceSpeed entries';
                 $db->delete('pmt2core_cheapest_price_speed', ['id_media_object = ?', $media_object->id]);
                 $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Inserting CheapestPriceSpeed entries';

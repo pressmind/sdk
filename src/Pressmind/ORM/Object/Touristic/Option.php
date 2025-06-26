@@ -20,6 +20,7 @@ use Pressmind\ORM\Object\Touristic\Option\Discount;
  * @property string $code
  * @property string $name
  * @property string $board_type
+ * @property string $board_code
  * @property float $price
  * @property float $price_pseudo
  * @property float $price_child
@@ -247,6 +248,19 @@ class Option extends AbstractObject
                     [
                         'name' => 'maxlength',
                         'params' => 45,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
+            'board_code' => [
+                'title' => 'board_code',
+                'name' => 'board_code',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 10,
                     ],
                 ],
                 'filters' => NULL,

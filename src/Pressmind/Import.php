@@ -278,14 +278,14 @@ class Import
             $this->_start_time = microtime(true);
             $current_object = new ORM\Object\MediaObject($id_media_object, false, true);
             $disable_touristic_data_import = (isset($config['data']['touristic']['disable_touristic_data_import']) && in_array($response[0]->id_media_objects_data_type, $config['data']['touristic']['disable_touristic_data_import']));
-            if(false == $disable_touristic_data_import) {
-                foreach($current_object->booking_packages as $booking_package) {
+            if (false == $disable_touristic_data_import) {
+                foreach ($current_object->booking_packages as $booking_package) {
                     $booking_package->delete(true);
                 }
             }
             $current_object->delete(true);
 
-            if(!empty($response[0]->insurance_group) && is_a($response[0]->insurance_group, 'stdClass')) {
+            if (!empty($response[0]->insurance_group) && is_a($response[0]->insurance_group, 'stdClass')) {
                 Writer::write('import insurances from main media_object (alternative booking tab in pm)', WRITER::OUTPUT_SCREEN, 'media_object_insurance_import', WRITER::TYPE_INFO);
                 $tmpObject = new \stdClass();
                 $tmpObject->touristic_insurance_groups = !empty($response[0]->insurance_group->insurance_groups) ? $response[0]->insurance_group->insurance_groups : [];
@@ -310,17 +310,17 @@ class Import
                 foreach ($touristic_data_importer->getErrors() as $error) {
                     Writer::write($error, WRITER::OUTPUT_FILE, 'touristic_data_import', WRITER::TYPE_ERROR);
                 }
-                if(count($touristic_data_importer->getErrors()) > 0) {
+                if (count($touristic_data_importer->getErrors()) > 0) {
                     $this->_errors[] = 'Error in ' . TouristicData::class . '. See log "touristic_data_import" for details';
                 }
 
-                if(is_array($starting_point_ids) && count($starting_point_ids) > 0) {
+                if (is_array($starting_point_ids) && count($starting_point_ids) > 0) {
                     $this->_log[] = ' Importer::_importMediaObjectTouristicData(' . $id_media_object . '): importing starting point options';
                     $starting_point_options_importer = new StartingPointOptions($starting_point_ids);
                     $starting_point_options_importer->import();
                 }
 
-                if(is_array($touristic_linked_media_object_ids) && count($touristic_linked_media_object_ids) > 0) {
+                if (is_array($touristic_linked_media_object_ids) && count($touristic_linked_media_object_ids) > 0) {
                     $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): found linked media objects in touristic data. Importing ...', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
                     $this->importMediaObjectsFromArray($touristic_linked_media_object_ids, false);
                 }
@@ -328,7 +328,7 @@ class Import
 
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): touristic import finished', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
 
-            if(is_a($response[0]->touristic->touristic_base, 'stdClass') && true == $disable_touristic_data_import) {
+            if (is_a($response[0]->touristic->touristic_base, 'stdClass') && true == $disable_touristic_data_import) {
                 $fake_data = new \stdClass();
                 $fake_data->touristic_base = $response[0]->touristic->touristic_base;
                 $touristic_data_importer = new TouristicData();
@@ -336,23 +336,23 @@ class Import
             }
 
             $disable_virtual_price_calculation = (isset($config['data']['touristic']['disable_virtual_price_calculation']) && in_array($response[0]->id_media_objects_data_type, $config['data']['touristic']['disable_virtual_price_calculation']));
-            if(!empty($response[0]->cheapest_prices) && !$disable_virtual_price_calculation){
+            if (!empty($response[0]->cheapest_prices) && !$disable_virtual_price_calculation) {
                 $touristic_data_importer = new MediaObjectCheapestPrice();
                 $touristic_data_importer->import($response[0]->cheapest_prices, $id_media_object, $this->_import_type);
             }
 
             $disable_manual_cheapest_price_import = (isset($config['data']['touristic']['disable_manual_cheapest_price_import']) && in_array($response[0]->id_media_objects_data_type, $config['data']['touristic']['disable_manual_cheapest_price_import']));
-            if(is_array($response[0]->cheapest_prices) && !$disable_manual_cheapest_price_import){
+            if (is_array($response[0]->cheapest_prices) && !$disable_manual_cheapest_price_import) {
                 $manual_cheapest_price_importer = new ManualCheapestPrice($response[0]->cheapest_prices);
                 $manual_cheapest_price_importer->import();
             }
 
-            if(is_array($response[0]->my_contents_to_media_object)) {
+            if (is_array($response[0]->my_contents_to_media_object)) {
                 $my_content_importer = new MyContent($response[0]->my_contents_to_media_object);
                 $my_content_importer->import();
             }
 
-            if(isset($response[0]->agencies) && is_array($response[0]->agencies) && count($response[0]->agencies) > 0) {
+            if (isset($response[0]->agencies) && is_array($response[0]->agencies) && count($response[0]->agencies) > 0) {
                 $agency_importer = new Agency($response[0]->agencies, $id_media_object);
                 $agency_importer->import();
                 foreach ($agency_importer->getLog() as $log) {
@@ -361,7 +361,7 @@ class Import
                 foreach ($agency_importer->getErrors() as $error) {
                     Writer::write($error, WRITER::OUTPUT_FILE, 'agency_import', WRITER::TYPE_ERROR);
                 }
-                if(count($agency_importer->getErrors()) > 0) {
+                if (count($agency_importer->getErrors()) > 0) {
                     $this->_errors[] = 'Error in agency import. See log "agency_import" for details';
                 }
             }
@@ -383,13 +383,10 @@ class Import
 
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): media object imported', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
 
-            if(false == $disable_touristic_data_import && count($_RUNTIME_IMPORTED_IDS) === 1) {
+            if (false == $disable_touristic_data_import && count($_RUNTIME_IMPORTED_IDS) === 1) {
                 $db = Registry::getInstance()->get('db');
                 $early_bird_importer = new EarlyBird();
                 $early_bird_importer->import();
-                $discount_importer = new MediaObjectDiscount();
-                $discount_importer->import($response[0]->discounts, $id_media_object, $this->_import_type);
-                MediaObject\ManualDiscount::convertManualDiscountsToEarlyBird($id_media_object);
                 $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Deleting CheapestPriceSpeed entries';
                 $db->delete('pmt2core_cheapest_price_speed', ['id_media_object = ?', $media_object->id]);
                 $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Inserting CheapestPriceSpeed entries';
@@ -401,6 +398,12 @@ class Import
                 }
             }
 
+            if(false == $disable_touristic_data_import){
+                $discount_importer = new MediaObjectDiscount();
+                $discount_importer->import($response[0]->discounts, $id_media_object, $this->_import_type);
+                MediaObject\ManualDiscount::convertManualDiscountsToEarlyBird($id_media_object);
+            }
+            
             if (is_array($response[0]->data)) {
                 $media_object_data_importer = new MediaObjectData($response[0], $id_media_object, $this->_import_type, $import_linked_objects);
                 $media_object_data_importer_result = $media_object_data_importer->import();

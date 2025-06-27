@@ -23,6 +23,7 @@ use DateTime;
  * @property string $option_description_long
  * @property string $option_code
  * @property string $option_board_type
+ * @property string $option_board_code
  * @property integer $option_occupancy
  * @property integer $option_occupancy_min
  * @property integer $option_occupancy_max
@@ -362,6 +363,19 @@ class CheapestPriceSpeed extends AbstractObject
                     [
                         'name' => 'maxlength',
                         'params' => 32,
+                    ]
+                ],
+            ],
+            'option_board_code' => [
+                'name' => 'option_board_code',
+                'title' => 'option_board_code',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 10,
                     ]
                 ],
             ],

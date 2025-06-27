@@ -1552,6 +1552,7 @@ class MediaObject extends AbstractObject
                                     $cheapestPriceSpeed->option_description_long = $option->description_long;
                                     $cheapestPriceSpeed->option_code = $option->code;
                                     $cheapestPriceSpeed->option_board_type = $option->board_type;
+                                    $cheapestPriceSpeed->option_board_code = $option->board_code;
                                     $cheapestPriceSpeed->option_occupancy = empty($option->occupancy) ? 1 : $option->occupancy;
                                     $cheapestPriceSpeed->option_occupancy_min = empty($option->occupancy_min) ? $option->occupancy : $option->occupancy_min;
                                     $cheapestPriceSpeed->option_occupancy_max = empty($option->occupancy_max) ? $option->occupancy : $option->occupancy_max;

@@ -24,7 +24,6 @@ class TouristicData extends AbstractImport
         'touristic_dates' => '\Date',
         'touristic_seasonal_periods' => '\SeasonalPeriod',
         'touristic_transports' => '\Transport',
-        'touristic_booking_earlybirds' => '\EarlyBirdDiscountGroup',
         'touristic_housing_packages' => '\Housing\Package',
         'touristic_housing_packages_description_links' => '\Housing\Package\DescriptionLink',
         'touristic_option_descriptions' => '\Option\Description',

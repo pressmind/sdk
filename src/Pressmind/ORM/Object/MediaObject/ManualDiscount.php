@@ -157,6 +157,13 @@ class ManualDiscount extends AbstractObject
         ]
     ];
 
+    /**
+     * @param $id
+     * @return mixed
+     */
+    public function deleteByMediaObjectId($id){
+        return $this->_db->delete($this->getDbTableName(), ['id_media_object = ?', $id]);
+    }
 
     /**
      * @param $id_media_object

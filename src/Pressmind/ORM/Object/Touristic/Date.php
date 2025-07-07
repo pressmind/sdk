@@ -726,9 +726,8 @@ class Date extends AbstractObject
      */
     public function getEarlybirds($agency = null){
         $valid_items = [];
-        $Date = new Date($this->id); // reinitialize the date object to ensure it is loaded
-        if(!empty($Date->early_bird_discount_group->items)){
-            foreach($Date->early_bird_discount_group->items as $item){
+        if(!empty($this->early_bird_discount_group->items)){
+            foreach($this->early_bird_discount_group->items as $item){
                 if(empty($item->agency) || $item->agency == $agency){
                     $valid_items[] = $item;
                 }

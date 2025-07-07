@@ -35,6 +35,8 @@ class MediaObjectDiscount extends AbstractImport
             $this->_log[] = ' Importer::_MediaObjectDiscount(' . $id_media_object . '): no valid prices found';
             return;
         }
+        $ManualDiscount = new ManualDiscount();
+        $ManualDiscount->deleteByMediaObjectId($id_media_object);
         foreach($validData as $discount){
             $ManualDiscount = new ManualDiscount();
             $ManualDiscount->id = $discount->id;

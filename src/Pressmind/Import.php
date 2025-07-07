@@ -390,6 +390,13 @@ class Import
                 $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Deleting CheapestPriceSpeed entries';
                 $db->delete('pmt2core_cheapest_price_speed', ['id_media_object = ?', $media_object->id]);
                 $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Inserting CheapestPriceSpeed entries';
+            }
+
+            if(false == $disable_touristic_data_import){
+                $discount_importer = new MediaObjectDiscount();
+                $discount_importer->import($response[0]->discounts, $id_media_object, $this->_import_type);
+                MediaObject\ManualDiscount::convertManualDiscountsToEarlyBird($id_media_object);
+                $media_object->readRelations();
                 try {
                     $media_object->insertCheapestPrice();
                 } catch (Exception $e) {
@@ -398,12 +405,6 @@ class Import
                 }
             }
 
-            if(false == $disable_touristic_data_import){
-                $discount_importer = new MediaObjectDiscount();
-                $discount_importer->import($response[0]->discounts, $id_media_object, $this->_import_type);
-                MediaObject\ManualDiscount::convertManualDiscountsToEarlyBird($id_media_object);
-            }
-            
             if (is_array($response[0]->data)) {
                 $media_object_data_importer = new MediaObjectData($response[0], $id_media_object, $this->_import_type, $import_linked_objects);
                 $media_object_data_importer_result = $media_object_data_importer->import();

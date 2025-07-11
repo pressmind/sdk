@@ -3,6 +3,9 @@
 
 namespace Pressmind\ORM\Object;
 
+use Pressmind\DB\Adapter\Pdo;
+use Pressmind\Registry;
+
 /**
  * Class Search
  * @property integer $id
@@ -104,4 +107,49 @@ class FulltextSearch extends AbstractObject
             ],
         ]
     ];
+
+    /**
+     * @param $id_media_object
+     * @param $id_object_type
+     * @param $language
+     * @return string
+     * @throws \Exception
+     */
+    public static function getFullTextWords($id_media_object, $id_object_type, $language = null)
+    {
+        $text = [];
+        /** @var Pdo $db */
+        $db = Registry::getInstance()->get('db');
+        $allowed_fulltext_fields = Registry::getInstance()->get('config')['data']['media_types_fulltext_index_fields'];
+        $query = "SELECT fulltext_values from pmt2core_fulltext_search WHERE id_media_object = ? AND var_name = ?";
+        $param = [$id_media_object, 'fulltext'];
+        if (!empty($language)) {
+            $query .= " AND language = ?";
+            $param[] = $language;
+        }
+        $result = $db->fetchAll($query, $param);
+        if (is_array($result)) {
+            foreach ($result as $row) {
+                $text[] = $row->fulltext_values;
+            }
+        }
+        if (!empty($allowed_fulltext_fields[$id_object_type])) {
+            $allowed_fields = '"' . implode('","', array_values($allowed_fulltext_fields[$id_object_type])) . '"';
+            $query = 'select fl.fulltext_values from pmt2core_media_object_object_links ol
+                        left join pmt2core_fulltext_search fl on (fl.id_media_object = ol.id_media_object_link)
+                        where ol.id_media_object = ? and fl.var_name = ? and ol.var_name in(' . $allowed_fields . ')';
+            $param = [$id_media_object, 'fulltext'];
+            if (!empty($language)) {
+                $query .= " AND fl.language = ?";
+                $param[] = $language;
+            }
+            $result = $db->fetchAll($query, $param);
+            if (is_array($result)) {
+                foreach ($result as $row) {
+                    $text[] = $row->fulltext_values;
+                }
+            }
+        }
+        return implode(' ', $text);
+    }
 }

@@ -18,8 +18,7 @@
       "client": {
         "api_key": "",
         "api_user": "",
-        "api_password": "",
-        "api_endpoint_overwrite_default": ""
+        "api_password": ""
       },
       "server": {
         "api_endpoint": "/rest",
@@ -39,7 +38,6 @@
       ],
       "storage": "database",
       "log_file_path": "APPLICATION_PATH/logs",
-      "error_email_address": "john.doe@local",
       "lifetime": 86400,
       "keep_log_types": [
         "ERROR"
@@ -47,12 +45,6 @@
       "enable_advanced_object_log": false,
       "enable_database_query_logging": false,
       "database_query_log_file": "APPLICATION_PATH/logs/db_query_log.txt"
-    },
-    "debug": {
-      "mode": "on",
-      "ip_addresses": [
-        "127.0.0.1"
-      ]
     },
     "data": {
       "touristic": {
@@ -119,7 +111,6 @@
           "dir" : "/path/to/languagefiles"
         }
       },
-      "preview_url": "/detail.php?id={{id_media_object}}&preview={{preview}}",
       "search_mongodb": {
         "enabled": false,
         "database": {
@@ -232,6 +223,111 @@
         },
         "calendar" : {
           "include_startingpoint_option" : false
+        }
+      },
+      "search_opensearch": {
+        "enabled": false,
+        "enabled_in_mongo_search": true,
+        "uri": "http://opensearch:9200",
+        "user": null,
+        "password": null,
+        "number_of_shards": 1,
+        "number_of_replicas": 0,
+        "index": {
+          "code": {
+            "type": "keyword",
+            "object_type_mapping": {
+              "607": [
+                {
+                  "language": null,
+                  "field": {
+                    "name": "code",
+                    "params": []
+                  }
+                }
+              ],
+              "609": [
+                {
+                  "language": null,
+                  "field": {
+                    "name": "code",
+                    "params": []
+                  }
+                }
+              ]
+            }
+          },
+          "headline_default": {
+            "type": "text",
+            "object_type_mapping": {
+              "607": [
+                {
+                  "language": null,
+                  "field": {
+                    "name": "headline_default",
+                    "params": []
+                  }
+                }
+              ],
+              "609": [
+                {
+                  "language": null,
+                  "field": {
+                    "name": "headline_default",
+                    "params": []
+                  }
+                }
+              ]
+            }
+          },
+          "subline_default": {
+            "type": "text",
+            "boost": 2,
+            "object_type_mapping": {
+              "607": [
+                {
+                  "language": null,
+                  "field": {
+                    "name": "subline_default",
+                    "params": []
+                  }
+                }
+              ],
+              "609": [
+                {
+                  "language": null,
+                  "field": {
+                    "name": "subline_default",
+                    "params": []
+                  }
+                }
+              ]
+            }
+          },
+          "zielgebiet_default": {
+            "type": "text",
+            "boost": 2,
+            "object_type_mapping": {
+              "607": [
+                {
+                  "language": null,
+                  "field": {
+                    "name": "zielgebiet_default",
+                    "params": []
+                  }
+                }
+              ],
+              "609": [
+                {
+                  "language": null,
+                  "field": {
+                    "name": "zielgebiet_default",
+                    "params": []
+                  }
+                }
+              ]
+            }
+          }
         }
       },
       "media_types_allowed_visibilities": {

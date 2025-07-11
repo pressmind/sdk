@@ -4,6 +4,7 @@ namespace Pressmind\Search\MongoDB;
 
 use Pressmind\DB\Adapter\Pdo;
 use Pressmind\HelperFunctions;
+use Pressmind\ORM\Object\FulltextSearch;
 use Pressmind\ORM\Object\MediaObject;
 use Pressmind\ORM\Object\Touristic\Date;
 use Pressmind\Registry;
@@ -52,7 +53,9 @@ class Indexer extends AbstractIndex
         $this->createCollectionIndexIfNotExists($collection_name, ['categories.name' => 1], ['name' => 'categories.name_1']);
         $this->createCollectionIndexIfNotExists($collection_name, ['categories.it_item' => 1, 'categories.field_name' => 1], ['name' => 'categories.it_item_1_categories.field_name_1']);
         $this->createCollectionIndexIfNotExists($collection_name, ['id_media_object' => 1], ['name' => 'id_media_object_1', 'unique' => 1]);
-        $this->createCollectionIndexIfNotExists($collection_name, ['fulltext' => 'text', 'categories.path_str' => 'text', 'code' => 'text'], ['default_language' => 'none', 'weights' => ['fulltext' => 5, 'categories.path_str' => 10, 'code' => 15], 'name' => 'fulltext_text']);
+        if(!$this->_use_opensearch){
+            $this->createCollectionIndexIfNotExists($collection_name, ['fulltext' => 'text', 'categories.path_str' => 'text', 'code' => 'text'], ['default_language' => 'none', 'weights' => ['fulltext' => 5, 'categories.path_str' => 10, 'code' => 15], 'name' => 'fulltext_text']);
+        }
         $this->createCollectionIndexIfNotExists($collection_name, ['sold_out' => 1], ['name' => 'sold_out_1']);
         $this->createCollectionIndexIfNotExists($collection_name, ['sales_priority' => 1], ['name' => 'sales_priority_1']);
     }
@@ -220,7 +223,9 @@ class Indexer extends AbstractIndex
         $searchObject->locations = $this->_mapLocations($language);
         $searchObject->prices = $this->_aggregatePrices($origin, $agency);
         $searchObject->has_price = !empty($searchObject->prices);
-        $searchObject->fulltext = $this->_createFulltext($language);
+        if(!$this->_use_opensearch){
+            $searchObject->fulltext = FulltextSearch::getFullTextWords($this->mediaObject->id, $this->mediaObject->id_object_type, $language);
+        }
         $searchObject->sold_out = $this->_soldOut($origin, $agency);
         $searchObject->is_running = $this->_isRunning($origin, $agency);
         $searchObject->ports = $this->_getPorts();
@@ -1042,47 +1047,6 @@ class Indexer extends AbstractIndex
      */
     private function _priceSort($pricea, $priceb) {
         return $priceb->price_total <=> $pricea->price_total;
-    }
-
-    /**
-     * @return string|null
-     * @throws \Exception
-     */
-    private function _createFulltext($language = null)
-    {
-        $text = [];
-        /** @var Pdo $db */
-        $db = Registry::getInstance()->get('db');
-        $query = "SELECT fulltext_values from pmt2core_fulltext_search WHERE id_media_object = ? AND var_name = ?";
-        $param = [$this->mediaObject->id, 'fulltext'];
-        if(!empty($language)) {
-            $query .= " AND language = ?";
-            $param[] = $language;
-        }
-        $result = $db->fetchAll($query, $param);
-        if (is_array($result)) {
-            foreach($result as $row){
-                $text[] = $row->fulltext_values;
-            }
-        }
-        if(!empty($this->_allowed_fulltext_fields[$this->mediaObject->id_object_type])){
-            $allowed_fields = '"'.implode('","', array_values($this->_allowed_fulltext_fields[$this->mediaObject->id_object_type]) ).'"';
-            $query = 'select fl.fulltext_values from pmt2core_media_object_object_links ol
-                        left join pmt2core_fulltext_search fl on (fl.id_media_object = ol.id_media_object_link)
-                        where ol.id_media_object = ? and fl.var_name = ? and ol.var_name in('.$allowed_fields.')';
-            $param = [$this->mediaObject->id, 'fulltext'];
-            if(!empty($language)) {
-                $query .= " AND fl.language = ?";
-                $param[] = $language;
-            }
-            $result = $db->fetchAll($query, $param);
-            if (is_array($result)) {
-                foreach($result as $row){
-                    $text[] = $row->fulltext_values;
-                }
-            }
-        }
-        return implode(' ', $text);
     }
 
     /**

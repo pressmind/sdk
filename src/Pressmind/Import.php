@@ -534,6 +534,16 @@ class Import
                 }
             }
 
+            if(isset($config['data']['search_opensearch']['enabled']) && $config['data']['search_opensearch']['enabled'] === true) {
+                try {
+                    $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): createOpenSearchIndex', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+                    $media_object->createOpenSearchIndex();
+                } catch (Exception $e) {
+                    $this->_log[] = 'Error during creating OpenSearch: ' . $e->getMessage();
+                    $this->_errors[] = 'Error during creating OpenSearch: ' . $e->getMessage();
+                }
+            }
+
             unset($response);
             unset($media_object);
 

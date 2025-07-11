@@ -12,6 +12,7 @@ use Pressmind\Registry;
  * Class EarlyBirdDiscountGroup
  * @property integer $id
  * @property string $name
+ * @property string $import_code
  * @property Item[] $items
  */
 class EarlyBirdDiscountGroup extends AbstractObject
@@ -48,6 +49,19 @@ class EarlyBirdDiscountGroup extends AbstractObject
                 'name' => 'name',
                 'type' => 'string',
                 'required' => true,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
+            'import_code' => [
+                'title' => 'import_code',
+                'name' => 'import_code',
+                'type' => 'string',
+                'required' => false,
                 'validators' => [
                     [
                         'name' => 'maxlength',

@@ -1,6 +1,8 @@
 <?php
 namespace Pressmind\Search\Query;
 
+use Pressmind\Search\SearchType;
+
 class Filter
 {
     public $request;
@@ -14,4 +16,5 @@ class Filter
     public $preview_date = null;
     public $custom_conditions = [];
     public $allowed_visibilities = [30];
+    public SearchType $search_type = SearchType::DEFAULT;
 }

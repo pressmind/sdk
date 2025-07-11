@@ -25,11 +25,19 @@
         "ext-redis": "*",
         "ext-imagick": "*",
         "gettext/gettext": "*",
-        "jc21/clitable": "*"
+        "jc21/clitable": "*",
+        "opensearch-project/opensearch-php": "^2.4.3",
+        "symfony/http-client": "^7.3",
+        "nyholm/psr7": "^1.8"
     },
     "autoload": {
         "psr-4": {
             "Pressmind\\": "src/Pressmind/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true
         }
     }
 }

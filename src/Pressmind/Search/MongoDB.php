@@ -71,15 +71,25 @@ class MongoDB extends AbstractSearch
     /**
      * @var string
      */
-    private $_collection_name = null;
+    private $_collection_name;
 
     /**
      * @var string
      */
-    private $_collection_name_description = null;
+    private $_collection_name_description;
 
     /**
-     * @param array $conditions
+     * @var bool
+     */
+    private $_use_opensearch;
+
+    /**
+     * @param $conditions
+     * @param $sort
+     * @param $language
+     * @param $origin
+     * @param $agency
+     * @param $search_type
      */
     public function __construct($conditions, $sort = ['price_total' => 'asc'], $language = null, $origin = 0, $agency = null)
     {
@@ -93,6 +103,7 @@ class MongoDB extends AbstractSearch
         $this->_db_name = $config['data']['search_mongodb']['database']['db'];
         $this->_origin = $origin;
         $this->_agency = $agency;
+        $this->_use_opensearch = !empty($config['data']['search_opensearch']['enabled']) && !empty($config['data']['search_opensearch']['enabled_in_mongo_search']);
         if(is_null($language) && count($config['data']['languages']['allowed']) > 1) {
             $this->_language = $config['data']['languages']['default'];
         }elseif(!is_null($language)){
@@ -148,7 +159,7 @@ class MongoDB extends AbstractSearch
 
     /**
      * @param string $type
-     * @return array
+     * @return object
      */
     public function getConditionByType($type){
         foreach($this->_conditions as $condition){
@@ -214,7 +225,7 @@ class MongoDB extends AbstractSearch
      * @param \DateTime|null $preview_date
      * @return mixed
      */
-    public function getResult($getFilters = false, $returnFiltersOnly = false, $ttl = 0, $output = null, $preview_date = null, $allowed_visibilities = [30])
+    public function getResult($getFilters = false, $returnFiltersOnly = false, $ttl = 0, $output = null, $preview_date = null, $allowed_visibilities = [30], SearchType $search_type = SearchType::DEFAULT)
     {
         $this->_addLog('getResult(): starting query');
         if (!empty($ttl) && Registry::getInstance()->get('config')['cache']['enabled'] && in_array('MONGODB', Registry::getInstance()->get('config')['cache']['types']) && $this->_skip_cache == false) {
@@ -229,6 +240,38 @@ class MongoDB extends AbstractSearch
             }
             if(!empty($cache_contents) && $key_exists === true){
                 return $cache_contents;
+            }
+        }
+        if($this->_use_opensearch && ($this->hasCondition('AtlasLuceneFulltext') || $this->hasCondition('Fulltext'))) {
+            $searchString = '';
+            $condition = $this->getConditionByType('AtlasLuceneFulltext');
+            if($condition) {
+                $searchString = $condition->getSearchStringRaw();
+                $this->_addLog('getResult(): removing AtlasLuceneFulltext condition');
+                unset($this->_conditions['AtlasLuceneFulltext']);
+            }
+            $condition = $this->getConditionByType('Fulltext');
+            if($condition) {
+                $searchString = $condition->getSearchStringRaw();
+                $this->_addLog('getResult(): removing Fulltext condition');
+                unset($this->_conditions['Fulltext']);
+            }
+            if(!empty($searchString)) {
+                $this->_addLog('getResult(): adding OpenSearch and MediaObject (ids in) condition');
+                try{
+                    $OpenSearch = new OpenSearch($searchString, $this->_language, 10000);
+                    $ids = $OpenSearch->getResult($search_type === SearchType::AUTOCOMPLETE);
+                    if(!empty($ids)){
+                        $ConditionMediaObject = new Condition\MongoDB\MediaObject($ids);
+                        $this->addCondition('MediaObject', $ConditionMediaObject);
+                    }
+                }catch (\Exception $e) {
+                    $this->_addLog('getResult(): OpenSearch error: ' . $e->getMessage());
+                    if(!empty($_GET['debug']) || (defined('PM_SDK_DEBUG') && PM_SDK_DEBUG)) {
+                        echo '<pre>'.json_encode($e->getMessage()).'</pre>';
+                    }
+                    exit;
+                }
             }
         }
         $this->setGetFilters($getFilters);
@@ -451,8 +494,9 @@ class MongoDB extends AbstractSearch
         }
 
         // stage 2, remove useless data
-        $stages[] = ['$unset' => ['fulltext']];
-
+        if(!$this->_use_opensearch){
+            $stages[] = ['$unset' => ['fulltext']];
+        }
         // stage 3, filter prices array (by occupancy, pricerange, durationrange)
         $addFieldsConditions = [];
         $prices_filter = ['$addFields' => ['prices' =>  ['$filter' => ['input' => '$prices', 'cond' => ['$and' => []]]]]];

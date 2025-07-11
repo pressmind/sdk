@@ -113,7 +113,7 @@ class Client
             if(strlen($response) > 60000) {
                 $debug_str .= 'Response is too long, saving to file...'."\n";
                 file_put_contents('/tmp/restclient_response_' . time() . '.json', json_encode(json_decode($response), JSON_PRETTY_PRINT));
-                $debug_str .= 'Response is too long, saved to /tmp/restclient_response_' . time() . '.json'."\n";
+                $debug_str .= 'Response is too long, view with "less /tmp/restclient_response_' . time() . '.json"'."\n";
             } else{
                 $debug_str .= $response."\n";
             }

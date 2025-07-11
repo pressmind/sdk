@@ -63,6 +63,11 @@ class AbstractIndex
      */
     protected $_agencies;
 
+    /**
+     * @var bool
+     */
+    protected $_use_opensearch = false;
+
     public function __construct() {
         $this->_config = Registry::getInstance()->get('config')['data']['search_mongodb'];
         $this->_config_touristic = Registry::getInstance()->get('config')['data']['touristic'];
@@ -70,6 +75,7 @@ class AbstractIndex
         $this->_allowed_fulltext_fields = Registry::getInstance()->get('config')['data']['media_types_fulltext_index_fields'];
         $this->_agency_based_option_and_prices = isset(Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['enabled']) ? Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['enabled'] : false;
         $this->_agencies = $this->_agency_based_option_and_prices && isset(Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['allowed_agencies']) && is_array(Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['allowed_agencies']) ? Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['allowed_agencies'] : [null];
+        $this->_use_opensearch = !empty(Registry::getInstance()->get('config')['data']['search_opensearch']['enabled']) && !empty(Registry::getInstance()->get('config')['data']['search_opensearch']['enabled_in_mongo_search']);
         $uri = $this->_config['database']['uri'];
         $db_name = $this->_config['database']['db'];
         $this->client = new \MongoDB\Client($uri);

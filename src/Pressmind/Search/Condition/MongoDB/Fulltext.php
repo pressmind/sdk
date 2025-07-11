@@ -10,11 +10,25 @@ class Fulltext
     private $_searchString;
 
     /**
+     * @var string
+     */
+    private $_searchStringRaw;
+
+    /**
      * @param string $searchString
      */
     public function __construct($searchString)
     {
+        $this->_searchStringRaw = $searchString;
         $this->_searchString = trim(str_replace(["\\", '"'], ['', ''], $searchString));
+    }
+
+    /**
+     * @return string
+     */
+    public function getSearchStringRaw()
+    {
+        return $this->_searchStringRaw;
     }
 
     /**
@@ -25,6 +39,10 @@ class Fulltext
         return (new \ReflectionClass($this))->getShortName();
     }
 
+    /**
+     * @param $type
+     * @return array[]|null
+     */
     public function getQuery($type = 'first_match')
     {
         if ($type == 'first_match') {

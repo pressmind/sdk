@@ -1853,6 +1853,17 @@ class MediaObject extends AbstractObject
     /**
      * @throws Exception
      */
+    public function createOpenSearchIndex(){
+        $config = Registry::getInstance()->get('config');
+        if(isset($config['data']['search_opensearch']['enabled']) && $config['data']['search_opensearch']['search_opensearch'] === true) {
+            $OpenSearchIndexer = new \Pressmind\Search\OpenSearch\Indexer();
+            $OpenSearchIndexer->upsertMediaObject($this->getId());
+        }
+    }
+
+    /**
+     * @throws Exception
+     */
     public function createMongoDBCalendar(){
         $config = Registry::getInstance()->get('config');
         if(isset($config['data']['search_mongodb']['enabled']) && $config['data']['search_mongodb']['enabled'] === true) {

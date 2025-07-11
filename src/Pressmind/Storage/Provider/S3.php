@@ -71,13 +71,13 @@ class S3 implements ProviderInterface
      */
     public function delete($file, $bucket)
     {
-        $result = $this->_s3_client->deleteObject([
-            'Bucket' => $bucket->name,
-            'Key' => $file->name,
-        ]);
-        if (!$result['DeleteMarker'])
-        {
-            throw new Exception('Failed to unlink file: ' . BASE_PATH . DIRECTORY_SEPARATOR . $bucket->name . DIRECTORY_SEPARATOR . $file->name);
+        try {
+            $result = $this->_s3_client->deleteObject([
+                'Bucket' => $bucket->name,
+                'Key' => $file->name,
+            ]);
+        } catch (S3Exception $e) {
+            throw new Exception('Failed to delete object: ' . $e->getAwsErrorMessage() . '. File: ' . $this->_s3_client->getEndpoint() . '/' . $bucket->name . '/' . $file->name);
         }
         return true;
     }

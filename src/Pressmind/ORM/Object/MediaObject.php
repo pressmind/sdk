@@ -1844,7 +1844,7 @@ class MediaObject extends AbstractObject
      */
     public function createMongoDBIndex(){
         $config = Registry::getInstance()->get('config');
-        if(isset($config['data']['search_mongodb']['enabled']) && $config['data']['search_mongodb']['enabled'] === true) {
+        if(!empty($config['data']['search_mongodb']['enabled'])) {
             $Indexer = new Indexer();
             $Indexer->upsertMediaObject($this->getId());
         }
@@ -1855,7 +1855,7 @@ class MediaObject extends AbstractObject
      */
     public function createOpenSearchIndex(){
         $config = Registry::getInstance()->get('config');
-        if(isset($config['data']['search_opensearch']['enabled']) && $config['data']['search_opensearch']['search_opensearch'] === true) {
+        if(!empty($config['data']['search_opensearch']['search_opensearch']['enabled'])) {
             $OpenSearchIndexer = new \Pressmind\Search\OpenSearch\Indexer();
             $OpenSearchIndexer->upsertMediaObject($this->getId());
         }

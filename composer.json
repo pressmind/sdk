@@ -25,15 +25,17 @@
         "ext-redis": "*",
         "ext-imagick": "*",
         "gettext/gettext": "*",
-        "jc21/clitable": "*",
-        "opensearch-project/opensearch-php": "^2.4.3",
-        "symfony/http-client": "^7.3",
-        "nyholm/psr7": "^1.8"
+        "jc21/clitable": "*"
     },
     "autoload": {
         "psr-4": {
             "Pressmind\\": "src/Pressmind/"
         }
+    },
+    "suggest": {
+        "opensearch-project/opensearch-php": "OpenSearch PHP-Client ^2.4.3",
+        "symfony/http-client": "Symfony HTTP-Client ^7.3",
+        "nyholm/psr7": "PSR-7 HTTP Message Implementation ^1.8"
     },
     "config": {
         "allow-plugins": {

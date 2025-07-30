@@ -158,6 +158,18 @@ class MongoDB extends AbstractSearch
     }
 
     /**
+     * @param $type
+     * @return void
+     */
+    public function removeCondition($type){
+        foreach($this->_conditions as $k => $condition){
+            if(strtolower($condition->getType()) == strtolower($type)){
+                unset($this->_conditions[$k]);
+            }
+        }
+    }
+
+    /**
      * @param string $type
      * @return object
      */
@@ -248,13 +260,13 @@ class MongoDB extends AbstractSearch
             if($condition) {
                 $searchString = $condition->getSearchStringRaw();
                 $this->_addLog('getResult(): removing AtlasLuceneFulltext condition');
-                unset($this->_conditions['AtlasLuceneFulltext']);
+                $this->removeCondition('AtlasLuceneFulltext');
             }
             $condition = $this->getConditionByType('Fulltext');
             if($condition) {
                 $searchString = $condition->getSearchStringRaw();
                 $this->_addLog('getResult(): removing Fulltext condition');
-                unset($this->_conditions['Fulltext']);
+                $this->removeCondition('Fulltext');
             }
             if(!empty($searchString)) {
                 $this->_addLog('getResult(): adding OpenSearch and MediaObject (ids in) condition');
@@ -268,7 +280,7 @@ class MongoDB extends AbstractSearch
                 }catch (\Exception $e) {
                     $this->_addLog('getResult(): OpenSearch error: ' . $e->getMessage());
                     if(!empty($_GET['debug']) || (defined('PM_SDK_DEBUG') && PM_SDK_DEBUG)) {
-                        echo '<pre>'.json_encode($e->getMessage()).'</pre>';
+                        echo '<pre>opensearch: '.json_encode($e->getMessage()).'</pre>';
                     }
                     exit;
                 }

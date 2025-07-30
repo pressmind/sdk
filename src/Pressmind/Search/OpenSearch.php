@@ -206,7 +206,7 @@ class OpenSearch extends AbstractSearch
                 'body' => $body
             ];
             if (!empty($_GET['debug']) || (defined('PM_SDK_DEBUG') && PM_SDK_DEBUG)) {
-                echo '<pre>' . json_encode($search_params) . '</pre>';
+                echo '<pre>opensearch: ' . json_encode($search_params) . '</pre>';
             }
             $response = $this->_client->search($search_params);
             $hits = $response['hits']['hits'];

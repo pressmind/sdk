@@ -411,7 +411,12 @@ class MongoDB extends AbstractSearch
         $has_startingpoint_index = !empty($config['data']['touristic']['generate_offer_for_each_startingpoint_option']);
         $stages = [];
 
-        // stage zero, lucene atlas search
+        if($this->hasCondition('Powerfilter')){
+            $condition = $this->getConditionByType('Powerfilter');
+            $stages[] = $condition->getQuery('lookup');
+            $stages[] = $condition->getQuery('match');
+        }
+
         if($this->hasCondition('AtlasLuceneFulltext')){
             $condition = $this->getConditionByType('AtlasLuceneFulltext');
             $stages[] = $condition->getQuery('base');

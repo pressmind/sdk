@@ -507,6 +507,7 @@ class Query
      * $request['pm-so'] sold out (0 or 1)
      * $request['pm-ir'] is running (0 or 1)
      * $request['pm-sp'] sales priority (A000001)
+     * $request['pm-pf'] powerfilter (int like 123)
      * $request['pm-l'] limit 0,10
      * $request['pm-o'] order
      * @param $request
@@ -665,6 +666,13 @@ class Query
                 $ids = array_map('intval', explode(',', $request[$prefix.'-id']));
                 $conditions[] = new \Pressmind\Search\Condition\MongoDB\MediaObject($ids);
                 $validated_search_parameters[$prefix.'-id'] = implode(',', $ids);
+            }
+        }
+        if (empty($request[$prefix.'-pf']) === false){
+            if(preg_match('/^[\-0-9]+$/', $request[$prefix.'-pf']) > 0){
+                $id = (int)$request[$prefix.'-pf'];
+                $conditions[] = new \Pressmind\Search\Condition\MongoDB\Powerfilter($id);
+                $validated_search_parameters[$prefix.'-pf'] = $id;
             }
         }
         if (empty($request[$prefix.'-url']) === false){

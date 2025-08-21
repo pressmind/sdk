@@ -6,6 +6,7 @@ use Pressmind\DB\Adapter\Pdo;
 use Pressmind\HelperFunctions;
 use Pressmind\ORM\Object\FulltextSearch;
 use Pressmind\ORM\Object\MediaObject;
+use Pressmind\ORM\Object\Powerfilter\ResultSet;
 use Pressmind\ORM\Object\Touristic\Date;
 use Pressmind\Registry;
 use Pressmind\Search\CheapestPrice;
@@ -137,6 +138,29 @@ class Indexer extends AbstractIndex
                 }
             }
         }
+    }
+
+    /**
+     * @return void
+     * @throws \Exception
+     */
+    public function upsertPowerfilter(){
+        $ResultSets = ResultSet::listAll();
+        $items = [];
+        $valid_ids = [];
+        foreach($ResultSets as $ResultSet){
+            $valid_ids[] = $ResultSet->id;
+            $item = new \stdClass();
+            $item->_id = $ResultSet->id;
+            $item->id_media_objects = explode(',', $ResultSet->id_media_objects);
+            $item->id_media_objects = array_map('intval', $item->id_media_objects);
+            $items[] = $item;
+        }
+        $collection = $this->db->{'powerfilter'};
+        foreach($items as $item){
+            $collection->updateOne(['_id' => $item->_id], ['$set' => $item], ['upsert' => true]);
+        }
+        $collection->deleteMany(['_id' => ['$nin' => $valid_ids]]);
     }
 
     /**

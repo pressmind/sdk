@@ -375,6 +375,12 @@ class Import
             $ports_importer = new Port();
             $ports_importer->import();
 
+            $powerfilter_importer = new Import\Powerfilter();
+            $powerfilter_importer->import();
+            if(isset($config['data']['search_mongodb']['enabled']) && $config['data']['search_mongodb']['enabled'] === true) {
+                $Indexer = new Search\MongoDB\Indexer();
+                $Indexer->upsertPowerfilter();
+            }
             $itinerary_importer = new Itinerary($id_media_object);
             $itinerary_importer->import();
 

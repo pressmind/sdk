@@ -43,6 +43,8 @@ class Info
         '\MediaObject\MyContent',
         '\MediaObject\ManualCheapestPrice',
         '\MediaObject\ManualDiscount',
+        '\Powerfilter',
+        '\Powerfilter\ResultSet',
         '\Route',
         '\Search',
         '\Season',

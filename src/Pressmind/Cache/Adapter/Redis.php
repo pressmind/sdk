@@ -36,6 +36,9 @@ class Redis implements AdapterInterface
         $this->_config = Registry::getInstance()->get('config')['cache'];
         $this->_server = new \Redis();
         $this->_server->connect($this->_config['adapter']['config']['host'], $this->_config['adapter']['config']['port']);
+        if(isset($this->_config['adapter']['config']['password']) && !empty($this->_config['adapter']['config']['password'])) {
+            $this->_server->auth($this->_config['adapter']['config']['password']);
+        }
         $this->_ttl = $this->_config['max_idle_time'];
         $this->_prefix = HelperFunctions::replaceConstantsFromConfig($this->_config['key_prefix']);
     }

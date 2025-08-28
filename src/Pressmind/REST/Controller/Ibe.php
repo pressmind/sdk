@@ -122,6 +122,8 @@ class Ibe
 
         $result['starting_points'] = ['total' => 0];
         $result['exit_points'] = ['total' => 0];
+        $id_starting_point = null;
+        $id_exit_point = null;
         $icc = !empty($this->parameters['params']['iic']) ? $this->parameters['params']['iic'] : null;
         if(!empty($booking->getDate()->id_starting_point) && empty($result['transport_pairs'])){
             // this way is soon deprecated, because its even better to use the startingpoint from the transport instead from the date
@@ -130,12 +132,12 @@ class Ibe
             $id_starting_point = $result['transport_pairs'][0]['way1']->id_starting_point;
             $id_exit_point= $result['transport_pairs'][0]['way2']->id_starting_point;
         }
-        $result['starting_points']['total'] = count(StartingPoint::getOptionsByZipRadius($id_starting_point, $icc, null, 20, 0, null));
-        $result['starting_points']['starting_point_options'] = StartingPoint::getOptionsByZipRadius($id_starting_point, $icc, null, 20,0, $starting_points_limit, $starting_points_order_by_code_list);
-        $result['pickup_services']['total'] = count(StartingPoint::getPickupOptionByZip($id_starting_point, $icc));
-        $result['pickup_services']['options'] = StartingPoint::getPickupOptionByZip($id_starting_point, $icc);
-        $result['exit_points']['total'] = count(StartingPoint::getExitOptionsByZipRadius($id_exit_point, $icc, null, 20, 0, null));
-        $result['exit_points']['exit_point_options'] = StartingPoint::getExitOptionsByZipRadius($id_exit_point, $icc, null, 20,0, $starting_points_limit);
+        $result['starting_points']['total'] = empty($id_starting_point) ? 0 : count(StartingPoint::getOptionsByZipRadius($id_starting_point, $icc, null, 20, 0, null));
+        $result['starting_points']['starting_point_options'] = empty($id_starting_point) ? [] : StartingPoint::getOptionsByZipRadius($id_starting_point, $icc, null, 20,0, $starting_points_limit, $starting_points_order_by_code_list);
+        $result['pickup_services']['total'] = empty($id_starting_point) ? 0 : count(StartingPoint::getPickupOptionByZip($id_starting_point, $icc));
+        $result['pickup_services']['options'] = empty($id_starting_point) ? [] : StartingPoint::getPickupOptionByZip($id_starting_point, $icc);
+        $result['exit_points']['total'] = empty($id_exit_point) ? 0 : count(StartingPoint::getExitOptionsByZipRadius($id_exit_point, $icc, null, 20, 0, null));
+        $result['exit_points']['exit_point_options'] = empty($id_exit_point) ? [] : StartingPoint::getExitOptionsByZipRadius($id_exit_point, $icc, null, 20,0, $starting_points_limit);
         $result['has_pickup_services'] = Startingpoint::hasPickupService($id_starting_point, $icc);
         $result['has_starting_points'] = $result['starting_points']['total'] > 0;
         $result['has_seatplan'] = false;
@@ -389,8 +391,8 @@ class Ibe
         $zip = isset($this->parameters['zip']) ? $this->parameters['zip'] : null;
         $ibe_client = isset($this->parameters['iic']) ? $this->parameters['iic'] : null;
         $data = [];
-        $data['total'] = count(Startingpoint::getPickupOptionByZip($id_starting_point, $ibe_client, $zip));
-        $data['starting_point_options'] = Startingpoint::getPickupOptionByZip($id_starting_point, $ibe_client, $zip);
+        $data['total'] = count(Startingpoint::getPickupOptionsByZip($id_starting_point, $ibe_client, $zip));
+        $data['starting_point_options'] = Startingpoint::getPickupOptionsByZip($id_starting_point, $ibe_client, $zip);
         return ['success' => true, 'data' => $data];
     }
 

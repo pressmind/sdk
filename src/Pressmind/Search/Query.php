@@ -113,6 +113,7 @@ class Query
                 $item['possible_durations'] = !empty($document['possible_durations']) ? $document['possible_durations'] : [];
                 $item['last_modified_date'] = $document['last_modified_date'];
                 $item['sales_priority'] = !empty($document['sales_priority']) ? $document['sales_priority'] : null;
+                $item['locations'] = !empty($document['locations']) ? $document['locations'] : [];
                 if (!empty($document['prices'])) {
                     if(!is_array($document['prices']['date_departures'])){
                         $document['prices']['date_departures'] = [$document['prices']['date_departures']];
@@ -487,29 +488,28 @@ class Query
     /**
      * Build search query based on specific on GET or POST request
      * Possible Parameters
-     * $request['pm-id'] media object id/s  separated by comma
-     * $request['pm-ot'] object Type ID
-     * $request['pm-t'] term
-     * $request['pm-co'] code/s separated by comma
-     * $request['pm-c'] category id's separated by comma (search with "or") or plus (search with "and")   e.g. pm-c[land_default]=xxx,yyyy = or Suche, + and Suche
-     * $request['pm-pr'] price range 123-1234
-     * $request['pm-dr'] date range 20200101-20200202
-     * $request['pm-url'] url like /travel/5-italia/
-     * $request['pm-loc'] location like 50.123,12.123,10.5 (lng,lat,radius in km)
-     * $request['pm-gr'] groups
-     * $request['pm-du'] duration range 3-14
-     * $request['pm-tr'] transport type
-     * $request['pm-bt'] board type
-     * $request['pm-ho'] occupancy
-     * $request['pm-hoc'] occupancy child
-     * $request['pm-loc'] location
-     * $request['pm-sc'] startingpoint option city ids separated by comma
-     * $request['pm-so'] sold out (0 or 1)
-     * $request['pm-ir'] is running (0 or 1)
-     * $request['pm-sp'] sales priority (A000001)
-     * $request['pm-pf'] powerfilter (int like 123)
-     * $request['pm-l'] limit 0,10
-     * $request['pm-o'] order
+     *  - pm-id    int     media object id/s  separated by comma
+     *  - pm-ot    int     object type id/s separated by comma
+     *  - pm-t     string  searchterm
+     *  - pm-co    string  code/s separated by comma
+     *  - pm-c     string  category id's separated by comma (search with "or") or plus (search with "and"), e.g. pm-c[land_default]=xxx,yyyy = OR-search, + AND-search
+     *  - pm-pr    string  price range 123-1234
+     *  - pm-dr    string  departure date range '20200101-20200202', schema: (YYYYMMDD-YYYYMMDD = departure date range, YYYYMMDD = exact departure day, ([0-9]+)-([0-9]+) = relative offset in days from today)
+     *  - pm-url   string  url like /travel/5-italia/
+     *  - pm-loc   string  location e.g. '50.123,12.123,10.5' (lng,lat,radius in km)
+     *  - pm-gr    string  group id/s separated by comma
+     *  - pm-du    string  duration range e.g. '3-14'
+     *  - pm-tr    string  transport type separated by comma
+     *  - pm-bt    string  board type separated by comma
+     *  - pm-ho    int     occupancy (of the rooms or cabins) separated by comma
+     *  - pm-hoc   int     occupancy child (of the rooms or cabins) separated by comma - not often used
+     *  - pm-sc    string  startingpoint option city id/s separated by comma
+     *  - pm-so    int     sold out (0 or 1),
+     *  - pm-ir    int     is running travel (0 or 1)
+     *  - pm-sp    string  sales priority, e.g. 'A000000' ([A,B,C])([0-9]{+6}) A = Higher, B = Medium, C = Lower, 000000 = Sales Priority Number, 0 = highest priority, 999999 = lowest priority
+     *  - pm-pf    int     Powerfilter,  e.g. '123456789'
+     *  - pm-l     string  limit e.g. '0,10' pagination
+     *  - pm-o     string  order e.g. 'rand', 'price-desc', 'price-asc', 'date_departure-asc', 'date_departure-desc', 'score-asc', 'score-desc', 'recommendation_rate-asc', 'recommendation_rate-desc', 'priority', 'list', 'valid_from-asc', 'valid_from-desc'), list = order from items in pm-id
      * @param $request
      * @param string $prefix
      * @param bool $paginator

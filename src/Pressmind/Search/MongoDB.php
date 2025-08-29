@@ -587,6 +587,7 @@ class MongoDB extends AbstractSearch
                 'recommendation_rate' => 1,
                 'possible_durations' => 1,
                 'startingpoint_options' => 1,
+                'locations' => 1,
                 'url' => 1,
                 'valid_from' => 1,
                 'valid_to' => 1,

@@ -264,6 +264,7 @@ class Ibe
         $result['code_ibe'] = is_null($booking->getHousingPackage()) ? null : $booking->getHousingPackage()->code_ibe;
         $result['product_type_ibe'] = $booking->getBookingPackage()->product_type_ibe;
         $result['booking_transaction_recipients'] = $booking_transaction_recipients;
+        $result['booking_package_created_date'] = !empty($booking->booking_package->created) && is_a($booking->booking_package->created, 'DateTime') ? $booking->booking_package->created->format('Y-m-d H:i:s') : null;
         return ['success' => true, 'data' => $result];
     }
 

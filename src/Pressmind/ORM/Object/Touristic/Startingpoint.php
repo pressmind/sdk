@@ -183,13 +183,24 @@ class Startingpoint extends AbstractObject
      */
     public static function getPickupOptionByZip($id_starting_point, $ibe_client = null, $zip = null, $start = 0, $limit = 1, $order_by_code_list = []){
         return self::getOptions($id_starting_point, $start, $limit, $ibe_client, $zip, 20, false, true, 'range', $order_by_code_list);
+    }
 
+    /**
+     * @param $id_starting_point
+     * @param string|null $ibe_client
+     * @param string $zip
+     * @param array $order_by_code_list
+     * @return Option[]
+     * @throws \Exception
+     */
+    public static function getPickupOptionsByZip($id_starting_point, $ibe_client = null, $zip = null, $order_by_code_list = []){
+        return self::getOptions($id_starting_point, 0, null, $ibe_client, $zip, 20, false, true, 'range', $order_by_code_list);
     }
 
     /**
      * @param array $id_starting_point
      * @param int $start
-     * @param int $limit
+     * @param int|null $limit
      * @param string|null $ibe_client
      * @param string $zip
      * @param int $radius

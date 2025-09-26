@@ -24,7 +24,21 @@
         "api_endpoint": "/rest",
         "api_key": "",
         "api_user": "",
-        "api_password": ""
+        "api_password": "",
+        "controller": {
+          "catalog" : {
+            "categories" : [
+              {
+                "var_name" : "zielgebiet_default",
+                "title" : "Zielgebiet"
+              },
+              {
+                "var_name" : "reiseart_default",
+                "title" : "Reiseart"
+              }
+            ]
+          }
+        }
       }
     },
     "tmp_dir": "APPLICATION_PATH/tmp",
@@ -340,6 +354,18 @@
         "123": [
           "{varname}_{section}"
         ]
+      }
+    },
+    "ib3" : {
+       "url": "http://ib3.pressmind.com/"
+    },
+    "price_format" : {
+      "de" : {
+        "decimals" : 2,
+        "decimal_separator" : ",",
+        "thousands_separator" : ".",
+        "position" : "LEFT",
+        "currency" : "€"
       }
     },
     "cache": {

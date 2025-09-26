@@ -11,7 +11,7 @@ use Pressmind\ORM\Object\Touristic\Startingpoint\Option;
 use Pressmind\ORM\Object\Touristic\Transport;
 use stdClass;
 
-class EntryPoint
+class Entrypoint
 {
     /**
      * @param $params

@@ -175,6 +175,9 @@ class Entrypoint
             }
             $PriceFilter = new CheapestPrice();
             $MediaObject = new \Pressmind\ORM\Object\MediaObject($params['id_media_object']);
+            if(!$MediaObject->isValid()){
+                throw new Exception('Media Object with id '.$params['id_media_object'].' not found');
+            }
             $CheapestPrice = $MediaObject->getCheapestPrice($PriceFilter);
             $CalendarFilter = new CalendarFilter();
             if(!$CalendarFilter->initFromGet()){

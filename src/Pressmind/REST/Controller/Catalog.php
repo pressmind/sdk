@@ -265,4 +265,48 @@ class Catalog
     public function listAll($params){
         return $this->index($params);
     }
+
+    /**
+     * @param $params
+     * @return null[]
+     */
+    public function convertSearchQueryToPriceQueryString($params)
+    {
+        if(empty($params['search_query'])) {
+            return [
+                "price_query" => null,
+            ];
+        }
+        $search_query = $params['search_query'];
+        $query = [];
+        parse_str($search_query, $query);
+        $valid_params = [];
+        if (empty($query['pm-dr']) === false) {
+            $dateRange = Query::extractDaterange($query['pm-dr']);
+            if ($dateRange !== false) {
+                $valid_params['pm-dr'] = $query['pm-dr'];
+            }
+        }
+        if (empty($query['pm-du']) === false) {
+            $durationRange = Query::extractDurationRange($query['pm-du']);
+            if ($durationRange !== false) {
+                $valid_params['pm-du'] = $query['pm-du'];
+            }
+        }
+        if (empty($query['pm-pr']) === false) {
+            $priceRange = Query::extractPriceRange($query['pm-pr']);
+            if ($priceRange !== false) {
+                $valid_params['pm-pr'] = $query['pm-pr'];
+            }
+        }
+        if (empty($query['pm-tr']) === false) {
+            $transport_types = Query::extractTransportTypes($query['pm-tr']);
+            if (!empty($transport_types)) {
+                $valid_params['pm-tr'] = $query['pm-tr'];
+            }
+        }
+        return [
+            "price_query" => !empty($valid_params) ? http_build_query($valid_params) : null,
+        ];
+    }
 }

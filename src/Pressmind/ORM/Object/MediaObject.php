@@ -2425,4 +2425,44 @@ class MediaObject extends AbstractObject
         }
         return $result;
     }
+
+    /**
+     * Build the booking linked based on several parameters
+     * @param CheapestPriceSpeed $CheapestPriceSpeed
+     * @param string $url back reference url to the detail page
+     * @param string $dc discount code
+     * @param string $booking_type enum(request,option,fix) or null ('fix' is the ib3 default value)
+     * @param bool $dont_hide_options prevent hiding the housing option dialog - legacy
+     * @return string
+     */
+    public static function getBookingLink($CheapestPriceSpeed, $url = null, $dc = null, $booking_type = null, $dont_hide_options = false): string
+    {
+        $p = [];
+        $p[] = 'imo='.$CheapestPriceSpeed->id_media_object;
+        $p[] = 'idbp='.$CheapestPriceSpeed->id_booking_package;
+        $p[] = 'idd='.$CheapestPriceSpeed->id_date;
+        if(!empty($CheapestPriceSpeed->id_option)) {
+            $p[] = 'iho[' . $CheapestPriceSpeed->id_option . ']=1';
+        }
+        if($dont_hide_options === true){ // legacy
+            $p[] = 'hodh=1';
+        }
+        if(!empty($CheapestPriceSpeed->transport_type)){
+            $p[] = 'idt1='.$CheapestPriceSpeed->id_transport_1;
+            $p[] = 'idt2='.$CheapestPriceSpeed->id_transport_2;
+            $p[] = 'tt='.$CheapestPriceSpeed->transport_type;
+        }
+        if(!is_null($dc)){
+            $p[] = 'dc='.$dc;
+        }
+        if(!is_null($booking_type)){
+            $p[] = 't='.$booking_type;
+        }
+        if(!is_null($url)){
+            $p[] = 'url='.base64_encode($url);
+        }
+        $config = Registry::getInstance()->get('config');
+        $base_url = !empty($config['data']['ib3']['url']) ? trim($config['data']['ib3']['url'],'/') : '';
+        return $base_url.'/?'.implode('&', $p);
+    }
 }

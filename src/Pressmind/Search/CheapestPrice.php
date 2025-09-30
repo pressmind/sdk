@@ -108,4 +108,42 @@ class CheapestPrice
         }
     }
 
+
+    /**
+     * Support the Shortcode API
+     * @return void
+     */
+    public function initFromGetShortCodes(){
+        if (!empty($_GET['pm-dr'])) {
+            $dateRange = Query::extractDaterange($_GET['pm-dr']);
+            if ($dateRange !== false) {
+                if(!empty($dateRange[0])){
+                    $this->date_from = $dateRange[0];
+                }
+                if(!empty($dateRange[1])){
+                   $this->date_to = $dateRange[1];
+                }
+            }
+        }
+        if (!empty($_GET['pm-du'])) {
+            $durationRange = Query::extractDurationRange($_GET['pm-du']);
+            if($durationRange !== false){
+                $this->duration_from = $durationRange[0];
+                $this->duration_to = $durationRange[1];
+            }
+        }
+        if (!empty($_GET['pm-pr'])) {
+            $priceRange = Query::extractPriceRange($_GET['pm-pr']);
+            if ($priceRange !== false) {
+                  $this->price_from = $priceRange[0];
+                  $this->price_to = $priceRange[1];
+            }
+        }
+        if (!empty($_GET['pm-tr'])) {
+            $transport_types = Query::extractTransportTypes($_GET['pm-tr']);
+            if (!empty($transport_types)) {
+                $this->transport_types = $transport_types;
+            }
+        }
+    }
 }

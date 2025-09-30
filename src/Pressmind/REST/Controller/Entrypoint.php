@@ -223,13 +223,14 @@ class Entrypoint
      * @param $params
      * @return array
      */
-    public function price($params) : array{
+    public function price($params) : array {
         try {
             if(empty($params['id_media_object']) || !is_numeric($params['id_media_object'])){
                 throw new Exception('Parameter id_media_object is missing or not an integer');
             }
             $Filter = new CheapestPrice();
             $Filter->initFromGet();
+            $Filter->initFromGetShortCodes();
             $MediaObject = new \Pressmind\ORM\Object\MediaObject($params['id_media_object']);
             if(!$MediaObject->isValid()){
                 throw new Exception('Media Object with id '.$params['id_media_object'].' not found');

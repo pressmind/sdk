@@ -2462,7 +2462,7 @@ class MediaObject extends AbstractObject
             $p[] = 'url='.base64_encode($url);
         }
         $config = Registry::getInstance()->get('config');
-        $base_url = !empty($config['data']['ib3']['url']) ? trim($config['data']['ib3']['url'],'/') : '';
+        $base_url = !empty($config['ib3']['endpoint']) ? trim($config['ib3']['endpoint'],'/') : '';
         return $base_url.'/?'.implode('&', $p);
     }
 }

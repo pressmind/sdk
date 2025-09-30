@@ -42,7 +42,7 @@
       }
     },
     "ib3" : {
-      "api_endpoint": "",
+      "endpoint": ""
     },
     "tmp_dir": "APPLICATION_PATH/tmp",
     "docs_dir": "WEBSERVER_DOCUMENT_ROOT/docs",
@@ -358,9 +358,6 @@
           "{varname}_{section}"
         ]
       }
-    },
-    "ib3" : {
-       "url": "http://ib3.pressmind.com/"
     },
     "price_format" : {
       "de" : {

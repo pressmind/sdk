@@ -20,9 +20,9 @@ class Entrypoint
     public function getBookingLink($params){
         try {
             $config = Registry::getInstance()->get('config');
-            $ib3_endpoint = !empty($config['ib3']['api_endpoint']) ? $config['ib3']['api_endpoint'] : null;
+            $ib3_endpoint = !empty($config['ib3']['endpoint']) ? trim($config['ib3']['endpoint'],'/') : '';
             if(empty($ib3_endpoint)){
-                throw new Exception('No IB3 endpoint configured, see sdk config: ib3.api_endpoint');
+                throw new Exception('No IB3 endpoint configured, see sdk config: ib3.endpoint');
             }
             set_error_handler(function($errno, $errstr, $errfile, $errline) {
                 throw new \ErrorException($errstr, 0, $errno, $errfile, $errline);

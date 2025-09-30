@@ -41,6 +41,9 @@
         }
       }
     },
+    "ib3" : {
+      "api_endpoint": "",
+    },
     "tmp_dir": "APPLICATION_PATH/tmp",
     "docs_dir": "WEBSERVER_DOCUMENT_ROOT/docs",
     "logging": {

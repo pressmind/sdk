@@ -18,8 +18,12 @@ class Entrypoint
      * @return array
      */
     public function getBookingLink($params){
-        $config = Registry::getInstance()->get('config');
         try {
+            $config = Registry::getInstance()->get('config');
+            $ib3_endpoint = !empty($config['ib3']['api_endpoint']) ? $config['ib3']['api_endpoint'] : null;
+            if(empty($ib3_endpoint)){
+                throw new Exception('No IB3 endpoint configured, see sdk config: ib3.api_endpoint');
+            }
             set_error_handler(function($errno, $errstr, $errfile, $errline) {
                 throw new \ErrorException($errstr, 0, $errno, $errfile, $errline);
             });
@@ -50,7 +54,7 @@ class Entrypoint
             $check->quantity_unit = 'pax';
             $request->checks[] = $check;
             curl_setopt_array($curl, array(
-                CURLOPT_URL => $config['ibe3']['url'].'/api/external/checkAvailability',
+                CURLOPT_URL => $ib3_endpoint.'/api/external/checkAvailability',
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_ENCODING => '',
                 CURLOPT_MAXREDIRS => 10,
@@ -81,7 +85,9 @@ class Entrypoint
             }
         } catch (Exception $e) {
             return [
-                'msg' => $e->getMessage()
+                'payload' => null,
+                'msg' => $e->getMessage(),
+                'error' => true
             ];
         }
         return [

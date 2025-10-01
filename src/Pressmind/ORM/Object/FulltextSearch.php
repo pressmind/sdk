@@ -152,4 +152,15 @@ class FulltextSearch extends AbstractObject
         }
         return implode(' ', $text);
     }
+
+    /**
+     * @param $str
+     * @return string
+     */
+    public static function replaceChars($str){
+        $search = ['ä', 'ö', 'ü', 'Ä', 'Ö', 'Ü', 'ß'];
+        $replace = ['ae', 'oe', 'ue', 'Ae', 'Oe', 'Ue', 'ss'];
+        return str_replace($search, $replace, $str);
+    }
+
 }

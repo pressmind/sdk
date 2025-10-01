@@ -1974,6 +1974,7 @@ class MediaObject extends AbstractObject
                 ];
             }
             foreach ($fulltext as $fulltext_data) {
+                $fulltext_data = FulltextSearch::replaceChars($fulltext_data);
                 $this->_db->insert('pmt2core_fulltext_search', $fulltext_data, false);
             }
         }

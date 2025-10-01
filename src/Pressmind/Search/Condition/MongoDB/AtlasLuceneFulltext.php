@@ -5,6 +5,8 @@
  * https://www.mongodb.com/docs/atlas/atlas-search/
  */
 namespace Pressmind\Search\Condition\MongoDB;
+use Pressmind\ORM\Object\FulltextSearch;
+
 #[\AllowDynamicProperties]
 class AtlasLuceneFulltext
 {
@@ -55,7 +57,7 @@ class AtlasLuceneFulltext
     public function __construct($searchString, $definition = [], $gson_property = null, $lon = null, $lat = null, $maxDistanceKm = 100, $locationCondition = 'must')
     {
         $this->_searchStringRaw = $searchString;
-        $this->_searchString = !empty($searchString) ? trim(str_replace(["\\", '"'], ['', ''], $searchString)) : null;
+        $this->_searchString  = !empty($searchString) ? trim(str_replace(["\\", '"'], ['', ''], FulltextSearch::replaceChars($clean_string))) : null;
         if(!empty($definition)){
             foreach(['should', 'must'] as $type){
                 $valid_queries = [];

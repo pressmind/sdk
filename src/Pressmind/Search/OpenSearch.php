@@ -5,6 +5,7 @@ namespace Pressmind\Search;
 use OpenSearch\ClientBuilder;
 use Pressmind\Cache\Adapter\Factory;
 use Pressmind\Log\Writer;
+use Pressmind\ORM\Object\FulltextSearch;
 use Pressmind\Registry;
 
 class OpenSearch extends AbstractSearch
@@ -163,7 +164,7 @@ class OpenSearch extends AbstractSearch
      * @return string
      */
     function sanitizeSearchTerm(string $input){
-        return trim(preg_replace('/[\x00-\x1F]+/', ' ', $input));
+        return trim(preg_replace('/[\x00-\x1F]+/', ' ', FulltextSearch::replaceChars($input)));
     }
 
     /**

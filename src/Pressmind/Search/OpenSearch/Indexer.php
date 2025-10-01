@@ -205,7 +205,7 @@ class Indexer extends AbstractIndex
                     }
                 }
             }
-            $searchObject->{$property_name} = $string;
+            $searchObject->{$property_name} = FulltextSearch::replaceChars($string);
         }
         return $searchObject;
     }

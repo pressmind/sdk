@@ -2,6 +2,8 @@
 
 namespace Pressmind\Search\Condition\MongoDB;
 
+use Pressmind\ORM\Object\FulltextSearch;
+
 class Fulltext
 {
     /**
@@ -20,7 +22,7 @@ class Fulltext
     public function __construct($searchString)
     {
         $this->_searchStringRaw = $searchString;
-        $this->_searchString = trim(str_replace(["\\", '"'], ['', ''], $searchString));
+        $this->_searchString = trim(str_replace(["\\", '"'], ['', ''], FulltextSearch::replaceChars($searchString)));
     }
 
     /**

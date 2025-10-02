@@ -48,11 +48,13 @@ class Ibe
         $destination_code = null;
         $destinations = $mediaObject->getValueByTagName('pressmind-ib3.destinations');
         if (!is_null($destinations)) {
+            $path = [];
             foreach ($destinations as $destination_array) {
                 $destination = new Item($destination_array->id_item);
-                $destination_name = $destination->name;
+                $path[] = $destination->name;
                 $destination_code = $destination->code;
             }
+            $destination_name = implode(' » ', $path);;
         }
 
         $travel_type_name = null;

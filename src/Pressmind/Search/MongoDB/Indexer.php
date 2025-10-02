@@ -855,6 +855,7 @@ class Indexer extends AbstractIndex
                                   startingpoint_city,
                                   housing_package_name,
                                   housing_package_id_name,
+                                  quota_pax,
                                   CASE
                                     WHEN state = 3 THEN 100
                                     WHEN state = 1 THEN 200
@@ -881,6 +882,7 @@ class Indexer extends AbstractIndex
                                          startingpoint_id_city,
                                          housing_package_name,
                                          housing_package_id_name,
+                                         quota_pax,
                                          ROW_NUMBER() OVER (PARTITION BY date_departure
                                              ".(empty($this->_config_touristic['generate_offer_for_each_transport_type']) ? "" : ", transport_type")."
                                              ".(empty($this->_config_touristic['generate_offer_for_each_startingpoint_option']) ? "" : ", startingpoint_id_city")."
@@ -935,6 +937,7 @@ class Indexer extends AbstractIndex
                         $result->price_regular_before_discount = floatval($result->price_regular_before_discount);
                         $result->earlybird_discount = floatval($result->earlybird_discount);
                         $result->earlybird_discount_f = floatval($result->earlybird_discount_f);
+                        $result->quota_pax = intval($result->quota_pax);
                         if(!empty($result->startingpoint_id_city)){
                             $result->startingpoint_option = new \stdClass();
                             $result->startingpoint_option->id_city = $result->startingpoint_id_city;
@@ -967,6 +970,7 @@ class Indexer extends AbstractIndex
                                   startingpoint_id_city,
                                   housing_package_name,
                                   housing_package_id_name,
+                                  quota_pax,
                                   CASE
                                     WHEN state = 3 THEN 100
                                     WHEN state = 1 THEN 200
@@ -992,6 +996,7 @@ class Indexer extends AbstractIndex
                                          startingpoint_id_city,
                                          housing_package_name,
                                          housing_package_id_name,
+                                         quota_pax,
                                          ROW_NUMBER() OVER (PARTITION BY date_departure
                                          ".(empty($this->_config_touristic['generate_offer_for_each_transport_type']) ? "" : ", transport_type")."
                                          ".(empty($this->_config_touristic['generate_offer_for_each_startingpoint_option']) ? "" : ", startingpoint_id_city")."
@@ -1049,6 +1054,7 @@ class Indexer extends AbstractIndex
                     $result->price_regular_before_discount = floatval($result->price_regular_before_discount);
                     $result->earlybird_discount = floatval($result->earlybird_discount);
                     $result->earlybird_discount_f = floatval($result->earlybird_discount_f);
+                    $result->quota_pax = intval($result->quota_pax);
                     if(!empty($result->startingpoint_city)){
                         $result->startingpoint_option = new \stdClass();
                         $result->startingpoint_option->id_city = $result->startingpoint_id_city;

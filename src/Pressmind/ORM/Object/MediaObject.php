@@ -1398,7 +1398,7 @@ class MediaObject extends AbstractObject
                         $options[] = $tmpOption;
                     }
                     if(empty($options)){
-                        self::$_insert_cheapest_price_log[$this->id][] = 'Skipping date ' . $date->departure->format('Y-m-d').' (season = '.$date->season.', agency = '.$agency.') because of no options found for price_mix = '.$booking_package->price_mix;
+                        self::$_insert_cheapest_price_log[$this->id][] = 'Skipping date ' . $date->departure->format('Y-m-d').' (season = '.$date->season.', agency = '.$agency.') because of no valid options found for price_mix = '.$booking_package->price_mix;
                         continue;
                     }
                     $cheapest_options = [];
@@ -1426,6 +1426,7 @@ class MediaObject extends AbstractObject
                             continue(2);
                         }
                     }
+                    $quotas = [];
                     foreach ($options as $option) {
                         $housing_package = $option->getHousingPackage();
                         $included_options_price = 0;
@@ -1435,6 +1436,7 @@ class MediaObject extends AbstractObject
                         $id_included_options = [];
                         $code_ibe_included_options = [];
                         $nights = empty($housing_package) ? 0 : $housing_package->nights;
+                        $quotas[] = (is_null($option->quota) ? 999 : $option->quota) * $option->occupancy;
                         foreach ($cheapest_options as $cheapest_option) {
                             $cheapest_option_price = $cheapest_option->calculatePrice($booking_package->duration, $nights);
                             if ($include_negative_option_in_cheapest_price === false && $cheapest_option_price < 0) {
@@ -1451,6 +1453,7 @@ class MediaObject extends AbstractObject
                             $included_options_description[] = $cheapest_option->name;
                             $id_included_options[] = $cheapest_option->getId();
                             $code_ibe_included_options[] = $cheapest_option->code_ibe;
+                            $quotas[] = is_null($cheapest_option->quota) ? 999 : $cheapest_option->quota;
                         }
                         foreach ($transport_pairs as $transport_pair) {
                             $is_bookable = in_array($date->state, [1, 4, 0]);
@@ -1470,6 +1473,8 @@ class MediaObject extends AbstractObject
                                 $is_request = $is_request || in_array($transport_pair['way1']->state, [2]);
                                 $is_bookable = $is_bookable && in_array($transport_pair['way2']->state, [3, 0]);
                                 $is_request = $is_request || in_array($transport_pair['way2']->state, [2]);
+                                $quotas[] = is_null($transport_pair['way1']->quota) ? 999 : $transport_pair['way1']->quota;
+                                $quotas[] = is_null($transport_pair['way2']->quota) ? 999 : $transport_pair['way2']->quota;
                             }
                             $startingPointOptions = [];
                             if (!empty($transport_pair['way1']->id_starting_point)) {
@@ -1651,6 +1656,8 @@ class MediaObject extends AbstractObject
                                     $cheapestPriceSpeed->guaranteed = $date->guaranteed;
                                     $cheapestPriceSpeed->saved = $date->saved;
                                     $cheapestPriceSpeed->agency = $agency;
+                                    $cheapestPriceSpeed->fingerprint = $cheapestPriceSpeed->createFingerprint();
+                                    $cheapestPriceSpeed->quota_pax = min($quotas);
                                     $cheapestPriceSpeed->create();
                                     unset($cheapestPriceSpeed);
                                     $c++;
@@ -1663,7 +1670,6 @@ class MediaObject extends AbstractObject
                         }
                     }
                 }
-
             }
         }
         $config = Registry::getInstance()->get('config');

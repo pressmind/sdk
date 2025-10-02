@@ -9,6 +9,7 @@ use DateTime;
  * Class CheapestPriceSpeed
  * @package Pressmind\ORM\Object
  * @property integer $id
+ * @property string $fingerprint
  * @property integer $id_media_object
  * @property string $id_booking_package
  * @property string $id_housing_package
@@ -98,6 +99,7 @@ use DateTime;
  * @property string $startingpoint_id_city
  * @property string $agency
  * @property string $housing_package_id_name
+ * @property int $quota_pax
  */
 class CheapestPriceSpeed extends AbstractObject
 {
@@ -176,6 +178,22 @@ class CheapestPriceSpeed extends AbstractObject
                 'required' => true,
                 'filters' => null,
                 'validators' => null
+            ],
+            'fingerprint' => [
+                'name' => 'fingerprint',
+                'title' => 'fingerprint',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 64,
+                    ]
+                ],
+                'index' => [
+                    'fingerprint' => 'index'
+                ]
             ],
             'id_media_object' => [
                 'name' => 'id_media_object',
@@ -737,6 +755,14 @@ class CheapestPriceSpeed extends AbstractObject
                 'filters' => null,
                 'validators' => null
             ],
+            'quota_pax' => [
+                'name' => 'quota_pax',
+                'title' => 'quota_pax',
+                'type' => 'integer',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
             'infotext' => [
                 'name' => 'infotext',
                 'title' => 'infotext',
@@ -1290,6 +1316,49 @@ class CheapestPriceSpeed extends AbstractObject
      */
     public function deleteByMediaObjectId($id){
         return $this->_db->delete($this->getDbTableName(), ['id_media_object = ?', $id]);
+    }
+
+
+    /**
+     * @return string 64chars sha256 hash
+     */
+    public function createFingerprint(){
+        $code_based = [
+            $this->id_media_object,
+            $this->date_departure->format('Y-m-d'),
+            $this->date_arrival->format('Y-m-d'),
+            $this->date_code_ibe,
+            $this->housing_package_code_ibe,
+            $this->option_code_ibe,
+            $this->option_code_ibe_board_type,
+            $this->option_code_ibe_board_type_category,
+            $this->option_code_ibe_category,
+            $this->transport_1_code_ibe,
+            $this->transport_2_code_ibe,
+            $this->startingpoint_code_ibe,
+            $this->code_ibe_included_options,
+            $this->agency,
+        ];
+        $id_based = [
+            $this->id,
+            $this->id_media_object,
+            $this->id_booking_package,
+            $this->id_housing_package,
+            $this->id_date,
+            $this->id_option,
+            $this->id_transport_1,
+            $this->id_transport_2,
+            $this->id_option_auto_book,
+            $this->id_option_required_group,
+            $this->id_startingpoint_option,
+            $this->id_origin,
+            $this->id_startingpoint,
+            $this->id_included_options,
+            $this->startingpoint_id_city,
+            $this->housing_package_id_name,
+            $this->agency,
+        ];
+        return hash('sha256', implode('_', $this->booking_package_ibe_type >= 2 ? $code_based : $id_based));
     }
 
 }

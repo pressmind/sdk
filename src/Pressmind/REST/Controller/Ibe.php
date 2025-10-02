@@ -50,10 +50,8 @@ class Ibe
         if (!is_null($destinations)) {
             foreach ($destinations as $destination_array) {
                 $destination = new Item($destination_array->id_item);
-                if (!empty($destination->code)) {
-                    $destination_name = $destination->name;
-                    $destination_code = $destination->code;
-                }
+                $destination_name = $destination->name;
+                $destination_code = $destination->code;
             }
         }
 

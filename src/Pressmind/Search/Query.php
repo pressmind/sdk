@@ -148,6 +148,7 @@ class Query
                     $item['cheapest_price']->startingpoint_id_city = !empty($document['prices']['startingpoint_option']['id']) ? $document['prices']['startingpoint_option']['id'] : null;
                     $item['cheapest_price']->startingpoint_city = !empty($document['prices']['startingpoint_option']['city']) ? $document['prices']['startingpoint_option']['city'] : null;
                     $item['cheapest_price']->startingpoint_zip = !empty($document['prices']['startingpoint_option']['zip']) ? $document['prices']['startingpoint_option']['zip'] : null;
+                    $item['cheapest_price']->quota_pax = is_int($document['prices']['quota_pax']) ? $document['prices']['quota_pax'] : 999;
                 } else {
                     $item['cheapest_price'] = null;
                     $document['prices'] = null;

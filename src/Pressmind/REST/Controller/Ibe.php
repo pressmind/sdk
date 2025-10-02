@@ -5,6 +5,7 @@ namespace Pressmind\REST\Controller;
 use Exception;
 use Pressmind\IBE\Booking;
 use Pressmind\MVC\AbstractController;
+use Pressmind\ORM\Object\CategoryTree\Item;
 use Pressmind\ORM\Object\Geodata;
 use Pressmind\ORM\Object\MediaObject;
 use Pressmind\ORM\Object\Touristic\Housing\Package;
@@ -45,30 +46,28 @@ class Ibe
         }
         $destination_name = null;
         $destination_code = null;
-        if(isset($settings['general']['destination_tag_name']['value'])) {
-            $destinations = $mediaObject->getValueByTagName($settings['general']['destination_tag_name']['value']);
-            if (!is_null($destinations)) {
-                foreach ($destinations as $destination_array) {
-                    $destination = new \Pressmind\ORM\Object\CategoryTree\Item($destination_array->id_item);
-                    if (!empty($destination->code)) {
-                        $destination_name = $destination->name;
-                        $destination_code = $destination->code;
-                    }
+        $destinations = $mediaObject->getValueByTagName('pressmind-ib3.destinations');
+        if (!is_null($destinations)) {
+            foreach ($destinations as $destination_array) {
+                $destination = new Item($destination_array->id_item);
+                if (!empty($destination->code)) {
+                    $destination_name = $destination->name;
+                    $destination_code = $destination->code;
                 }
             }
         }
+
         $travel_type_name = null;
         $travel_type_code = null;
-        if(isset($settings['general']['travel_type_tag_name']['value'])) {
-            $travel_types = $mediaObject->getValueByTagName($settings['general']['travel_type_tag_name']['value']);
-            if (!is_null($travel_types)) {
-                foreach ($travel_types as $travel_types_array) {
-                    $travel_type = new \Pressmind\ORM\Object\CategoryTree\Item($travel_types_array->id_item);
-                    $travel_type_name = $travel_type->name;
-                    $travel_type_code = $travel_type->code;
-                }
+        $travel_types = $mediaObject->getValueByTagName('pressmind-ib3.travel-types');
+        if (!is_null($travel_types)) {
+            foreach ($travel_types as $travel_types_array) {
+                $travel_type = new Item($travel_types_array->id_item);
+                $travel_type_name = $travel_type->name;
+                $travel_type_code = $travel_type->code;
             }
         }
+
         $services_box_title = null;
         $services_box_content = null;
         if(!empty(strip_tags((string)$mediaObject->getValueByTagName('pressmind-ib3.services-box-content')))){

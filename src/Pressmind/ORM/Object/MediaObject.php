@@ -1157,7 +1157,7 @@ class MediaObject extends AbstractObject
             } else {
                 $mo = new MediaObject($this->getId());
                 $moc = $mo->getDataForLanguage($language);
-                if($moc->getPropertyDefinition($field)['type'] == 'string') {
+                if(!empty($moc) && $moc->getPropertyDefinition($field)['type'] == 'string') {
                     if(!empty($moc->$field)) {
                         $url_array[] = strtolower(HelperFunctions::replaceLatinSpecialChars(trim(strip_tags($moc->$field))));
                     }

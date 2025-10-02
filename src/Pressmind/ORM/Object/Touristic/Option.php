@@ -329,10 +329,6 @@ class Option extends AbstractObject
                     [
                         'name' => 'maxlength',
                         'params' => 11,
-                    ],
-                    [
-                        'name' => 'unsigned',
-                        'params' => null,
                     ]
                 ],
                 'filters' => NULL,

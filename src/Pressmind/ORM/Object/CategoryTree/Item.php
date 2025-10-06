@@ -3,6 +3,7 @@
 namespace Pressmind\ORM\Object\CategoryTree;
 
 use Pressmind\ORM\Object\AbstractObject;
+use Pressmind\ORM\Object\MediaObject;
 
 /**
  * Class CategoryTreeItem
@@ -13,6 +14,7 @@ use Pressmind\ORM\Object\AbstractObject;
  * @property string $code
  * @property string $id_media_object
  * @property string $dynamic_values
+ * @property string $links
  * @property integer $sort
  * @property Item[] $children
  */
@@ -134,6 +136,14 @@ class Item extends AbstractObject
                 'validators' => NULL,
                 'filters' => NULL,
             ],
+            'links' => [
+                'title' => 'links',
+                'name' => 'links',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
             'sort' => [
                 'title' => 'Sort',
                 'name' => 'sort',
@@ -165,4 +175,29 @@ class Item extends AbstractObject
             ]
         ],
     ];
+
+    /**
+     * @return MediaObject[]
+     * @throws \Exception
+     */
+    public function getMediaObjectLinks(){
+        $ids =  $this->getMediaObjectLinkIds();
+        $media_objects = [];
+        foreach($ids as $id){
+            $media_object = new \Pressmind\ORM\Object\MediaObject($id);
+            if($media_object->isValid()){
+                $media_objects[] = $media_object;
+            }
+        }
+        return $media_objects;
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getMediaObjectLinkIds(){
+        $ids =  array_filter(explode(',', (string)$this->links));
+        return $ids;
+    }
+
 }

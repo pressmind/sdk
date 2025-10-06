@@ -422,7 +422,10 @@ class Import
                 if(is_array($category_tree_ids) && count($category_tree_ids) > 0) {
                     $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::_importMediaObjectData(' . $id_media_object . '): Importing Category Trees', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
                     $category_tree_importer = new CategoryTree($category_tree_ids);
-                    $category_tree_importer->import();
+                    $category_tree_importer_result = $category_tree_importer->import();
+                    if(isset($category_tree_importer_result['linked_media_object_ids'])){
+                        $linked_media_object_ids = array_merge($linked_media_object_ids, $category_tree_importer_result['linked_media_object_ids']);
+                    }
                 }
 
                 if(is_array($linked_media_object_ids) && count($linked_media_object_ids) > 0) {

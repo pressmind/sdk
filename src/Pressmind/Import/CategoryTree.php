@@ -24,6 +24,8 @@ class CategoryTree extends AbstractImport implements ImportInterface
 
     private $_imported_items = [];
 
+    private $_linked_media_objects = [];
+
     /**
      * CategoryTree constructor.
      * @param array $ids
@@ -58,13 +60,13 @@ class CategoryTree extends AbstractImport implements ImportInterface
            return true;
         }
         $_RUNTIME_IMPORTED_CATEGORY_IDS = array_merge($_RUNTIME_IMPORTED_CATEGORY_IDS, $request);
+        $this->_linked_media_objects = [];
         $client = new Client();
         $response = $client->sendRequest('Category', 'all', empty(array_filter($this->_ids)) ? [] : ['ids' => implode(',', $this->_ids)]);
         $this->_log[] = ' Importer::_importCategoryTrees(): REST request done';
         $this->_checkApiResponse($response);
         if (is_a($response, 'stdClass') && isset($response->result) && is_array($response->result)) {
             foreach ($response->result as $tree_info) {
-                $_imported_items = [];
                 if (is_a($tree_info, 'stdClass') && isset($tree_info->tree) && !empty($tree_info->tree)) {
                     $this->_log[] = 'Importer::_importCategoryTrees(): Importing tree ID ' . $tree_info->id;
                     $tree = new \Pressmind\ORM\Object\CategoryTree();
@@ -87,6 +89,10 @@ class CategoryTree extends AbstractImport implements ImportInterface
             }
             $this->createGetTextFiles();
         }
+
+        return [
+            'linked_media_object_ids' => $this->_linked_media_objects,
+        ];
     }
 
     /**
@@ -109,6 +115,11 @@ class CategoryTree extends AbstractImport implements ImportInterface
             $category_tree_item->id_tree = $id_tree;
             $category_tree_item->code = empty($item->code) ? null : $item->code;
             $category_tree_item->sort = $sort;
+            $category_tree_item->links = null;
+            if(!empty($item->links)){
+                $category_tree_item->links = $item->links;
+                $this->_linked_media_objects = array_unique(array_merge($this->_linked_media_objects, array_filter(explode(',', $item->links))));
+            }
             if(!empty($allowed_languages) && is_array($allowed_languages)){
                 foreach($allowed_languages as $language){
                     if(isset($item->{$language})){

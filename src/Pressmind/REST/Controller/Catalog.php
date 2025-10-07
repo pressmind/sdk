@@ -179,7 +179,7 @@ class Catalog
                     if($Discount !== false){
                         $product->priceLabel = !empty($Discount->name) ? $Discount->name : null;
                         $product->priceLabel = html_entity_decode($product->priceLabel);
-                        $product->priceBefore = html_entity_decode($Discount->name);
+                        $product->priceBefore = html_entity_decode($Discount->price_before_discount);
                     }
                     $product->priceSuffix = null;
                     $product->pricePrefix = "ab";

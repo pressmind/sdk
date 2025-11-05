@@ -152,8 +152,8 @@ class Indexer extends AbstractIndex
             $valid_ids[] = $ResultSet->id;
             $item = new \stdClass();
             $item->_id = $ResultSet->id;
-            $item->id_media_objects = explode(',', $ResultSet->id_media_objects);
-            $item->id_media_objects = array_map('intval', $item->id_media_objects);
+            $item->id_media_objects = explode(',', $ResultSet->id_media_objects ?? '');
+            $item->id_media_objects = array_map('intval', $item->id_media_objects ?? []);
             $items[] = $item;
         }
         $collection = $this->db->{'powerfilter'};

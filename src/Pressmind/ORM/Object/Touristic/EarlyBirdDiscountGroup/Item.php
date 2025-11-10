@@ -20,6 +20,7 @@ use Pressmind\ORM\Object\AbstractObject;
  * @property string $origin
  * @property string $agency
  * @property string $name
+ * @property string $room_condition_code_ibe
  */
 class Item extends AbstractObject
 {
@@ -157,6 +158,14 @@ class Item extends AbstractObject
             'name' => [
                 'title' => 'name',
                 'name' => 'name',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'room_condition_code_ibe' => [
+                'title' => 'room_condition_code_ibe',
+                'name' => 'room_condition_code_ibe',
                 'type' => 'string',
                 'required' => false,
                 'validators' => NULL,

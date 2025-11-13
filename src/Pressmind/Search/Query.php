@@ -112,6 +112,7 @@ class Query
                 $item['fst_date_departure'] = !empty($document['fst_date_departure']) ? new \DateTime($document['fst_date_departure']) : null;
                 $item['possible_durations'] = !empty($document['possible_durations']) ? $document['possible_durations'] : [];
                 $item['last_modified_date'] = $document['last_modified_date'];
+                $item['object_type_order'] = !empty($document['object_type_order']) ? $document['object_type_order'] : null;
                 $item['sales_priority'] = !empty($document['sales_priority']) ? $document['sales_priority'] : null;
                 $item['locations'] = !empty($document['locations']) ? $document['locations'] : [];
                 if (!empty($document['prices'])) {

@@ -209,6 +209,7 @@
           "five_dates_per_month_list": false,
           "possible_duration_list": false,
           "allow_invalid_offers": [123,124],
+          "order_by_primary_object_type_priority" : false,
           "touristic": {
             "occupancies": [
               1,

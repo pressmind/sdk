@@ -224,6 +224,7 @@ class Indexer extends AbstractIndex
      */
     public function createIndex($idMediaObject, $language, $origin, $agency = null, $force = false)
     {
+        $config = Registry::getInstance()->get('config');
         $searchObject = new \stdClass();
         $this->mediaObject = new MediaObject($idMediaObject, true, true);
         $searchObject->departure_date_count = $this->_createDepartureDateCount($origin, $agency);
@@ -232,6 +233,7 @@ class Indexer extends AbstractIndex
         }
         $searchObject->_id = $this->mediaObject->id;
         $searchObject->id_object_type = $this->mediaObject->id_object_type;
+        $searchObject->object_type_order = array_search($this->mediaObject->id_object_type, $config['data']['primary_media_type_ids']);
         $searchObject->id_media_object = $this->mediaObject->id;
         $searchObject->url = $this->mediaObject->getPrettyUrl($language);
         foreach($this->_config['search']['build_for'][$this->mediaObject->id_object_type] as $v){

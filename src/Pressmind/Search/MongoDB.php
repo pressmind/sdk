@@ -1039,7 +1039,9 @@ class MongoDB extends AbstractSearch
         if($allow_invalid_offers && isset($sort['$sort'])){
             $sort['$sort'] = array_merge(['has_price' => -1], $sort['$sort']);
         }
-
+        if(!empty($config['data']['search_mongodb']['search']['order_by_primary_object_type_priority'])){
+            $sort['$sort'] = array_merge(['object_type_order' => 1], $sort['$sort']);
+        }
         $facetStage['$facet']['documents'][] = $sort;
         $stages[] = $facetStage;
 

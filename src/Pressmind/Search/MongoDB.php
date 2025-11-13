@@ -1040,7 +1040,11 @@ class MongoDB extends AbstractSearch
             $sort['$sort'] = array_merge(['has_price' => -1], $sort['$sort']);
         }
         if(!empty($config['data']['search_mongodb']['search']['order_by_primary_object_type_priority'])){
-            $sort['$sort'] = array_merge(['object_type_order' => 1], $sort['$sort']);
+            if(isset($sort['$sort']) && is_array($sort['$sort'])){
+                $sort['$sort'] = array_merge(['object_type_order' => 1], $sort['$sort']);
+            }else{
+                $sort = ['$sort' => ['object_type_order' => 1]];
+            }
         }
         $facetStage['$facet']['documents'][] = $sort;
         $stages[] = $facetStage;

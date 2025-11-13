@@ -596,6 +596,7 @@ class MongoDB extends AbstractSearch
                 'sales_priority' => 1,
                 'sold_out' => 1,
                 'is_running' => 1,
+                'object_type_order' => 1,
                 'has_price' => ['$gt' => [['$size' => '$prices'], 0 ] ],
                 'prices' => [
                     '$reduce' => [
@@ -689,6 +690,7 @@ class MongoDB extends AbstractSearch
                 'has_price' => ['$first' => '$$ROOT.has_price'],
                 'sold_out' => ['$first' => '$$ROOT.sold_out'],
                 'is_running' => ['$first' => '$$ROOT.is_running'],
+                'object_type_order' => ['$first' => '$$ROOT.object_type_order'],
                 'dates_per_month' => ['$first' => '$$ROOT.dates_per_month'],
                 'prices' => ['$push' => '$$ROOT.prices'],
             ]

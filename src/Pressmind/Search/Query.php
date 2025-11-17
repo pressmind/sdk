@@ -508,6 +508,7 @@ class Query
      *  - pm-sc    string  startingpoint option city id/s separated by comma
      *  - pm-so    int     sold out (0 or 1),
      *  - pm-ir    int     is running travel (0 or 1)
+     *  - pm-gu    int     product has guaranteed departures (0 or 1)
      *  - pm-sp    string  sales priority, e.g. 'A000000' ([A,B,C])([0-9]{+6}) A = Higher, B = Medium, C = Lower, 000000 = Sales Priority Number, 0 = highest priority, 999999 = lowest priority
      *  - pm-pf    int     Powerfilter,  e.g. '123456789'
      *  - pm-l     string  limit e.g. '0,10' pagination
@@ -630,6 +631,13 @@ class Query
             $is_running = self::extractBoolean($request[$prefix.'-ir']);
             $conditions[] = new \Pressmind\Search\Condition\MongoDB\Running($is_running);
             $validated_search_parameters[$prefix.'-ir'] = $is_running ? '1' : '0';
+        }
+        if (isset($request[$prefix . '-gu']) === true){
+            $guaranteed = filter_var($request[$prefix . '-gu'], FILTER_VALIDATE_BOOLEAN);
+            if(is_bool($guaranteed)){
+                $conditions[] = new \Pressmind\Search\Condition\MongoDB\Guaranteed($guaranteed);
+                $validated_search_parameters[$prefix . '-gu'] = $guaranteed ? '1' : '0';
+            }
         }
         if (isset($request[$prefix.'-c']) === true && is_array($request[$prefix.'-c']) === true) {
             $search_item = $request[$prefix.'-c'];

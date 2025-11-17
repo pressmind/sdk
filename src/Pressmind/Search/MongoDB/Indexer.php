@@ -254,6 +254,7 @@ class Indexer extends AbstractIndex
         }
         $searchObject->sold_out = $this->_soldOut($origin, $agency);
         $searchObject->is_running = $this->_isRunning($origin, $agency);
+        $searchObject->has_guaranteed_departures = $this->_hasGuaranteedDepartures($searchObject->prices);
         $searchObject->ports = $this->_getPorts();
         $searchObject->departure_ports = $this->_getDeparturePorts();
         $searchObject->arrival_ports = $this->_getArrivalPorts();
@@ -289,6 +290,41 @@ class Indexer extends AbstractIndex
             return false;
         }
         return json_decode(json_encode($searchObject));
+    }
+
+    /**
+     * @param $prices
+     * @return bool
+     */
+    private function _hasGuaranteedDepartures($prices){
+        if(!empty($prices)){
+            foreach($prices as $price){
+                if(!empty($price->guaranteed_departures)){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @return array|null
+     * @throws \ReflectionException
+     */
+    private function _custom_order(){
+        if(empty($this->_config['search']['custom_order'])){
+           return null;
+        }
+        $result = [];
+        foreach($this->_config['search']['custom_order'] as $id_object_type => $custom_orders){
+            if($this->mediaObject->id_object_type != $id_object_type){
+                continue;
+            }
+            foreach($custom_orders as $key => $custom_order){
+                $result[$key] = $this->_filterFunction($custom_order);
+            }
+        }
+        return $result;
     }
 
     /**

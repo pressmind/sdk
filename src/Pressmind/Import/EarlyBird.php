@@ -73,7 +73,7 @@ class EarlyBird extends AbstractImport implements ImportInterface
                         $this->_errors[] = $e->getMessage();
                     }
                 }
-                $this->remove_orphans($earlybird_group_ids);
+                $this->remove_orphans($earlybird_group_ids, $earlybird_group_item_ids);
             }
         } catch (Exception $e) {
             $this->_errors[] = $e->getMessage();
@@ -85,7 +85,7 @@ class EarlyBird extends AbstractImport implements ImportInterface
      * @return void
      * @throws Exception
      */
-    public function remove_orphans($earlybird_group_ids)
+    public function remove_orphans($earlybird_group_ids, $earlybird_group_item_ids)
     {
         /** @var Pdo $db */
         $db = Registry::getInstance()->get('db');
@@ -103,5 +103,9 @@ class EarlyBird extends AbstractImport implements ImportInterface
                 WHERE NOT EXISTS (
                 SELECT 1 FROM '.$EarlyBirdGroup->getDbTableName().' WHERE '.$EarlyBirdGroupItem->getDbTableName().'.id_early_bird_discount_group = '.$EarlyBirdGroup->getDbTableName().'.id)';
         $db->execute($sql);
+        if(!empty($earlybird_group_item_ids)){
+            $sql = 'DELETE FROM '.$EarlyBirdGroupItem->getDbTableName().' WHERE id not in("'.implode('","', $earlybird_group_item_ids).'")';
+            $db->execute($sql);
+        }
     }
 }

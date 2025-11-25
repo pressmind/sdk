@@ -997,9 +997,13 @@ class MongoDB extends AbstractSearch
             ];
         }elseif(array_key_first($this->_sort) == 'date_departure'){
             if($output == 'date_list'){
+                $sort_direction = strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1;
                 $sort = ['$sort' => [
-                            'prices.date_departures' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1,
-                            'sales_priority' => 1
+                            'prices.date_departures' => $sort_direction,
+                            'sales_priority' => 1,
+                            'prices.price_total' => 1,
+                            'prices.duration' => -1,
+                            'id_media_object' => 1
                         ]
                 ];
             }else{

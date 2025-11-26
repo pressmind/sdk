@@ -57,7 +57,7 @@ class AtlasLuceneFulltext
     public function __construct($searchString, $definition = [], $gson_property = null, $lon = null, $lat = null, $maxDistanceKm = 100, $locationCondition = 'must')
     {
         $this->_searchStringRaw = $searchString;
-        $this->_searchString  = !empty($searchString) ? trim(str_replace(["\\", '"'], ['', ''], FulltextSearch::replaceChars($clean_string))) : null;
+        $this->_searchString  = !empty($searchString) ? trim(str_replace(["\\", '"'], ['', ''], FulltextSearch::replaceChars($searchString))) : null;
         if(!empty($definition)){
             foreach(['should', 'must'] as $type){
                 $valid_queries = [];
@@ -97,7 +97,7 @@ class AtlasLuceneFulltext
             }
         } else {
             if(!empty($this->_searchString) || (!empty($this->_lon) && !empty($this->_lat) && !empty($this->_maxDistanceKm) && !empty($this->_gson_property))){
-                $is_valid = false;
+                $is_valid = true;
             }
         }
         return $is_valid;

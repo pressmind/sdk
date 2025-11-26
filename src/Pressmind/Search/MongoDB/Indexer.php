@@ -335,11 +335,12 @@ class Indexer extends AbstractIndex
      */
     private function _mapDescriptions($language, $agency = null)
     {
-        $data = $this->mediaObject->getDataForLanguage($language)->toStdClass();
+        $moc = $this->mediaObject->getDataForLanguage($language);
         $description = [];
-        if(empty($this->_config['search']['descriptions'][$this->mediaObject->id_object_type])){
+        if(empty($moc) || empty($this->_config['search']['descriptions'][$this->mediaObject->id_object_type])){
             return $description;
         }
+        $data = $moc->stdClass();
         $description_map = $this->_config['search']['descriptions'][$this->mediaObject->id_object_type];
         foreach ($description_map as $index_name => $item_info) {
             $value = null;
@@ -421,11 +422,12 @@ class Indexer extends AbstractIndex
 
     private function _mapGroups($language)
     {
-        $data = $this->mediaObject->getDataForLanguage($language)->toStdClass();
+        $moc = $this->mediaObject->getDataForLanguage($language);
         $groups = [];
-        if(empty($this->_config['search']['groups'][$this->mediaObject->id_object_type])){
+        if(empty($moc) || empty($this->_config['search']['groups'][$this->mediaObject->id_object_type])){
             return $groups;
         }
+        $data = $moc->toStdClass();
         $group_map = $this->_config['search']['groups'][$this->mediaObject->id_object_type];
         if(empty($group_map['field'])){
             echo 'Error: field must be set (if you plan to use groups!)';
@@ -483,11 +485,12 @@ class Indexer extends AbstractIndex
      */
     private function _mapLocations($language)
     {
-        $data = $this->mediaObject->getDataForLanguage($language)->toStdClass();
+        $moc = $this->mediaObject->getDataForLanguage($language);
         $locations = new \stdClass();
-        if(empty($this->_config['search']['locations'][$this->mediaObject->id_object_type])){
+        if(empty($moc) || empty($this->_config['search']['locations'][$this->mediaObject->id_object_type])){
             return $locations;
         }
+        $data = $moc->toStdClass();
         $location_fields = array_keys($this->_config['search']['locations'][$this->mediaObject->id_object_type]);
         foreach($location_fields as $field){
             $geojson = new \stdClass();
@@ -509,12 +512,12 @@ class Indexer extends AbstractIndex
      */
     private function _mapCategories($language) {
         $categories = [];
-        if(empty($this->_config['search']['categories'][$this->mediaObject->id_object_type])){
+        $moc = $this->mediaObject->getDataForLanguage($language);
+        if(empty($moc) || empty($this->_config['search']['categories'][$this->mediaObject->id_object_type])){
             return $categories;
         }
+        $data = $moc->toStdClass();
         $categories_map = $this->_config['search']['categories'][$this->mediaObject->id_object_type];
-        $data = $this->mediaObject->getDataForLanguage($language)->toStdClass();
-
         foreach ($categories_map as $field => $additionalInfo) {
             if(!empty($additionalInfo['aggregation']['method'])){
                 $aggregated_result = $this->_callMethod($additionalInfo['aggregation']['method'], $additionalInfo['aggregation']['params']);

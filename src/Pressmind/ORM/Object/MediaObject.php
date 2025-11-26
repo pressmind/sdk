@@ -1444,7 +1444,8 @@ class MediaObject extends AbstractObject
                                 continue;
                             }
                             $included_options_price += $cheapest_option_price;
-                            if ($option->use_earlybird) {
+                            if (!empty($cheapest_option->use_earlybird)) {
+                                self::$_insert_cheapest_price_log[$this->id][] = 'Add includes option ' . $cheapest_option->name . ' to earlybird base price';
                                 $included_options_earlybird_price_base += $cheapest_option_price;
                             }
                             if ($included_options_lowest_state > $cheapest_option->state) {
@@ -1497,6 +1498,7 @@ class MediaObject extends AbstractObject
                                 } else {
                                     $starting_point_price = empty($StartingPointOption->price) ? 0 : $StartingPointOption->price;
                                 }
+                                $starting_point_earlybird_price_base = !empty($StartingPointOption->use_earlybird) ? $starting_point_price : 0;
                                 $transport_earlybird_price_base = 0;
                                 foreach ($early_bird_discounts as $early_bird_discount) {
                                     if(!empty($early_bird_discount->booking_date_to)){
@@ -1536,7 +1538,7 @@ class MediaObject extends AbstractObject
                                         continue;
                                     }
                                     $price = $option->price + $transport_price + $starting_point_price + $included_options_price;
-                                    $price_base_early_bird = ($option->use_earlybird ? $option->price : 0) + $transport_earlybird_price_base + $starting_point_price + $included_options_earlybird_price_base;
+                                    $price_base_early_bird = ($option->use_earlybird ? $option->price : 0) + $transport_earlybird_price_base + $starting_point_earlybird_price_base + $included_options_earlybird_price_base;
                                     if ($price <= 0) {
                                         self::$_insert_cheapest_price_log[$this->id][] = 'Skipping option ' . $option->name . ' because of zero price';
                                         continue;
@@ -2347,7 +2349,7 @@ class MediaObject extends AbstractObject
         $r = $CheapestPriceSpeed->loadAll(['id_media_object' => $this->getId()]);
         $count = count($r);
         $result[] = '     '.($count > 0 ? '✅' : '❌') . '  Offers (count: '.$count.')';
-        if($count === 0 && !empty(MediaObject::$_insert_cheapest_price_log[$this->id])){
+        if(((defined('PM_SDK_DEBUG') && PM_SDK_DEBUG) || $count === 0) && !empty(MediaObject::$_insert_cheapest_price_log[$this->id])){
             foreach(MediaObject::$_insert_cheapest_price_log[$this->id] as $log){
                 $result[] = '          > '.$log;
             }

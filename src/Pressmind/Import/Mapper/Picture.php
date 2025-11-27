@@ -58,8 +58,10 @@ class Picture implements MapperInterface
                         $mapped_section_object->section_name = HelperFunctions::human_to_machine($picture_section->name);
                         $mapped_section_object->tmp_url = $picture_section->link;
                         $mapped_section_object->file_name = $pIdMediaObject . '_' . $object->id_media_object . '_' . HelperFunctions::human_to_machine($picture_section->name) .'_'.md5($picture_section->link). '.jpg';
-                        $mapped_section_object->width = round($picture_section->img_width);
-                        $mapped_section_object->height = round($picture_section->img_height);
+                        $mapped_section_object->width = $picture_section->img_width;
+                        $mapped_section_object->height = $picture_section->img_height;
+                        $mapped_section_object->img_x = $picture_section->img_x;
+                        $mapped_section_object->img_y = $picture_section->img_y;
                         $mapped_section_object->file_size = null;
                         $mapped_section_object->mime_type = "image/jpeg";
                         $mapped_object->sections[] = $mapped_section_object;

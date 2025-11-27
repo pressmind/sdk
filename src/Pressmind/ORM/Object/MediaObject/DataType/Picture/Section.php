@@ -21,8 +21,10 @@ use Pressmind\Storage\File;
  * @property integer $id_image
  * @property string $section_name
  * @property string $file_name
- * @property integer $width
- * @property integer $height
+ * @property float $width
+ * @property float $height
+ * @property float $img_x
+ * @property float $img_y
  * @property integer $file_size
  * @property string $tmp_url
  * @property boolean $download_successful
@@ -125,7 +127,7 @@ class Section extends Picture
             'width' => [
                 'title' => 'width',
                 'name' => 'width',
-                'type' => 'integer',
+                'type' => 'float',
                 'required' => false,
                 'filters' => null,
                 'validators' => null,
@@ -133,7 +135,23 @@ class Section extends Picture
             'height' => [
                 'title' => 'height',
                 'name' => 'height',
-                'type' => 'integer',
+                'type' => 'float',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+            ],
+            'img_x' => [
+                'title' => 'img_x',
+                'name' => 'img_x',
+                'type' => 'float',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+            ],
+            'img_y' => [
+                'title' => 'img_y',
+                'name' => 'img_y',
+                'type' => 'float',
                 'required' => false,
                 'filters' => null,
                 'validators' => null,
@@ -210,5 +228,6 @@ class Section extends Picture
         $webp_processor->process($derivative_config, $derivative_binary_file, $derivative_config->name);
         unset($derivative_binary_file);
     }
+
     
 }

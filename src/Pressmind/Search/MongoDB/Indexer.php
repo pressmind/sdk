@@ -264,6 +264,7 @@ class Indexer extends AbstractIndex
         $searchObject->recommendation_rate = $this->mediaObject->recommendation_rate;
         $searchObject->sales_priority = $this->mediaObject->sales_priority.str_pad($this->mediaObject->sales_position, 6, '0', STR_PAD_LEFT);
         //$searchObject->dates_per_month = null;
+        $searchObject->custom_order = $this->_custom_order();
         if(!empty($this->_config['search']['five_dates_per_month_list'])){
             $searchObject->dates_per_month = $this->_createDatesPerMonth($origin, $agency);
         }
@@ -340,7 +341,7 @@ class Indexer extends AbstractIndex
         if(empty($moc) || empty($this->_config['search']['descriptions'][$this->mediaObject->id_object_type])){
             return $description;
         }
-        $data = $moc->stdClass();
+        $data = $moc->toStdClass();
         $description_map = $this->_config['search']['descriptions'][$this->mediaObject->id_object_type];
         foreach ($description_map as $index_name => $item_info) {
             $value = null;

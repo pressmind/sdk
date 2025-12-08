@@ -104,7 +104,7 @@ class MongoDB extends AbstractSearch
         $this->_origin = $origin;
         $this->_agency = $agency;
         $this->_use_opensearch = !empty($config['data']['search_opensearch']['enabled']) && !empty($config['data']['search_opensearch']['enabled_in_mongo_search']);
-        if(is_null($language) && count($config['data']['languages']['allowed'])) {
+        if(is_null($language) && count($config['data']['languages']['allowed']) > 1) {
             $this->_language = $config['data']['languages']['default'];
         }elseif(!is_null($language)){
             $this->_language = $language;

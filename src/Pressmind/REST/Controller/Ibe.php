@@ -235,9 +235,10 @@ class Ibe
                         continue;
                     }
                 }
-                $extra->occupancy_min = $extra->min_pax > 0 ? $extra->min_pax : 1;
-                $extra->occupancy_max = $extra->max_pax > 0 ? $extra->max_pax : 10;
-                $extra->occupancy = (isset($predefined_options[$extra->id]) && $predefined_options[$extra->id] > $extra->occupancy_min) ? $predefined_options[$extra->id] : $extra->occupancy_min;
+                $extra->occupancy_min = 1;
+                $extra->occupancy_max = 1;
+                $extra->occupancy = 1;
+                $extra->quota = 15;
                 if ($extra->type == 'ticket' && $booking->booking_package->price_mix == 'date_ticket') {
                     $options[] = $extra;
                     unset($extras[$key]);

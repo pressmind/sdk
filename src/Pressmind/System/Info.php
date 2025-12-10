@@ -55,6 +55,8 @@ class Info
         '\Touristic\Date\Attribute',
         '\Touristic\EarlyBirdDiscountGroup',
         '\Touristic\EarlyBirdDiscountGroup\Item',
+        '\Touristic\EarlyPaymentDiscountGroup',
+        '\Touristic\EarlyPaymentDiscountGroup\Item',
         '\Touristic\ExtrasToMediaObject',
         '\Touristic\Housing\Package',
         '\Touristic\Housing\Package\DescriptionLink',

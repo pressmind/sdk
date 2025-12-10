@@ -1,6 +1,6 @@
 <?php
 
-namespace Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup;
+namespace Pressmind\ORM\Object\Touristic\EarlyPaymentDiscountGroup;
 
 use DateTime;
 use Pressmind\ORM\Object\AbstractObject;
@@ -8,7 +8,7 @@ use Pressmind\ORM\Object\AbstractObject;
 /**
  * Class Item
  * @property string $id
- * @property string $id_early_bird_discount_group
+ * @property string $id_early_payment_discount_group
  * @property DateTime $travel_date_from
  * @property DateTime $travel_date_to
  * @property DateTime $booking_date_from
@@ -21,6 +21,8 @@ use Pressmind\ORM\Object\AbstractObject;
  * @property string $origin
  * @property string $agency
  * @property string $name
+ * @property DateTime $have_to_pay_before_date
+ * @property int $have_to_pay_after_booking_date_days
  * @property string $room_condition_code_ibe
  */
 class Item extends AbstractObject
@@ -35,7 +37,7 @@ class Item extends AbstractObject
             'name' => self::class,
         ],
         'database' => [
-            'table_name' => 'pmt2core_touristic_early_bird_discount_group_item',
+            'table_name' => 'pmt2core_touristic_early_payment_discount_group_item',
             'primary_key' => 'id',
         ],
         'properties' => [
@@ -52,9 +54,9 @@ class Item extends AbstractObject
                 ],
                 'filters' => NULL,
             ],
-            'id_early_bird_discount_group' => [
-                'title' => 'id_early_bird_discount_group',
-                'name' => 'id_early_bird_discount_group',
+            'id_early_payment_discount_group' => [
+                'title' => 'id_early_payment_discount_group',
+                'name' => 'id_early_payment_discount_group',
                 'type' => 'string',
                 'required' => true,
                 'validators' => [
@@ -65,7 +67,7 @@ class Item extends AbstractObject
                 ],
                 'filters' => NULL,
                 'index' => [
-                    'id_early_bird_discount_group' => 'index'
+                    'id_early_payment_discount_group' => 'index'
                 ]
             ],
             'travel_date_from' => [
@@ -176,6 +178,22 @@ class Item extends AbstractObject
                 'title' => 'room_condition_code_ibe',
                 'name' => 'room_condition_code_ibe',
                 'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'have_to_pay_before_date' => [
+                'title' => 'have_to_pay_before_date',
+                'name' => 'have_to_pay_before_date',
+                'type' => 'datetime',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'have_to_pay_after_booking_date_days' => [
+                'title' => 'have_to_pay_after_booking_date_days',
+                'name' => 'have_to_pay_after_booking_date_days',
+                'type' => 'int',
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,

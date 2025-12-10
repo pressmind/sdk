@@ -84,7 +84,10 @@ use DateTime;
  * @property string $booking_package_type_of_travel
  * @property string $booking_package_variant_code
  * @property string $booking_package_request_code
+ * @property string $booking_package_price_group
+ * @property string $booking_package_product_group
  * @property string $booking_package_name
+ * @property string $booking_package_code
  * @property string $diff_to_single_room
  * @property string $included_options_price
  * @property string $included_options_description
@@ -1053,9 +1056,48 @@ class CheapestPriceSpeed extends AbstractObject
                     ]
                 ],
             ],
+            'booking_package_price_group' => [
+                'name' => 'booking_package_price_group',
+                'title' => 'booking_package_price_group',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 5,
+                    ]
+                ],
+            ],
+            'booking_package_product_group' => [
+                'name' => 'booking_package_product_group',
+                'title' => 'booking_package_product_group',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 5,
+                    ]
+                ],
+            ],
             'booking_package_name' => [
                 'name' => 'booking_package_name',
                 'title' => 'booking_package_name',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 255,
+                    ]
+                ],
+            ],
+            'booking_package_code' => [
+                'name' => 'booking_package_code',
+                'title' => 'booking_package_code',
                 'type' => 'string',
                 'required' => false,
                 'filters' => null,

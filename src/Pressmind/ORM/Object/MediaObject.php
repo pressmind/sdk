@@ -1628,7 +1628,7 @@ class MediaObject extends AbstractObject
                                         $discount = $this->_calculateEarlyBirdDiscount($early_bird_discount, $price_base_early_bird);
                                         if ($discount > 0 || $discount < 0) {
                                             $cheapestPriceSpeed->earlybird_discount = strtolower($early_bird_discount->type) == 'p' ? $early_bird_discount->discount_value : null;
-                                            $cheapestPriceSpeed->earlybird_discount_date_to = $early_bird_discount->booking_date_to;
+                                            $cheapestPriceSpeed->earlybird_discount_date_to = $this->_getEffectiveBookingDateTo($early_bird_discount, $date);
                                             $cheapestPriceSpeed->earlybird_discount_f = strtolower($early_bird_discount->type) == 'f' ? $early_bird_discount->discount_value : null;
                                             $cheapestPriceSpeed->earlybird_name = empty($date->early_bird_discount_group->name) ? 'Frühbucher' : $date->early_bird_discount_group->name;
                                             if(!empty($early_bird_discount->name)) {
@@ -1654,6 +1654,9 @@ class MediaObject extends AbstractObject
                                     $cheapestPriceSpeed->booking_package_variant_code = $booking_package->variant_code;
                                     $cheapestPriceSpeed->booking_package_request_code = $booking_package->request_code;
                                     $cheapestPriceSpeed->booking_package_name = $booking_package->name;
+                                    $cheapestPriceSpeed->booking_package_code = $booking_package->code;
+                                    $cheapestPriceSpeed->booking_package_price_group = $booking_package->price_group;
+                                    $cheapestPriceSpeed->booking_package_product_group = $booking_package->product_group;
                                     $cheapestPriceSpeed->is_virtual_created_price = $booking_package->is_virtual_created_price;
                                     $cheapestPriceSpeed->guaranteed = $date->guaranteed;
                                     $cheapestPriceSpeed->saved = $date->saved;
@@ -1684,16 +1687,48 @@ class MediaObject extends AbstractObject
     /**
      * @param Item $discount
      * @param Date $date
+     * @return DateTime|null
+     */
+    private function _getEffectiveBookingDateFrom($discount, $date) {
+        var_dump($discount);
+        if (is_null($discount->booking_date_from) && is_null($discount->booking_date_to) && !is_null($discount->booking_days_before_departure)) {
+            $booking_date_from = clone $date->departure;
+            $booking_date_from->sub(new \DateInterval('P' . $discount->booking_days_before_departure . 'D'));
+            return $booking_date_from;
+        }
+        return $discount->booking_date_from;
+    }
+
+    /**
+     * @param Item $discount
+     * @param Date $date
+     * @return DateTime|null
+     */
+    private function _getEffectiveBookingDateTo($discount, $date) {
+        if (is_null($discount->booking_date_from) && is_null($discount->booking_date_to) && !is_null($discount->booking_days_before_departure)) {
+            return clone $date->departure;
+        }
+        return $discount->booking_date_to;
+    }
+
+    /**
+     * @param Item $discount
+     * @param Date $date
      * @return false
      */
     private function _checkEarlyBirdDiscount($discount, $date) {
+        if(is_null($discount)){
+            return false;
+        }
         $now = new DateTime();
         $now->setTime(0,0,0);
-        if(!is_null($discount) &&
-                ($now >= $discount->booking_date_from || is_null($discount->booking_date_from)) &&
-                ($now <= $discount->booking_date_to || is_null($discount->booking_date_to)) &&
-                ($date->departure >= $discount->travel_date_from || is_null($discount->travel_date_from)) &&
-                ($date->departure <= $discount->travel_date_to || is_null($discount->travel_date_to))
+        $booking_date_from = $this->_getEffectiveBookingDateFrom($discount, $date);
+        $booking_date_to = $this->_getEffectiveBookingDateTo($discount, $date);
+        if(
+            ($now >= $booking_date_from || is_null($booking_date_from)) &&
+            ($now <= $booking_date_to || is_null($booking_date_to)) &&
+            ($date->departure >= $discount->travel_date_from || is_null($discount->travel_date_from)) &&
+            ($date->departure <= $discount->travel_date_to || is_null($discount->travel_date_to))
         ) {
             return true;
         }

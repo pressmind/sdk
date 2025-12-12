@@ -105,7 +105,7 @@ class Item extends AbstractObject
             'booking_days_before_departure' => [
                 'title' => 'booking_days_before_departure',
                 'name' => 'booking_days_before_departure',
-                'type' => 'int',
+                'type' => 'integer',
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,
@@ -113,7 +113,7 @@ class Item extends AbstractObject
             'min_stay_nights' => [
                 'title' => 'min_stay_nights',
                 'name' => 'min_stay_nights',
-                'type' => 'int',
+                'type' => 'integer',
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,

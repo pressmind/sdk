@@ -26,8 +26,8 @@ use Pressmind\Registry;
  * @property string $url
  * @property integer $state
  * @property string $code_ibe
- * @property integer $id_early_bird_discount_group
- * @property integer $id_early_payment_discount_group
+ * @property string $id_early_bird_discount_group
+ * @property string $id_early_payment_discount_group
  * @property string $link_pib
  * @property boolean $guaranteed
  * @property boolean $saved

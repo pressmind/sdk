@@ -27,6 +27,7 @@ use Pressmind\Registry;
  * @property integer $state
  * @property string $code_ibe
  * @property integer $id_early_bird_discount_group
+ * @property integer $id_early_payment_discount_group
  * @property string $link_pib
  * @property boolean $guaranteed
  * @property boolean $saved
@@ -260,6 +261,22 @@ class Date extends AbstractObject
                 'filters' => NULL,
                 'index' => [
                     'id_early_bird_discount_group' => 'index'
+                ]
+            ],
+            'id_early_payment_discount_group' => [
+                'title' => 'id_early_payment_discount_group',
+                'name' => 'id_early_payment_discount_group',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ]
+                ],
+                'filters' => NULL,
+                'index' => [
+                    'id_early_payment_discount_group' => 'index'
                 ]
             ],
             'link_pib' => [

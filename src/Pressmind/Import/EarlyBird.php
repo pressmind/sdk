@@ -38,7 +38,6 @@ class EarlyBird extends AbstractImport implements ImportInterface
                         $EarlyBirdGroup->id = $result->id;
                         $EarlyBirdGroup->name = empty($result->name) ? $result->import_code : $result->name;
                         $EarlyBirdGroup->create();
-                        $earlybird_group_item_ids = [];
                         foreach($result->scales as $scale){
                             $travel_date_to = !empty($scale->travel_date_to) ? new \DateTime($scale->travel_date_to. ' 00:00:00') : null;
                             $booking_date_to = !empty($scale->booking_date_to) ? new \DateTime($scale->booking_date_to.' 00:00:00') : null;
@@ -60,7 +59,8 @@ class EarlyBird extends AbstractImport implements ImportInterface
                             $Item->discount_value = $scale->discount_value;
                             $Item->type = $scale->type;
                             $Item->round = $scale->round;
-                            $Item->early_payer = $scale->early_payer;
+                            $Item->min_stay_nights = null;
+                            $Item->booking_days_before_departure = null;
                             $Item->create();
                             $earlybird_group_item_ids[] = $Item->getId();
                         }

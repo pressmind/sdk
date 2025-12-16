@@ -1690,8 +1690,7 @@ class MediaObject extends AbstractObject
      * @return DateTime|null
      */
     private function _getEffectiveBookingDateFrom($discount, $date) {
-        var_dump($discount);
-        if (is_null($discount->booking_date_from) && is_null($discount->booking_date_to) && !is_null($discount->booking_days_before_departure)) {
+        if (is_null($discount->booking_date_from) && is_null($discount->booking_date_to) && !empty($discount->booking_days_before_departure)) {
             $booking_date_from = clone $date->departure;
             $booking_date_from->sub(new \DateInterval('P' . $discount->booking_days_before_departure . 'D'));
             return $booking_date_from;
@@ -1705,7 +1704,7 @@ class MediaObject extends AbstractObject
      * @return DateTime|null
      */
     private function _getEffectiveBookingDateTo($discount, $date) {
-        if (is_null($discount->booking_date_from) && is_null($discount->booking_date_to) && !is_null($discount->booking_days_before_departure)) {
+        if (is_null($discount->booking_date_from) && is_null($discount->booking_date_to) && !empty($discount->booking_days_before_departure)) {
             return clone $date->departure;
         }
         return $discount->booking_date_to;

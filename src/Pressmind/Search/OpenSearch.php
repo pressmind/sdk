@@ -191,7 +191,8 @@ class OpenSearch extends AbstractSearch
                                     'fields' => $this->_getFields(),
                                     'type' => 'best_fields',
                                     'operator' => 'and',
-                                    'fuzziness' => 'AUTO'
+                                    'fuzziness' => 'AUTO',
+                                    'prefix_length' => 3
                                 ]
                             ]
                         ],

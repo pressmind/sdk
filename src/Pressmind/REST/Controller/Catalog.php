@@ -108,7 +108,7 @@ class Catalog
             $date_range_str = $month->date->format('Ymd').'-'.$month->date->format('Ymt');
             $item = new stdClass();
             $item->id = $date_range_str;
-            $query = $_GET;
+            $query = $params;
             $query['pm-dr'] = $date_range_str;
             $item->url = urldecode(http_build_query($query));
             $item->name = HelperFunctions::monthNumberToLocalMonthName($month->date->format('n'));
@@ -120,7 +120,7 @@ class Catalog
             $product_count += $is_initial ? $month->count_in_system : $month->count_in_search;
             $month_filter->items[] = $item;
         }
-        if($product_count > 20 && count($month_filter->items) > 1){
+        if(count($month_filter->items) > 1) {
             $filters[] = $month_filter;
         }
         /**

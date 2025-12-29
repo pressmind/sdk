@@ -44,7 +44,11 @@ class Catalog
             }
             $result = Query::getResult($Filter);
         }catch (Exception $e){
-            return $e->getMessage();
+            return [
+                'error' => true,
+                'payload' => null,
+                'msg' => $e->getMessage()
+            ];
         }
         $filters = [];
         foreach($result['categories'] as $category_name => $categories){
@@ -192,7 +196,11 @@ class Catalog
                 $feed->sections[] = $section;
 
             }
-            return $feed;
+            return [
+                'error' => false,
+                'payload' => $feed,
+                'msg' => null
+            ];
         }
         if(!$is_initial){
             $feed = new stdClass();
@@ -239,7 +247,11 @@ class Catalog
                 $section->products = array_slice($products, 0, 5);;
                 $feed->sections[] = $section;
             }
-            return $feed;
+            return [
+                'error' => false,
+                'payload' => $feed,
+                'msg' => null
+            ];
         }
     }
 
@@ -257,9 +269,17 @@ class Catalog
             }
             $result = Query::getResult($Filter);
         } catch (Exception $e) {
-            return $e->getMessage();
+            return [
+                'error' => true,
+                'payload' => null,
+                'msg' => $e->getMessage()
+            ];
         }
-       return $result;
+        return [
+            'error' => false,
+            'payload' => $result,
+            'msg' => null
+        ];
     }
 
     public function listAll($params){
@@ -274,7 +294,9 @@ class Catalog
     {
         if(empty($params['search_query'])) {
             return [
-                "price_query" => null,
+                'error' => false,
+                'payload' => ["price_query" => null],
+                'msg' => null
             ];
         }
         $search_query = $params['search_query'];
@@ -306,7 +328,9 @@ class Catalog
             }
         }
         return [
-            "price_query" => !empty($valid_params) ? http_build_query($valid_params) : null,
+            'error' => false,
+            'payload' => ["price_query" => !empty($valid_params) ? http_build_query($valid_params) : null],
+            'msg' => null
         ];
     }
 }

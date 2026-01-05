@@ -117,7 +117,6 @@ class S3 implements ProviderInterface
      * @param File $file
      * @param Bucket $bucket
      * @return boolean
-     * @throws S3Exception|\Exception if there is an unhandled exception
      */
     public function fileExists($file, $bucket)
     {

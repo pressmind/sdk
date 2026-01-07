@@ -120,7 +120,12 @@ class S3 implements ProviderInterface
      */
     public function fileExists($file, $bucket)
     {
-        return $this->_s3_client->doesObjectExist($bucket->name, $file->name);
+        try {
+            return $this->_s3_client->doesObjectExistV2($bucket->name, $file->name);
+        } catch (Exception $e) {
+            Writer::write($e->getMessage(), Writer::OUTPUT_FILE, $this->_log_file_name, Writer::TYPE_ERROR);
+            return false;
+        }
     }
 
     /**

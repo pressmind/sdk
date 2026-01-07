@@ -178,6 +178,15 @@ class ManualDiscount extends AbstractObject
          * @var ManualDiscount[] $manualDiscounts
          */
         try{
+            $Dates = Date::listAll(['id_media_object' => $id_media_object]);
+            self::cleanupGeneratedEarlyBirds($Dates);
+            $Dates = Date::listAll(['id_media_object' => $id_media_object]);
+            $datesWithoutEarlyBird = array_filter($Dates, function($date) {
+                return empty($date->id_early_bird_discount_group);
+            });
+            if (count($datesWithoutEarlyBird) === 0) {
+                return;
+            }
             $manualDiscounts = self::listAll(['id_media_object' => $id_media_object]);
             if (count($manualDiscounts) > 0) {
                 $earlyBirdGroup = new EarlyBirdDiscountGroup();
@@ -199,18 +208,60 @@ class ManualDiscount extends AbstractObject
                     $item->name = $manualDiscount->description;
                     $item->create();
                 }
-                $Dates = Date::listAll(['id_media_object' => $id_media_object]);
-                foreach ($Dates as $Date) {
-                    if(!empty($Date->id_early_bird_discount_group)){
-                        echo 'Date ' . $Date->id . ' already has an early bird discount group assigned, skipping.' . PHP_EOL;
-                        continue;
-                    }
+                foreach ($datesWithoutEarlyBird as $Date) {
                     $Date->id_early_bird_discount_group = $earlyBirdGroup->getId();
                     $Date->update();
                 }
             }
-        }catch (Exception $e) {
-            Writer::write('Error converting manual discounts to early bird discounts for media object ' . $id_media_object . ': ' . $e->getMessage(), WRITER::OUTPUT_BOTH, 'touristic_data', WRITER::TYPE_INFO);
+        }catch (\Exception $e) {
+            Writer::write('Error converting manual discounts to early bird discounts for media object ' . $id_media_object . ': ' . $e->getMessage(), Writer::OUTPUT_BOTH, 'touristic_data', Writer::TYPE_INFO);
+        }
+    }
+    
+    /**
+     * @param Date[] $dates
+     * @return void
+     */
+    private static function cleanupGeneratedEarlyBirds($dates) {
+        $processedGroupIds = [];
+        foreach ($dates as $date) {
+            if (empty($date->id_early_bird_discount_group)) {
+                continue;
+            }
+            if (in_array($date->id_early_bird_discount_group, $processedGroupIds)) {
+                continue;
+            }
+            $processedGroupIds[] = $date->id_early_bird_discount_group;
+            try {
+                $group = new EarlyBirdDiscountGroup($date->id_early_bird_discount_group);
+                if (empty($group->getId())) {
+                    continue;
+                }
+                $items = Item::listAll(['id_early_bird_discount_group' => $group->getId()]);
+                if (empty($items)) {
+                    continue;
+                }
+                $isGeneratedGroup = true;
+                foreach ($items as $item) {
+                    if ($item->origin !== 'manual_discount') {
+                        $isGeneratedGroup = false;
+                        break;
+                    }
+                }
+                if ($isGeneratedGroup) {
+                    $datesWithGroup = Date::listAll(['id_early_bird_discount_group' => $group->getId()]);
+                    foreach ($datesWithGroup as $dateWithGroup) {
+                        $dateWithGroup->id_early_bird_discount_group = null;
+                        $dateWithGroup->update();
+                    }
+                    foreach ($items as $item) {
+                        $item->delete();
+                    }
+                    $group->delete();
+                }
+            } catch (\Exception $e) {
+                Writer::write('Error cleaning up generated EarlyBird group: ' . $e->getMessage(), Writer::OUTPUT_BOTH, 'touristic_data', Writer::TYPE_INFO);
+            }
         }
     }
 

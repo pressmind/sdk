@@ -383,11 +383,15 @@ class Booking
             return $group;
         }
         $MediaObject = new MediaObject();
-
-        $item = $MediaObject->getEarlyBirdDiscount($this->date->getEarlybirds($agency), $this->date);
-        if(!empty($item)){
+        $valid_items = [];
+        foreach($this->date->getEarlybirds($agency) as $discount){
+            if($MediaObject->checkEarlyBirdDiscountDateOnly($discount, $this->date)){
+                $valid_items[] = $discount->toStdClass();
+            }
+        }
+        if(!empty($valid_items)){
             $group = $this->date->early_bird_discount_group->toStdClass();
-            $group->items = [$item->toStdClass()];
+            $group->items = $valid_items;
         }
         return $group;
     }

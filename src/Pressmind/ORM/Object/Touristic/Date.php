@@ -852,30 +852,23 @@ class Date extends AbstractObject
             $result[] = $prefix . ' ❌   Early Bird Discount Group id_early_bird_discount_group is set but has no relation to EarlyBirdDiscountGroup';
         }
 
-
-        /**
-         * TODO sauber validieren, ob die Early Bird Discount Group Items
-         */
         if(!empty($this->early_bird_discount_group->items) && is_array($this->early_bird_discount_group->items)) {
             foreach ($this->early_bird_discount_group->items as $item) {
                 $result[] =
-                    str_pad($item->name, 30)
+                    str_pad($item->name ?? '', 30)
                     . str_pad('(id: ' . $item->id . ') ', 12)
-                    . str_pad('agency: ' . $item->agency, 20)
+                    . str_pad('agency: ' . ($item->agency ?? '-'), 20)
                     . str_pad('booking_date: ' . ($item->booking_date_from ? $item->booking_date_from->format('Y-m-d') : 'null'), 28)
                     . ' to '
                     . str_pad(($item->booking_date_to ? $item->booking_date_to->format('Y-m-d') : 'null'), 12)
                     . str_pad('travel_date_from: ' . ($item->travel_date_from ? $item->travel_date_from->format('Y-m-d') : 'null'), 32)
                     . ' to '
-                    . str_pad(($item->travel_date_to ? $item->travel_date_to->format('Y-m-d') : 'null'), 12) .
-                    $item->type . ' - ' . $item->discount_value . ' origin: ' .
-                    $item->origin;
-
+                    . str_pad(($item->travel_date_to ? $item->travel_date_to->format('Y-m-d') : 'null'), 12)
+                    . $item->type . ' - ' . $item->discount_value 
+                    . ' origin: ' . ($item->origin ?? '-')
+                    . (!empty($item->room_condition_code_ibe) ? ' room_condition: ' . $item->room_condition_code_ibe : '');
             }
         }
-
-
-
         return $result;
     }
 

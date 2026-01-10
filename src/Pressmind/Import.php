@@ -18,13 +18,13 @@ use Pressmind\Import\MyContent;
 use Pressmind\Import\Port;
 use Pressmind\Import\Season;
 use Pressmind\Import\StartingPointOptions;
+use Pressmind\ORM\Object\Import\Queue;
 use Pressmind\Import\TouristicData;
 use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\MediaObject;
 use Pressmind\ORM\Object\Route;
 use Pressmind\REST\Client;
-use \DirectoryIterator;
 use \Exception;
 use Pressmind\Search\MongoDB\Indexer;
 
@@ -39,11 +39,6 @@ class Import
      * @var Client
      */
     private $_client;
-
-    /**
-     * @var string
-     */
-    private $_tmp_import_folder = 'import_ids';
 
     /**
      * @var array
@@ -162,7 +157,6 @@ class Import
      */
     private function _importIds($startIndex, $params, $numItems = 50)
     {
-        $config = Registry::getInstance()->get('config');
         $log_params = 'id_media_object_type=' . $params['id_media_object_type']. ', visibility=' . $params['visibility'];
         if(isset( $params['id_pool'])) {
             $log_params .= ', id_pool=' .  $params['id_pool'];
@@ -171,12 +165,8 @@ class Import
         $params['startIndex'] = $startIndex;
         $params['numItems'] = $numItems;
         $response = $this->_client->sendRequest('Text', 'search', $params);
-        $tmp_import_folder = str_replace('APPLICATION_PATH', APPLICATION_PATH, $config['tmp_dir']) . DIRECTORY_SEPARATOR . $this->_tmp_import_folder;
-        if(!file_exists($tmp_import_folder)) {
-            @mkdir($tmp_import_folder, 0770, true);
-        }
         foreach ($response->result as $item) {
-            file_put_contents($tmp_import_folder . DIRECTORY_SEPARATOR . $item->id_media_object, print_r($item, true));
+            Queue::addToQueue($item->id_media_object, $this->_import_type);
         }
         if (count($response->result) >= $numItems && $startIndex < $response->count) {
             $nextStartIndex = $startIndex + $numItems;
@@ -191,8 +181,7 @@ class Import
     public function importMediaObjectsFromFolder()
     {
         $config = Registry::getInstance()->get('config');
-        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::_importMediaObjectsFromFolder()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
-        $tmp_import_folder = str_replace('APPLICATION_PATH', APPLICATION_PATH, $config['tmp_dir']) . DIRECTORY_SEPARATOR . $this->_tmp_import_folder;
+        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObjectsFromFolder()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
         $ids = $this->getMediaObjectsFromFolder();
         foreach ($ids as $id_media_object) {
             $import_linked_media_objects = false;
@@ -200,10 +189,9 @@ class Import
                 $import_linked_media_objects = true;
             }
             if ($this->importMediaObject($id_media_object, $import_linked_media_objects)) {
-                unlink($tmp_import_folder. DIRECTORY_SEPARATOR . $id_media_object);
+                Queue::remove($id_media_object);
                 $this->_imported_ids[] = $id_media_object;
             }
-
         }
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . 'Fullimport finished', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
     }
@@ -213,17 +201,8 @@ class Import
      */
     public function getMediaObjectsFromFolder()
     {
-        $config = Registry::getInstance()->get('config');
-        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::_importMediaObjectsFromFolder()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
-        $dir = new DirectoryIterator(str_replace('APPLICATION_PATH', APPLICATION_PATH, $config['tmp_dir']) . DIRECTORY_SEPARATOR . $this->_tmp_import_folder);
-        $ids = [];
-        foreach ($dir as $file_info) {
-            if (!$file_info->isDot()) {
-                $id_media_object = $file_info->getFilename();
-                $ids[] = $id_media_object;
-            }
-        }
-        return $ids;
+        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::getMediaObjectsFromFolder()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
+        return Queue::getAllPending();
     }
 
     /**
@@ -595,17 +574,13 @@ class Import
                 }
             }
         }
-        $dir = new DirectoryIterator(str_replace('APPLICATION_PATH', APPLICATION_PATH, $conf['tmp_dir']) . DIRECTORY_SEPARATOR . $this->_tmp_import_folder);
-        foreach ($dir as $file_info) {
-            if (!$file_info->isDot()) {
-                $id_media_object = $file_info->getFilename();
-                unlink($file_info->getPathname());
-                $this->_imported_ids[] = $id_media_object;
-            }
+        $pending_ids = Queue::getAllPending();
+        foreach ($pending_ids as $id_media_object) {
+            Queue::remove($id_media_object);
+            $this->_imported_ids[] = $id_media_object;
         }
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . 'Importer::removeOrphans() Checking ' . count($this->_imported_ids) . ' mediaobjects', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         $this->_findAndRemoveOrphans();
-
     }
 
     /**

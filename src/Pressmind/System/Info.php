@@ -90,6 +90,9 @@ class Info
         '\Itinerary\Step\Board',
         '\Itinerary\Step\Section',
         '\Itinerary\Step\Section\Content',
-        '\Itinerary\Step\TextMediaObject'
+        '\Itinerary\Step\TextMediaObject',
+        '\Import\Queue'
     ];
+
+    const IBE_IMPORT_VERSION = '6_0';
 }

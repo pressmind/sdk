@@ -5,6 +5,7 @@ namespace Pressmind\REST\Controller;
 
 
 use Exception;
+use Pressmind\ORM\Object\Import\Queue;
 use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\MediaObject;
 use Pressmind\Registry;
@@ -18,33 +19,33 @@ class Import
      */
     public function addToQueue($parameters)
     {
-        if(!isset($parameters['id_media_object']) && preg_match('/^[0-9]+$/', $parameters['id_media_object'])) {
+        if(!isset($parameters['id_media_object']) || !preg_match('/^[0-9]+$/', $parameters['id_media_object'])) {
             return [
                 'success' => false,
                 'msg' => 'Error: Parameter id_media_object is missing or is not a number',
                 'data' => null
             ];
         }
-        $id_media_object = $parameters['id_media_object'];
-        $config = Registry::getInstance()->get('config');
-        $tmp_import_folder = str_replace('APPLICATION_PATH', APPLICATION_PATH, $config['tmp_dir']) . DIRECTORY_SEPARATOR . 'import_ids';
-        if(!file_exists($tmp_import_folder)) {
-            @mkdir($tmp_import_folder, 0770, true);
-        }
-        if(file_exists($tmp_import_folder . DIRECTORY_SEPARATOR . $id_media_object)) {
+        $id_media_object = (int)$parameters['id_media_object'];
+
+        if(Queue::exists($id_media_object)) {
             return [
                 'success' => true,
                 'msg' => 'Info: ID '.$id_media_object.' is already in queue',
                 'data' => null
             ];
         }
-        if(!file_put_contents($tmp_import_folder . DIRECTORY_SEPARATOR . $id_media_object, 'created_from: api_import')) {
+
+        try {
+            Queue::addToQueue($id_media_object, 'api_import');
+        } catch (Exception $e) {
             return [
                 'success' => false,
-                'msg' => 'Error: Can not write file in queue storage',
+                'msg' => 'Error: Can not add to queue: ' . $e->getMessage(),
                 'data' => null
             ];
         }
+
         return [
             'success' => true,
             'msg' => 'Success: object added to queue',

@@ -44,7 +44,6 @@
     "ib3" : {
       "endpoint": ""
     },
-    "tmp_dir": "APPLICATION_PATH/tmp",
     "docs_dir": "WEBSERVER_DOCUMENT_ROOT/docs",
     "logging": {
       "mode": [

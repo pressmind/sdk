@@ -91,7 +91,8 @@ class Info
         '\Itinerary\Step\Section',
         '\Itinerary\Step\Section\Content',
         '\Itinerary\Step\TextMediaObject',
-        '\Import\Queue'
+        '\Import\Queue',
+        '\ProcessList'
     ];
 
     const IBE_IMPORT_VERSION = '6_0';

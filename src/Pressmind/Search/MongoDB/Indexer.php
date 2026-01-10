@@ -350,7 +350,7 @@ class Indexer extends AbstractIndex
                     $linkedObject = new MediaObject($objectlink->id_media_object_link);
                     $linkedObjectData = $linkedObject->getDataForLanguage($language);
                     if(empty($item_info['field']) === true){
-                        echo "Missing or empty 'field' key in descriptions config for index_name '{$index_name}' (id_media_object: {$this->mediaObject->id}, id_object_type: {$this->mediaObject->id_object_type})";
+                        echo "Missing or empty 'field' key in descriptions config for index_name '{$index_name}' (id_media_object: {$this->mediaObject->id}, id_object_type: {$this->mediaObject->id_object_type})\n";
                         break;
                     }
                     if($item_info['field'] == 'name') {
@@ -362,7 +362,7 @@ class Indexer extends AbstractIndex
                 }
             } else {
                 if(empty($item_info['field']) === true){
-                    echo "Missing or empty 'field' key in descriptions config for index_name '{$index_name}' (id_media_object: {$this->mediaObject->id}, id_object_type: {$this->mediaObject->id_object_type})";
+                    echo "Missing or empty 'field' key in descriptions config for index_name '{$index_name}' (id_media_object: {$this->mediaObject->id}, id_object_type: {$this->mediaObject->id_object_type})\n";
                     continue;
                 }
                 if($item_info['field'] == 'name') {

@@ -165,8 +165,9 @@ class Import
         $params['startIndex'] = $startIndex;
         $params['numItems'] = $numItems;
         $response = $this->_client->sendRequest('Text', 'search', $params);
+        $action = ($this->_import_type === 'fullimport_touristic') ? 'touristic' : 'mediaobject';
         foreach ($response->result as $item) {
-            Queue::addToQueue($item->id_media_object, $this->_import_type);
+            Queue::addToQueue($item->id_media_object, $this->_import_type, $action);
         }
         if (count($response->result) >= $numItems && $startIndex < $response->count) {
             $nextStartIndex = $startIndex + $numItems;
@@ -197,6 +198,8 @@ class Import
     }
 
     /**
+     * @deprecated Use Queue::getAllPending() directly instead. This method is kept for backward compatibility.
+     * @return array
      * @throws Exception
      */
     public function getMediaObjectsFromFolder()
@@ -216,6 +219,183 @@ class Import
             $this->importMediaObject($media_object_id, $import_linked_objects);
             $this->_imported_ids[] = $media_object_id;
         }
+    }
+
+    /**
+     * Import touristic data only for multiple media objects (without reimporting the full media object).
+     * This method iterates over an array of media object IDs and calls importTouristicDataOnly for each.
+     *
+     * @param array $media_object_ids Array of media object IDs
+     * @return void
+     * @throws Exception
+     */
+    public function importTouristicDataFromArray($media_object_ids)
+    {
+        foreach ($media_object_ids as $media_object_id) {
+            $this->importTouristicDataOnly($media_object_id);
+            $this->_imported_ids[] = $media_object_id;
+        }
+    }
+
+    /**
+     * Process all pending queue entries.
+     * Each entry is processed individually with try-catch-finally to ensure
+     * the queue entry is always removed, even if the import fails.
+     *
+     * @return array Array of processed media object IDs
+     * @throws Exception
+     */
+    public function processQueue()
+    {
+        $entries = Queue::getAllPendingWithAction();
+        $ids = array_column($entries, 'id_media_object');
+
+        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importing queue entries: ' . implode(',', $ids), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+
+        if (empty($entries)) {
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' No media_objects found in queue', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+            return [];
+        }
+
+        foreach ($entries as $entry) {
+            $id = $entry['id_media_object'];
+            $action = $entry['action'];
+
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Processing media object ' . $id . ' with action: ' . $action, Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+
+            try {
+                switch ($action) {
+                    case 'touristic':
+                        $this->importTouristicDataOnly($id);
+                        break;
+                    case 'mediaobject':
+                    default:
+                        $this->importMediaObject($id);
+                        break;
+                }
+            } catch (Exception $e) {
+                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Import failed for ' . $id . ': ' . $e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
+                $this->_errors[] = 'Import failed for ' . $id . ': ' . $e->getMessage();
+            } finally {
+                Queue::remove($id);
+            }
+
+            $this->_imported_ids[] = $id;
+        }
+
+        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Queue processing done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        return $ids;
+    }
+
+    /**
+     * Import only touristic data for a single media object.
+     * This method does NOT delete or reimport the media object itself - only the touristic data
+     * (booking packages, prices, etc.) is updated. Custom import hooks are executed.
+     *
+     * Use this for fast touristic data updates without reimporting media object content,
+     * images, routes, etc.
+     *
+     * @param int $id_media_object
+     * @return bool
+     * @throws Exception
+     */
+    public function importTouristicDataOnly($id_media_object)
+    {
+        $id_media_object = intval($id_media_object);
+        $config = Registry::getInstance()->get('config');
+        $this->_start_time = microtime(true);
+        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . '--------------------------------------------------------------------------------', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . ')', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        try {
+            $media_object = new MediaObject($id_media_object);
+        } catch (Exception $e) {
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . '): Media object not found: ' . $e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
+            $this->_errors[] = 'Importer::importTouristicDataOnly(' . $id_media_object . '): Media object not found: ' . $e->getMessage();
+            return false;
+        }
+        if (empty($media_object->id)) {
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . '): Media object does not exist in database', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
+            $this->_errors[] = 'Importer::importTouristicDataOnly(' . $id_media_object . '): Media object does not exist in database';
+            return false;
+        }
+        $id_object_type = $media_object->id_object_type;
+        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . '): deleting old booking packages', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        foreach ($media_object->booking_packages as $booking_package) {
+            $booking_package->delete(true);
+        }
+        /** @var \Pressmind\DB\Adapter\Pdo $db */
+        $db = Registry::getInstance()->get('db');
+        $db->delete('pmt2core_cheapest_price_speed', ['id_media_object = ?', $id_media_object]);
+        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . '): executing custom import hooks', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        if (isset($config['data']['media_type_custom_import_hooks'][$id_object_type]) &&
+            is_array($config['data']['media_type_custom_import_hooks'][$id_object_type])) {
+            foreach ($config['data']['media_type_custom_import_hooks'][$id_object_type] as $custom_import_class_name) {
+                $custom_import_class = new $custom_import_class_name($id_media_object);
+                $custom_import_class->import();
+                foreach ($custom_import_class->getLog() as $log) {
+                    Writer::write($log, WRITER::OUTPUT_FILE, 'custom_import_hook', WRITER::TYPE_INFO);
+                }
+                foreach ($custom_import_class->getErrors() as $error) {
+                    Writer::write($error, WRITER::OUTPUT_BOTH, 'custom_import_hook', WRITER::TYPE_ERROR);
+                }
+                if (count($custom_import_class->getErrors()) > 0) {
+                    $this->_errors[] = count($custom_import_class->getErrors()) . ' errors in custom import hook. See log "custom_import_hook" for details';
+                }
+                if (method_exists($custom_import_class, 'getWarnings')) {
+                    foreach ($custom_import_class->getWarnings() as $warning) {
+                        Writer::write($warning, WRITER::OUTPUT_BOTH, 'custom_import_hook', WRITER::TYPE_WARNING);
+                    }
+                    if (count($custom_import_class->getWarnings()) > 0) {
+                        $this->_errors[] = count($custom_import_class->getWarnings()) . ' warnings in custom import hook. See log "custom_import_hook" for details';
+                    }
+                }
+            }
+        }
+        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . '): recalculating cheapest price', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        $media_object = new MediaObject($id_media_object);
+        $media_object->setReadRelations(true);
+        $media_object->readRelations();
+        try {
+            $media_object->insertCheapestPrice();
+        } catch (Exception $e) {
+            $this->_log[] = ' Importer::importTouristicDataOnly(' . $id_media_object . '): Creating cheapest price failed: ' . $e->getMessage();
+            $this->_errors[] = 'Importer::importTouristicDataOnly(' . $id_media_object . '): Creating cheapest price failed: ' . $e->getMessage();
+        }
+        if ($config['cache']['enabled'] == true && in_array('OBJECT', $config['cache']['types'])) {
+            $media_object->updateCache($id_media_object);
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . '): Cache has been updated', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        }
+        if (isset($config['data']['search_mongodb']['enabled']) && $config['data']['search_mongodb']['enabled'] === true) {
+            try {
+                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . '): createMongoDBIndex', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+                $media_object->createMongoDBIndex();
+            } catch (Exception $e) {
+                $this->_log[] = 'Error during creating MongoDBIndex: ' . $e->getMessage();
+                $this->_errors[] = 'Error during creating MongoDBIndex: ' . $e->getMessage();
+            }
+            try {
+                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . '): createMongoDBCalendar', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+                $media_object->createMongoDBCalendar();
+            } catch (Exception $e) {
+                $this->_log[] = 'Error during creating createMongoDBCalendar: ' . $e->getMessage();
+                $this->_errors[] = 'Error during creating createMongoDBCalendar: ' . $e->getMessage();
+            }
+        }
+        if (isset($config['data']['search_opensearch']['enabled']) && $config['data']['search_opensearch']['enabled'] === true) {
+            try {
+                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . '): createOpenSearchIndex', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+                $media_object->createOpenSearchIndex();
+            } catch (Exception $e) {
+                $this->_log[] = 'Error during creating OpenSearch: ' . $e->getMessage();
+                $this->_errors[] = 'Error during creating OpenSearch: ' . $e->getMessage();
+            }
+        }
+        unset($media_object);
+        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . '): Objects removed from heap', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . '--------------------------------------------------------------------------------', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        $overall_time_elapsed = number_format(microtime(true) - $this->_overall_start_time, 4) . ' sec';
+        $this->_log[] = Writer::write('Total import time: ' . $overall_time_elapsed, Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        return true;
     }
 
     /**

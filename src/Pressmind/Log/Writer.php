@@ -81,6 +81,21 @@ class Writer
     }
 
     /**
+     * @return int Number of deleted rows
+     */
+    public static function cleanup()
+    {
+        try {
+            $config = Registry::getInstance()->get('config');
+            $db = Registry::getInstance()->get('db');
+            $cutoffDate = date('Y-m-d H:i:s', strtotime('-5 days'));
+            return $db->delete('pmt2core_logs', "date < '" . $cutoffDate . "'");
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
      * @return array
      */
     static function getTrace()

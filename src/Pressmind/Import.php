@@ -80,6 +80,7 @@ class Import
         $this->_client = new Client();
         $this->_import_type = $importType;
         $this->checkLegacyIssues();
+        Writer::cleanup();
     }
 
     /**
@@ -91,6 +92,16 @@ class Import
         $config = Registry::getInstance()->get('config');
         if(isset($config['data']['search_mongodb']['search']['touristic']['departure_offset_from']) || isset($config['data']['search_mongodb']['search']['touristic']['departure_offset_to'])){
             throw new Exception('Legacy config issue detected: search_mongodb.touristic.departure_offset_from and search_mongodb.touristic.departure_offset_to is not longer supported. Please remove this keys and configure this in data.touristic.date_filter instead.'."\n");
+        }
+
+        // Hint for schema migration feature (CLI only)
+        if(php_sapi_name() === 'cli' && !isset($config['data']['schema_migration']['mode'])){
+            trigger_error(
+                'Schema migration feature: New fields from Pressmind are logged but ignored (log_only mode). ' .
+                'Set data.schema_migration.mode to "auto" in config to enable automatic ' .
+                'field synchronization.',
+                E_USER_NOTICE
+            );
         }
     }
 

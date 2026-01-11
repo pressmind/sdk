@@ -8,6 +8,7 @@ use Pressmind\ORM\Object\MediaType\Factory;
 use Exception;
 use Pressmind\HelperFunctions;
 use Pressmind\Registry;
+use Pressmind\System\SchemaMigrator;
 use stdClass;
 
 class MediaObjectData extends AbstractImport implements ImportInterface
@@ -64,6 +65,36 @@ class MediaObjectData extends AbstractImport implements ImportInterface
         $default_language = $conf['data']['languages']['default'];
         $allowed_media_objects = array_keys($conf['data']['media_types']);
         $this->_log[] = ' MediaObjectData::import(' . $this->_id_media_object . '): Importing media object data';
+
+        // Schema Migration: Check for new fields and migrate if configured
+        // This must happen BEFORE we try to import data, so DB columns exist
+        if (isset($this->_data->data) && is_array($this->_data->data)) {
+            try {
+                $migrationResult = SchemaMigrator::migrateIfNeeded(
+                    $this->_data->id_media_objects_data_type,
+                    $this->_data->data
+                );
+
+                if ($migrationResult['migrated']) {
+                    $this->_log[] = ' MediaObjectData::import(' . $this->_id_media_object . '): Schema migrated, added fields: ' .
+                        implode(', ', array_keys($migrationResult['fields']));
+                }
+
+                // log_only mode: Remove unknown fields from import data before processing
+                if (!empty($migrationResult['ignore_fields'])) {
+                    foreach ($this->_data->data as $dataField) {
+                        if (in_array(HelperFunctions::human_to_machine($dataField->var_name), $migrationResult['ignore_fields'])) {
+                            $dataField->sections = []; // Empty sections so the field is effectively ignored
+                        }
+                    }
+                    $this->_log[] = ' MediaObjectData::import(' . $this->_id_media_object . '): Ignored unknown fields: ' .
+                        implode(', ', $migrationResult['ignore_fields']);
+                }
+            } catch (Exception $e) {
+                // Re-throw schema exceptions to stop the import if mode is 'abort'
+                throw $e;
+            }
+        }
         $values = [];
         $linked_media_object_ids = [];
         $languages = [];

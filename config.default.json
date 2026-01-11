@@ -357,6 +357,10 @@
         "123": [
           "{varname}_{section}"
         ]
+      },
+      "schema_migration": {
+        "mode": "log_only",
+        "log_changes": true
       }
     },
     "price_format" : {

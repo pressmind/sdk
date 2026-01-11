@@ -27,10 +27,27 @@
         "gettext/gettext": "*",
         "jc21/clitable": "*"
     },
+    "require-dev": {
+        "phpunit/phpunit": "^9.0 || ^10.0"
+    },
     "autoload": {
         "psr-4": {
             "Pressmind\\": "src/Pressmind/"
         }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Pressmind\\Tests\\": "tests/"
+        }
+    },
+    "bin": [
+        "bin/integrity-check"
+    ],
+    "scripts": {
+        "integrity-check": "php bin/integrity-check",
+        "post-update-cmd": [
+            "@php bin/integrity-check --non-interactive"
+        ]
     },
     "suggest": {
         "opensearch-project/opensearch-php": "OpenSearch PHP-Client ^2.4.3",

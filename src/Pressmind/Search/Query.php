@@ -56,7 +56,7 @@ class Query
         if($QueryFilter->getFilters){
             $FilterCondition = [];
             if(!empty($QueryFilter->request['pm-ot'])){
-                if(!$id_object_type) {
+                if($id_object_type) {
                     $FilterCondition[] = new \Pressmind\Search\Condition\MongoDB\ObjectType($id_object_type);
                 }
             }
@@ -74,12 +74,26 @@ class Query
                 self::$touristic_origin,
                 self::$agency_id_price_index
             );
+            // Separate cache key for filter results - allows cache hits when only pagination differs
+            $filter_cache_key = md5(serialize([
+                $id_object_type,
+                $QueryFilter->occupancy,
+                $QueryFilter->custom_conditions,
+                self::$group_keys,
+                self::$language_code,
+                self::$touristic_origin,
+                self::$agency_id_price_index,
+                $QueryFilter->preview_date,
+                $QueryFilter->allowed_visibilities,
+                $QueryFilter->search_type,
+                $QueryFilter->ttl_filter
+            ]));
             $start_time = microtime(true);
-            if(isset(self::$_run_time_cache_filter[$cache_key])){
-                $result_filter = self::$_run_time_cache_filter[$cache_key];
+            if(isset(self::$_run_time_cache_filter[$filter_cache_key])){
+                $result_filter = self::$_run_time_cache_filter[$filter_cache_key];
             }else{
                 $result_filter = $filter->getResult(true, true, $QueryFilter->ttl_filter, null, $QueryFilter->preview_date, $QueryFilter->allowed_visibilities, $QueryFilter->search_type);
-                self::$_run_time_cache_filter[$cache_key] = $result_filter;
+                self::$_run_time_cache_filter[$filter_cache_key] = $result_filter;
             }
             $end_time = microtime(true);
             $duration_filter_ms = ($end_time - $start_time)  * 1000;

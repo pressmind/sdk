@@ -271,5 +271,62 @@ class DocumentMediaObject extends Picture
         $webp_processor->process($derivative_config, $derivative_binary_file, $derivative_config->name);
         unset($derivative_binary_file);
     }
-    
+
+    /**
+     * Override ensureDerivatives to use the correct Derivative class for Itinerary images.
+     * The parent Picture::ensureDerivatives() uses Picture\Derivative which writes to the wrong table
+     * (pmt2core_media_object_image_derivatives instead of pmt2core_itinerary_step_document_media_object_derivatives).
+     *
+     * @throws Exception
+     */
+    public function ensureDerivatives()
+    {
+        $config = Registry::getInstance()->get('config');
+        if (empty($config['image_handling']['processor']['derivatives'])) {
+            return;
+        }
+        foreach ($config['image_handling']['processor']['derivatives'] as $derivative_name => $derivative_config) {
+            $extensions = ['jpg'];
+            if (!empty($derivative_config['webp_create'])) {
+                $extensions[] = 'webp';
+            }
+            foreach ($extensions as $extension) {
+                $derivative_file_name = pathinfo($this->file_name, PATHINFO_FILENAME) . '_' . $derivative_name . '.' . $extension;
+                $existing_derivative = Derivative::listOne([
+                    'id_document_media_object' => $this->getId(),
+                    'name' => $derivative_name
+                ]);
+                if ($existing_derivative) {
+                    $File = new File(new Bucket($config['image_handling']['storage']));
+                    $File->name = $derivative_file_name;
+                    if ($File->exists()) {
+                        if ($existing_derivative->download_successful == false) {
+                            $existing_derivative->download_successful = true;
+                            $existing_derivative->update();
+                        }
+                    } else {
+                        if ($existing_derivative->download_successful == true) {
+                            $existing_derivative->download_successful = false;
+                            $existing_derivative->update();
+                        }
+                    }
+                } else {
+                    $File = new File(new Bucket($config['image_handling']['storage']));
+                    $File->name = $derivative_file_name;
+                    $derivative = new Derivative();
+                    $derivative->id_document_media_object = $this->getId();
+                    $derivative->name = $derivative_name;
+                    $derivative->file_name = $derivative_file_name;
+                    $derivative->width = $derivative_config['max_width'] ?? null;
+                    $derivative->height = $derivative_config['max_height'] ?? null;
+                    $derivative->download_successful = $File->exists() ? true : false;
+                    try {
+                        $derivative->create();
+                    } catch (Exception $e) {
+                        Writer::write('Failed to create derivative entry: ' . $e->getMessage(), Writer::OUTPUT_FILE, 'import', Writer::TYPE_WARNING);
+                    }
+                }
+            }
+        }
+    }
 }

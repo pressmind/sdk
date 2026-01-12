@@ -42,6 +42,7 @@ class AbstractMediaType extends AbstractObject
 
     /**
      * Override __get to also check dynamic properties.
+     * Known properties are delegated to parent (includes relation loading).
      *
      * @param string $name
      * @return mixed|null
@@ -49,7 +50,8 @@ class AbstractMediaType extends AbstractObject
     public function __get($name)
     {
         if (isset($this->_definitions['properties'][$name])) {
-            return $this->$name ?? null;
+            // Known property - let parent handle it (includes relation loading)
+            return parent::__get($name);
         }
         return $this->_dynamic_properties[$name] ?? null;
     }

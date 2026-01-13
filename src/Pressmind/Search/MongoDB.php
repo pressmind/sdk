@@ -597,6 +597,7 @@ class MongoDB extends AbstractSearch
                 'sold_out' => 1,
                 'is_running' => 1,
                 'object_type_order' => 1,
+                'custom_order' => 1,
                 'has_price' => ['$gt' => [['$size' => '$prices'], 0 ] ],
                 'prices' => [
                     '$reduce' => [
@@ -986,13 +987,15 @@ class MongoDB extends AbstractSearch
                     '$sort' => [
                         'prices.price_total' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1,
                         'prices.duration' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? -1 : 1,
-                        'sales_priority' => 1
+                        'sales_priority' => 1,
+                        '_id' => 1
                     ]
                 ];
         }elseif(array_key_first($this->_sort) == 'score'){
             $sort = ['$sort' => [
                         'score' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1,
-                        'sales_priority' => 1
+                        'sales_priority' => 1,
+                        '_id' => 1
                     ]
             ];
         }elseif(array_key_first($this->_sort) == 'date_departure'){
@@ -1011,34 +1014,48 @@ class MongoDB extends AbstractSearch
                 $stages[] = $addFieldsForDepartureSort;
                 $sort = ['$sort' => [
                                 'fst_date_departure' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1,
-                                'sales_priority' => 1
+                                'sales_priority' => 1,
+                                '_id' => 1
                         ]
                 ];
             }
         }elseif(array_key_first($this->_sort) == 'recommendation_rate'){
             $sort = ['$sort' => [
                         'recommendation_rate' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1,
-                        'sales_priority' => 1
+                        'sales_priority' => 1,
+                        '_id' => 1
                 ]
             ];
         }elseif(array_key_first($this->_sort) == 'priority'){
             $sort = ['$sort' => [
-                        'sales_priority' => 1
+                        'sales_priority' => 1,
+                        '_id' => 1
                 ]
             ];
         }elseif(array_key_first($this->_sort) == 'list' && $this->hasCondition('MediaObject')){
             $sort = ['$sort' => [
-                    'sort' => 1
+                    'sort' => 1,
+                    '_id' => 1
                 ]
             ];
         }elseif(array_key_first($this->_sort) == 'valid_from'){
             $sort = ['$sort' => [
-                        'valid_from' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1
+                        'valid_from' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1,
+                        '_id' => 1
                 ]
             ];
+        }elseif(strpos(array_key_first($this->_sort), 'custom_order.') === 0){
+            // Extract custom_order field: e.g. 'custom_order.destination'
+            $customOrderField = array_key_first($this->_sort);
+            $sort = ['$sort' => [
+                $customOrderField => strtolower($this->_sort[$customOrderField]) == 'asc' ? 1 : -1,
+                'sales_priority' => 1,
+                '_id' => 1
+            ]];
         }else{
             $sort = ['$sort' => [
-                    'sales_priority' => 1
+                    'sales_priority' => 1,
+                    '_id' => 1
                 ]
             ];
         }

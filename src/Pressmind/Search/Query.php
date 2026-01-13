@@ -2,6 +2,7 @@
 
 namespace Pressmind\Search;
 
+use Pressmind\Registry;
 use Pressmind\Search\Query\Filter;
 
 class Query
@@ -128,6 +129,7 @@ class Query
                 $item['last_modified_date'] = $document['last_modified_date'];
                 $item['object_type_order'] = !empty($document['object_type_order']) ? $document['object_type_order'] : null;
                 $item['sales_priority'] = !empty($document['sales_priority']) ? $document['sales_priority'] : null;
+                $item['custom_order'] = !empty($document['custom_order']) ? $document['custom_order'] : null;
                 $item['locations'] = !empty($document['locations']) ? $document['locations'] : [];
                 if (!empty($document['prices'])) {
                     if(!is_array($document['prices']['date_departures'])){
@@ -716,19 +718,52 @@ class Query
             'rand', 'price-desc', 'price-asc', 'date_departure-asc', 'date_departure-desc',
             'score-asc', 'score-desc', 'recommendation_rate-asc', 'recommendation_rate-desc', 'priority', 'list', 'valid_from-asc', 'valid_from-desc'
         );
-        if (empty($request[$prefix.'-o']) === false && in_array($request[$prefix.'-o'], $allowed_orders) === true) {
-            if($request[$prefix.'-o'] == 'rand'){
-                $order = array('rand' => '');
-            }elseif($request[$prefix.'-o'] == 'priority'){
-                $order = array('priority' => '');
-            }elseif($request[$prefix.'-o'] == 'list'){
-                $order = array('list' => '');
-            }else{
-                list($property, $direction) =  explode('-', $request[$prefix.'-o']);
-                $property = $property == 'price' ? 'price_total' : $property;
-                $order = array($property => $direction);
+        if (empty($request[$prefix.'-o']) === false) {
+            $orderValue = $request[$prefix.'-o'];
+            // Check if it's in allowed_orders OR starts with 'co.' (custom_order shortname)
+            $isAllowed = in_array($orderValue, $allowed_orders) === true || strpos($orderValue, 'co.') === 0;
+            
+            if($isAllowed) {
+                if($orderValue == 'rand'){
+                    $order = array('rand' => '');
+                }elseif($orderValue == 'priority'){
+                    $order = array('priority' => '');
+                }elseif($orderValue == 'list'){
+                    $order = array('list' => '');
+                }else{
+                    list($property, $direction) = explode('-', $orderValue);
+                    
+                    // Check if custom_order shortname and expand it
+                    if(strpos($property, 'co.') === 0){
+                        $shortname = substr($property, 3); // 'co.destination' → 'destination'
+                        // Get config for current object type
+                        $config = Registry::getInstance()->get('config');
+                        // Handle array of object types - check if shortname exists in ANY of them
+                        $objectTypesToCheck = is_array($id_object_type) ? $id_object_type : ($id_object_type ? [$id_object_type] : []);
+                        $customOrderFound = false;
+                        foreach($objectTypesToCheck as $otCheck){
+                            if(!empty($config['data']['search_mongodb']['search']['custom_order'][$otCheck][$shortname])){
+                                $customOrderFound = true;
+                                break;
+                            }
+                        }
+                        if($customOrderFound){
+                            $property = 'custom_order.' . $shortname;
+                        } else {
+                            // Invalid shortname - fallback to default sort
+                            $order = array('priority' => '');
+                            $validated_search_parameters[$prefix.'-o'] = 'priority';
+                            $property = null; // Prevent further processing
+                        }
+                    }
+                    
+                    if($property !== null){
+                        $property = $property == 'price' ? 'price_total' : $property;
+                        $order = array($property => $direction);
+                    }
+                }
+                $validated_search_parameters[$prefix.'-o'] = $orderValue;
             }
-            $validated_search_parameters[$prefix.'-o'] = $request[$prefix.'-o'];
         }
         $conditions = array_merge($conditions, $custom_conditions);
         self::$validated_search_parameters = $validated_search_parameters;
@@ -979,6 +1014,61 @@ class Query
             return $str;
         }
         return null;
+    }
+
+    /**
+     * Returns all available sort criteria
+     * @param int|array|null $id_object_type Optional - Object type(s) for custom_order fields
+     * @param array Disbaled Order Options
+     * @return array Array with available sort options (value => label)
+     */
+    public static function getAvailableOrderOptions($id_object_type = null, $disabled = ['recommendation_rate-asc', 'score-asc', 'rand', 'priority'])
+    {
+        // Standard sort options
+        $options = [
+            'price-asc' => 'Niedrigster Preis',
+            'price-desc' => 'Höchster Preis',
+            'date_departure-asc' => 'Früheste Abreise',
+            'date_departure-desc' => 'Späteste Abreise',
+            'recommendation_rate-desc' => 'Beste Bewertung',
+            'recommendation_rate-asc' => 'Schlechteste Bewertung',
+            'score-desc' => 'Beste Relevanz',
+            'score-asc' => 'Schlechteste Relevanz',
+            'valid_from-asc' => 'Frühestes Gültigkeitsdatum',
+            'valid_from-desc' => 'Spätestes Gültigkeitsdatum',
+            'priority' => 'Priorität',
+            'rand' => 'Zufällig'
+        ];
+        
+        // Add custom_order fields from config
+        $config = Registry::getInstance()->get('config');
+        
+        if(!is_null($id_object_type)){
+            $objectTypes = is_array($id_object_type) ? $id_object_type : [$id_object_type];
+        } else {
+            // When null, load all object types that have custom_order configured
+            $objectTypes = !empty($config['data']['search_mongodb']['search']['custom_order']) 
+                ? array_keys($config['data']['search_mongodb']['search']['custom_order']) 
+                : [];
+        }
+        
+        foreach($objectTypes as $ot){
+            if(!empty($config['data']['search_mongodb']['search']['custom_order'][$ot])){
+                foreach($config['data']['search_mongodb']['search']['custom_order'][$ot] as $shortname => $fieldConfig){
+                    // Use label from config if available, otherwise generate from shortname
+                    $label = !empty($fieldConfig['label']) 
+                        ? $fieldConfig['label'] 
+                        : ucfirst(str_replace('_', ' ', $shortname));
+                    
+                    $options['co.' . $shortname . '-asc'] = $label . ' (A-Z)';
+                    $options['co.' . $shortname . '-desc'] = $label . ' (Z-A)';
+                }
+            }
+        }
+        foreach($disabled as $option){
+            unset($options[$option]);
+        }
+        return $options;
     }
 
 }

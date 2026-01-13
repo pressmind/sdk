@@ -59,6 +59,27 @@ class Indexer extends AbstractIndex
         }
         $this->createCollectionIndexIfNotExists($collection_name, ['sold_out' => 1], ['name' => 'sold_out_1']);
         $this->createCollectionIndexIfNotExists($collection_name, ['sales_priority' => 1], ['name' => 'sales_priority_1']);
+        
+        // Create custom_order indexes dynamically based on config
+        if(!empty($this->_config['search']['custom_order'])){
+            foreach($this->_config['search']['custom_order'] as $id_object_type => $custom_orders){
+                foreach($custom_orders as $shortname => $fieldConfig){
+                    $indexField = 'custom_order.' . $shortname;
+                    // Create ascending index
+                    $this->createCollectionIndexIfNotExists(
+                        $collection_name, 
+                        [$indexField => 1], 
+                        ['name' => $indexField . '_1']
+                    );
+                    // Create descending index for better performance
+                    $this->createCollectionIndexIfNotExists(
+                        $collection_name, 
+                        [$indexField => -1], 
+                        ['name' => $indexField . '_-1']
+                    );
+                }
+            }
+        }
     }
 
     public function createIndexes()
@@ -264,7 +285,7 @@ class Indexer extends AbstractIndex
         $searchObject->recommendation_rate = $this->mediaObject->recommendation_rate;
         $searchObject->sales_priority = $this->mediaObject->sales_priority.str_pad($this->mediaObject->sales_position, 6, '0', STR_PAD_LEFT);
         //$searchObject->dates_per_month = null;
-        $searchObject->custom_order = $this->_custom_order();
+        $searchObject->custom_order = $this->_custom_order($language, $agency);
         if(!empty($this->_config['search']['five_dates_per_month_list'])){
             $searchObject->dates_per_month = $this->_createDatesPerMonth($origin, $agency);
         }
@@ -309,22 +330,83 @@ class Indexer extends AbstractIndex
     }
 
     /**
+     * @param string $language
+     * @param string|null $agency
      * @return array|null
-     * @throws \ReflectionException
      */
-    private function _custom_order(){
+    private function _custom_order($language, $agency = null){
         if(empty($this->_config['search']['custom_order'])){
            return null;
         }
-        $result = [];
+        
+        // 1. Collect ALL unique shortnames from ALL object types
+        // This ensures all documents have the same custom_order fields for deterministic sorting
+        $allShortnames = [];
         foreach($this->_config['search']['custom_order'] as $id_object_type => $custom_orders){
-            if($this->mediaObject->id_object_type != $id_object_type){
-                continue;
-            }
-            foreach($custom_orders as $key => $custom_order){
-                $result[$key] = $this->_filterFunction($custom_order);
+            foreach($custom_orders as $shortname => $fieldConfig){
+                $allShortnames[$shortname] = true;
             }
         }
+        
+        // 2. Initialize all fields with 'ZZZZZ' so they sort at the end
+        $result = [];
+        foreach(array_keys($allShortnames) as $shortname){
+            $result[$shortname] = 'ZZZZZ';
+        }
+        
+        // 3. Overwrite with actual values for matching object type
+        foreach($this->_config['search']['custom_order'] as $id_object_type => $custom_orders){
+            // Compare as integers to avoid type mismatch issues
+            if((int)$this->mediaObject->id_object_type != (int)$id_object_type){
+                continue;
+            }
+            foreach($custom_orders as $shortname => $fieldConfig){
+                $value = null;
+                $moc = $this->mediaObject->getDataForLanguage($language);
+                
+                if(empty($moc) || empty($fieldConfig['field'])){
+                    $result[$shortname] = 'ZZZZZ';
+                    continue;
+                }
+                
+                $data = $moc->toStdClass();
+                
+                // Read field value (similar to _mapDescriptions)
+                if(!empty($fieldConfig['from']) && !empty($data->{$fieldConfig['from']})){
+                    // Read from linked object
+                    foreach ($data->{$fieldConfig['from']} as $objectlink) {
+                        $linkedObject = new MediaObject($objectlink->id_media_object_link);
+                        $linkedObjectData = $linkedObject->getDataForLanguage($language);
+                        if($fieldConfig['field'] == 'name') {
+                            $value = $linkedObject->name;
+                        }elseif($fieldConfig['field'] == 'code') {
+                            $value = $linkedObject->code;
+                        }else{
+                            $value = !empty($linkedObjectData->{$fieldConfig['field']}) ? $linkedObjectData->{$fieldConfig['field']} : null;
+                        }
+                        break;
+                    }
+                } else {
+                    // Read directly from MediaObject
+                    if($fieldConfig['field'] == 'name') {
+                        $value = $this->mediaObject->name;
+                    }else{
+                        $value = !empty($data->{$fieldConfig['field']}) ? $data->{$fieldConfig['field']} : null;
+                    }
+                }
+                
+                // Apply filter if configured
+                // Note: Filter is applied even if value is empty (null, empty array, etc.)
+                // This allows filters to handle empty values or transform data structures
+                if(isset($fieldConfig['filter']) && !empty($fieldConfig['filter'])){
+                    $value = $this->_filterFunction($fieldConfig, $value, $agency);
+                }
+                
+                // Use 'ZZZZZ' for null/empty values so they sort at the end
+                $result[$shortname] = ($value !== null && ($stripped = strip_tags($value)) !== '') ? $stripped : 'ZZZZZ';
+            }
+        }
+        
         return $result;
     }
 

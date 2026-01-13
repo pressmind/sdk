@@ -205,6 +205,28 @@
               }
             }
           },
+          "custom_order": {
+            "123": {
+              "destination": {
+                "field": "zielgebiet_default",
+                "from": null,
+                "filter": null,
+                "params": {}
+              },
+              "region": {
+                "field": "region_default",
+                "from": null,
+                "filter": null,
+                "params": {}
+              },
+              "country": {
+                "field": "name",
+                "from": "laender_default",
+                "filter": null,
+                "params": {}
+              }
+            }
+          },
           "five_dates_per_month_list": false,
           "possible_duration_list": false,
           "allow_invalid_offers": [123,124],

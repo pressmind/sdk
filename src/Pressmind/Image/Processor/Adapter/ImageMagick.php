@@ -6,6 +6,7 @@ namespace Pressmind\Image\Processor\Adapter;
 
 use Imagick;
 use ImagickException;
+use Pressmind\Image\Filter\FilterChain;
 use Pressmind\Image\Processor\AdapterInterface;
 use Pressmind\Image\Processor\Config;
 use Pressmind\Log\Writer;
@@ -45,6 +46,15 @@ class ImageMagick implements AdapterInterface
             $image->cropThumbnailImage($config->max_width,$config->max_height);
         } else {
             $image->thumbnailImage($config->max_width, $config->max_height, $config->preserve_aspect_ratio);
+        }
+
+        // Apply filters if configured
+        if (!empty($config->filters) && is_array($config->filters)) {
+            $filterChain = FilterChain::createFromConfig($config->filters);
+            if ($filterChain->count() > 0) {
+                Writer::write('Applying ' . $filterChain->count() . ' filter(s) to derivative ' . $derivativeName, Writer::OUTPUT_FILE, 'image_processor', Writer::TYPE_INFO);
+                $image = $filterChain->process($image);
+            }
         }
 
         if($image->getImageFormat() != 'jpg'){

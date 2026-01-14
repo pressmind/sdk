@@ -15,6 +15,11 @@ class Config
     public $vertical_crop;
     public $webp_quality;
     public $webp_create;
+    
+    /**
+     * @var array|null Filter configurations for this derivative
+     */
+    public $filters;
 
     public function __construct()
     {
@@ -33,6 +38,7 @@ class Config
         $config->vertical_crop = isset($config_array['vertical_crop']) ? $config_array['vertical_crop'] : null;
         $config->webp_quality = isset($config_array['webp_quality']) ? $config_array['webp_quality'] : null;
         $config->webp_create = isset($config_array['webp_create']) ? $config_array['webp_create'] : false;
+        $config->filters = isset($config_array['filters']) ? $config_array['filters'] : null;
         return $config;
     }
 }

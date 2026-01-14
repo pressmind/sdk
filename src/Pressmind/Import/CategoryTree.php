@@ -32,6 +32,7 @@ class CategoryTree extends AbstractImport implements ImportInterface
      */
     public function __construct($ids)
     {
+        parent::__construct();
         $this->_ids = $ids;
     }
 
@@ -63,28 +64,28 @@ class CategoryTree extends AbstractImport implements ImportInterface
         $this->_linked_media_objects = [];
         $client = new Client();
         $response = $client->sendRequest('Category', 'all', empty(array_filter($this->_ids)) ? [] : ['ids' => implode(',', $this->_ids)]);
-        $this->_log[] = ' Importer::_importCategoryTrees(): REST request done';
+        $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_importCategoryTrees(): REST request done';
         $this->_checkApiResponse($response);
         if (is_a($response, 'stdClass') && isset($response->result) && is_array($response->result)) {
             foreach ($response->result as $tree_info) {
                 if (is_a($tree_info, 'stdClass') && isset($tree_info->tree) && !empty($tree_info->tree)) {
-                    $this->_log[] = 'Importer::_importCategoryTrees(): Importing tree ID ' . $tree_info->id;
+                    $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_importCategoryTrees(): Importing tree ID ' . $tree_info->id;
                     $tree = new \Pressmind\ORM\Object\CategoryTree();
                     $tree->id = $tree_info->id;
                     $tree->name = $tree_info->name;
                     try {
                         $tree->replace();
                     } catch (Exception $e) {
-                        $this->_log[] = 'Importer::_importCategoryTrees(): Error importing tree ID ' . $tree->id . ': ' . $e->getMessage();
+                        $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_importCategoryTrees(): Error importing tree ID ' . $tree->id . ': ' . $e->getMessage();
                         $this->_errors[] = 'Importer::_importCategoryTrees(): Error importing tree ID ' . $tree->id . ': ' . $e->getMessage();
                     }
-                    $this->_log[] = 'Importer::_importCategoryTrees(): Tree import done';
+                    $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_importCategoryTrees(): Tree import done';
                     if (isset($tree_info->tree->item)) {
-                        $this->_log[] = ' Importer::_importCategoryTrees(): Importing tree items ' . $tree_info->id;
+                        $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_importCategoryTrees(): Importing tree items ' . $tree_info->id;
                         $this->_iterateCategoryTreeItems($tree_info->id, $tree_info->tree->item);
                     }
                     $this->remove_orphans($tree_info->id);
-                    $this->_log[] = 'Importer::_importCategoryTrees(): Importing tree items done';
+                    $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_importCategoryTrees(): Importing tree items done';
                 }
             }
             $this->createGetTextFiles();
@@ -106,7 +107,7 @@ class CategoryTree extends AbstractImport implements ImportInterface
         $allowed_languages = $conf['data']['languages']['allowed'];
         $sort = 0;
         foreach ($items as $item) {
-            $this->_log[] = ' Importer::_iterateCategoryTreeItems(): Importing tree item ID ' . $item->id;
+            $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_iterateCategoryTreeItems(): Importing tree item ID ' . $item->id;
             $sort++;
             $category_tree_item = new Item();
             $category_tree_item->id = $item->id;
@@ -138,7 +139,7 @@ class CategoryTree extends AbstractImport implements ImportInterface
             try {
                 $category_tree_item->replace();
             } catch (Exception $e) {
-                $this->_log[] = ' Importer::_iterateCategoryTreeItems(): Error importing tree item ID ' . $item->id . ': '. $e->getMessage();
+                $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_iterateCategoryTreeItems(): Error importing tree item ID ' . $item->id . ': '. $e->getMessage();
                 $this->_errors[] = 'Importer::_iterateCategoryTreeItems(): Error importing tree item ID ' . $item->id . ': '. $e->getMessage();
             }
             $this->_imported_items [] = $item->id;
@@ -173,7 +174,7 @@ class CategoryTree extends AbstractImport implements ImportInterface
         if($active === false){
             return true;
         }
-        $this->_log[] = 'Importer::createGetTextFiles(): Creating gettext (*.mo) files';
+        $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::createGetTextFiles(): Creating gettext (*.mo) files';
         $allowed_languages = $conf['data']['languages']['allowed'];
         $default_language = $conf['data']['languages']['default'];
         if(empty($conf['data']['languages']['gettext']['dir'])){
@@ -191,13 +192,13 @@ class CategoryTree extends AbstractImport implements ImportInterface
                 $Translations = Translations::create('categorytree');
                 if($language === $default_language) {
                     $items = Item::listAll();
-                    $this->_log[] = 'Importer::createGetTextFiles(): Found ' . count($items) . ' items for default language ' . $default_language;
+                    $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::createGetTextFiles(): Found ' . count($items) . ' items for default language ' . $default_language;
                 }else{
                     $items = \Pressmind\ORM\Object\CategoryTree\Translation\Item::listAll('language = "'.$language.'"');
-                    $this->_log[] = 'Importer::createGetTextFiles(): Found ' . count($items) . ' items for language ' . $language;
+                    $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::createGetTextFiles(): Found ' . count($items) . ' items for language ' . $language;
                 }
                 if(count($items) == 0) {
-                    $this->_log[] = 'Importer::createGetTextFiles(): No items found for language ' . $language;
+                    $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::createGetTextFiles(): No items found for language ' . $language;
                     continue;
                 }
                 foreach ($items as $item) {
@@ -208,7 +209,7 @@ class CategoryTree extends AbstractImport implements ImportInterface
                 $Generator = new MoGenerator();
                 $file = $dir.'/categorytree-'.$language.'.mo';
                 $Generator->generateFile($Translations, $file);
-                $this->_log[] = 'Importer::createGetTextFiles(): Wrote file ' . $file;
+                $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::createGetTextFiles(): Wrote file ' . $file;
             }
         }catch(Exception $e){
             $this->_errors[] = 'Importer::createGetTextFiles(): Error: ' . $e->getMessage();

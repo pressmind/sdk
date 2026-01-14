@@ -12,6 +12,8 @@ class Info
         '\Airport',
         '\Agency',
         '\AgencyToMediaObject',
+        '\Attachment',
+        '\AttachmentToMediaObject',
         '\Bank',
         '\Brand',
         '\ObjectdataTag',

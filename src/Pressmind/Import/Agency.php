@@ -25,6 +25,7 @@ class Agency extends AbstractImport implements ImportInterface
      */
     public function __construct($agencies, $id_media_object)
     {
+        parent::__construct();
         $this->_agencies = $agencies;
         $this->_id_media_object = $id_media_object;
     }

@@ -11,6 +11,7 @@ class ManualCheapestPrice extends AbstractImport implements ImportInterface
 
     public function __construct($data)
     {
+        parent::__construct();
         $this->_data = $data;
     }
 

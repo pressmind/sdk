@@ -26,7 +26,7 @@ class MediaObjectDiscount extends AbstractImport
         if(!is_array($data) || count($data) === 0){
             return;
         }
-        $this->_log[] = ' Importer::_MediaObjectDiscount(' . $id_media_object . '): converting manual price infos to touristic data';
+        $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_MediaObjectDiscount(' . $id_media_object . '): converting manual price infos to touristic data';
         $validData = [];
         foreach($data as $discount){
             if(!empty($discount->value)){
@@ -34,7 +34,7 @@ class MediaObjectDiscount extends AbstractImport
             }
         }
         if(count($validData) === 0){
-            $this->_log[] = ' Importer::_MediaObjectDiscount(' . $id_media_object . '): no valid prices found';
+            $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_MediaObjectDiscount(' . $id_media_object . '): no valid prices found';
             return;
         }
         foreach($validData as $discount){

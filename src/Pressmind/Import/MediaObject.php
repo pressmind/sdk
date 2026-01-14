@@ -49,13 +49,13 @@ class MediaObject extends AbstractImport
             $old_media_object->delete();
             unset($old_media_object);
         } catch (Exception $e) {
-            $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Deleting old object failed';
+            $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $media_object->getId() . '):  Deleting old object failed';
         }*/
-        $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Creating media object';
+        $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $media_object->getId() . '):  Creating media object';
         try {
             $media_object->create();
         } catch (Exception $e) {
-            $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Creating media object failed: ' . $e->getMessage();
+            $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $media_object->getId() . '):  Creating media object failed: ' . $e->getMessage();
             $this->_errors[] = 'Importer::importMediaObject(' . $media_object->getId() . '):  Creating media object failed: ' . $e->getMessage();
         }
         //$media_object->setReadRelations(true);
@@ -64,10 +64,10 @@ class MediaObject extends AbstractImport
         /*try {
             $media_object->createSearchIndex();
         } catch (Exception $e) {
-            $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Creating search index failed: ' . $e->getMessage();
+            $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $media_object->getId() . '):  Creating search index failed: ' . $e->getMessage();
             $this->_errors[] = 'Importer::importMediaObject(' . $media_object->getId() . '):  Creating search index failed: ' . $e->getMessage();
         }*/
-        $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  CheapestPriceSpeed table updated';
+        $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $media_object->getId() . '):  CheapestPriceSpeed table updated';
 
         return $media_object;
     }

@@ -26,6 +26,7 @@ class Itinerary extends AbstractImport implements ImportInterface
      */
     public function __construct($id_media_object)
     {
+        parent::__construct();
         $this->_id_media_object = intval($id_media_object);
     }
 
@@ -33,7 +34,7 @@ class Itinerary extends AbstractImport implements ImportInterface
     {
         $client = new Client();
         $id_media_object = $this->_id_media_object;
-        $this->_log[] = ' Importer::importItinerary(' . $id_media_object . '):  Starting import';
+        $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::importItinerary(' . $id_media_object . '):  Starting import';
         try {
             $response = $client->sendRequest('Itinerary', 'get', ['id_media_object' => (int)$id_media_object]);
             $this->_checkApiResponse($response);
@@ -55,8 +56,8 @@ class Itinerary extends AbstractImport implements ImportInterface
 
     private function _importVariants($data, $id_media_object)
     {
-        $this->_log[] = ' Importer::importItinerary(' . $id_media_object . '): Found ' . count($data) . ' itinerary variants';
-        $this->_log[] = ' Importer::importItinerary(' . $id_media_object . '):  Deleting existing itinerary_variants';
+        $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::importItinerary(' . $id_media_object . '): Found ' . count($data) . ' itinerary variants';
+        $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::importItinerary(' . $id_media_object . '):  Deleting existing itinerary_variants';
         /** @var Variant[] $variants */
         $variants = Variant::listAll(['id_media_object' => $id_media_object]);
         foreach ($variants as $variant) {
@@ -113,12 +114,12 @@ class Itinerary extends AbstractImport implements ImportInterface
                 $variant->setReadRelations(true);
                 $variant->fromStdClass($result);
                 $variant->create();
-                $this->_log[] = ' Importer::importItinerary(' . $id_media_object . '): Variant ' . $variant->getId() . ' created';
+                $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::importItinerary(' . $id_media_object . '): Variant ' . $variant->getId() . ' created';
             } catch (Exception $e) {
                 $this->_errors[] = 'Failed to create Itinerary Variant: ' . $e->getMessage();
             }
         }
-        $this->_log[] = ' Importer::importItinerary(' . $id_media_object . '): Import done.';
+        $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::importItinerary(' . $id_media_object . '): Import done.';
     }
 
     private function _importSteps($data, $id_media_object)

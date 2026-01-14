@@ -19,6 +19,19 @@ class AbstractImport
     protected $_errors = [];
 
     /**
+     * @var float
+     */
+    protected $_start_time;
+
+    /**
+     * AbstractImport constructor.
+     */
+    public function __construct()
+    {
+        $this->_start_time = microtime(true);
+    }
+
+    /**
      * @return array
      */
     public function getLog()
@@ -50,5 +63,16 @@ class AbstractImport
         if(!isset($pResponse->result) || !is_a($pResponse, 'stdClass')) {
             throw new Exception('API response is not well formatted.');
         }
+    }
+
+    /**
+     * Returns formatted elapsed time and heap memory usage for logging
+     * @return string
+     */
+    protected function _getElapsedTimeAndHeap()
+    {
+        $text = number_format(microtime(true) - $this->_start_time, 4) . ' sec | Heap: ';
+        $text .= bcdiv(memory_get_usage(), (1000 * 1000), 2) . ' MByte';
+        return $text;
     }
 }

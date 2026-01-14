@@ -23,7 +23,7 @@ class MediaObjectCheapestPrice extends AbstractImport
         if(!is_array($data) || count($data) === 0){
             return;
         }
-        $this->_log[] = ' Importer::_importMediaObjectCheapestPrice(' . $id_media_object . '): converting manual price infos to touristic data';
+        $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_importMediaObjectCheapestPrice(' . $id_media_object . '): converting manual price infos to touristic data';
         $validData = [];
         foreach($data as $priceObject){
             if(!empty($priceObject->price)){
@@ -31,7 +31,7 @@ class MediaObjectCheapestPrice extends AbstractImport
             }
         }
         if(count($validData) === 0){
-            $this->_log[] = ' Importer::_importMediaObjectCheapestPrice(' . $id_media_object . '): no valid prices found';
+            $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_importMediaObjectCheapestPrice(' . $id_media_object . '): no valid prices found';
             return;
         }
         \Pressmind\ORM\Object\MediaObject::deleteTouristic($id_media_object);

@@ -22,6 +22,7 @@ use Pressmind\ORM\Object\Import\Queue;
 use Pressmind\Import\TouristicData;
 use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\AbstractObject;
+use Pressmind\ORM\Object\Attachment;
 use Pressmind\ORM\Object\MediaObject;
 use Pressmind\ORM\Object\Route;
 use Pressmind\REST\Client;
@@ -806,6 +807,58 @@ class Import
             }
         }
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Finding and removing Orphans done', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+
+        // Remove orphan attachments (attachments without any MediaObject reference)
+        $this->_removeOrphanAttachments();
+    }
+
+    /**
+     * Removes attachments that are no longer referenced by any MediaObject.
+     * This should only run at the end of a full import to avoid deleting
+     * attachments that are still being referenced by MediaObjects not yet imported.
+     *
+     * @throws Exception
+     */
+    private function _removeOrphanAttachments()
+    {
+        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Finding and removing orphan attachments', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+
+        /** @var Pdo $db */
+        $db = Registry::getInstance()->get('db');
+
+        // Find attachments without any reference in AttachmentToMediaObject
+        $query = "SELECT a.* FROM pmt2core_attachments a
+                  LEFT JOIN pmt2core_attachment_to_media_object rel ON a.id = rel.id_attachment
+                  WHERE rel.id IS NULL";
+
+        try {
+            $orphanAttachments = $db->fetchAll($query);
+        } catch (Exception $e) {
+            // Table might not exist yet
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Attachment orphan check skipped (table may not exist): ' . $e->getMessage(), Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
+            return;
+        }
+
+        $deletedCount = 0;
+        foreach ($orphanAttachments as $attachmentData) {
+            try {
+                $attachment = new Attachment();
+                $attachment->read($attachmentData->id);
+
+                // Delete file from storage
+                $attachment->deleteFile();
+
+                // Delete database record
+                $attachment->delete();
+
+                $deletedCount++;
+                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Deleted orphan attachment: ' . $attachmentData->id, Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
+            } catch (Exception $e) {
+                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Failed to delete orphan attachment ' . $attachmentData->id . ': ' . $e->getMessage(), Writer::OUTPUT_FILE, 'import', Writer::TYPE_ERROR);
+            }
+        }
+
+        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Removed ' . $deletedCount . ' orphan attachments', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
     }
 
     /**

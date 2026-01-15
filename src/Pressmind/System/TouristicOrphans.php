@@ -48,35 +48,16 @@ class TouristicOrphans
 
         $placeholders = implode(',', array_fill(0, count($objectTypeIds), '?'));
 
+        // Step 1: Find orphan IDs (fast query without counts)
         $sql = "
             SELECT 
                 mo.id,
                 mo.name,
                 mo.code,
                 mo.id_object_type,
-                mo.visibility,
-                COALESCE(bp_counts.cnt, 0) as booking_packages_count,
-                COALESCE(d_counts.cnt, 0) as dates_count,
-                COALESCE(o_counts.cnt, 0) as options_count
+                mo.visibility
             FROM pmt2core_media_objects mo
             LEFT JOIN pmt2core_cheapest_price_speed cps ON cps.id_media_object = mo.id
-            LEFT JOIN (
-                SELECT id_media_object, COUNT(*) as cnt 
-                FROM pmt2core_touristic_booking_packages 
-                GROUP BY id_media_object
-            ) bp_counts ON bp_counts.id_media_object = mo.id
-            LEFT JOIN (
-                SELECT bp.id_media_object, COUNT(*) as cnt
-                FROM pmt2core_touristic_dates d
-                JOIN pmt2core_touristic_booking_packages bp ON d.id_booking_package = bp.id
-                GROUP BY bp.id_media_object
-            ) d_counts ON d_counts.id_media_object = mo.id
-            LEFT JOIN (
-                SELECT bp.id_media_object, COUNT(*) as cnt
-                FROM pmt2core_touristic_options o
-                JOIN pmt2core_touristic_booking_packages bp ON o.id_booking_package = bp.id
-                GROUP BY bp.id_media_object
-            ) o_counts ON o_counts.id_media_object = mo.id
             WHERE mo.id_object_type IN ({$placeholders})
               AND mo.visibility = ?
               AND cps.id IS NULL
@@ -84,8 +65,50 @@ class TouristicOrphans
         ";
 
         $params = array_merge($objectTypeIds, [$visibility]);
-        
-        return $this->db->fetchAll($sql, $params);
+        $orphans = $this->db->fetchAll($sql, $params);
+
+        if (empty($orphans)) {
+            return [];
+        }
+
+        // Step 2: Get counts only for the orphan IDs (much faster than full table aggregation)
+        $orphanIds = array_column($orphans, 'id');
+        $idPlaceholders = implode(',', array_fill(0, count($orphanIds), '?'));
+
+        // Booking packages count
+        $sql = "SELECT id_media_object, COUNT(*) as cnt 
+                FROM pmt2core_touristic_booking_packages 
+                WHERE id_media_object IN ({$idPlaceholders})
+                GROUP BY id_media_object";
+        $bpCounts = $this->db->fetchAll($sql, $orphanIds);
+        $bpCountMap = array_column($bpCounts, 'cnt', 'id_media_object');
+
+        // Dates count
+        $sql = "SELECT bp.id_media_object, COUNT(*) as cnt
+                FROM pmt2core_touristic_dates d
+                JOIN pmt2core_touristic_booking_packages bp ON d.id_booking_package = bp.id
+                WHERE bp.id_media_object IN ({$idPlaceholders})
+                GROUP BY bp.id_media_object";
+        $dateCounts = $this->db->fetchAll($sql, $orphanIds);
+        $dateCountMap = array_column($dateCounts, 'cnt', 'id_media_object');
+
+        // Options count
+        $sql = "SELECT bp.id_media_object, COUNT(*) as cnt
+                FROM pmt2core_touristic_options o
+                JOIN pmt2core_touristic_booking_packages bp ON o.id_booking_package = bp.id
+                WHERE bp.id_media_object IN ({$idPlaceholders})
+                GROUP BY bp.id_media_object";
+        $optionCounts = $this->db->fetchAll($sql, $orphanIds);
+        $optionCountMap = array_column($optionCounts, 'cnt', 'id_media_object');
+
+        // Merge counts into orphans
+        foreach ($orphans as $orphan) {
+            $orphan->booking_packages_count = $bpCountMap[$orphan->id] ?? 0;
+            $orphan->dates_count = $dateCountMap[$orphan->id] ?? 0;
+            $orphan->options_count = $optionCountMap[$orphan->id] ?? 0;
+        }
+
+        return $orphans;
     }
 
     /**

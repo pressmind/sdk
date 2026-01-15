@@ -48,7 +48,12 @@ class TouristicOrphans
 
         $placeholders = implode(',', array_fill(0, count($objectTypeIds), '?'));
 
-        // Step 1: Find orphan IDs (fast query without counts)
+        // Step 1: Get all IDs that HAVE prices (fast, uses index)
+        $sql = "SELECT DISTINCT id_media_object FROM pmt2core_cheapest_price_speed WHERE id_media_object IS NOT NULL";
+        $idsWithPrices = $this->db->fetchAll($sql);
+        $idsWithPricesSet = array_flip(array_column($idsWithPrices, 'id_media_object'));
+
+        // Step 2: Get all visible media objects (fast, no JOIN)
         $sql = "
             SELECT 
                 mo.id,
@@ -57,21 +62,24 @@ class TouristicOrphans
                 mo.id_object_type,
                 mo.visibility
             FROM pmt2core_media_objects mo
-            LEFT JOIN pmt2core_cheapest_price_speed cps ON cps.id_media_object = mo.id
             WHERE mo.id_object_type IN ({$placeholders})
               AND mo.visibility = ?
-              AND cps.id IS NULL
             ORDER BY mo.id_object_type, mo.name
         ";
-
         $params = array_merge($objectTypeIds, [$visibility]);
-        $orphans = $this->db->fetchAll($sql, $params);
+        $allVisible = $this->db->fetchAll($sql, $params);
+
+        // Step 3: Filter orphans in PHP (objects without prices)
+        $orphans = array_filter($allVisible, function($mo) use ($idsWithPricesSet) {
+            return !isset($idsWithPricesSet[$mo->id]);
+        });
+        $orphans = array_values($orphans);
 
         if (empty($orphans)) {
             return [];
         }
 
-        // Step 2: Get counts only for the orphan IDs (much faster than full table aggregation)
+        // Step 4: Get counts only for the orphan IDs
         $orphanIds = array_column($orphans, 'id');
         $idPlaceholders = implode(',', array_fill(0, count($orphanIds), '?'));
 
@@ -254,31 +262,45 @@ class TouristicOrphans
 
         $placeholders = implode(',', array_fill(0, count($objectTypeIds), '?'));
         
+        // Query 1: Count visible media objects per object type (fast, no JOIN)
         $sql = "
-            SELECT 
-                mo.id_object_type,
-                COUNT(*) as visible_count,
-                SUM(CASE WHEN cps.id IS NOT NULL THEN 1 ELSE 0 END) as with_prices_count,
-                SUM(CASE WHEN cps.id IS NULL THEN 1 ELSE 0 END) as orphans_count
+            SELECT id_object_type, COUNT(*) as visible_count
+            FROM pmt2core_media_objects
+            WHERE id_object_type IN ({$placeholders})
+              AND visibility = ?
+            GROUP BY id_object_type
+        ";
+        $params = array_merge($objectTypeIds, [$visibility]);
+        $visibleResults = $this->db->fetchAll($sql, $params);
+        $visibleMap = [];
+        foreach ($visibleResults as $row) {
+            $visibleMap[(int)$row->id_object_type] = (int)$row->visible_count;
+        }
+
+        // Query 2: Count media objects WITH prices per object type (fast, uses index)
+        $sql = "
+            SELECT mo.id_object_type, COUNT(DISTINCT mo.id) as with_prices_count
             FROM pmt2core_media_objects mo
-            LEFT JOIN pmt2core_cheapest_price_speed cps ON cps.id_media_object = mo.id
+            INNER JOIN pmt2core_cheapest_price_speed cps ON cps.id_media_object = mo.id
             WHERE mo.id_object_type IN ({$placeholders})
               AND mo.visibility = ?
             GROUP BY mo.id_object_type
         ";
+        $withPricesResults = $this->db->fetchAll($sql, $params);
+        $withPricesMap = [];
+        foreach ($withPricesResults as $row) {
+            $withPricesMap[(int)$row->id_object_type] = (int)$row->with_prices_count;
+        }
 
-        $params = array_merge($objectTypeIds, [$visibility]);
-        $results = $this->db->fetchAll($sql, $params);
-
+        // Build stats: orphans = visible - with_prices
         $stats = [];
         $totalOrphans = 0;
         $totalVisible = 0;
 
-        foreach ($results as $row) {
-            $objectTypeId = (int)$row->id_object_type;
-            $visible = (int)$row->visible_count;
-            $withPrices = (int)$row->with_prices_count;
-            $orphans = (int)$row->orphans_count;
+        foreach ($objectTypeIds as $objectTypeId) {
+            $visible = $visibleMap[$objectTypeId] ?? 0;
+            $withPrices = $withPricesMap[$objectTypeId] ?? 0;
+            $orphans = $visible - $withPrices;
 
             $stats[$objectTypeId] = [
                 'id_object_type' => $objectTypeId,
@@ -291,20 +313,6 @@ class TouristicOrphans
 
             $totalOrphans += $orphans;
             $totalVisible += $visible;
-        }
-
-        // Ensure all requested object types are in the result (even if they have 0 entries)
-        foreach ($objectTypeIds as $objectTypeId) {
-            if (!isset($stats[$objectTypeId])) {
-                $stats[$objectTypeId] = [
-                    'id_object_type' => $objectTypeId,
-                    'name' => $this->getObjectTypeName($objectTypeId),
-                    'visible_count' => 0,
-                    'with_prices_count' => 0,
-                    'orphans_count' => 0,
-                    'percentage_orphans' => 0
-                ];
-            }
         }
 
         return [

@@ -1,0 +1,43 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Pressmind SDK Touristic Orphans Check
+ *
+ * Finds orphaned products - visible Media Objects without
+ * Cheapest-Price entries that do not appear in search results.
+ *
+ * Usage:
+ *   php bin/touristic-orphans [--object-types=1212,1214] [--visibility=30]
+ *   php bin/touristic-orphans --details=3638931
+ *   php bin/touristic-orphans --stats-only
+ *
+ * Options:
+ *   --object-types=IDS   Comma-separated list of object type IDs (default: from config)
+ *   --visibility=INT     Visibility value (default: 30)
+ *   --details=ID         Show details for a specific Media Object
+ *   --stats-only         Show statistics only, no individual list
+ *   -n, --non-interactive  No interactive prompts
+ */
+
+// Find autoloader - supports installation as vendor package and standalone
+$autoloadPaths = [
+    __DIR__ . '/../vendor/autoload.php',           // Standalone SDK
+    __DIR__ . '/../../../autoload.php',            // Installed as vendor package
+];
+
+$autoloaderFound = false;
+foreach ($autoloadPaths as $autoloadPath) {
+    if (file_exists($autoloadPath)) {
+        require_once $autoloadPath;
+        $autoloaderFound = true;
+        break;
+    }
+}
+
+if (!$autoloaderFound) {
+    fwrite(STDERR, "Autoloader not found. Please run 'composer install'.\n");
+    exit(1);
+}
+
+$command = new \Pressmind\CLI\TouristicOrphansCommand();
+exit($command->run($argv));

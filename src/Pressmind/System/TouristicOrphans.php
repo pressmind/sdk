@@ -47,7 +47,7 @@ class TouristicOrphans
         }
 
         $placeholders = implode(',', array_fill(0, count($objectTypeIds), '?'));
-        
+
         $sql = "
             SELECT 
                 mo.id,
@@ -55,21 +55,28 @@ class TouristicOrphans
                 mo.code,
                 mo.id_object_type,
                 mo.visibility,
-                (SELECT COUNT(*) 
-                 FROM pmt2core_touristic_booking_packages bp 
-                 WHERE bp.id_media_object = mo.id) as booking_packages_count,
-                (SELECT COUNT(*) 
-                 FROM pmt2core_touristic_dates d 
-                 JOIN pmt2core_touristic_booking_packages bp ON d.id_booking_package = bp.id 
-                 WHERE bp.id_media_object = mo.id) as dates_count,
-                (SELECT COUNT(*) 
-                 FROM pmt2core_touristic_options o 
-                 WHERE o.id_media_object = mo.id 
-                    OR o.id_booking_package IN (
-                        SELECT id FROM pmt2core_touristic_booking_packages WHERE id_media_object = mo.id
-                    )) as options_count
+                COALESCE(bp_counts.cnt, 0) as booking_packages_count,
+                COALESCE(d_counts.cnt, 0) as dates_count,
+                COALESCE(o_counts.cnt, 0) as options_count
             FROM pmt2core_media_objects mo
             LEFT JOIN pmt2core_cheapest_price_speed cps ON cps.id_media_object = mo.id
+            LEFT JOIN (
+                SELECT id_media_object, COUNT(*) as cnt 
+                FROM pmt2core_touristic_booking_packages 
+                GROUP BY id_media_object
+            ) bp_counts ON bp_counts.id_media_object = mo.id
+            LEFT JOIN (
+                SELECT bp.id_media_object, COUNT(*) as cnt
+                FROM pmt2core_touristic_dates d
+                JOIN pmt2core_touristic_booking_packages bp ON d.id_booking_package = bp.id
+                GROUP BY bp.id_media_object
+            ) d_counts ON d_counts.id_media_object = mo.id
+            LEFT JOIN (
+                SELECT bp.id_media_object, COUNT(*) as cnt
+                FROM pmt2core_touristic_options o
+                JOIN pmt2core_touristic_booking_packages bp ON o.id_booking_package = bp.id
+                GROUP BY bp.id_media_object
+            ) o_counts ON o_counts.id_media_object = mo.id
             WHERE mo.id_object_type IN ({$placeholders})
               AND mo.visibility = ?
               AND cps.id IS NULL
@@ -222,41 +229,37 @@ class TouristicOrphans
             return [];
         }
 
+        $placeholders = implode(',', array_fill(0, count($objectTypeIds), '?'));
+        
+        $sql = "
+            SELECT 
+                mo.id_object_type,
+                COUNT(*) as visible_count,
+                SUM(CASE WHEN cps.id IS NOT NULL THEN 1 ELSE 0 END) as with_prices_count,
+                SUM(CASE WHEN cps.id IS NULL THEN 1 ELSE 0 END) as orphans_count
+            FROM pmt2core_media_objects mo
+            LEFT JOIN pmt2core_cheapest_price_speed cps ON cps.id_media_object = mo.id
+            WHERE mo.id_object_type IN ({$placeholders})
+              AND mo.visibility = ?
+            GROUP BY mo.id_object_type
+        ";
+
+        $params = array_merge($objectTypeIds, [$visibility]);
+        $results = $this->db->fetchAll($sql, $params);
+
         $stats = [];
         $totalOrphans = 0;
         $totalVisible = 0;
 
-        foreach ($objectTypeIds as $objectTypeId) {
-            // Number of visible objects
-            $sql = "SELECT COUNT(*) as count 
-                    FROM pmt2core_media_objects 
-                    WHERE id_object_type = ? AND visibility = ?";
-            $visibleCount = $this->db->fetchRow($sql, [$objectTypeId, $visibility]);
-
-            // Number of objects with cheapest prices
-            $sql = "SELECT COUNT(DISTINCT mo.id) as count 
-                    FROM pmt2core_media_objects mo
-                    INNER JOIN pmt2core_cheapest_price_speed cps ON cps.id_media_object = mo.id
-                    WHERE mo.id_object_type = ? AND mo.visibility = ?";
-            $withPricesCount = $this->db->fetchRow($sql, [$objectTypeId, $visibility]);
-
-            // Number of orphans
-            $sql = "SELECT COUNT(*) as count 
-                    FROM pmt2core_media_objects mo
-                    LEFT JOIN pmt2core_cheapest_price_speed cps ON cps.id_media_object = mo.id
-                    WHERE mo.id_object_type = ? AND mo.visibility = ? AND cps.id IS NULL";
-            $orphansCount = $this->db->fetchRow($sql, [$objectTypeId, $visibility]);
-
-            $visible = (int)($visibleCount->count ?? 0);
-            $withPrices = (int)($withPricesCount->count ?? 0);
-            $orphans = (int)($orphansCount->count ?? 0);
-
-            // Get object type name from config
-            $objectTypeName = $this->getObjectTypeName($objectTypeId);
+        foreach ($results as $row) {
+            $objectTypeId = (int)$row->id_object_type;
+            $visible = (int)$row->visible_count;
+            $withPrices = (int)$row->with_prices_count;
+            $orphans = (int)$row->orphans_count;
 
             $stats[$objectTypeId] = [
                 'id_object_type' => $objectTypeId,
-                'name' => $objectTypeName,
+                'name' => $this->getObjectTypeName($objectTypeId),
                 'visible_count' => $visible,
                 'with_prices_count' => $withPrices,
                 'orphans_count' => $orphans,
@@ -265,6 +268,20 @@ class TouristicOrphans
 
             $totalOrphans += $orphans;
             $totalVisible += $visible;
+        }
+
+        // Ensure all requested object types are in the result (even if they have 0 entries)
+        foreach ($objectTypeIds as $objectTypeId) {
+            if (!isset($stats[$objectTypeId])) {
+                $stats[$objectTypeId] = [
+                    'id_object_type' => $objectTypeId,
+                    'name' => $this->getObjectTypeName($objectTypeId),
+                    'visible_count' => 0,
+                    'with_prices_count' => 0,
+                    'orphans_count' => 0,
+                    'percentage_orphans' => 0
+                ];
+            }
         }
 
         return [

@@ -1404,6 +1404,11 @@ class MediaObject extends AbstractObject
                     }
                     if(empty($options)){
                         self::$_insert_cheapest_price_log[$this->id][] = 'Skipping date ' . $date->departure->format('Y-m-d').' (season = '.$date->season.', agency = '.$agency.') because of no valid options found for price_mix = '.$booking_package->price_mix;
+                        // Sub-validation: Log counts of different option types for debugging
+                        $extras_count = count($date->getExtras(true, $agency));
+                        $ticket_count = count($date->getTickets(true, $agency));
+                        $sightseeing_count = count($date->getSightseeings(true, $agency));
+                        self::$_insert_cheapest_price_log[$this->id][] = 'Option Info: extras count = ' . $extras_count . ', ticket count: ' . $ticket_count . ', sightseeing: ' . $sightseeing_count;
                         continue;
                     }
                     $cheapest_options = [];

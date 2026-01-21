@@ -68,6 +68,7 @@ class AbstractIndex
         if (!empty($this->_config['username']) && !empty($this->_config['password'])) {
             $this->client->setBasicAuthentication($this->_config['username'], $this->_config['password']);
         }
+        $this->client->setSSLVerification(false);
         $this->client = $this->client->build();
         $this->_number_of_shards = isset($this->_config['number_of_shards']) ? $this->_config['number_of_shards'] : 1;
         $this->_number_of_replicas = isset($this->_config['number_of_replicas']) ? $this->_config['number_of_replicas'] : 0;

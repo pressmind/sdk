@@ -1085,7 +1085,8 @@ class MediaObject extends AbstractObject
                 (empty($filters->airport) || $filters->airport == $document->airport) &&
                 (empty($filters->housing_package_code_ibe) || $filters->housing_package_code_ibe == $document->housing_package->code_ibe) &&
                 (empty($filters->startingpoint_id_city) || $filters->startingpoint_id_city == $document->startingpoint_id_city) &&
-                (empty($filters->housing_package_id_name) || $filters->housing_package_id_name == $document->housing_package_id_name)
+                (empty($filters->housing_package_id_name) || $filters->housing_package_id_name == $document->housing_package_id_name) &&
+                (empty($filters->id_housing_package) || $filters->id_housing_package == $document->id_housing_package)
             ){
                 $filtered_documents[] = $document;
             }

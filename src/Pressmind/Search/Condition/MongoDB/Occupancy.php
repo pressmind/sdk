@@ -31,6 +31,26 @@ class Occupancy
         return (new \ReflectionClass($this))->getShortName();
     }
 
+    /**
+     * Get the occupancies array (without null value)
+     * 
+     * @return array
+     */
+    public function getOccupancies(): array
+    {
+        return array_filter($this->_occupancies, fn($v) => $v !== null);
+    }
+
+    /**
+     * Get the child occupancies array (without null value)
+     * 
+     * @return array
+     */
+    public function getChildOccupancies(): array
+    {
+        return array_filter($this->_child_occupancies, fn($v) => $v !== null);
+    }
+
     public function getQuery($type = 'first_match', $allow_invalid_offers = false)
     {
         if($type == 'first_match') {

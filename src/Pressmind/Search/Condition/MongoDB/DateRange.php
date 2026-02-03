@@ -33,6 +33,26 @@ class DateRange
         return (new \ReflectionClass($this))->getShortName();
     }
 
+    /**
+     * Get the from date
+     * 
+     * @return DateTime|null
+     */
+    public function getDateFrom(): ?DateTime
+    {
+        return $this->_dateFrom;
+    }
+
+    /**
+     * Get the to date
+     * 
+     * @return DateTime|null
+     */
+    public function getDateTo(): ?DateTime
+    {
+        return $this->_dateTo;
+    }
+
     public function getQuery($type = 'first_match')
     {
         if($type == 'first_match') {

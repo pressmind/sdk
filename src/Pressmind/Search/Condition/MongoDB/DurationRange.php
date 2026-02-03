@@ -21,6 +21,26 @@ class DurationRange
         return (new \ReflectionClass($this))->getShortName();
     }
 
+    /**
+     * Get the from duration
+     * 
+     * @return float
+     */
+    public function getDurationFrom(): float
+    {
+        return $this->_durationFrom;
+    }
+
+    /**
+     * Get the to duration
+     * 
+     * @return float
+     */
+    public function getDurationTo(): float
+    {
+        return $this->_durationTo;
+    }
+
     public function getQuery($type = 'first_match')
     {
         if($type == 'first_match') {

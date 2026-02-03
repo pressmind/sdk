@@ -27,6 +27,26 @@ class Code
         return (new \ReflectionClass($this))->getShortName();
     }
 
+    /**
+     * Get the codes array
+     * 
+     * @return array
+     */
+    public function getCodes(): array
+    {
+        return $this->_codes;
+    }
+
+    /**
+     * Get the combine operator
+     * 
+     * @return string
+     */
+    public function getCombineOperator(): string
+    {
+        return $this->_combineOperator;
+    }
+
     public function getQuery($type = 'first_match')
     {
         $query = [];

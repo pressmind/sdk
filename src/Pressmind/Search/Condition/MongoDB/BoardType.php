@@ -18,6 +18,16 @@ class BoardType
         return (new \ReflectionClass($this))->getShortName();
     }
 
+    /**
+     * Get the board types array
+     * 
+     * @return array
+     */
+    public function getBoardTypes(): array
+    {
+        return $this->_boardType;
+    }
+
     public function getQuery($type = 'first_match')
     {
         if($type == 'first_match') {

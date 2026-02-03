@@ -597,7 +597,7 @@ class Query
         if (isset($request[$prefix.'-pr']) === true && preg_match('/^([0-9]+)\-([0-9]+)$/', $request[$prefix.'-pr']) > 0) {
             list($price_range_from, $price_range_to) = explode('-', $request[$prefix.'-pr']);
             $price_range_from = empty(intval($price_range_from)) ? 1 : intval($price_range_from);
-            $price_range_to = empty(intval($price_range_to)) ? 99999 : intval($price_range_to);
+            $price_range_to = empty(intval($price_range_to)) ? 9999999 : intval($price_range_to);
             $conditions[] = new \Pressmind\Search\Condition\MongoDB\PriceRange($price_range_from, $price_range_to);
             $validated_search_parameters[$prefix.'-pr'] = $price_range_from.'-'.$price_range_to;
         }
@@ -774,8 +774,9 @@ class Query
             self::$touristic_origin,
             self::$agency_id_price_index
         );
-        if($paginator){ // @TODO this needs a refactoring
-            self::$page  = 0;
+        if($paginator){
+            self::$page = 1;
+            self::$page_size = $page_size;
             if (isset($request[$prefix.'-l']) === true && preg_match('/^([0-9]+)\,([0-9]+)$/', $request[$prefix.'-l'], $m) > 0) {
                 self::$page = intval($m[1]);
                 self::$page_size = intval($m[2]);

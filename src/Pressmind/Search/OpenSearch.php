@@ -68,6 +68,7 @@ class OpenSearch extends AbstractSearch
         if (!empty($this->_config['data']['search_opensearch']['username']) && !empty($this->_config['data']['search_opensearch']['password'])) {
             $this->_client->setBasicAuthentication($this->_config['data']['search_opensearch']['username'], $this->_config['data']['search_opensearch']['password']);
         }
+        $this->_client->setSSLVerification(false);
         $this->_client = $this->_client->build();
         $this->_search_term = $this->sanitizeSearchTerm($search_term);
         $this->_index_name = $this->getIndexTemplateName($language);

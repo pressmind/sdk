@@ -13,6 +13,7 @@ class CalendarFilter
     public $airport = null;
     public $startingpoint_id_city = null;
     public $housing_package_id_name = null;
+    public $id_housing_package = null;
     public $agency = null;
 
     /**
@@ -31,6 +32,7 @@ class CalendarFilter
             'airport',
             'startingpoint_id_city',
             'housing_package_id_name',
+            'id_housing_package',
             'agency'
         ];
         foreach ($params as $param) {

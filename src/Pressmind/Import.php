@@ -28,6 +28,7 @@ use Pressmind\ORM\Object\Route;
 use Pressmind\REST\Client;
 use \Exception;
 use Pressmind\Search\MongoDB\Indexer;
+use Pressmind\System\EnvironmentValidation;
 
 /**
  * Class Importer
@@ -901,9 +902,15 @@ class Import
         }        $image_processor_path = APPLICATION_PATH . '/cli/image_processor.php' . (empty($id_media_object) ? '' : ' mediaobject ' . implode(',',$id_media_object));
 
         $php_binary = isset($config['server']['php_cli_binary']) && !empty($config['server']['php_cli_binary']) ? $config['server']['php_cli_binary'] : 'php';
-        if(php_sapi_name() === 'cli' && !file_exists($php_binary)) {
-            throw new Exception('can not run post import scripts, php binary not found at "' . $php_binary. '", check pm-config.php');
-            return;
+        if (php_sapi_name() === 'cli') {
+            $validation = EnvironmentValidation::validatePhpCliBinary($php_binary);
+            if (!$validation['valid']) {
+                throw new Exception('Can not run post import scripts: ' . $validation['message']);
+            }
+            // Use resolved path if available (for relative paths like 'php')
+            if (!empty($validation['resolvedPath'])) {
+                $php_binary = $validation['resolvedPath'];
+            }
         }
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): Starting post import processes ', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): bash -c "exec nohup php ' . $image_processor_path . ' > /dev/null 2>&1 &"', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);

@@ -88,7 +88,6 @@ class Indexer extends AbstractIndex
         foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
             $mediaObjects = MediaObject::listAll(['id_object_type' => $id_object_type]);
             foreach ($mediaObjects as $mediaObject) {
-                echo $mediaObject->id."\n";
                 $ids[] = $mediaObject->id;
             }
         }

@@ -5,6 +5,8 @@ namespace Pressmind\Search;
 use Pressmind\Cache\Adapter\Factory;
 use Pressmind\Log\Writer;
 use Pressmind\Registry;
+use Pressmind\Search\Hook\SearchHookManager;
+use Pressmind\Search\Hook\SearchHookResult;
 
 class MongoDB extends AbstractSearch
 {
@@ -84,6 +86,30 @@ class MongoDB extends AbstractSearch
     private $_use_opensearch;
 
     /**
+     * Static cache for MongoDB client connection (reused across instances)
+     * @var \MongoDB\Client|null
+     */
+    private static $_clientCache = null;
+
+    /**
+     * Static cache key for current client
+     * @var string|null
+     */
+    private static $_clientCacheKey = null;
+
+    /**
+     * Static cache for MongoDB database connection
+     * @var \MongoDB\Database|null
+     */
+    private static $_dbCache = null;
+
+    /**
+     * Static cache key for current database
+     * @var string|null
+     */
+    private static $_dbCacheKey = null;
+
+    /**
      * @param $conditions
      * @param $sort
      * @param $language
@@ -115,6 +141,78 @@ class MongoDB extends AbstractSearch
 
     public function getAgency(){
         return $this->_agency;
+    }
+
+    /**
+     * Get cached MongoDB database connection (reuses connection across requests in same process)
+     * @return \MongoDB\Database
+     */
+    private function _getDatabase()
+    {
+        $clientKey = md5($this->_db_uri);
+        $dbKey = md5($this->_db_uri . $this->_db_name);
+
+        // Check if client needs to be created or recreated
+        if (self::$_clientCache === null || self::$_clientCacheKey !== $clientKey) {
+            self::$_clientCache = new \MongoDB\Client($this->_db_uri);
+            self::$_clientCacheKey = $clientKey;
+            // Reset database cache when client changes
+            self::$_dbCache = null;
+            self::$_dbCacheKey = null;
+        }
+
+        // Check if database needs to be selected
+        if (self::$_dbCache === null || self::$_dbCacheKey !== $dbKey) {
+            self::$_dbCache = self::$_clientCache->selectDatabase($this->_db_name);
+            self::$_dbCacheKey = $dbKey;
+        }
+
+        return self::$_dbCache;
+    }
+
+    /**
+     * Clear cached MongoDB connections
+     */
+    public static function clearConnectionCache()
+    {
+        self::$_clientCache = null;
+        self::$_clientCacheKey = null;
+        self::$_dbCache = null;
+        self::$_dbCacheKey = null;
+    }
+
+    /**
+     * Get a cached MongoDB client (global static method for use by other classes)
+     * @param string $uri MongoDB connection URI
+     * @return \MongoDB\Client
+     */
+    public static function getClient($uri)
+    {
+        $clientKey = md5($uri);
+        if (self::$_clientCache === null || self::$_clientCacheKey !== $clientKey) {
+            self::$_clientCache = new \MongoDB\Client($uri);
+            self::$_clientCacheKey = $clientKey;
+            self::$_dbCache = null;
+            self::$_dbCacheKey = null;
+        }
+        return self::$_clientCache;
+    }
+
+    /**
+     * Get a cached MongoDB database (global static method for use by other classes)
+     * @param string $uri MongoDB connection URI
+     * @param string $dbName Database name
+     * @return \MongoDB\Database
+     */
+    public static function getDatabase($uri, $dbName)
+    {
+        $client = self::getClient($uri);
+        $dbKey = md5($uri . $dbName);
+        if (self::$_dbCache === null || self::$_dbCacheKey !== $dbKey) {
+            self::$_dbCache = $client->selectDatabase($dbName);
+            self::$_dbCacheKey = $dbKey;
+        }
+        return self::$_dbCache;
     }
 
     public static function getCollectionName($prefix = 'best_price_search_based_', $language = null, $origin = null, $agency = null){
@@ -254,6 +352,68 @@ class MongoDB extends AbstractSearch
                 return $cache_contents;
             }
         }
+        
+        // Execute pre-search hooks (e.g., Infx API integration)
+        $hookContext = [
+            'language' => $this->_language,
+            'origin' => $this->_origin,
+            'agency' => $this->_agency,
+            'conditions' => $this->_conditions,
+            'sort' => $this->_sort,
+            'search_type' => $search_type,
+        ];
+        
+        $hookResult = SearchHookManager::executePreSearch($this->_conditions, $hookContext);
+        
+        if ($hookResult !== null) {
+            $this->_addLog('getResult(): applying pre-search hook result');
+            
+            // Debug output for pre-search hook
+            if (!empty($_GET['debug']) || (defined('PM_SDK_DEBUG') && PM_SDK_DEBUG)) {
+                $debugInfo = [
+                    'hook' => 'preSearch',
+                    'codes_count' => $hookResult->hasCodes() ? count($hookResult->codes) : 0,
+                    'codes' => $hookResult->hasCodes() ? $hookResult->codes : [],
+                    'remove_conditions' => $hookResult->hasConditionsToRemove() ? $hookResult->removeConditions : [],
+                    'force_order' => $hookResult->shouldForceOrder() ? $hookResult->forceOrder : null,
+                    'additional_data' => $hookResult->additionalData ?? [],
+                ];
+                echo '<pre style="background:#e8f5e9;padding:10px;margin:10px 0;border-left:4px solid #4caf50;">SearchHook preSearch: ' . json_encode($debugInfo, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . '</pre>';
+            }
+            
+            // Add external codes as condition
+            if ($hookResult->hasCodes()) {
+                $codeCondition = new Condition\MongoDB\Code($hookResult->codes);
+                $this->addCondition('ExternalCodes', $codeCondition);
+                $this->_addLog('getResult(): added ' . count($hookResult->codes) . ' external codes');
+                
+                // Debug: Show the actual MongoDB query generated
+                if (!empty($_GET['debug']) || (defined('PM_SDK_DEBUG') && PM_SDK_DEBUG)) {
+                    $codeQuery = $codeCondition->getQuery('first_match');
+                    echo '<pre style="background:#c8e6c9;padding:5px;margin:5px 0;font-size:10px;border-left:3px solid #388e3c;">';
+                    echo '<b>ExternalCodes Query:</b> ' . json_encode($codeQuery, JSON_UNESCAPED_UNICODE);
+                    echo '</pre>';
+                }
+            }
+            
+            // Remove conditions that are handled by the external API
+            if ($hookResult->hasConditionsToRemove()) {
+                foreach ($hookResult->removeConditions as $conditionType) {
+                    $this->removeCondition($conditionType);
+                    $this->_addLog('getResult(): removed condition ' . $conditionType);
+                }
+            }
+            
+            // Force sort order if specified
+            if ($hookResult->shouldForceOrder()) {
+                $this->_sort = [$hookResult->forceOrder => ''];
+                $this->_addLog('getResult(): forced sort order to ' . $hookResult->forceOrder);
+            }
+            
+            // Store hook result for post-search
+            $hookContext['_hook_result'] = $hookResult;
+        }
+        
         if($this->_use_opensearch && ($this->hasCondition('AtlasLuceneFulltext') || $this->hasCondition('Fulltext'))) {
             $searchString = '';
             $condition = $this->getConditionByType('AtlasLuceneFulltext');
@@ -288,9 +448,7 @@ class MongoDB extends AbstractSearch
         }
         $this->setGetFilters($getFilters);
         $this->setReturnFiltersOnly($returnFiltersOnly);
-        $client = new \MongoDB\Client($this->_db_uri);
-        $db_name = $this->_db_name;
-        $db = $client->$db_name;
+        $db = $this->_getDatabase();
         $collection = $db->{$this->_collection_name};
         $prepare = $this->prepareQuery();
         $query = $this->buildQuery($output, $preview_date, $allowed_visibilities);
@@ -344,6 +502,32 @@ class MongoDB extends AbstractSearch
         }
 
         $this->_addLog('getResult(): query completed');
+        
+        // Execute post-search hooks (e.g., enrich with Infx data)
+        if (isset($hookContext)) {
+            $result = SearchHookManager::executePostSearch($result, $hookContext);
+            $this->_addLog('getResult(): post-search hooks executed');
+            
+            // Debug output for post-search hook
+            if (!empty($_GET['debug']) || (defined('PM_SDK_DEBUG') && PM_SDK_DEBUG)) {
+                $enrichedCount = 0;
+                if (!empty($result->documents)) {
+                    foreach ($result->documents as $doc) {
+                        $docArray = is_object($doc) ? (array)$doc : $doc;
+                        if (!empty($docArray['hookData'])) {
+                            $enrichedCount++;
+                        }
+                    }
+                }
+                $debugInfo = [
+                    'hook' => 'postSearch',
+                    'documents_total' => !empty($result->documents) ? count($result->documents) : 0,
+                    'documents_with_hookData' => $enrichedCount,
+                ];
+                echo '<pre style="background:#e3f2fd;padding:10px;margin:10px 0;border-left:4px solid #2196f3;">SearchHook postSearch: ' . json_encode($debugInfo, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . '</pre>';
+            }
+        }
+        
         return $result;
     }
 
@@ -364,9 +548,7 @@ class MongoDB extends AbstractSearch
         $params = isset($info['info']) && !empty($info['info']->parameters) ? $info['info']->parameters : null;
         if(!is_null($params)) {
             try {
-                $client = new \MongoDB\Client($this->_db_uri);
-                $db_name = $this->_db_name;
-                $db = $client->$db_name;
+                $db = $this->_getDatabase();
                 $collection = $db->{$this->_collection_name};
                 $result = $collection->aggregate($params->aggregate)->toArray()[0];
                 $info = new \stdClass();
@@ -733,11 +915,30 @@ class MongoDB extends AbstractSearch
             $stages[] = $projectStage;
         }
 
-        if(array_key_first($this->_sort) == 'list' && $this->hasCondition('MediaObject')){
-            $MediaObjectCondition = $this->getConditionByType('MediaObject');
-            $order_by_list = ['$addFields' =>
-                ['sort' => ['$indexOfArray' => [$MediaObjectCondition->getValue(), '$_id']]]];
-            $stages[] = $order_by_list;
+        if(array_key_first($this->_sort) == 'list') {
+            if ($this->hasCondition('MediaObject')) {
+                // Sort by MediaObject ID order
+                $MediaObjectCondition = $this->getConditionByType('MediaObject');
+                $order_by_list = ['$addFields' =>
+                    ['sort' => ['$indexOfArray' => [$MediaObjectCondition->getValue(), '$_id']]]];
+                $stages[] = $order_by_list;
+            } elseif ($this->hasCondition('ExternalCodes')) {
+                // Sort by external code order (e.g., from Infx API)
+                $CodeCondition = $this->getConditionByType('ExternalCodes');
+                if (method_exists($CodeCondition, 'getCodes')) {
+                    $order_by_list = ['$addFields' =>
+                        ['sort' => ['$indexOfArray' => [$CodeCondition->getCodes(), '$code']]]];
+                    $stages[] = $order_by_list;
+                }
+            } elseif ($this->hasCondition('Code')) {
+                // Sort by code order
+                $CodeCondition = $this->getConditionByType('Code');
+                if (method_exists($CodeCondition, 'getCodes')) {
+                    $order_by_list = ['$addFields' =>
+                        ['sort' => ['$indexOfArray' => [$CodeCondition->getCodes(), '$code']]]];
+                    $stages[] = $order_by_list;
+                }
+            }
         }
 
         // stage n, build the filter stages
@@ -1032,7 +1233,7 @@ class MongoDB extends AbstractSearch
                         '_id' => 1
                 ]
             ];
-        }elseif(array_key_first($this->_sort) == 'list' && $this->hasCondition('MediaObject')){
+        }elseif(array_key_first($this->_sort) == 'list' && ($this->hasCondition('MediaObject') || $this->hasCondition('ExternalCodes') || $this->hasCondition('Code'))){
             $sort = ['$sort' => [
                     'sort' => 1,
                     '_id' => 1

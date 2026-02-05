@@ -51,23 +51,19 @@ class Code
     {
         $query = [];
         if($type == 'first_match') {
-            if (count($this->_codes) > 1) {
-                $q = [];
-                foreach ($this->_codes as $code) {
-                    if($this->_asRegex) {
+            if($this->_asRegex) {
+                if (count($this->_codes) > 1) {
+                    $q = [];
+                    foreach ($this->_codes as $code) {
                         $q[] = ['code' => ['$regex' => $code]];
-                    }else{
-                        $q[] = ['code' => $code];
                     }
-                }
-                $query['$' . strtolower($this->_combineOperator)] = $q;
-            } else {
-                if($this->_asRegex) {
+                    $query['$' . strtolower($this->_combineOperator)] = $q;
+                } else {
                     $query['code'] = ['$regex' => $this->_codes[0]];
-                }else{
-                    $query['code'] = $this->_codes[0];
                 }
-
+            } else {
+                // Use $in operator - works for both scalar and array fields
+                $query['code'] = ['$in' => $this->_codes];
             }
             return $query;
         }

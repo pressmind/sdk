@@ -38,28 +38,31 @@ class StartingPointOptions extends AbstractImport implements ImportInterface
         $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_importMediaObjectTouristicStartingPointOptions(' . implode(',', $this->_ids) . '): REST request started';
         $response = $client->sendRequest('StartingPoint', 'getById', ['ids' => implode(',', $this->_ids)]);
         $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_importMediaObjectTouristicStartingPointOptions(' . implode(',', $this->_ids) . '): REST request done';
-        $starting_point_option_ids = [];
+
         if (is_a($response, 'stdClass') && isset($response->result) && is_array($response->result)) {
             foreach ($response->result as $result) {
-                if(is_a($result, 'stdClass') && isset($result->options) && is_array($result->options)) {
+                if (is_a($result, 'stdClass') && isset($result->options) && is_array($result->options)) {
                     $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_importMediaObjectTouristicStartingPointOptions(' . implode(',', $this->_ids) . '): writing data';
+                    $optionObjects = [];
+                    $optionIds = [];
                     foreach ($result->options as $option) {
                         $starting_point_option = new Option();
                         $starting_point_option->fromStdClass($option);
                         $starting_point_option->id_startingpoint = $result->id;
-                        try {
-                            $starting_point_option->create();
-                            $starting_point_option_ids[] = $starting_point_option->id;
-                        } catch (Exception $e) {
-                            $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_importMediaObjectTouristicStartingPointOptions(' . implode(',', $this->_ids) . '): Error writing starting point option with ID ' . $starting_point_option->getId() . ': '. $e->getMessage();
-                            $this->_errors[] = 'Importer::_importMediaObjectTouristicStartingPointOptions(' . implode(',', $this->_ids) . '): Error writing starting point option with ID ' . $starting_point_option->getId() . ': '. $e->getMessage();
-                        }
-                        $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_importMediaObjectTouristicStartingPointOptions(' . implode(',', $this->_ids) . '): Starting point option with ID ' . $starting_point_option->getId() . ' written';
-                        unset($starting_point_option);
-                        $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_importMediaObjectTouristicStartingPointOptions(' . implode(',', $this->_ids) . '): Object removed from heap';
+                        $optionObjects[] = $starting_point_option;
+                        $optionIds[] = $starting_point_option->id;
                     }
+                    if (!empty($optionObjects)) {
+                        try {
+                            Option::batchCreate($optionObjects);
+                            $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_importMediaObjectTouristicStartingPointOptions(' . implode(',', $this->_ids) . '): Batch created ' . count($optionObjects) . ' options';
+                        } catch (Exception $e) {
+                            $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_importMediaObjectTouristicStartingPointOptions(' . implode(',', $this->_ids) . '): Batch create failed: ' . $e->getMessage();
+                            $this->_errors[] = 'Importer::_importMediaObjectTouristicStartingPointOptions(' . implode(',', $this->_ids) . '): Batch create failed: ' . $e->getMessage();
+                        }
+                    }
+                    $this->remove_orphans($result->id, $optionIds);
                 }
-                $this->remove_orphans($result->id, $starting_point_option_ids);
             }
         }
         unset($response);

@@ -41,6 +41,11 @@ class MediaObjectData extends AbstractImport implements ImportInterface
     private $_import_linked_objects;
 
     /**
+     * @var array Cached config for performance
+     */
+    private $_config = null;
+
+    /**
      * MediaObjectData constructor.
      * @param stdClass $data
      * @param integer $id_media_object
@@ -55,6 +60,8 @@ class MediaObjectData extends AbstractImport implements ImportInterface
         $this->_import_type = $import_type;
         $this->_import_linked_objects = $import_linked_objects;
         $this->_var_names_to_be_ignored = [];
+        // Cache config for performance
+        $this->_config = Registry::getInstance()->get('config');
     }
 
     /**
@@ -64,7 +71,7 @@ class MediaObjectData extends AbstractImport implements ImportInterface
     public function import() {
 
         $category_tree_ids = [];
-        $conf =  Registry::getInstance()->get('config');
+        $conf = $this->_config;
         $default_language = $conf['data']['languages']['default'];
         $allowed_media_objects = array_keys($conf['data']['media_types']);
         $this->_log[] = $this->_getElapsedTimeAndHeap() . ' MediaObjectData::import(' . $this->_id_media_object . '): Importing media object data';
@@ -221,8 +228,9 @@ class MediaObjectData extends AbstractImport implements ImportInterface
             Writer::TYPE_INFO
         );
 
-        $config = Registry::getInstance()->get('config');
+        $config = $this->_config;
         $attachmentsMap = [];
+        $relationsToCreate = []; // Collect relations for batch insert
 
         // Delete existing relations for this field/section/language
         AttachmentToMediaObject::deleteByMediaObjectField(
@@ -335,14 +343,14 @@ class MediaObjectData extends AbstractImport implements ImportInterface
                     }
                 }
 
-                // Create relation
+                // Collect relation for batch insert
                 $relation = new AttachmentToMediaObject();
                 $relation->id_attachment = $attachmentId;
                 $relation->id_media_object = $this->_id_media_object;
                 $relation->var_name = $varName;
                 $relation->section_name = $sectionName;
                 $relation->language = $language;
-                $relation->create();
+                $relationsToCreate[] = $relation;
 
                 // Store for URL rewriting
                 $attachmentsMap[$attachmentId] = [
@@ -358,6 +366,11 @@ class MediaObjectData extends AbstractImport implements ImportInterface
                     Writer::TYPE_ERROR
                 );
             }
+        }
+
+        // Batch insert all relations at once
+        if (!empty($relationsToCreate)) {
+            AttachmentToMediaObject::batchCreate($relationsToCreate);
         }
 
         // Rewrite URLs in HTML

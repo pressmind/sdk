@@ -170,6 +170,25 @@ class CheapestPriceSpeed extends AbstractObject
                     'columns' => [
                         'housing_package_id_name'
                     ]
+                ],
+                'aggregate_prices_index' => [
+                    'type' => 'index',
+                    'columns' => [
+                        'id_media_object',
+                        'id_origin',
+                        'price_mix',
+                        'option_occupancy',
+                        'duration'
+                    ]
+                ],
+                'aggregate_prices_agency_index' => [
+                    'type' => 'index',
+                    'columns' => [
+                        'id_media_object',
+                        'id_origin',
+                        'agency',
+                        'price_mix'
+                    ]
                 ]
             ]
         ],

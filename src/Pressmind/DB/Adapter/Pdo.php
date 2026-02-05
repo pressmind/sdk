@@ -242,6 +242,56 @@ class Pdo implements AdapterInterface
     }
 
     /**
+     * Batch inserts multiple rows into table with a single query
+     * @param string $tableName Table name
+     * @param array $columns Array of column names
+     * @param array $rows Array of value arrays (each inner array corresponds to one row)
+     * @param boolean $replace_into Use REPLACE INTO instead of INSERT INTO
+     * @return int Number of affected rows
+     * @throws Exception
+     */
+    public function batchInsert($tableName, $columns, $rows, $replace_into = true)
+    {
+        if (empty($rows)) {
+            return 0;
+        }
+
+        $database_query_log_enabled = Registry::getInstance()->get('config')['logging']['enable_database_query_logging'] ?? false;
+        if ($database_query_log_enabled) {
+            $debug_start_time = microtime(true);
+        }
+
+        $insert_statement = $replace_into ? 'REPLACE' : 'INSERT';
+        $column_count = count($columns);
+
+        // Build placeholders: (?, ?, ?), (?, ?, ?), ...
+        $row_placeholder = '(' . implode(', ', array_fill(0, $column_count, '?')) . ')';
+        $all_placeholders = implode(', ', array_fill(0, count($rows), $row_placeholder));
+
+        // Flatten all values into single array
+        $values = [];
+        foreach ($rows as $row) {
+            foreach ($row as $value) {
+                $values[] = $value;
+            }
+        }
+
+        $query = $insert_statement . " INTO " . $this->table_prefix . $tableName
+               . " (`" . implode('`, `', $columns) . "`) VALUES " . $all_placeholders;
+
+        $this->execute($query, $values);
+
+        if ($database_query_log_enabled) {
+            $now = new \DateTime();
+            $logfile = Registry::getInstance()->get('config')['logging']['database_query_log_file'] ?? APPLICATION_PATH . '/logs/db_query_log.txt';
+            $debug_end_time = microtime(true);
+            file_put_contents(HelperFunctions::replaceConstantsFromConfig($logfile), $now->format(DATE_ISO8601) . ' - ' . ($debug_end_time - $debug_start_time) . ': ' . $query . " (" . count($rows) . " rows)\n", FILE_APPEND);
+        }
+
+        return count($rows);
+    }
+
+    /**
      * @return string
      */
     public function getTablePrefix()

@@ -35,19 +35,29 @@ class Agency extends AbstractImport implements ImportInterface
      */
     public function import()
     {
+        if (empty($this->_agencies)) {
+            return;
+        }
+
+        // Collect all agencies and relations for batch insert
+        $agencies = [];
+        $relations = [];
+
         foreach ($this->_agencies as $import_agency) {
             $agency = new \Pressmind\ORM\Object\Agency();
             $agency->id = $import_agency->id;
             $agency->name = isset($import_agency->name) ? $import_agency->name : null;
             $agency->code = isset($import_agency->code) ? $import_agency->code : $import_agency->id;
-
-            $agency->create();
+            $agencies[] = $agency;
 
             $agency_to_media_object = new AgencyToMediaObject();
             $agency_to_media_object->id_media_object = $this->_id_media_object;
             $agency_to_media_object->id_agency = $agency->id;
-
-            $agency_to_media_object->create();
+            $relations[] = $agency_to_media_object;
         }
+
+        // Batch insert all agencies and relations at once
+        \Pressmind\ORM\Object\Agency::batchCreate($agencies);
+        AgencyToMediaObject::batchCreate($relations);
     }
 }

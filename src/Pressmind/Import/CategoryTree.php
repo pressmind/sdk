@@ -27,6 +27,11 @@ class CategoryTree extends AbstractImport implements ImportInterface
     private $_linked_media_objects = [];
 
     /**
+     * @var array Config cached for performance during recursive iterations
+     */
+    private $_config = null;
+
+    /**
      * CategoryTree constructor.
      * @param array $ids
      */
@@ -62,6 +67,7 @@ class CategoryTree extends AbstractImport implements ImportInterface
         }
         $_RUNTIME_IMPORTED_CATEGORY_IDS = array_merge($_RUNTIME_IMPORTED_CATEGORY_IDS, $request);
         $this->_linked_media_objects = [];
+        $this->_config = Registry::getInstance()->get('config');
         $client = new Client();
         $response = $client->sendRequest('Category', 'all', empty(array_filter($this->_ids)) ? [] : ['ids' => implode(',', $this->_ids)]);
         $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_importCategoryTrees(): REST request done';
@@ -90,9 +96,9 @@ class CategoryTree extends AbstractImport implements ImportInterface
             }
             $this->createGetTextFiles();
         }
-
+        $filtered_linked_media_objects = $this->_filterExistingMediaObjects($this->_linked_media_objects);
         return [
-            'linked_media_object_ids' => $this->_linked_media_objects,
+            'linked_media_object_ids' => $filtered_linked_media_objects,
         ];
     }
 
@@ -103,8 +109,7 @@ class CategoryTree extends AbstractImport implements ImportInterface
      * @throws Exception
      */
     private function _iterateCategoryTreeItems($id_tree, $items, $parent = null) {
-        $conf = Registry::getInstance()->get('config');
-        $allowed_languages = $conf['data']['languages']['allowed'];
+        $allowed_languages = $this->_config['data']['languages']['allowed'];
         $sort = 0;
         foreach ($items as $item) {
             $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_iterateCategoryTreeItems(): Importing tree item ID ' . $item->id;
@@ -117,19 +122,20 @@ class CategoryTree extends AbstractImport implements ImportInterface
             $category_tree_item->code = empty($item->code) ? null : $item->code;
             $category_tree_item->sort = $sort;
             $category_tree_item->links = null;
-            if(!empty($item->links)){
+            if (!empty($item->links)) {
                 $category_tree_item->links = $item->links;
-                $this->_linked_media_objects = array_unique(array_merge($this->_linked_media_objects, array_filter(explode(',', $item->links))));
+                $link_ids = array_map('intval', array_filter(explode(',', $item->links)));
+                $this->_linked_media_objects = array_merge($this->_linked_media_objects, $link_ids);
             }
-            if(!empty($allowed_languages) && is_array($allowed_languages)){
-                foreach($allowed_languages as $language){
-                    if(isset($item->{$language})){
+            if (!empty($allowed_languages) && is_array($allowed_languages)) {
+                foreach ($allowed_languages as $language) {
+                    if (isset($item->{$language})) {
                         $translation = new \Pressmind\ORM\Object\CategoryTree\Translation\Item();
                         $translation->id = $item->id;
                         $translation->id_tree = $id_tree;
                         $translation->name = empty($item->{$language}) ? $item->name : $item->{$language};
                         $translation->language = $language;
-                        if(empty($translation->name) || empty($translation->language) || empty($translation->id)){
+                        if (empty($translation->name) || empty($translation->language) || empty($translation->id)) {
                             continue;
                         }
                         $translation->replace();
@@ -142,25 +148,97 @@ class CategoryTree extends AbstractImport implements ImportInterface
                 $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_iterateCategoryTreeItems(): Error importing tree item ID ' . $item->id . ': '. $e->getMessage();
                 $this->_errors[] = 'Importer::_iterateCategoryTreeItems(): Error importing tree item ID ' . $item->id . ': '. $e->getMessage();
             }
-            $this->_imported_items [] = $item->id;
+            $this->_imported_items[] = $item->id;
             if (isset($item->item)) {
                 $this->_iterateCategoryTreeItems($id_tree, $item->item, $item->id);
             }
         }
     }
 
-    private function remove_orphans($id_tree){
-        $conf =  Registry::getInstance()->get('config');
+    /**
+     * Remove orphaned items that are no longer in the imported tree
+     * Uses direct DELETE queries for better performance (Optimization #2)
+     * @param int $id_tree
+     */
+    private function remove_orphans($id_tree)
+    {
         $db = Registry::getInstance()->get('db');
-        $allowed_languages = $conf['data']['languages']['allowed'];
-        $Orphans = Item::listAll('id_tree = '.$id_tree.' AND id NOT IN ("'.implode('","', $this->_imported_items).'")');
-        foreach($Orphans as $Orphan){
-            $Orphan->delete();
+
+        if (empty($this->_imported_items)) {
+            $db->delete('pmt2core_category_tree_items', ['id_tree = ?', $id_tree]);
+            $db->delete('pmt2core_category_tree_item_translation', ['id_tree = ?', $id_tree]);
+            return;
         }
-        $Orphans = \Pressmind\ORM\Object\CategoryTree\Translation\Item::listAll('id_tree = '.$id_tree.' AND id NOT IN ("'.implode('","', $this->_imported_items).'")');
-        foreach($Orphans as $Orphan){
-            $db->delete('pmt2core_category_tree_item_translation', ["id = ?", $Orphan->id]);
+
+        // Build placeholders for the IN clause
+        $placeholders = implode(',', array_fill(0, count($this->_imported_items), '?'));
+
+        // Delete orphaned items directly with a single query
+        $query = "DELETE FROM pmt2core_category_tree_items WHERE id_tree = ? AND id NOT IN ($placeholders)";
+        $params = array_merge([$id_tree], $this->_imported_items);
+        $db->execute($query, $params);
+
+        // Delete orphaned translations directly with a single query
+        $query = "DELETE FROM pmt2core_category_tree_item_translation WHERE id_tree = ? AND id NOT IN ($placeholders)";
+        $db->execute($query, $params);
+    }
+
+    /**
+     * Filter out MediaObject IDs that already exist in the database or are already imported in this run
+     * Performs a single bulk query for all collected IDs (Optimization #1)
+     * @param array $ids Array of MediaObject IDs to check
+     * @return array Array of IDs that do NOT exist and are not already being imported
+     */
+    private function _filterExistingMediaObjects($ids)
+    {
+        if (empty($ids)) {
+            return [];
         }
+
+        // Remove duplicates first
+        $ids = array_unique(array_map('intval', $ids));
+        $total_collected = count($ids);
+
+        global $_RUNTIME_IMPORTED_IDS;
+
+        // Step 1: Filter out IDs already imported in this runtime
+        $runtime_filtered = [];
+        if (!empty($_RUNTIME_IMPORTED_IDS)) {
+            $runtime_filtered = array_diff($ids, $_RUNTIME_IMPORTED_IDS);
+            $skipped_runtime = $total_collected - count($runtime_filtered);
+            if ($skipped_runtime > 0) {
+                $this->_log[] = $this->_getElapsedTimeAndHeap() .
+                    ' CategoryTree::_filterExistingMediaObjects(): Skipped ' .
+                    $skipped_runtime . ' MediaObjects (already in runtime queue)';
+            }
+        } else {
+            $runtime_filtered = $ids;
+        }
+
+        if (empty($runtime_filtered)) {
+            return [];
+        }
+
+        // Step 2: Filter out IDs already in database (single bulk query)
+        $db = Registry::getInstance()->get('db');
+        $placeholders = implode(',', array_fill(0, count($runtime_filtered), '?'));
+        $query = "SELECT id FROM pmt2core_media_objects WHERE id IN ($placeholders)";
+        $existing = $db->fetchAll($query, array_values($runtime_filtered));
+
+        $existing_ids = array_map('intval', array_column($existing, 'id'));
+        $missing_ids = array_values(array_diff($runtime_filtered, $existing_ids));
+
+        if (count($existing_ids) > 0) {
+            $this->_log[] = $this->_getElapsedTimeAndHeap() .
+                ' CategoryTree::_filterExistingMediaObjects(): Skipped ' .
+                count($existing_ids) . ' MediaObjects (already in database)';
+        }
+
+        $this->_log[] = $this->_getElapsedTimeAndHeap() .
+            ' CategoryTree::_filterExistingMediaObjects(): ' .
+            count($missing_ids) . ' of ' . $total_collected . ' linked MediaObjects need import';
+
+        return $missing_ids;
     }
 
     /**

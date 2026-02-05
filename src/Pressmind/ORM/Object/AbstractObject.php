@@ -770,6 +770,132 @@ abstract class AbstractObject
     }
 
     /**
+     * Batch create multiple objects with a single database query.
+     * Supports hasMany relations - they are also batch created recursively.
+     * Note: Objects with relations require _dont_use_autoincrement_on_primary_key = true
+     *
+     * @param AbstractObject[] $objects Array of objects to create
+     * @return int Number of created objects
+     * @throws Exception If objects have relations with autoincrement or required properties are missing
+     */
+    public static function batchCreate($objects)
+    {
+        if (empty($objects)) {
+            return 0;
+        }
+
+        /** @var AbstractObject $first */
+        $first = $objects[0];
+
+        // Detect hasMany relations for batch processing
+        $hasManyRelations = [];
+        $hasRelations = false;
+        foreach ($first->_definitions['properties'] as $property) {
+            if ($property['type'] === 'relation') {
+                $hasRelations = true;
+                if (isset($property['relation']['type']) && $property['relation']['type'] === 'hasMany') {
+                    $hasManyRelations[] = $property;
+                }
+            }
+        }
+
+        // Relations with autoincrement are not supported (can't get IDs back from batch insert)
+        if ($hasRelations && !$first->_dont_use_autoincrement_on_primary_key) {
+            throw new Exception('batchCreate with relations requires _dont_use_autoincrement_on_primary_key = true. Use create() instead.');
+        }
+
+        // Validate all objects have required properties
+        foreach ($objects as $index => $object) {
+            $required_check = $object->checkForRequiredProperties();
+            if ($required_check !== true) {
+                throw new Exception('Missing required properties in object at index ' . $index . ': ' . implode(', ', $required_check));
+            }
+        }
+
+        $db = Registry::getInstance()->get('db');
+
+        // Get column names (excluding auto-increment primary key and relation properties)
+        $columns = [];
+        foreach ($first->getPropertyNames() as $field_name) {
+            if ($field_name != $first->getDbPrimaryKey() || $first->_dont_use_autoincrement_on_primary_key == true) {
+                $columns[] = $field_name;
+            }
+        }
+
+        // Build rows array with parsed values
+        $rows = [];
+        foreach ($objects as $object) {
+            $row = [];
+            foreach ($columns as $column) {
+                $row[] = $object->parsePropertyValue($column, $object->$column, 'output');
+            }
+            $rows[] = $row;
+        }
+
+        $count = $db->batchInsert(
+            $first->getDbTableName(),
+            $columns,
+            $rows,
+            $first->_replace_into_on_create
+        );
+
+        // Process hasMany relations as batch (recursive)
+        if (!empty($hasManyRelations)) {
+            self::_batchCreateHasManyRelations($objects, $hasManyRelations);
+        }
+
+        return $count;
+    }
+
+    /**
+     * Batch create hasMany relations for multiple parent objects.
+     * Collects all related objects and inserts them with a single batch query.
+     * Supports nested relations through recursive batchCreate() calls.
+     *
+     * @param AbstractObject[] $parentObjects Parent objects containing the relations
+     * @param array $hasManyRelations Relation property definitions
+     * @throws Exception
+     */
+    private static function _batchCreateHasManyRelations($parentObjects, $hasManyRelations)
+    {
+        foreach ($hasManyRelations as $relationDef) {
+            $key = $relationDef['name'];
+            $relatedKey = $relationDef['relation']['related_id'];
+
+            // Collect all related objects from all parent objects
+            $allRelatedObjects = [];
+            foreach ($parentObjects as $parent) {
+                if (!empty($parent->$key) && is_array($parent->$key)) {
+                    foreach ($parent->$key as $relatedObject) {
+                        // Set foreign key to parent ID
+                        $relatedObject->$relatedKey = $parent->getId();
+
+                        // Handle on_save_related_properties if defined
+                        if (isset($relationDef['relation']['on_save_related_properties']) && is_array($relationDef['relation']['on_save_related_properties'])) {
+                            foreach ($relationDef['relation']['on_save_related_properties'] as $localProp => $foreignProp) {
+                                $relatedObject->$foreignProp = $parent->$localProp;
+                            }
+                        }
+
+                        // Handle relation_key if different from primary_key
+                        if (isset($parent->_definitions['database']['relation_key']) && $parent->_definitions['database']['relation_key'] != $parent->_definitions['database']['primary_key']) {
+                            $keyName = $parent->_definitions['database']['relation_key'];
+                            $relatedObject->$relatedKey = $parent->$keyName;
+                        }
+
+                        $allRelatedObjects[] = $relatedObject;
+                    }
+                }
+            }
+
+            // Batch create all related objects (recursive - supports nested relations)
+            if (!empty($allRelatedObjects)) {
+                self::batchCreate($allRelatedObjects);
+            }
+        }
+    }
+
+    /**
      * @throws Exception
      */
     private function _createHasManyRelations()

@@ -70,6 +70,43 @@ class Import
     private $_imported_ids = [];
 
     /**
+     * @var array Cached config for performance
+     */
+    private $_config = null;
+
+    /**
+     * @var Pdo Cached database adapter for performance
+     */
+    private $_db = null;
+
+    /**
+     * Static flags to track which global imports have been executed in current session.
+     * Prevents redundant API calls for Brand, Season, Port, Powerfilter, EarlyBird.
+     * @var array
+     */
+    private static $_globalImportsExecuted = [
+        'brand' => false,
+        'season' => false,
+        'port' => false,
+        'powerfilter' => false,
+        'earlybird' => false,
+    ];
+
+    /**
+     * Reset global import flags (useful for testing or long-running processes)
+     */
+    public static function resetGlobalImportFlags()
+    {
+        self::$_globalImportsExecuted = [
+            'brand' => false,
+            'season' => false,
+            'port' => false,
+            'powerfilter' => false,
+            'earlybird' => false,
+        ];
+    }
+
+    /**
      * Importer constructor.
      * @param string $importType
      * @throws Exception
@@ -78,6 +115,11 @@ class Import
     {
         $this->_start_time = microtime(true);
         $this->_overall_start_time = microtime(true);
+        
+        // Cache config and db for performance (avoid repeated Registry lookups)
+        $this->_config = Registry::getInstance()->get('config');
+        $this->_db = Registry::getInstance()->get('db');
+        
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::__construct()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
         $this->_client = new Client();
         $this->_import_type = $importType;
@@ -91,7 +133,7 @@ class Import
      * @throws Exception
      */
     public function checkLegacyIssues(){
-        $config = Registry::getInstance()->get('config');
+        $config = $this->_config;
         if(isset($config['data']['search_mongodb']['search']['touristic']['departure_offset_from']) || isset($config['data']['search_mongodb']['search']['touristic']['departure_offset_to'])){
             throw new Exception('Legacy config issue detected: search_mongodb.touristic.departure_offset_from and search_mongodb.touristic.departure_offset_to is not longer supported. Please remove this keys and configure this in data.touristic.date_filter instead.'."\n");
         }
@@ -136,7 +178,7 @@ class Import
      * @throws Exception
      */
     public function getIDsToImport($id_pool = null, $allowed_object_types = null, $allowed_visibilities = null){
-        $conf = Registry::getInstance()->get('config');
+        $conf = $this->_config;
         if(is_null($allowed_object_types)) {
             $allowed_object_types = array_keys($conf['data']['media_types']);
             if(isset($conf['data']['primary_media_type_ids']) && !empty($conf['data']['primary_media_type_ids'])) {
@@ -194,7 +236,7 @@ class Import
      */
     public function importMediaObjectsFromFolder()
     {
-        $config = Registry::getInstance()->get('config');
+        $config = $this->_config;
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObjectsFromFolder()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
         $ids = $this->getMediaObjectsFromFolder();
         foreach ($ids as $id_media_object) {
@@ -315,7 +357,7 @@ class Import
     public function importTouristicDataOnly($id_media_object)
     {
         $id_media_object = intval($id_media_object);
-        $config = Registry::getInstance()->get('config');
+        $config = $this->_config;
         $this->_start_time = microtime(true);
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . '--------------------------------------------------------------------------------', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . ')', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
@@ -336,9 +378,7 @@ class Import
         foreach ($media_object->booking_packages as $booking_package) {
             $booking_package->delete(true);
         }
-        /** @var \Pressmind\DB\Adapter\Pdo $db */
-        $db = Registry::getInstance()->get('db');
-        $db->delete('pmt2core_cheapest_price_speed', ['id_media_object = ?', $id_media_object]);
+        $this->_db->delete('pmt2core_cheapest_price_speed', ['id_media_object = ?', $id_media_object]);
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . '): executing custom import hooks', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         if (isset($config['data']['media_type_custom_import_hooks'][$id_object_type]) &&
             is_array($config['data']['media_type_custom_import_hooks'][$id_object_type])) {
@@ -429,7 +469,7 @@ class Import
         }
         $_RUNTIME_IMPORTED_IDS[] = $id_media_object;
 
-        $config = Registry::getInstance()->get('config');
+        $config = $this->_config;
         $this->_start_time = microtime(true);
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . '--------------------------------------------------------------------------------', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . ')', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
@@ -538,20 +578,37 @@ class Import
                 }
             }
 
-            $brands_importer = new Brand();
-            $brands_importer->import();
+            // Import global data only once per session (Brand, Season, Port, Powerfilter)
+            if (!self::$_globalImportsExecuted['brand']) {
+                $brands_importer = new Brand();
+                $brands_importer->import();
+                self::$_globalImportsExecuted['brand'] = true;
+                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): Brand import executed (once per session)', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
+            }
 
-            $seasons_importer = new Season();
-            $seasons_importer->import();
+            if (!self::$_globalImportsExecuted['season']) {
+                $seasons_importer = new Season();
+                $seasons_importer->import();
+                self::$_globalImportsExecuted['season'] = true;
+                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): Season import executed (once per session)', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
+            }
 
-            $ports_importer = new Port();
-            $ports_importer->import();
+            if (!self::$_globalImportsExecuted['port']) {
+                $ports_importer = new Port();
+                $ports_importer->import();
+                self::$_globalImportsExecuted['port'] = true;
+                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): Port import executed (once per session)', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
+            }
 
-            $powerfilter_importer = new Import\Powerfilter();
-            $powerfilter_importer->import();
-            if(isset($config['data']['search_mongodb']['enabled']) && $config['data']['search_mongodb']['enabled'] === true) {
-                $Indexer = new Search\MongoDB\Indexer();
-                $Indexer->upsertPowerfilter();
+            if (!self::$_globalImportsExecuted['powerfilter']) {
+                $powerfilter_importer = new Import\Powerfilter();
+                $powerfilter_importer->import();
+                self::$_globalImportsExecuted['powerfilter'] = true;
+                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): Powerfilter import executed (once per session)', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
+                if (isset($config['data']['search_mongodb']['enabled']) && $config['data']['search_mongodb']['enabled'] === true) {
+                    $Indexer = new Search\MongoDB\Indexer();
+                    $Indexer->upsertPowerfilter();
+                }
             }
             $itinerary_importer = new Itinerary($id_media_object);
             $itinerary_importer->import();
@@ -561,12 +618,15 @@ class Import
 
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): media object imported', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
 
-            if (false == $disable_touristic_data_import && count($_RUNTIME_IMPORTED_IDS) === 1) {
-                $db = Registry::getInstance()->get('db');
+            if (false == $disable_touristic_data_import && !self::$_globalImportsExecuted['earlybird']) {
                 $early_bird_importer = new EarlyBird();
                 $early_bird_importer->import();
+                self::$_globalImportsExecuted['earlybird'] = true;
+                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): EarlyBird import executed (once per session)', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
+            }
+            if (false == $disable_touristic_data_import) {
                 $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Deleting CheapestPriceSpeed entries';
-                $db->delete('pmt2core_cheapest_price_speed', ['id_media_object = ?', $media_object->id]);
+                $this->_db->delete('pmt2core_cheapest_price_speed', ['id_media_object = ?', $media_object->id]);
                 $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Inserting CheapestPriceSpeed entries';
             }
 
@@ -606,29 +666,32 @@ class Import
                 }
 
                 //$media_object->readRelations();
-                /**@var Pdo $db**/
-                $db = Registry::getInstance()->get('db');
                 $this->_log[] = ' Deleting Route entries for media object id: ' . $id_media_object;
-                $db->delete('pmt2core_routes', ['id_media_object = ?', $id_media_object]);
+                $this->_db->delete('pmt2core_routes', ['id_media_object = ?', $id_media_object]);
                 $this->_log[] = ' Inserting Route entries for media object id: ' . $id_media_object;
 
-                if(is_array($imported_languages)) {
+                if (is_array($imported_languages)) {
+                    // Collect all routes first, then batch insert
+                    $route_data = [];
                     foreach ($imported_languages as $language) {
                         try {
                             $urls = $media_object->buildPrettyUrls($language);
                             foreach ($urls as $url) {
-                                $route = new Route();
-                                $route->id_media_object = $id_media_object;
-                                $route->id_object_type = $media_object->id_object_type;
-                                $route->route = $url;
-                                $route->language = $language;
-                                $route->create();
-                                unset($route);
+                                $route_data[] = [
+                                    'id_media_object' => $id_media_object,
+                                    'id_object_type' => $media_object->id_object_type,
+                                    'route' => $url,
+                                    'language' => $language
+                                ];
                             }
                         } catch (Exception $e) {
                             $this->_log[] = ' Creating routes failed for media object id ' . $id_media_object . ': ' . $e->getMessage();
                             $this->_errors[] = ' Creating routes failed for media object id ' . $id_media_object . ': ' . $e->getMessage();
                         }
+                    }
+                    // Batch insert all routes at once
+                    if (!empty($route_data)) {
+                        $this->_batchInsertRoutes($route_data);
                     }
                     $this->_log[] = ' Routes inserted for media object id: ' . $id_media_object;
                 }
@@ -748,7 +811,7 @@ class Import
     public function removeOrphans()
     {
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Finding and removing Orphans', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
-        $conf = Registry::getInstance()->get('config');
+        $conf = $this->_config;
         $allowed_object_types = array_keys($conf['data']['media_types']);
         if(isset($conf['data']['primary_media_type_ids']) && !empty($conf['data']['primary_media_type_ids'])) {
             $allowed_object_types = $conf['data']['primary_media_type_ids'];
@@ -777,20 +840,46 @@ class Import
     }
 
     /**
+     * Batch insert routes for better performance
+     * @param array $routes Array of route data arrays with keys: id_media_object, id_object_type, route, language
+     */
+    private function _batchInsertRoutes($routes)
+    {
+        if (empty($routes)) {
+            return;
+        }
+
+        $columns = ['id_media_object', 'id_object_type', 'route', 'language'];
+        $placeholders = [];
+        $values = [];
+
+        foreach ($routes as $route) {
+            $placeholders[] = '(?, ?, ?, ?)';
+            $values[] = $route['id_media_object'];
+            $values[] = $route['id_object_type'];
+            $values[] = $route['route'];
+            $values[] = $route['language'];
+        }
+
+        $query = "INSERT INTO pmt2core_routes (" . implode(', ', $columns) . ") VALUES " . implode(', ', $placeholders);
+        $this->_db->execute($query, $values);
+    }
+
+    /**
      * @throws Exception
      */
     private function _findAndRemoveOrphans()
     {
-        /** @var Pdo $db */
-        $db = Registry::getInstance()->get('db');
         $query = "SELECT id FROM pmt2core_media_objects";
-        $config = Registry::getInstance()->get('config');
+        $config = $this->_config;
         if(isset($config['data']['primary_media_type_ids']) && !empty($config['data']['primary_media_type_ids'])) {
             $query = "SELECT id FROM pmt2core_media_objects WHERE id_object_type IN (" . implode(',', $config['data']['primary_media_type_ids']) . ")";
         }
-        $existing_media_objects = $db->fetchAll($query);
+        $existing_media_objects = $this->_db->fetchAll($query);
+        // Use hash set for O(1) lookup instead of in_array O(n)
+        $imported_ids_set = array_flip($this->_imported_ids);
         foreach($existing_media_objects as $media_object) {
-            if(!in_array($media_object->id, $this->_imported_ids)) {
+            if(!isset($imported_ids_set[$media_object->id])) {
                 $media_object_to_remove = new MediaObject($media_object->id);
                 $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Found Orphan: ' . $media_object->id . ' -> deleting ...', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
                 try {
@@ -824,16 +913,13 @@ class Import
     {
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Finding and removing orphan attachments', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
 
-        /** @var Pdo $db */
-        $db = Registry::getInstance()->get('db');
-
         // Find attachments without any reference in AttachmentToMediaObject
         $query = "SELECT a.* FROM pmt2core_attachments a
                   LEFT JOIN pmt2core_attachment_to_media_object rel ON a.id = rel.id_attachment
                   WHERE rel.id IS NULL";
 
         try {
-            $orphanAttachments = $db->fetchAll($query);
+            $orphanAttachments = $this->_db->fetchAll($query);
         } catch (Exception $e) {
             // Table might not exist yet
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Attachment orphan check skipped (table may not exist): ' . $e->getMessage(), Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
@@ -870,7 +956,7 @@ class Import
         if(!is_array($id_media_object)){
             $id_media_object = [$id_media_object];
         }
-        $config = Registry::getInstance()->get('config');
+        $config = $this->_config;
         if(isset($config['data']['media_type_custom_post_import_hooks']) &&
             is_array($config['data']['media_type_custom_post_import_hooks'])) {
             foreach ($config['data']['media_type_custom_post_import_hooks'] as $id_object_type => $hooks){

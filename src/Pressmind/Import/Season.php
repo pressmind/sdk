@@ -15,7 +15,8 @@ class Season extends AbstractImport implements ImportInterface
         try {
             $response = $client->sendRequest('Saison', 'search');
             $this->_checkApiResponse($response);
-            if(isset($response->result) && is_array($response->result)) {
+            if (isset($response->result) && is_array($response->result)) {
+                $seasons = [];
                 foreach ($response->result as $result) {
                     $season = new \Pressmind\ORM\Object\Season();
                     $season->id = $result->id;
@@ -24,7 +25,10 @@ class Season extends AbstractImport implements ImportInterface
                     $season->season_from = !empty($result->saison_from) ? \DateTime::createFromFormat('Y-m-d', $result->saison_from) : null;
                     $season->season_to = !empty($result->saison_to) ? \DateTime::createFromFormat('Y-m-d', $result->saison_to) : null;
                     $season->time_of_year = $result->time_of_year;
-                    $season->create();
+                    $seasons[] = $season;
+                }
+                if (!empty($seasons)) {
+                    \Pressmind\ORM\Object\Season::batchCreate($seasons);
                 }
             }
         } catch (\Exception $e) {

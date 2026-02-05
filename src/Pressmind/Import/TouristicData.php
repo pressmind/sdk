@@ -179,35 +179,60 @@ class TouristicData extends AbstractImport
                 }
             }
         }
-        if(!empty($insurance_to_group)){
-            foreach($insurance_to_group as $id_insurance_group => $groupItem){
-                $storedItems = InsuranceToGroup::listAll(['id_insurance_group' => $id_insurance_group]);
-                foreach($storedItems as $storedItem){
-                    $id_insurance = $storedItem->id_insurance;
-                    $result = array_filter($groupItem, function($v) use ($id_insurance) {
+
+        if (!empty($insurance_to_group)) {
+            $group_ids = array_keys($insurance_to_group);
+            $placeholders = implode(',', array_fill(0, count($group_ids), '?'));
+            // Fetch all stored items for all groups at once
+            $allStoredItems = $db->fetchAll(
+                "SELECT id_insurance, id_insurance_group FROM pmt2core_touristic_insurance_to_group WHERE id_insurance_group IN ($placeholders)",
+                $group_ids
+            );
+            $items_to_delete = [];
+            foreach ($allStoredItems as $storedItem) {
+                $id_insurance_group = $storedItem->id_insurance_group;
+                $id_insurance = $storedItem->id_insurance;
+                if (isset($insurance_to_group[$id_insurance_group])) {
+                    $result = array_filter($insurance_to_group[$id_insurance_group], function($v) use ($id_insurance) {
                         return $v->id_insurance == $id_insurance;
                     });
-                    if(count($result) == 0) {
-                        $db->execute('delete from pmt2core_touristic_insurance_to_group where id_insurance = ? and id_insurance_group = ?', [$storedItem->id_insurance, $id_insurance_group]);
+                    if (count($result) == 0) {
+                        $items_to_delete[] = ['id_insurance' => $id_insurance, 'id_insurance_group' => $id_insurance_group];
                     }
                 }
             }
+            foreach ($items_to_delete as $item) {
+                $db->execute('DELETE FROM pmt2core_touristic_insurance_to_group WHERE id_insurance = ? AND id_insurance_group = ?',
+                    [$item['id_insurance'], $item['id_insurance_group']]);
+            }
         }
-        if(!empty($insurances_to_price_table)){
-            foreach($insurances_to_price_table as $id_insurance => $groupItem){
-                $storedItems = InsuranceToPriceTable::listAll(['id_insurance' => $id_insurance]);
-                foreach($storedItems as $storedItem){
-                    $id_price_table = $storedItem->id_price_table;
-                    $result = array_filter($groupItem, function($v) use ($id_price_table) {
+        if (!empty($insurances_to_price_table)) {
+            $insurance_ids = array_keys($insurances_to_price_table);
+            $placeholders = implode(',', array_fill(0, count($insurance_ids), '?'));
+            $allStoredItems = $db->fetchAll(
+                "SELECT id_insurance, id_price_table FROM pmt2core_touristic_insurance_to_price_table WHERE id_insurance IN ($placeholders)",
+                $insurance_ids
+            );
+            $items_to_delete = [];
+            foreach ($allStoredItems as $storedItem) {
+                $id_insurance = $storedItem->id_insurance;
+                $id_price_table = $storedItem->id_price_table;
+                if (isset($insurances_to_price_table[$id_insurance])) {
+                    $result = array_filter($insurances_to_price_table[$id_insurance], function($v) use ($id_price_table) {
                         return $v->id_price_table == $id_price_table;
                     });
-                    if(count($result) == 0) {
-                        $db->execute('delete from pmt2core_touristic_insurance_to_price_table where id_insurance = ? and id_price_table = ?', [$id_insurance, $storedItem->id_price_table]);
+                    if (count($result) == 0) {
+                        $items_to_delete[] = ['id_insurance' => $id_insurance, 'id_price_table' => $id_price_table];
                     }
                 }
             }
+            foreach ($items_to_delete as $item) {
+                $db->execute('DELETE FROM pmt2core_touristic_insurance_to_price_table WHERE id_insurance = ? AND id_price_table = ?',
+                    [$item['id_insurance'], $item['id_price_table']]);
+            }
         }
-        $db->execute('delete from pmt2core_touristic_insurances_price_tables where id not in (select id_price_table from pmt2core_touristic_insurance_to_price_table)');
+
+        $db->execute('DELETE FROM pmt2core_touristic_insurances_price_tables WHERE id NOT IN (SELECT id_price_table FROM pmt2core_touristic_insurance_to_price_table)');
     }
 
     /**
@@ -228,18 +253,32 @@ class TouristicData extends AbstractImport
                 }
             }
         }
-        if(!empty($startingpoints_options)){
-            foreach($startingpoints_options as $id_startingpoint => $startingPointOption){
-                $storedItems = Startingpoint\Option::listAll(['id_startingpoint' => $id_startingpoint]);
-                foreach($storedItems as $storedItem){
-                    $id_startingpoint_option = $storedItem->id;
-                    $result = array_filter($startingPointOption, function($v) use ($id_startingpoint_option) {
+
+        // Optimized: Batch fetch all needed data upfront, then batch delete
+        if (!empty($startingpoints_options)) {
+            $startingpoint_ids = array_keys($startingpoints_options);
+            $placeholders = implode(',', array_fill(0, count($startingpoint_ids), '?'));
+            // Fetch all stored items for all startingpoints at once
+            $allStoredItems = $db->fetchAll(
+                "SELECT id, id_startingpoint FROM pmt2core_touristic_startingpoint_options WHERE id_startingpoint IN ($placeholders)",
+                $startingpoint_ids
+            );
+            $ids_to_delete = [];
+            foreach ($allStoredItems as $storedItem) {
+                $id_startingpoint = $storedItem->id_startingpoint;
+                $id_startingpoint_option = $storedItem->id;
+                if (isset($startingpoints_options[$id_startingpoint])) {
+                    $result = array_filter($startingpoints_options[$id_startingpoint], function($v) use ($id_startingpoint_option) {
                         return $v->id == $id_startingpoint_option;
                     });
-                    if(count($result) == 0) {
-                        $db->execute('delete from pmt2core_touristic_startingpoint_options where id = ? ', [$storedItem->id]);
+                    if (count($result) == 0) {
+                        $ids_to_delete[] = $storedItem->id;
                     }
                 }
+            }
+            if (!empty($ids_to_delete)) {
+                $delete_placeholders = implode(',', array_fill(0, count($ids_to_delete), '?'));
+                $db->execute("DELETE FROM pmt2core_touristic_startingpoint_options WHERE id IN ($delete_placeholders)", $ids_to_delete);
             }
         }
     }

@@ -20,6 +20,7 @@ class Port extends AbstractImport implements ImportInterface
             $response = $client->sendRequest('Ports', 'getAll');
             $this->_checkApiResponse($response);
             if (isset($response->result) && is_array($response->result)) {
+                $ports = [];
                 foreach ($response->result as $result) {
                     try {
                         $port = new \Pressmind\ORM\Object\Port();
@@ -28,10 +29,13 @@ class Port extends AbstractImport implements ImportInterface
                         $port->active = $result->active;
                         $port->name = $result->name;
                         $port->description = $result->description;
-                        $port->create();
+                        $ports[] = $port;
                     } catch (Exception $e) {
                         $this->_errors[] = $e->getMessage();
                     }
+                }
+                if (!empty($ports)) {
+                    \Pressmind\ORM\Object\Port::batchCreate($ports);
                 }
             }
         } catch (Exception $e) {

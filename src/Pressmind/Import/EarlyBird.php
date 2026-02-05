@@ -31,22 +31,27 @@ class EarlyBird extends AbstractImport implements ImportInterface
             if (!empty($response->result) && is_array($response->result)) {
                 foreach ($response->result as $result) {
                     try {
-                        if(empty($result->scales)){
+                        if (empty($result->scales)) {
                             continue;
                         }
                         $EarlyBirdGroup = new EarlyBirdDiscountGroup();
                         $EarlyBirdGroup->id = $result->id;
                         $EarlyBirdGroup->name = empty($result->name) ? $result->import_code : $result->name;
                         $EarlyBirdGroup->create();
-                        foreach($result->scales as $scale){
-                            $travel_date_to = !empty($scale->travel_date_to) ? new \DateTime($scale->travel_date_to. ' 00:00:00') : null;
-                            $booking_date_to = !empty($scale->booking_date_to) ? new \DateTime($scale->booking_date_to.' 00:00:00') : null;
-                            $travel_date_from = !empty($scale->travel_date_from) ? new \DateTime($scale->travel_date_from.' 00:00:00') : null;
-                            $booking_date_from = !empty($scale->booking_date_from) ? new \DateTime($scale->booking_date_from.' 00:00:00') : null;
-                            if(is_a($travel_date_to, 'DateTime') && $travel_date_to < $today){
+
+                        // Collect items for batch insert
+                        $items_to_create = [];
+                        $group_item_ids = [];
+
+                        foreach ($result->scales as $scale) {
+                            $travel_date_to = !empty($scale->travel_date_to) ? new \DateTime($scale->travel_date_to . ' 00:00:00') : null;
+                            $booking_date_to = !empty($scale->booking_date_to) ? new \DateTime($scale->booking_date_to . ' 00:00:00') : null;
+                            $travel_date_from = !empty($scale->travel_date_from) ? new \DateTime($scale->travel_date_from . ' 00:00:00') : null;
+                            $booking_date_from = !empty($scale->booking_date_from) ? new \DateTime($scale->booking_date_from . ' 00:00:00') : null;
+                            if (is_a($travel_date_to, 'DateTime') && $travel_date_to < $today) {
                                 continue;
                             }
-                            if(is_a($booking_date_to, 'DateTime') && $booking_date_to < $today){
+                            if (is_a($booking_date_to, 'DateTime') && $booking_date_to < $today) {
                                 continue;
                             }
                             $Item = new EarlyBirdDiscountGroup\Item();
@@ -61,13 +66,17 @@ class EarlyBird extends AbstractImport implements ImportInterface
                             $Item->round = $scale->round;
                             $Item->min_stay_nights = null;
                             $Item->booking_days_before_departure = null;
-                            $Item->create();
-                            $earlybird_group_item_ids[] = $Item->getId();
+                            $items_to_create[] = $Item;
+                            $group_item_ids[] = $Item->id;
                         }
-                        if(empty($earlybird_group_item_ids)){
-                            $EarlyBirdGroup->delete();
-                        }else{
+
+                        // Batch create all items for this group
+                        if (!empty($items_to_create)) {
+                            EarlyBirdDiscountGroup\Item::batchCreate($items_to_create);
+                            $earlybird_group_item_ids = array_merge($earlybird_group_item_ids, $group_item_ids);
                             $earlybird_group_ids[] = $EarlyBirdGroup->getId();
+                        } else {
+                            $EarlyBirdGroup->delete();
                         }
                     } catch (Exception $e) {
                         $this->_errors[] = $e->getMessage();

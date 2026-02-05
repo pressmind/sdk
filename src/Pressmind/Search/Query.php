@@ -213,6 +213,9 @@ class Query
                     }
                 }
                 $item['meta']['score'] = !empty($document['score']) ? $document['score'] : null;
+                if (!empty($document['hookData'])) {
+                    $item['hookData'] = $document['hookData'];
+                }
                 $items[] = $item;
             }
         }

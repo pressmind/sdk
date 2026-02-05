@@ -290,9 +290,7 @@ class OpenSearch extends AbstractSearch
         $params = isset($info['info']) && !empty($info['info']->parameters) ? $info['info']->parameters : null;
         if (!is_null($params)) {
             try {
-                $client = new \MongoDB\Client($this->_db_uri);
-                $db_name = $this->_db_name;
-                $db = $client->$db_name;
+                $db = MongoDB::getDatabase($this->_db_uri, $this->_db_name);
                 $collection = $db->{$this->_collection_name};
                 $result = $collection->aggregate($params->aggregate)->toArray()[0];
                 $info = new \stdClass();

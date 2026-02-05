@@ -68,6 +68,20 @@ class AbstractIndex
      */
     protected $_use_opensearch = false;
 
+    /**
+     * Static cache for MongoDB client connection (reused across instances)
+     * Key: connection URI hash, Value: MongoDB\Client
+     * @var array
+     */
+    private static $_clientCache = [];
+
+    /**
+     * Static cache for MongoDB database connections
+     * Key: connection URI + db name hash, Value: MongoDB\Database
+     * @var array
+     */
+    private static $_dbCache = [];
+
     public function __construct() {
         $this->_config = Registry::getInstance()->get('config')['data']['search_mongodb'];
         $this->_config_touristic = Registry::getInstance()->get('config')['data']['touristic'];
@@ -78,8 +92,19 @@ class AbstractIndex
         $this->_use_opensearch = !empty(Registry::getInstance()->get('config')['data']['search_opensearch']['enabled']) && !empty(Registry::getInstance()->get('config')['data']['search_opensearch']['enabled_in_mongo_search']);
         $uri = $this->_config['database']['uri'];
         $db_name = $this->_config['database']['db'];
-        $this->client = new \MongoDB\Client($uri);
-        $this->db = $this->client->$db_name;
+
+        // Use global MongoDB connection cache from Search\MongoDB class
+        $this->db = \Pressmind\Search\MongoDB::getDatabase($uri, $db_name);
+        $this->client = \Pressmind\Search\MongoDB::getClient($uri);
+    }
+
+    /**
+     * Clear cached MongoDB connections (useful for testing or long-running processes)
+     */
+    public static function clearConnectionCache()
+    {
+        self::$_clientCache = [];
+        self::$_dbCache = [];
     }
 
     /**

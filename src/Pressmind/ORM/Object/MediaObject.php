@@ -875,7 +875,11 @@ class MediaObject extends AbstractObject
     {
         $config = Registry::getInstance()->get('config');
         $collection_name = (new Calendar())->getCollectionName($origin, $language, !is_null($filters) ? $filters->agency : null);
-        $collection = (new \MongoDB\Client($config['data']['search_mongodb']['database']['uri']))->{$config['data']['search_mongodb']['database']['db']}->{$collection_name};
+        $db = \Pressmind\Search\MongoDB::getDatabase(
+            $config['data']['search_mongodb']['database']['uri'],
+            $config['data']['search_mongodb']['database']['db']
+        );
+        $collection = $db->{$collection_name};
         $stages = [];
         $query['$match']['id_media_object'] = $this->getId();
         $stages[] = $query;
@@ -1427,6 +1431,8 @@ class MediaObject extends AbstractObject
         $max_date->setTime(0, 0, 0);
         $max_date->modify( $max_date_offset . ' days');
         $c = 0;
+        $cheapestPriceSpeedBatch = []; // Collect for batch insert
+        $batch_size = 500; // Insert in chunks to avoid memory issues
         self::$_insert_cheapest_price_log[$this->id][] = 'Creating index for this agencies: '.implode(',',$agencies);
         foreach ($agencies as $agency) {
             self::$_insert_cheapest_price_log[$this->id][] = 'Current agency id = '.$agency;
@@ -1748,9 +1754,13 @@ class MediaObject extends AbstractObject
                                     $cheapestPriceSpeed->agency = $agency;
                                     $cheapestPriceSpeed->fingerprint = $cheapestPriceSpeed->createFingerprint();
                                     $cheapestPriceSpeed->quota_pax = min($quotas);
-                                    $cheapestPriceSpeed->create();
-                                    unset($cheapestPriceSpeed);
+                                    $cheapestPriceSpeedBatch[] = $cheapestPriceSpeed;
                                     $c++;
+                                    // Batch insert in chunks to avoid memory issues
+                                    if (count($cheapestPriceSpeedBatch) >= $batch_size) {
+                                        CheapestPriceSpeed::batchCreate($cheapestPriceSpeedBatch);
+                                        $cheapestPriceSpeedBatch = [];
+                                    }
                                     if ($c == $max_rows) {
                                         self::$_insert_cheapest_price_log[$this->id][] = 'Reached maximum number of rows (' . $max_rows . ')';
                                         break(5);
@@ -1761,6 +1771,10 @@ class MediaObject extends AbstractObject
                     }
                 }
             }
+        }
+        // Insert remaining batch
+        if (!empty($cheapestPriceSpeedBatch)) {
+            CheapestPriceSpeed::batchCreate($cheapestPriceSpeedBatch);
         }
         $config = Registry::getInstance()->get('config');
         if(!empty($config['data']['touristic']['generate_single_room_index'])) {
@@ -2002,7 +2016,8 @@ class MediaObject extends AbstractObject
         $config = Registry::getInstance()->get('config');
         if(!empty($config['data']['search_mongodb']['enabled'])) {
             $Indexer = new Indexer();
-            $Indexer->upsertMediaObject($this->getId());
+            // Pass $this to avoid reloading the MediaObject in the Indexer
+            $Indexer->upsertMediaObject($this->getId(), $this);
         }
     }
 

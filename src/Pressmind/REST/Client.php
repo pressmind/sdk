@@ -36,6 +36,13 @@ class Client
     private $_api_password;
 
     /**
+     * Static cURL handles for connection reuse (Keep-Alive)
+     * Key: hash of credentials, Value: cURL handle
+     * @var array
+     */
+    private static $_curlHandles = [];
+
+    /**
      * Client constructor.
      * @param string|null $apiEndpoint
      * @param string|null $apiKey
@@ -64,6 +71,62 @@ class Client
     }
 
     /**
+     * Get or create a reusable cURL handle for the current credentials.
+     * Enables HTTP Keep-Alive connection reuse across multiple requests.
+     *
+     * @return resource|\CurlHandle
+     */
+    private function _getCurlHandle()
+    {
+        // Create unique key based on endpoint and credentials
+        $handleKey = md5($this->_api_endpoint . $this->_api_key . $this->_api_user);
+
+        if (!isset(self::$_curlHandles[$handleKey]) || self::$_curlHandles[$handleKey] === null) {
+            $ch = curl_init();
+
+            // Set persistent options (don't change between requests)
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_ENCODING, 'gzip');
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json; charset=utf-8']);
+            curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+            curl_setopt($ch, CURLOPT_USERPWD, $this->_api_user . ":" . $this->_api_password);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
+            // Enable connection reuse (Keep-Alive)
+            curl_setopt($ch, CURLOPT_TCP_KEEPALIVE, 1);
+            curl_setopt($ch, CURLOPT_TCP_KEEPIDLE, 120);
+            curl_setopt($ch, CURLOPT_TCP_KEEPINTVL, 60);
+
+            // Enable HTTP/2 if available (multiplexing)
+            if (defined('CURL_HTTP_VERSION_2_0')) {
+                curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
+            }
+
+            self::$_curlHandles[$handleKey] = $ch;
+            Writer::write('CURL handle created and cached (connection reuse enabled)', Writer::OUTPUT_FILE, 'restclient', Writer::TYPE_INFO);
+        }
+
+        return self::$_curlHandles[$handleKey];
+    }
+
+    /**
+     * Close all cached cURL handles (call at end of import process if needed)
+     */
+    public static function closeAllHandles()
+    {
+        foreach (self::$_curlHandles as $key => $ch) {
+            if ($ch !== null) {
+                curl_close($ch);
+            }
+            unset(self::$_curlHandles[$key]);
+        }
+        self::$_curlHandles = [];
+    }
+
+    /**
      * @param string $controller
      * @param string $action
      * @param array|null $params
@@ -72,8 +135,9 @@ class Client
      */
     public function sendRequest($controller, $action, $params = null)
     {
-        Writer::write('CURL initialized', Writer::OUTPUT_FILE, 'restclient', Writer::TYPE_INFO);
-        $ch = curl_init();
+        // Get reusable cURL handle
+        $ch = $this->_getCurlHandle();
+
         if (is_array($params)) {
             $params['cache'] = 0;
         } else {
@@ -87,16 +151,10 @@ class Client
         if (!empty($action)) {
             $url .= '/' . $action;
         }
+
+        // Set URL for this request (only thing that changes between requests)
         curl_setopt($ch, CURLOPT_URL, $url . $get_params);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
-        curl_setopt($ch, CURLOPT_ENCODING, 'gzip');
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json; charset=utf-8']);
-        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-        curl_setopt($ch, CURLOPT_USERPWD, $this->_api_user . ":" . $this->_api_password);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
         Writer::write('Sending request to: ' . $this->_api_endpoint . $this->_api_key . '/' . $controller . '/' . $action . $get_params, Writer::OUTPUT_FILE, 'restclient', Writer::TYPE_INFO);
         $response = curl_exec($ch);
         if($response === false) {

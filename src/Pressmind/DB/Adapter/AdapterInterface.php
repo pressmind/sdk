@@ -76,6 +76,16 @@ interface AdapterInterface
     public function truncate($tableName);
 
     /**
+     * Batch inserts multiple rows into table with a single query
+     * @param string $tableName Table name
+     * @param array $columns Array of column names
+     * @param array $rows Array of value arrays (each inner array corresponds to one row)
+     * @param boolean $replace_into Use REPLACE INTO instead of INSERT INTO
+     * @return int Number of affected rows
+     */
+    public function batchInsert($tableName, $columns, $rows, $replace_into = true);
+
+    /**
      * @return string
      */
     public function getTablePrefix();

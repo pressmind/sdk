@@ -23,6 +23,8 @@ use Pressmind\System\Info;
  *   --non-interactive  No interactive prompts, output only
  *   -n                 Short form for --non-interactive
  *
+ * Interactive prompts: y = yes, n = no, a = all (apply to this and all remaining)
+ *
  * Requires bootstrap to be loaded (e.g. via travelshop cli/integrity_check.php wrapper).
  *
  * @see \Pressmind\DB\IntegrityCheck\Mysql
@@ -38,12 +40,20 @@ class DatabaseIntegrityCheckCommand extends AbstractCommand
     /** Log table: suggest cleanup when size (data_length + data_free) exceeds this (bytes). */
     private const LOG_TABLE_MAX_BYTES = 100 * 1024 * 1024;
 
+    /** When true, apply schema changes without prompting (user chose "a" for all). */
+    private bool $applyAllSchema = false;
+
+    /** When true, apply PHP file updates without prompting (user chose "a" for all). */
+    private bool $applyAllPhpFile = false;
+
     protected function execute(): int
     {
         $this->output->newLine();
         $this->output->writeln('=== Database Schema Integrity Check ===', 'cyan');
         $this->output->newLine();
 
+        $this->applyAllSchema = false;
+        $this->applyAllPhpFile = false;
         $hasErrors = false;
 
         $hasErrors = $this->checkStaticModels() || $hasErrors;
@@ -97,7 +107,19 @@ class DatabaseIntegrityCheckCommand extends AbstractCommand
 
                     if (!$prompted) {
                         $prompted = true;
-                        $userWantsApply = !$this->isNonInteractive() && $this->output->prompt('Apply changes?', false);
+                        if ($this->applyAllSchema) {
+                            $userWantsApply = true;
+                        } elseif ($this->isNonInteractive()) {
+                            $userWantsApply = false;
+                        } else {
+                            $answer = $this->output->promptWithAll('Apply changes?', false);
+                            if ($answer === 'a') {
+                                $this->applyAllSchema = true;
+                                $userWantsApply = true;
+                            } else {
+                                $userWantsApply = ($answer === 'y');
+                            }
+                        }
                     }
                     if (!$userWantsApply) {
                         break;
@@ -173,6 +195,9 @@ class DatabaseIntegrityCheckCommand extends AbstractCommand
                 case 'alter_engine':
                     $this->executeSql($db, 'ALTER TABLE ' . $tableName . ' ENGINE=' . $difference['engine']);
                     break;
+                case 'drop_index':
+                    $this->executeSql($db, 'DROP INDEX `' . $difference['index_name'] . '` ON ' . $tableName);
+                    break;
             }
         }
 
@@ -231,7 +256,19 @@ class DatabaseIntegrityCheckCommand extends AbstractCommand
 
                         if (!$prompted) {
                             $prompted = true;
-                            $userWantsApply = !$this->isNonInteractive() && $this->output->prompt('Apply changes?', false);
+                            if ($this->applyAllSchema) {
+                                $userWantsApply = true;
+                            } elseif ($this->isNonInteractive()) {
+                                $userWantsApply = false;
+                            } else {
+                                $answer = $this->output->promptWithAll('Apply changes?', false);
+                                if ($answer === 'a') {
+                                    $this->applyAllSchema = true;
+                                    $userWantsApply = true;
+                                } else {
+                                    $userWantsApply = ($answer === 'y');
+                                }
+                            }
                         }
                         if (!$userWantsApply) {
                             break;
@@ -252,10 +289,22 @@ class DatabaseIntegrityCheckCommand extends AbstractCommand
                     $this->output->warning('Max apply iterations reached for ' . $tableName . '. Re-run script if needed.');
                 }
 
-                if ($iteration > 0 && !$this->isNonInteractive() && $this->output->prompt('Apply changes to PHP file?', false)) {
-                    $scaffolder = new ObjectTypeScaffolder($media_type_definition, $media_type_definition->id);
-                    $scaffolder->parse();
-                    $this->output->success('PHP file updated.');
+                if ($iteration > 0) {
+                    $doPhpFile = $this->applyAllPhpFile;
+                    if (!$doPhpFile && !$this->isNonInteractive()) {
+                        $answer = $this->output->promptWithAll('Apply changes to PHP file?', false);
+                        if ($answer === 'a') {
+                            $this->applyAllPhpFile = true;
+                            $doPhpFile = true;
+                        } else {
+                            $doPhpFile = ($answer === 'y');
+                        }
+                    }
+                    if ($doPhpFile) {
+                        $scaffolder = new ObjectTypeScaffolder($media_type_definition, $media_type_definition->id);
+                        $scaffolder->parse();
+                        $this->output->success('PHP file updated.');
+                    }
                 }
             }
         } catch (Exception $e) {
@@ -283,6 +332,9 @@ class DatabaseIntegrityCheckCommand extends AbstractCommand
                     break;
                 case 'drop_column':
                     $this->executeSql($db, 'ALTER TABLE ' . $tableName . ' DROP `' . $difference['column_name'] . '`');
+                    break;
+                case 'drop_index':
+                    $this->executeSql($db, 'DROP INDEX `' . $difference['index_name'] . '` ON ' . $tableName);
                     break;
             }
         }

@@ -138,13 +138,6 @@ class CheapestPriceSpeed extends AbstractObject
                         'date_departure',
                     ]
                 ],
-                'id_id_media_object_price_total_index' => [
-                    'type' => 'index',
-                    'columns' => [
-                        'id_media_object',
-                        'price_total'
-                    ]
-                ],
                  'state' => [
                     'type' => 'index',
                     'columns' => [
@@ -189,6 +182,15 @@ class CheapestPriceSpeed extends AbstractObject
                         'agency',
                         'price_mix'
                     ]
+                ],
+                'calendar_query_index' => [
+                    'type' => 'index',
+                    'columns' => [
+                        'id_media_object',
+                        'id_origin',
+                        'option_occupancy',
+                        'transport_type'
+                    ]
                 ]
             ]
         ],
@@ -229,9 +231,6 @@ class CheapestPriceSpeed extends AbstractObject
                         'params' => 32,
                     ]
                 ],
-                'index' => [
-                    'id_media_object' => 'index'
-                ]
             ],
             'id_booking_package' => [
                 'name' => 'id_booking_package',
@@ -344,9 +343,6 @@ class CheapestPriceSpeed extends AbstractObject
                 'required' => false,
                 'filters' => null,
                 'validators' => null,
-                'index' => [
-                    'date_departure' => 'index'
-                ]
             ],
             'date_arrival' => [
                 'name' => 'date_arrival',

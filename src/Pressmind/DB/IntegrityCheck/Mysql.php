@@ -160,5 +160,33 @@ class Mysql
                 }
             }
         }
+
+        // Collect all expected index names (ORM definition); report DB indexes not in definition as drop_index
+        $expected_indexes = ['PRIMARY'];
+        foreach ($this->_object->getPropertyDefinitions() as $definition) {
+            if ($definition['type'] != 'relation' && isset($definition['index']) && is_array($definition['index'])) {
+                foreach ($definition['index'] as $index_name => $index_type) {
+                    $expected_indexes[] = $index_name;
+                }
+            }
+        }
+        if (!is_null($global_object_indexes) && is_array($global_object_indexes)) {
+            foreach ($global_object_indexes as $index_name => $index_definition) {
+                $expected_indexes[] = $index_name;
+            }
+        }
+        foreach ($indexes as $index_name => $index) {
+            // Never suggest dropping PRIMARY (backs auto_increment / primary key in MySQL/MariaDB)
+            if ($index_name === 'PRIMARY') {
+                continue;
+            }
+            if (!in_array($index_name, $expected_indexes)) {
+                $this->_differences[] = [
+                    'action' => 'drop_index',
+                    'index_name' => $index_name,
+                    'msg' => get_class($this) . ': index ' . $index_name . ' exists in database but is not defined in ORM. Index can be dropped.'
+                ];
+            }
+        }
     }
 }

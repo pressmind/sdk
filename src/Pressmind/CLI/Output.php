@@ -102,6 +102,32 @@ class Output
     }
 
     /**
+     * Interactive yes/no/all prompt.
+     * Use when the same question is asked repeatedly; "a" means yes and apply to all remaining.
+     *
+     * @param string $question The question to ask
+     * @param bool $default Default answer when Enter is pressed
+     * @return string 'y' for yes, 'n' for no, 'a' for all (yes to this and all remaining)
+     */
+    public function promptWithAll(string $question, bool $default = false): string
+    {
+        $hint = $default ? '[Y/n/a]' : '[y/N/a]';
+        $this->write($question . ' ' . $hint . ': ');
+
+        $handle = fopen('php://stdin', 'r');
+        $input = strtolower(trim(fgets($handle)));
+        fclose($handle);
+
+        if ($input === '') {
+            return $default ? 'y' : 'n';
+        }
+        if ($input === 'a' || $input === 'all') {
+            return 'a';
+        }
+        return ($input === 'y' || $input === 'yes') ? 'y' : 'n';
+    }
+
+    /**
      * Outputs a formatted table.
      *
      * @param array $headers Column headers

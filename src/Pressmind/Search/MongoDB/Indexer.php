@@ -4,6 +4,7 @@ namespace Pressmind\Search\MongoDB;
 
 use Pressmind\DB\Adapter\Pdo;
 use Pressmind\HelperFunctions;
+use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\FulltextSearch;
 use Pressmind\ORM\Object\MediaObject;
 use Pressmind\ORM\Object\Powerfilter\ResultSet;
@@ -165,6 +166,19 @@ class Indexer extends AbstractIndex
 
         foreach($mediaObjects as $mediaObject){
             if(empty($this->_config['search']['build_for'][$mediaObject->id_object_type])){
+                $configured_types = array_keys($this->_config['search']['build_for']);
+                Writer::write(
+                    sprintf(
+                        'MongoDB Indexer: MediaObject %d NOT INDEXED - id_object_type %d is not in build_for config. ' .
+                        'CONFIGURED object_types: [%s]. ' .
+                        'FIX: Add id_object_type %d to search.build_for in pm-config.php',
+                        $mediaObject->id,
+                        $mediaObject->id_object_type,
+                        implode(', ', $configured_types),
+                        $mediaObject->id_object_type
+                    ),
+                    Writer::OUTPUT_FILE, 'mongodb_indexer', Writer::TYPE_WARNING
+                );
                 continue;
             }
             foreach ($this->_config['search']['build_for'][$mediaObject->id_object_type] as $build_info) {
@@ -314,6 +328,20 @@ class Indexer extends AbstractIndex
         $searchObject->departure_date_count = $this->_createDepartureDateCount($origin, $agency);
 
         if(empty($searchObject->departure_date_count) && !empty($agency)){
+            Writer::write(
+                sprintf(
+                    'MongoDB Indexer: MediaObject %d NOT INDEXED for agency "%s" - departure_date_count is 0. ' .
+                    'ORIGIN: %d. ' .
+                    'CHECK: SELECT COUNT(*) FROM pmt2core_cheapest_price_speed WHERE id_media_object = %d AND id_origin = %d AND agency = "%s"',
+                    $this->mediaObject->id,
+                    $agency,
+                    $origin,
+                    $this->mediaObject->id,
+                    $origin,
+                    $agency
+                ),
+                Writer::OUTPUT_FILE, 'mongodb_indexer', Writer::TYPE_WARNING
+            );
             return false;
         }
         $searchObject->_id = $this->mediaObject->id;
@@ -381,9 +409,132 @@ class Indexer extends AbstractIndex
             $allow_invalid_offers = true;
         }
         if(empty($searchObject->prices) && $allow_invalid_offers === false && $searchObject->visibility != 10){
+            $actualDurations = $this->_getActualDurationsFromDb($origin, $agency);
+            $configuredRanges = $this->_config['search']['touristic']['duration_ranges'] ?? [];
+            $rangesStr = implode(', ', array_map(function($r) { return $r[0].'-'.$r[1].' days'; }, $configuredRanges));
+            $durationsStr = !empty($actualDurations) ? implode(', ', $actualDurations) . ' days' : 'NONE FOUND';
+            $fixHint = !empty($actualDurations) ? min($actualDurations).'-'.max($actualDurations) : 'N/A';
+            
+            Writer::write(
+                sprintf(
+                    'MongoDB Indexer: MediaObject %d NOT INDEXED - No prices after aggregation. ' .
+                    'ACTUAL DURATIONS in DB: [%s]. ' .
+                    'CONFIGURED duration_ranges: [%s]. ' .
+                    'VISIBILITY: %d (10=hidden). ALLOW_INVALID_OFFERS: %s. ' .
+                    'FIX: Add a duration_range covering %s days to search.touristic.duration_ranges in pm-config.php',
+                    $this->mediaObject->id,
+                    $durationsStr,
+                    $rangesStr ?: 'NOT CONFIGURED',
+                    $searchObject->visibility,
+                    $allow_invalid_offers ? 'true' : 'false',
+                    $fixHint
+                ),
+                Writer::OUTPUT_FILE, 'mongodb_indexer', Writer::TYPE_WARNING
+            );
             return false;
         }
         return json_decode(json_encode($searchObject));
+    }
+
+    /**
+     * Validates if a MediaObject can be indexed and returns detailed error messages.
+     * Used by MediaObject::validate() to show indexing issues.
+     * @param int $idMediaObject
+     * @param MediaObject|null $preloadedMediaObject
+     * @return array Array of validation messages (with ✅ or ❌ prefixes)
+     * @throws \Exception
+     */
+    public function validateMediaObject($idMediaObject, $preloadedMediaObject = null)
+    {
+        $result = [];
+        $result[] = 'Validation: MongoDB Indexer';
+        
+        if ($preloadedMediaObject !== null) {
+            $this->mediaObject = $preloadedMediaObject;
+        } else {
+            $this->mediaObject = new MediaObject($idMediaObject, true, true);
+        }
+        
+        // Check 1: Object Type in build_for
+        if (empty($this->_config['search']['build_for'][$this->mediaObject->id_object_type])) {
+            $configured_types = array_keys($this->_config['search']['build_for']);
+            $result[] = sprintf(
+                ' ❌  id_object_type %d is not configured in search.build_for. CONFIGURED: [%s]',
+                $this->mediaObject->id_object_type,
+                implode(', ', $configured_types)
+            );
+            return $result;
+        }
+        $result[] = ' ✅  id_object_type ' . $this->mediaObject->id_object_type . ' is configured in build_for';
+        
+        // Check for each origin/agency combination
+        foreach ($this->_config['search']['build_for'][$this->mediaObject->id_object_type] as $build_info) {
+            $origin = $build_info['origin'];
+            $language = $build_info['language'];
+            
+            foreach ($this->_agencies as $agency) {
+                $agencyLabel = !empty($agency) ? "agency '$agency'" : 'no agency';
+                $prefix = " Origin $origin, $agencyLabel: ";
+                
+                // Check 2: Departure date count
+                $departureDateCount = $this->_createDepartureDateCount($origin, $agency);
+                if (empty($departureDateCount) && !empty($agency)) {
+                    $result[] = $prefix . '❌  departure_date_count is 0. No prices for this agency in pmt2core_cheapest_price_speed';
+                    continue;
+                }
+                
+                // Check 3: Duration ranges and prices
+                $actualDurations = $this->_getActualDurationsFromDb($origin, $agency);
+                $configuredRanges = $this->_config['search']['touristic']['duration_ranges'] ?? [];
+                
+                if (empty($actualDurations)) {
+                    $result[] = $prefix . '❌  No durations found in pmt2core_cheapest_price_speed';
+                    continue;
+                }
+                
+                // Check if durations match any configured range
+                $matchedRange = false;
+                foreach ($configuredRanges as $range) {
+                    foreach ($actualDurations as $duration) {
+                        if ($duration >= $range[0] && $duration <= $range[1]) {
+                            $matchedRange = true;
+                            break 2;
+                        }
+                    }
+                }
+                
+                $rangesStr = implode(', ', array_map(function($r) { return $r[0].'-'.$r[1]; }, $configuredRanges));
+                $durationsStr = implode(', ', $actualDurations);
+                
+                if (!$matchedRange && !empty($configuredRanges)) {
+                    $result[] = $prefix . sprintf(
+                        '❌  Duration mismatch! ACTUAL: [%s days]. CONFIGURED duration_ranges: [%s]',
+                        $durationsStr,
+                        $rangesStr
+                    );
+                } else {
+                    $result[] = $prefix . sprintf(
+                        '✅  Durations [%s days] match configured ranges [%s]',
+                        $durationsStr,
+                        $rangesStr
+                    );
+                }
+            }
+        }
+        
+        // Check 4: Groups/Brand configuration
+        if (!empty($this->_config['search']['groups'][$this->mediaObject->id_object_type])) {
+            $group_map = $this->_config['search']['groups'][$this->mediaObject->id_object_type];
+            if (empty($group_map['field'])) {
+                $result[] = ' ❌  Groups config missing "field" key for id_object_type ' . $this->mediaObject->id_object_type;
+            } elseif ($group_map['field'] == 'brand' && empty($this->mediaObject->brand)) {
+                $result[] = ' ❌  Groups field is "brand" but MediaObject has no brand assigned';
+            } else {
+                $result[] = ' ✅  Groups config OK (field: ' . $group_map['field'] . ')';
+            }
+        }
+        
+        return $result;
     }
 
     /**
@@ -504,7 +655,21 @@ class Indexer extends AbstractIndex
                     $linkedObject = $this->_getLinkedMediaObject($objectlink->id_media_object_link);
                     $linkedObjectData = $linkedObject->getDataForLanguage($language);
                     if(empty($item_info['field']) === true){
-                        echo "Missing or empty 'field' key in descriptions config for index_name '{$index_name}' (id_media_object: {$this->mediaObject->id}, id_object_type: {$this->mediaObject->id_object_type})\n";
+                        Writer::write(
+                            sprintf(
+                                'MongoDB Indexer: MediaObject %d - Missing "field" key in descriptions config. ' .
+                                'INDEX_NAME: "%s". id_object_type: %d. ' .
+                                'CONFIG ENTRY: %s. ' .
+                                'FIX: Add "field" => "fieldname" to search.descriptions.%d.%s in pm-config.php',
+                                $this->mediaObject->id,
+                                $index_name,
+                                $this->mediaObject->id_object_type,
+                                json_encode($item_info),
+                                $this->mediaObject->id_object_type,
+                                $index_name
+                            ),
+                            Writer::OUTPUT_FILE, 'mongodb_indexer', Writer::TYPE_WARNING
+                        );
                         break;
                     }
                     if($item_info['field'] == 'name') {
@@ -516,7 +681,21 @@ class Indexer extends AbstractIndex
                 }
             } else {
                 if(empty($item_info['field']) === true){
-                    echo "Missing or empty 'field' key in descriptions config for index_name '{$index_name}' (id_media_object: {$this->mediaObject->id}, id_object_type: {$this->mediaObject->id_object_type})\n";
+                    Writer::write(
+                        sprintf(
+                            'MongoDB Indexer: MediaObject %d - Missing "field" key in descriptions config. ' .
+                            'INDEX_NAME: "%s". id_object_type: %d. ' .
+                            'CONFIG ENTRY: %s. ' .
+                            'FIX: Add "field" => "fieldname" to search.descriptions.%d.%s in pm-config.php',
+                            $this->mediaObject->id,
+                            $index_name,
+                            $this->mediaObject->id_object_type,
+                            json_encode($item_info),
+                            $this->mediaObject->id_object_type,
+                            $index_name
+                        ),
+                        Writer::OUTPUT_FILE, 'mongodb_indexer', Writer::TYPE_WARNING
+                    );
                     continue;
                 }
                 if($item_info['field'] == 'name') {
@@ -590,8 +769,18 @@ class Indexer extends AbstractIndex
         $data = $moc->toStdClass();
         $group_map = $this->_config['search']['groups'][$this->mediaObject->id_object_type];
         if(empty($group_map['field'])){
-            echo 'Error: field must be set (if you plan to use groups!)';
-            exit; // @TODO
+            $errorMsg = sprintf(
+                'MongoDB Indexer: MediaObject %d - CRITICAL CONFIG ERROR. ' .
+                'Missing "field" key in search.groups config for id_object_type %d. ' .
+                'CURRENT CONFIG: %s. ' .
+                'FIX: Add "field" => "brand" (or agencies/id_pool) to search.groups.%d in pm-config.php',
+                $this->mediaObject->id,
+                $this->mediaObject->id_object_type,
+                json_encode($group_map),
+                $this->mediaObject->id_object_type
+            );
+            Writer::write($errorMsg, Writer::OUTPUT_FILE, 'mongodb_indexer', Writer::TYPE_ERROR);
+            throw new \Exception($errorMsg);
         }
         $field_name = $group_map['field'];
         if($field_name == 'agencies'){
@@ -601,6 +790,21 @@ class Indexer extends AbstractIndex
         }elseif($field_name == 'id_pool'){
             $groups[] = $this->mediaObject->id_pool ."";
         }elseif($field_name == 'brand'){
+            if(empty($this->mediaObject->brand)){
+                Writer::write(
+                    sprintf(
+                        'MongoDB Indexer: MediaObject %d - brand property is NULL but groups.field = "brand". ' .
+                        'id_object_type: %d. ' .
+                        'CHECK: Does this MediaObject have a brand assigned in Pressmind? ' .
+                        'FIX: Assign a brand in Pressmind OR change search.groups.%d.field to another value (e.g. "agencies")',
+                        $this->mediaObject->id,
+                        $this->mediaObject->id_object_type,
+                        $this->mediaObject->id_object_type
+                    ),
+                    Writer::OUTPUT_FILE, 'mongodb_indexer', Writer::TYPE_WARNING
+                );
+                return $groups;
+            }
             $groups[] = $this->mediaObject->brand->id ."";
         }else{
             if(empty($data->$field_name)){
@@ -1575,6 +1779,30 @@ class Indexer extends AbstractIndex
         $result = $db->fetchRow($query, $values);
 
         return !is_null($result) ? intval($result->departure_date_count) : null;
+    }
+
+    /**
+     * Get all distinct durations from the database for logging purposes.
+     * Used to show the actual duration values when price aggregation fails.
+     * @param int $origin
+     * @param string|null $agency
+     * @return array
+     * @throws \Exception
+     */
+    private function _getActualDurationsFromDb($origin, $agency = null)
+    {
+        /** @var Pdo $db */
+        $db = Registry::getInstance()->get('db');
+        $query = "SELECT DISTINCT duration FROM pmt2core_cheapest_price_speed 
+                  WHERE id_media_object = ? AND id_origin = ?";
+        $values = [$this->mediaObject->id, $origin];
+        if (!empty($agency)) {
+            $query .= " AND agency = ?";
+            $values[] = $agency;
+        }
+        $query .= " ORDER BY duration";
+        $results = $db->fetchAll($query, $values);
+        return $results ? array_map(function($r) { return (int)$r->duration; }, $results) : [];
     }
 
     /**

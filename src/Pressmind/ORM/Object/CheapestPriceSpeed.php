@@ -114,7 +114,7 @@ class CheapestPriceSpeed extends AbstractObject
         'database' => [
             'table_name' => 'pmt2core_cheapest_price_speed',
             'primary_key' => 'id',
-            'storage_engine' => 'myisam',
+            'storage_engine' => 'innodb',
             'indexes' => [
                 'search_filter_index' => [
                     'type' => 'index',

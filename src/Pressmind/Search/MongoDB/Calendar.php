@@ -4,6 +4,7 @@ namespace Pressmind\Search\MongoDB;
 
 use Pressmind\DB\Adapter\Pdo;
 use Pressmind\HelperFunctions;
+use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\CheapestPriceSpeed;
 use Pressmind\ORM\Object\MediaObject;
 use Pressmind\ORM\Object\Touristic\Booking;
@@ -59,6 +60,19 @@ class Calendar extends AbstractIndex
     $ids = [];
     foreach($mediaObjects as $mediaObject){
       if(empty($this->_config['search']['build_for'][$mediaObject->id_object_type])){
+        $configured_types = array_keys($this->_config['search']['build_for']);
+        Writer::write(
+            sprintf(
+                'MongoDB Calendar: MediaObject %d NOT INDEXED - id_object_type %d is not in build_for config. ' .
+                'CONFIGURED object_types: [%s]. ' .
+                'FIX: Add id_object_type %d to search.build_for in pm-config.php',
+                $mediaObject->id,
+                $mediaObject->id_object_type,
+                implode(', ', $configured_types),
+                $mediaObject->id_object_type
+            ),
+            Writer::OUTPUT_FILE, 'mongodb_indexer', Writer::TYPE_WARNING
+        );
         continue;
       }
       foreach ($this->_config['search']['build_for'][$mediaObject->id_object_type] as $build_info) {

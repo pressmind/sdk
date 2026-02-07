@@ -41,6 +41,7 @@ class Mysql
         }else{
             $table = $this->_db->fetchAll('DESCRIBE ' . $this->_object->getDbTableName());
             $this->_checkPrimaryKey();
+            $this->_checkStorageEngine();
             $database_table_info = [];
             foreach ($table as $field) {
                 $field->Type = preg_replace('/^(bigint|int)(\([0-9]+)\)/', '$1', $field->Type);
@@ -98,6 +99,28 @@ class Mysql
     }
 
     /**
+     * Checks if the current storage engine matches the configured one.
+     * Reports a difference with action 'alter_engine' for the command to apply.
+     */
+    private function _checkStorageEngine() {
+        $expected_engine = $this->_object->getStorageDefinition('storage_engine');
+        if (is_null($expected_engine)) {
+            return;
+        }
+        $table_status = $this->_db->fetchAll('SHOW TABLE STATUS LIKE \'' . $this->_object->getDbTableName() . '\'');
+        if (!empty($table_status) && isset($table_status[0]->Engine)) {
+            $current_engine = strtolower($table_status[0]->Engine);
+            if ($current_engine != strtolower($expected_engine)) {
+                $this->_differences[] = [
+                    'action' => 'alter_engine',
+                    'engine' => $expected_engine,
+                    'msg' => get_class($this) . ': storage engine for table ' . $this->_object->getDbTableName() . ' is ' . strtoupper($current_engine) . ' but should be ' . strtoupper($expected_engine) . '. Engine needs to be altered.'
+                ];
+            }
+        }
+    }
+
+    /**
      * @throws Exception
      */
     private function _checkIndexes() {
@@ -111,7 +134,13 @@ class Mysql
                 if(isset($definition['index']) && is_array($definition['index'])) {
                     foreach ($definition['index'] as $index_name => $index_type) {
                         if(!isset($indexes[$index_name])) {
-                            $this->_differences[] = ['action' => 'add_index', 'column_names' => [$definition['name']], 'index_name' => $index_name, 'msg' => get_class($this) . ': database column ' . $definition['name'] . ' has no index set. Index needs to be set.'];
+                            $this->_differences[] = [
+                                'action' => 'add_index',
+                                'column_names' => [$definition['name']],
+                                'index_name' => $index_name,
+                                'index_type' => $index_type,
+                                'msg' => get_class($this) . ': database column ' . $definition['name'] . ' has no index set. Index needs to be set.'
+                            ];
                         }
                     }
                 }
@@ -121,7 +150,13 @@ class Mysql
         if(!is_null($global_object_indexes) && is_array($global_object_indexes)) {
             foreach ($global_object_indexes as $index_name => $index_definition) {
                 if(!isset($indexes[$index_name])) {
-                    $this->_differences[] = ['action' => 'add_index', 'column_names' => $index_definition['columns'], 'index_name' => $index_name, 'msg' => get_class($this) . ': index ' . $index_name . ' for columns ' . implode(', ', $index_definition['columns']) . ' is not set.'];
+                    $this->_differences[] = [
+                        'action' => 'add_index',
+                        'column_names' => $index_definition['columns'],
+                        'index_name' => $index_name,
+                        'index_type' => $index_definition['type'] ?? 'index',
+                        'msg' => get_class($this) . ': index ' . $index_name . ' for columns ' . implode(', ', $index_definition['columns']) . ' is not set.'
+                    ];
                 }
             }
         }

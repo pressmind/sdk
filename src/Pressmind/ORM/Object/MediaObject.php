@@ -2560,6 +2560,16 @@ class MediaObject extends AbstractObject
             $Calendar = $this->getCalendar($Filter);
             $result[] = '     '.(!empty($Calendar->calendar) ? '✅' : '❌') . '  Mongo Calendar';
         }
+        // MongoDB Indexer validation - shows detailed reasons why indexing might fail
+        if(!empty($config['data']['search_mongodb']['enabled'])) {
+            try {
+                $indexer = new Indexer();
+                $indexerValidation = $indexer->validateMediaObject($this->getId(), $this);
+                $result = array_merge($result, array_map(function($line) { return '    ' . $line; }, $indexerValidation));
+            } catch (\Exception $e) {
+                $result[] = '     ❌  MongoDB Indexer validation failed: ' . $e->getMessage();
+            }
+        }
         $result = array_merge(
             $result,
             $this->validateBookingPackages('    ')

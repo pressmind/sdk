@@ -1,0 +1,38 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Pressmind SDK Database Integrity Check
+ *
+ * Compares ORM definitions with database tables and optionally applies fixes.
+ * Requires bootstrap to be loaded (e.g. call from travelshop cli/integrity_check.php).
+ *
+ * Usage:
+ *   php bin/database-integrity-check [--non-interactive]
+ *
+ * Options:
+ *   --non-interactive  No interactive prompts, output only
+ *   -n                 Short form for --non-interactive
+ */
+
+// Find autoloader - supports installation as vendor package and standalone
+$autoloadPaths = [
+    __DIR__ . '/../vendor/autoload.php',           // Standalone SDK
+    __DIR__ . '/../../../autoload.php',            // Installed as vendor package
+];
+
+$autoloaderFound = false;
+foreach ($autoloadPaths as $autoloadPath) {
+    if (file_exists($autoloadPath)) {
+        require_once $autoloadPath;
+        $autoloaderFound = true;
+        break;
+    }
+}
+
+if (!$autoloaderFound) {
+    fwrite(STDERR, "Autoloader not found. Please run 'composer install'.\n");
+    exit(1);
+}
+
+$command = new \Pressmind\CLI\DatabaseIntegrityCheckCommand();
+exit($command->run($argv));

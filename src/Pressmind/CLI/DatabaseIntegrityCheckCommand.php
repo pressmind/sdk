@@ -4,6 +4,7 @@ namespace Pressmind\CLI;
 
 use Exception;
 use Pressmind\DB\Scaffolder\Mysql as ScaffolderMysql;
+use Pressmind\Log\Writer as LogWriter;
 use Pressmind\ObjectIntegrityCheck;
 use Pressmind\ObjectTypeScaffolder;
 use Pressmind\ORM\Object\AbstractObject;
@@ -28,6 +29,15 @@ use Pressmind\System\Info;
  */
 class DatabaseIntegrityCheckCommand extends AbstractCommand
 {
+    /** Fragmentation threshold: suggest OPTIMIZE when data_free exceeds this (bytes). */
+    private const FRAGMENTATION_THRESHOLD_BYTES = 10 * 1024 * 1024;
+
+    /** Log table: suggest cleanup when row count exceeds this. */
+    private const LOG_TABLE_MAX_ROWS = 100000;
+
+    /** Log table: suggest cleanup when size (data_length + data_free) exceeds this (bytes). */
+    private const LOG_TABLE_MAX_BYTES = 100 * 1024 * 1024;
+
     protected function execute(): int
     {
         $this->output->newLine();
@@ -38,6 +48,8 @@ class DatabaseIntegrityCheckCommand extends AbstractCommand
 
         $hasErrors = $this->checkStaticModels() || $hasErrors;
         $hasErrors = $this->checkCustomMediaTypes() || $hasErrors;
+        $this->checkFragmentation();
+        $this->checkLogTableSize();
 
         $this->output->newLine();
 
@@ -274,6 +286,118 @@ class DatabaseIntegrityCheckCommand extends AbstractCommand
                     break;
             }
         }
+    }
+
+    /**
+     * Check for fragmented tables (data_free above threshold) and optionally run OPTIMIZE TABLE.
+     */
+    private function checkFragmentation(): void
+    {
+        $this->output->newLine();
+        $this->output->writeln('Checking table fragmentation.', 'cyan');
+
+        $db = Registry::getInstance()->get('db');
+        $schemaRow = $db->fetchAll('SELECT DATABASE() as db');
+        $schema = $schemaRow[0]->db ?? null;
+        if (!$schema) {
+            $this->output->warning('Could not determine current database. Skipping fragmentation check.');
+            return;
+        }
+
+        $threshold = self::FRAGMENTATION_THRESHOLD_BYTES;
+        $rows = $db->fetchAll(
+            "SELECT table_name, data_free FROM information_schema.tables WHERE table_schema = ? AND data_free > ?",
+            [$schema, $threshold]
+        );
+
+        if (empty($rows)) {
+            $this->output->writeln('No fragmented tables (data_free > ' . round($threshold / 1024 / 1024) . ' MB).');
+            return;
+        }
+
+        $this->output->writeln('Fragmented tables (data_free > ' . round($threshold / 1024 / 1024) . ' MB):');
+        foreach ($rows as $row) {
+            $freeMb = round((int) $row->data_free / 1024 / 1024, 1);
+            $this->output->writeln('  ' . $row->table_name . ' (data_free: ' . $freeMb . ' MB)');
+        }
+        $this->output->newLine();
+
+        if ($this->isNonInteractive()) {
+            $this->output->info('Run with interactive mode to apply OPTIMIZE TABLE.');
+            return;
+        }
+
+        if (!$this->output->prompt('Run OPTIMIZE TABLE on these tables?', false)) {
+            return;
+        }
+
+        foreach ($rows as $row) {
+            $fullName = '`' . $schema . '`.`' . $row->table_name . '`';
+            $this->executeSql($db, 'OPTIMIZE TABLE ' . $fullName);
+        }
+        $this->output->success('Fragmentation optimization done.');
+    }
+
+    /**
+     * Check log table size; if over limits, optionally run Writer::cleanup() and OPTIMIZE TABLE.
+     */
+    private function checkLogTableSize(): void
+    {
+        $this->output->newLine();
+        $this->output->writeln('Checking log table size.', 'cyan');
+
+        $db = Registry::getInstance()->get('db');
+        $schemaRow = $db->fetchAll('SELECT DATABASE() as db');
+        $schema = $schemaRow[0]->db ?? null;
+        if (!$schema) {
+            $this->output->warning('Could not determine current database. Skipping log table check.');
+            return;
+        }
+
+        $logTableName = $db->getTablePrefix() . 'pmt2core_logs';
+        $row = $db->fetchRow(
+            "SELECT table_rows, data_length, data_free FROM information_schema.tables WHERE table_schema = ? AND table_name = ?",
+            [$schema, $logTableName]
+        );
+
+        if (!$row || ($row->table_rows == 0 && (int) $row->data_length === 0 && (int) $row->data_free === 0)) {
+            $this->output->writeln('Log table not found or empty. Skipping.');
+            return;
+        }
+
+        $rows = (int) $row->table_rows;
+        $size = (int) $row->data_length + (int) $row->data_free;
+        $overRows = $rows > self::LOG_TABLE_MAX_ROWS;
+        $overSize = $size > self::LOG_TABLE_MAX_BYTES;
+
+        if (!$overRows && !$overSize) {
+            $this->output->writeln('Log table size OK (rows: ' . $rows . ', size: ' . round($size / 1024 / 1024, 1) . ' MB).');
+            return;
+        }
+
+        $this->output->writeln('Log table ' . $logTableName . ' is large: rows=' . $rows . ', size=' . round($size / 1024 / 1024, 1) . ' MB.');
+        if ($overRows) {
+            $this->output->writeln('  (max rows threshold: ' . self::LOG_TABLE_MAX_ROWS . ')');
+        }
+        if ($overSize) {
+            $this->output->writeln('  (max size threshold: ' . round(self::LOG_TABLE_MAX_BYTES / 1024 / 1024) . ' MB)');
+        }
+        $this->output->newLine();
+
+        if ($this->isNonInteractive()) {
+            $this->output->info('Run with interactive mode to run log cleanup and OPTIMIZE TABLE.');
+            return;
+        }
+
+        if (!$this->output->prompt('Run log cleanup (delete entries older than 5 days) and OPTIMIZE TABLE?', false)) {
+            return;
+        }
+
+        $deleted = LogWriter::cleanup();
+        $this->output->writeln('  Deleted ' . $deleted . ' log row(s).');
+        $fullName = '`' . $schema . '`.`' . $logTableName . '`';
+        $this->executeSql($db, 'OPTIMIZE TABLE ' . $fullName);
+        $this->output->success('Log table cleanup and optimization done.');
     }
 
     private function executeSql($db, string $sql): void

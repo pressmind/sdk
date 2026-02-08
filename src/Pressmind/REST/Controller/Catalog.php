@@ -39,7 +39,9 @@ class Catalog
             $Filter->returnFiltersOnly = false;
             Query::$calendar_show_departures = true;
             if(!empty($params['pm-dr'])){
-                $Filter->request['pm-o'] = 'date_departure-asc';
+                if(empty($params['pm-o'])){
+                    $Filter->request['pm-o'] = 'date_departure-asc';
+                }
                 $Filter->output = 'date_list';
             }
             $result = Query::getResult($Filter);
@@ -264,7 +266,9 @@ class Catalog
             $Filter->returnFiltersOnly = false;
             Query::$calendar_show_departures = true;
             if (!empty($params['pm-dr'])) {
-                $Filter->request['pm-o'] = 'date_departure-asc';
+                if(empty($params['pm-o'])){
+                    $Filter->request['pm-o'] = 'date_departure-asc';
+                }
                 $Filter->output = 'date_list';
             }
             $result = Query::getResult($Filter);

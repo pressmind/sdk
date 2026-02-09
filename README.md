@@ -49,8 +49,8 @@ The pressmind SDK is a caching layer for non-bookable (and extendable for bookab
 |   (Content &        |   API    |  +-------------------+  |
 |    Touristic Data)  |          |  | Import Pipeline   |  |
 |                     |          |  +--------+----------+  |
-+---------------------+          |           |              |
-                                 |           v              |
++---------------------+          |           |             |
+                                 |           v             |
                                  |  +--------+----------+  |
                                  |  |   MySQL/MariaDB   |  |
                                  |  |                   |  |
@@ -58,8 +58,8 @@ The pressmind SDK is a caching layer for non-bookable (and extendable for bookab
                                  |  | - Touristic Data  |  |
                                  |  | - CheapestPrice   |  |
                                  |  +--------+----------+  |
-                                 |           |              |
-                                 |           v              |
+                                 |           |             |
+                                 |           v             |
                                  |  +--------+----------+  |
                                  |  |     MongoDB       |  |
                                  |  |                   |  |
@@ -67,7 +67,7 @@ The pressmind SDK is a caching layer for non-bookable (and extendable for bookab
                                  |  | - Self-contained  |  |
                                  |  |   Documents       |  |
                                  |  +--------+----------+  |
-                                 |           |              |
+                                 |           |             |
                                  +-----------|---+----------+
                                              |   |
                                  +-----------v-+ | REST API

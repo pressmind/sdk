@@ -80,6 +80,13 @@ class Import
     private $_db = null;
 
     /**
+     * True only when ID retrieval from API (getIDsToImport / _importIds) completed without exception.
+     * When false, orphan removal is skipped to avoid deleting all objects on API failure.
+     * @var bool
+     */
+    private $_api_import_successful = false;
+
+    /**
      * Static flags to track which global imports have been executed in current session.
      * Prevents redundant API calls for Brand, Season, Port, Powerfilter, EarlyBird.
      * @var array
@@ -165,7 +172,14 @@ class Import
     public function import($id_pool = null, $allowed_object_types = null, $allowed_visibilities = null)
     {
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::import()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
-        $this->getIDsToImport($id_pool, $allowed_object_types, $allowed_visibilities);
+        $this->_api_import_successful = false;
+        try {
+            $this->getIDsToImport($id_pool, $allowed_object_types, $allowed_visibilities);
+            $this->_api_import_successful = true;
+        } catch (Exception $e) {
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::import(): API ID retrieval failed: ' . $e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
+            $this->_errors[] = 'Importer::import(): API ID retrieval failed: ' . $e->getMessage();
+        }
         $this->importMediaObjectsFromFolder();
         $this->removeOrphans();
     }
@@ -181,7 +195,7 @@ class Import
         $conf = $this->_config;
         if(is_null($allowed_object_types)) {
             $allowed_object_types = array_keys($conf['data']['media_types']);
-            if(isset($conf['data']['primary_media_type_ids']) && !empty($conf['data']['primary_media_type_ids'])) {
+            if(!empty($conf['data']['primary_media_type_ids'])) {
                 $allowed_object_types = $conf['data']['primary_media_type_ids'];
             }
         }
@@ -241,7 +255,7 @@ class Import
         $ids = $this->getMediaObjectsFromFolder();
         foreach ($ids as $id_media_object) {
             $import_linked_media_objects = false;
-            if(isset($config['data']['primary_media_type_ids']) && !empty($config['data']['primary_media_type_ids'])) {
+            if(!empty($config['data']['primary_media_type_ids'])) {
                 $import_linked_media_objects = true;
             }
             if ($this->importMediaObject($id_media_object, $import_linked_media_objects)) {
@@ -374,6 +388,8 @@ class Import
             return false;
         }
         $id_object_type = $media_object->id_object_type;
+        $this->_db->beginTransaction();
+        try {
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . '): deleting old booking packages', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         foreach ($media_object->booking_packages as $booking_package) {
             $booking_package->delete(true);
@@ -408,11 +424,20 @@ class Import
         $media_object = new MediaObject($id_media_object);
         $media_object->setReadRelations(true);
         $media_object->readRelations();
-        try {
-            $media_object->insertCheapestPrice();
+        $media_object->insertCheapestPrice();
+        $this->_db->commit();
         } catch (Exception $e) {
-            $this->_log[] = ' Importer::importTouristicDataOnly(' . $id_media_object . '): Creating cheapest price failed: ' . $e->getMessage();
-            $this->_errors[] = 'Importer::importTouristicDataOnly(' . $id_media_object . '): Creating cheapest price failed: ' . $e->getMessage();
+            $this->_db->rollback();
+            $this->_log[] = Writer::write(
+                'TRANSACTION ROLLBACK for importTouristicDataOnly(' . $id_media_object . '): ' . $e->getMessage()
+                . "\n" . 'Exception in: ' . $e->getFile() . ':' . $e->getLine()
+                . "\n" . $e->getTraceAsString(),
+                Writer::OUTPUT_BOTH,
+                'import',
+                Writer::TYPE_ERROR
+            );
+            $this->_errors[] = 'TRANSACTION ROLLBACK for importTouristicDataOnly(' . $id_media_object . '): ' . $e->getMessage();
+            return false;
         }
         if ($config['cache']['enabled'] == true && in_array('OBJECT', $config['cache']['types'])) {
             $media_object->updateCache($id_media_object);
@@ -488,6 +513,8 @@ class Import
 
         if (is_array($response) && count($response) > 0) {
             $this->_start_time = microtime(true);
+            $this->_db->beginTransaction();
+            try {
             $current_object = new ORM\Object\MediaObject($id_media_object, false, true);
             $disable_touristic_data_import = (isset($config['data']['touristic']['disable_touristic_data_import']) && in_array($response[0]->id_media_objects_data_type, $config['data']['touristic']['disable_touristic_data_import']));
             if (false == $disable_touristic_data_import) {
@@ -750,6 +777,22 @@ class Import
                 $media_object->insertCheapestPrice();
             }
 
+            $this->_db->commit();
+            } catch (Exception $e) {
+                $this->_db->rollback();
+                $this->_log[] = Writer::write(
+                    'TRANSACTION ROLLBACK for MediaObject ' . $id_media_object . ': ' . $e->getMessage()
+                    . "\n" . 'Exception in: ' . $e->getFile() . ':' . $e->getLine()
+                    . "\n" . $e->getTraceAsString(),
+                    Writer::OUTPUT_BOTH,
+                    'import',
+                    Writer::TYPE_ERROR
+                );
+                $this->_errors[] = 'TRANSACTION ROLLBACK for MediaObject ' . $id_media_object
+                    . ': ' . $e->getMessage();
+                return false;
+            }
+
             if($config['cache']['enabled'] == true && in_array('OBJECT', $config['cache']['types'])) {
                 $media_object->updateCache($id_media_object);
                 $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '):  Cache has been updated', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
@@ -811,29 +854,44 @@ class Import
     public function removeOrphans()
     {
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Finding and removing Orphans', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        if (!$this->_api_import_successful) {
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::removeOrphans(): Skipping orphan removal because API ID retrieval was not successful.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
+            return;
+        }
         $conf = $this->_config;
         $allowed_object_types = array_keys($conf['data']['media_types']);
-        if(isset($conf['data']['primary_media_type_ids']) && !empty($conf['data']['primary_media_type_ids'])) {
+        if(!empty($conf['data']['primary_media_type_ids'])) {
             $allowed_object_types = $conf['data']['primary_media_type_ids'];
         }
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::removeOrphans()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
-        foreach ($allowed_object_types as $allowed_object_type) {
-            $allowed_visibilities = $conf['data']['media_types_allowed_visibilities'][$allowed_object_type];
-            $allowed_visibilities[] = 60; // the hidden visibility is always allowed
-            if(is_array($allowed_visibilities)) {
-                foreach ($allowed_visibilities as $allowed_visibility) {
-                    $params = [
-                        'id_media_object_type' => $allowed_object_type,
-                        'visibility' => $allowed_visibility
-                    ];
-                    $this->_importIds(0, $params);
+        try {
+            foreach ($allowed_object_types as $allowed_object_type) {
+                $allowed_visibilities = $conf['data']['media_types_allowed_visibilities'][$allowed_object_type];
+                $allowed_visibilities[] = 60; // the hidden visibility is always allowed
+                if(is_array($allowed_visibilities)) {
+                    foreach ($allowed_visibilities as $allowed_visibility) {
+                        $params = [
+                            'id_media_object_type' => $allowed_object_type,
+                            'visibility' => $allowed_visibility
+                        ];
+                        $this->_importIds(0, $params);
+                    }
                 }
             }
+        } catch (Exception $e) {
+            $this->_api_import_successful = false;
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::removeOrphans(): API call failed, skipping orphan removal: ' . $e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
+            $this->_errors[] = 'Importer::removeOrphans(): API call failed, skipping orphan removal: ' . $e->getMessage();
+            return;
         }
         $pending_ids = Queue::getAllPending();
         foreach ($pending_ids as $id_media_object) {
             Queue::remove($id_media_object);
             $this->_imported_ids[] = $id_media_object;
+        }
+        if (empty($this->_imported_ids)) {
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::removeOrphans(): Skipping orphan removal because no objects were imported (empty imported list).', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
+            return;
         }
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . 'Importer::removeOrphans() Checking ' . count($this->_imported_ids) . ' mediaobjects', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         $this->_findAndRemoveOrphans();
@@ -872,28 +930,49 @@ class Import
     {
         $query = "SELECT id FROM pmt2core_media_objects";
         $config = $this->_config;
-        if(isset($config['data']['primary_media_type_ids']) && !empty($config['data']['primary_media_type_ids'])) {
+        if(!empty($config['data']['primary_media_type_ids'])) {
             $query = "SELECT id FROM pmt2core_media_objects WHERE id_object_type IN (" . implode(',', $config['data']['primary_media_type_ids']) . ")";
         }
         $existing_media_objects = $this->_db->fetchAll($query);
+        $total_in_db = count($existing_media_objects);
         // Use hash set for O(1) lookup instead of in_array O(n)
         $imported_ids_set = array_flip($this->_imported_ids);
+        $orphan_ids = [];
         foreach($existing_media_objects as $media_object) {
             if(!isset($imported_ids_set[$media_object->id])) {
-                $media_object_to_remove = new MediaObject($media_object->id);
-                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Found Orphan: ' . $media_object->id . ' -> deleting ...', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
-                try {
-                    if(isset($config['data']['search_mongodb']['enabled']) && $config['data']['search_mongodb']['enabled'] === true) {
-                        $Indexer = new Indexer();
-                        $Indexer->deleteMediaObject($media_object->id);
-                        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Orphan: ' . $media_object->id . ' deleted from mongodb index', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
-                    }
-                    $media_object_to_remove->delete(true);
-                    $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Orphan: ' . $media_object->id . ' deleted from mysql', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
-                } catch (Exception $e) {
-                    $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Deletion of Orphan ' . $media_object->id . ' failed: ' . $e->getMessage(), Writer::OUTPUT_FILE, 'import', Writer::TYPE_ERROR);
-                    $this->_errors[] = 'Deletion of Orphan ' . $media_object->id . '): failed: ' . $e->getMessage();
+                $orphan_ids[] = $media_object;
+            }
+        }
+        $orphan_count = count($orphan_ids);
+        $max_ratio = isset($config['data']['import']['max_orphan_delete_ratio']) ? floatval($config['data']['import']['max_orphan_delete_ratio']) : 0.5;
+        $force_removal = isset($config['data']['import']['force_orphan_removal']) && $config['data']['import']['force_orphan_removal'] === true;
+        if ($total_in_db > 0 && $orphan_count > 0 && !$force_removal) {
+            $ratio = $orphan_count / $total_in_db;
+            if ($ratio > $max_ratio) {
+                $this->_log[] = Writer::write(
+                    $this->_getElapsedTimeAndHeap() . ' Importer::_findAndRemoveOrphans(): ABORTED - Orphan delete ratio ' . round($ratio * 100, 1) . '% (' . $orphan_count . '/' . $total_in_db . ') exceeds max_orphan_delete_ratio ' . ($max_ratio * 100) . '%. Set data.import.force_orphan_removal to true to override.',
+                    Writer::OUTPUT_BOTH,
+                    'import',
+                    Writer::TYPE_ERROR
+                );
+                $this->_errors[] = 'Orphan removal aborted: delete ratio ' . round($ratio * 100, 1) . '% exceeds threshold ' . ($max_ratio * 100) . '%';
+                return;
+            }
+        }
+        foreach($orphan_ids as $media_object) {
+            $media_object_to_remove = new MediaObject($media_object->id);
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Found Orphan: ' . $media_object->id . ' -> deleting ...', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+            try {
+                if(isset($config['data']['search_mongodb']['enabled']) && $config['data']['search_mongodb']['enabled'] === true) {
+                    $Indexer = new Indexer();
+                    $Indexer->deleteMediaObject($media_object->id);
+                    $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Orphan: ' . $media_object->id . ' deleted from mongodb index', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
                 }
+                $media_object_to_remove->delete(true);
+                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Orphan: ' . $media_object->id . ' deleted from mysql', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+            } catch (Exception $e) {
+                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Deletion of Orphan ' . $media_object->id . ' failed: ' . $e->getMessage(), Writer::OUTPUT_FILE, 'import', Writer::TYPE_ERROR);
+                $this->_errors[] = 'Deletion of Orphan ' . $media_object->id . '): failed: ' . $e->getMessage();
             }
         }
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Finding and removing Orphans done', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);

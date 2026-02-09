@@ -410,6 +410,10 @@
       "schema_migration": {
         "mode": "log_only",
         "log_changes": true
+      },
+      "import": {
+        "max_orphan_delete_ratio": 0.5,
+        "force_orphan_removal": false
       }
     },
     "price_format" : {

@@ -117,7 +117,7 @@ class MediaObjectData extends AbstractImport implements ImportInterface
                     $language = strtolower($language);
                     if(!in_array($var_name, $this->_var_names_to_be_ignored) && in_array($language, $conf['data']['languages']['allowed'])) {
                         $section_name = $section->name;
-                        if(isset($conf['data']['sections']['replace']) && !empty($conf['data']['sections']['replace']['regular_expression'])) {
+                        if(!empty($conf['data']['sections']['replace']['regular_expression'])) {
                             $section_name = preg_replace($conf['data']['sections']['replace']['regular_expression'], $conf['data']['sections']['replace']['replacement'], $section_name);
                         }
                         $column_name = $var_name . '_' . HelperFunctions::human_to_machine($section_name);

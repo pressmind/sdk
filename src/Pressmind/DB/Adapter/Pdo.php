@@ -30,6 +30,12 @@ class Pdo implements AdapterInterface
     private $table_prefix;
 
     /**
+     * Nesting level for transaction support (allows nested begin/commit/rollback).
+     * @var int
+     */
+    private $transactionLevel = 0;
+
+    /**
      * Pdo constructor.
      * @param \Pressmind\DB\Config\Pdo $config
      */
@@ -297,5 +303,57 @@ class Pdo implements AdapterInterface
     public function getTablePrefix()
     {
         return $this->table_prefix;
+    }
+
+    /**
+     * Begin a database transaction. Supports nested calls; only the first beginTransaction() starts a real PDO transaction.
+     * @return void
+     */
+    public function beginTransaction()
+    {
+        if ($this->transactionLevel === 0) {
+            $this->databaseConnection->beginTransaction();
+        }
+        $this->transactionLevel++;
+    }
+
+    /**
+     * Commit the current transaction. With nested transactions, only the outermost commit() actually commits.
+     * @return void
+     * @throws Exception
+     */
+    public function commit()
+    {
+        if ($this->transactionLevel <= 0) {
+            return;
+        }
+        $this->transactionLevel--;
+        if ($this->transactionLevel === 0) {
+            $this->databaseConnection->commit();
+        }
+    }
+
+    /**
+     * Roll back the current transaction. Resets nesting level; all changes since the first beginTransaction() are discarded.
+     * @return void
+     */
+    public function rollback()
+    {
+        if ($this->transactionLevel <= 0) {
+            return;
+        }
+        if ($this->transactionLevel > 0 && $this->databaseConnection->inTransaction()) {
+            $this->databaseConnection->rollBack();
+        }
+        $this->transactionLevel = 0;
+    }
+
+    /**
+     * Check if a transaction is currently active.
+     * @return bool
+     */
+    public function inTransaction()
+    {
+        return $this->transactionLevel > 0 && $this->databaseConnection->inTransaction();
     }
 }

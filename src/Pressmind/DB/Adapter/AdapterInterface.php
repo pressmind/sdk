@@ -89,4 +89,28 @@ interface AdapterInterface
      * @return string
      */
     public function getTablePrefix();
+
+    /**
+     * Begin a database transaction. Supports nested calls (only the outermost commit/rollback has effect).
+     * @return void
+     */
+    public function beginTransaction();
+
+    /**
+     * Commit the current transaction. With nested transactions, only commits when the nesting level reaches zero.
+     * @return void
+     */
+    public function commit();
+
+    /**
+     * Roll back the current transaction. Resets nesting level; all changes since beginTransaction() are discarded.
+     * @return void
+     */
+    public function rollback();
+
+    /**
+     * Check if a transaction is currently active.
+     * @return bool
+     */
+    public function inTransaction();
 }

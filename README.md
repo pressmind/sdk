@@ -68,11 +68,11 @@ The pressmind SDK is a caching layer for non-bookable (and extendable for bookab
                                  |  |   Documents       |  |
                                  |  +--------+----------+  |
                                  |           |             |
-                                 +-----------|---+----------+
-                                             |   |
-                                 +-----------v-+ | REST API
-                                 |             | |
-                                 | Your App    | +--------->  IBE / CRS
+                                 +-----------|--------+----+
+                                             |        |
+                                 +-----------v-+      | REST API
+                                 |             |      |
+                                 | Your App    |      +--------->  IBE / CRS
                                  |             |
                                  | - Search    |
                                  | - Templates |

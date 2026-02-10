@@ -246,9 +246,9 @@ class ImageProcessorCommand extends AbstractCommand
      * Downloads an image.
      *
      * @param Picture|DocumentMediaObject $image
-     * @return string|null Binary image data or null on failure
+     * @return File|null Storage file object or null on failure
      */
-    private function downloadImage($image): ?string
+    private function downloadImage($image): ?File
     {
         try {
             if ($image->exists()) {
@@ -268,9 +268,9 @@ class ImageProcessorCommand extends AbstractCommand
      * Creates derivatives for an image.
      *
      * @param Picture|DocumentMediaObject $image
-     * @param string $binaryImage
+     * @param File $binaryImage
      */
-    private function createDerivatives($image, string $binaryImage): void
+    private function createDerivatives($image, File $binaryImage): void
     {
         $imageProcessor = Factory::create($this->config['image_handling']['processor']['adapter']);
         Writer::write('Creating derivatives (Adapter: ' . $this->config['image_handling']['processor']['adapter'] . ')', Writer::OUTPUT_BOTH, self::PROCESS_NAME, Writer::TYPE_INFO);
@@ -355,9 +355,9 @@ class ImageProcessorCommand extends AbstractCommand
     /**
      * Downloads a section image.
      *
-     * @return string|null
+     * @return File|null
      */
-    private function downloadSection(Section $section): ?string
+    private function downloadSection(Section $section): ?File
     {
         if ($section->exists()) {
             $section->download_successful = true;

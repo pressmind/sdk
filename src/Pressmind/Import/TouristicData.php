@@ -37,6 +37,8 @@ class TouristicData extends AbstractImport
         'touristic_additional_insurances' => '\Insurance',
         'touristic_insurances_price_tables' => '\Insurance\PriceTable',
         'touristic_insurances_to_price_table' => '\Insurance\InsuranceToPriceTable',
+        'touristic_insurance_to_attribute' => '\Insurance\InsuranceToAttribute',
+        'touristic_insurance_attributes' => '\Insurance\Attribute',
         'touristic_option_discounts' => '\Option\Discount'
     ];
 
@@ -96,6 +98,10 @@ class TouristicData extends AbstractImport
                     }
                     if($touristic_object_name == 'touristic_option_discounts') {
                         unset($touristic_object->import_code);
+                    }
+                    if($touristic_object_name == 'touristic_insurance_to_attribute') {
+                        // Strip fields not defined in InsuranceToAttribute model, get fixed in api soon
+                        unset($touristic_object->order);
                     }
                     $class_name = '\Pressmind\ORM\Object\Touristic' . $this->_touristic_object_map[$touristic_object_name];
                     foreach ($touristic_object as $key => $value) {
@@ -167,6 +173,7 @@ class TouristicData extends AbstractImport
         $db = Registry::getInstance()->get('db');
         $insurance_to_group = [];
         $insurances_to_price_table = [];
+        $insurance_to_attribute = [];
         foreach($data as $touristic_object_name => $touristic_objects){
             if($touristic_object_name == 'touristic_insurance_to_group'){
                 foreach($touristic_objects as $item){
@@ -176,6 +183,11 @@ class TouristicData extends AbstractImport
             if($touristic_object_name == 'touristic_insurances_to_price_table'){
                 foreach($touristic_objects as $item){
                     $insurances_to_price_table[$item->id_insurance][] = $item;
+                }
+            }
+            if($touristic_object_name == 'touristic_insurance_to_attribute'){
+                foreach($touristic_objects as $item){
+                    $insurance_to_attribute[$item->id_insurance][] = $item;
                 }
             }
         }
@@ -233,6 +245,36 @@ class TouristicData extends AbstractImport
         }
 
         $db->execute('DELETE FROM pmt2core_touristic_insurances_price_tables WHERE id NOT IN (SELECT id_price_table FROM pmt2core_touristic_insurance_to_price_table)');
+
+        // Remove orphaned insurance_to_attribute entries
+        if (!empty($insurance_to_attribute)) {
+            $insurance_ids = array_keys($insurance_to_attribute);
+            $placeholders = implode(',', array_fill(0, count($insurance_ids), '?'));
+            $allStoredItems = $db->fetchAll(
+                "SELECT id_insurance, id_attribute FROM pmt2core_touristic_insurance_to_attributes WHERE id_insurance IN ($placeholders)",
+                $insurance_ids
+            );
+            $items_to_delete = [];
+            foreach ($allStoredItems as $storedItem) {
+                $id_insurance = $storedItem->id_insurance;
+                $id_attribute = $storedItem->id_attribute;
+                if (isset($insurance_to_attribute[$id_insurance])) {
+                    $result = array_filter($insurance_to_attribute[$id_insurance], function($v) use ($id_attribute) {
+                        return $v->id_attribute == $id_attribute;
+                    });
+                    if (count($result) == 0) {
+                        $items_to_delete[] = ['id_insurance' => $id_insurance, 'id_attribute' => $id_attribute];
+                    }
+                }
+            }
+            foreach ($items_to_delete as $item) {
+                $db->execute('DELETE FROM pmt2core_touristic_insurance_to_attributes WHERE id_insurance = ? AND id_attribute = ?',
+                    [$item['id_insurance'], $item['id_attribute']]);
+            }
+        }
+
+        // Remove orphaned insurance attributes not referenced by any insurance
+        $db->execute('DELETE FROM pmt2core_touristic_insurance_attributes WHERE id NOT IN (SELECT id_attribute FROM pmt2core_touristic_insurance_to_attributes)');
     }
 
     /**

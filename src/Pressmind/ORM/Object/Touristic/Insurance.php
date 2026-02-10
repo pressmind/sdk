@@ -26,6 +26,7 @@ use Pressmind\Registry;
  * @property integer $duration_max_days // deprecated
  * @property boolean $worldwide
  * @property boolean $is_additional_insurance
+ * @property boolean $is_alternate_insurance
  * @property string $urlinfo
  * @property string $urlproduktinfo
  * @property string $urlagb
@@ -134,6 +135,14 @@ class Insurance extends AbstractObject
             'is_additional_insurance' => [
                 'title' => 'Is_additional_insurance',
                 'name' => 'is_additional_insurance',
+                'type' => 'boolean',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'is_alternate_insurance' => [
+                'title' => 'Is_alternate_insurance',
+                'name' => 'is_alternate_insurance',
                 'type' => 'boolean',
                 'required' => false,
                 'validators' => NULL,

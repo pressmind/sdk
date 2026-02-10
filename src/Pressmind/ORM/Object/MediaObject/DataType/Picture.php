@@ -473,7 +473,8 @@ class Picture extends AbstractObject
         $parsed_url = parse_url($tmp_url);
         parse_str($parsed_url['query'], $parsed_query);
         unset($parsed_query['v']);
-        if(!is_null($derivativeName)) {
+        $hasCropCoordinates = isset($parsed_query['cw']) || isset($parsed_query['cx']) || isset($parsed_query['cy']);
+        if(!is_null($derivativeName) && !$hasCropCoordinates) {
             if($crop) {
                 $parsed_query['w'] = $image_max_width;
                 $parsed_query['h'] = $image_max_height;

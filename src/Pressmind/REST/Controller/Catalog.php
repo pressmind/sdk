@@ -2,6 +2,7 @@
 
 namespace Pressmind\REST\Controller;
 
+use DateTime;
 use Exception;
 use Pressmind\HelperFunctions;
 use Pressmind\Registry;
@@ -334,6 +335,229 @@ class Catalog
         return [
             'error' => false,
             'payload' => ["price_query" => !empty($valid_params) ? http_build_query($valid_params) : null],
+            'msg' => null
+        ];
+    }
+
+    /**
+     * Returns a compact suggestion index for client-side autocomplete/search.
+     * Entities: categories (trees), products, departures (date + product name), months.
+     * Each item includes pm-search parameters as metadata.
+     * Supports application-level ETag via ?etag= parameter.
+     *
+     * @param $params
+     * @return array
+     */
+    public function suggestion($params)
+    {
+        $config = Registry::getInstance()->get('config');
+        $controller_config = !empty($config['rest']['server']['controller']['catalog']) ? $config['rest']['server']['controller']['catalog'] : null;
+
+        try {
+            /**
+             * Query 1: Categories (MongoDB, filter-only)
+             */
+            $FilterOnly = new Filter();
+            $FilterOnly->page_size = 10000;
+            $FilterOnly->getFilters = true;
+            $FilterOnly->returnFiltersOnly = true;
+            $resultFilter = Query::getResult($FilterOnly);
+
+            /**
+             * Query 2: Products (MongoDB, items-only)
+             */
+            $FilterItems = new Filter();
+            $FilterItems->request = ['pm-l' => '1,10000'];
+            $FilterItems->page_size = 10000;
+            $FilterItems->getFilters = false;
+            $FilterItems->returnFiltersOnly = false;
+            $resultItems = Query::getResult($FilterItems);
+
+            /**
+             * Query 3: Departures (SQL, from cheapest_price_speed - only bookable dates)
+             * Respects date_filter config (offset, max_date_offset)
+             */
+            $db = Registry::getInstance()->get('db');
+            $date_offset = 0;
+            $max_date_offset = 730;
+            if (!empty($config['data']['touristic']['date_filter']['active'])) {
+                $date_offset = empty($config['data']['touristic']['date_filter']['offset']) ? 0 : (int)$config['data']['touristic']['date_filter']['offset'];
+                $max_date_offset = empty($config['data']['touristic']['date_filter']['max_date_offset']) ? 730 : (int)$config['data']['touristic']['date_filter']['max_date_offset'];
+            }
+            $date_from = new DateTime();
+            $date_from->setTime(0, 0, 0);
+            $date_from->modify($date_offset . ' days');
+            $date_to = new DateTime();
+            $date_to->setTime(23, 59, 59);
+            $date_to->modify($max_date_offset . ' days');
+
+            $departures_raw = $db->fetchAll(
+                "SELECT DISTINCT
+                    cps.id_media_object,
+                    DATE_FORMAT(cps.date_departure, '%d.%m.') as dep_label,
+                    DATE_FORMAT(cps.date_departure, '%Y%m%d') as dep_id,
+                    mo.name as headline
+                FROM pmt2core_cheapest_price_speed cps
+                JOIN pmt2core_media_objects mo ON mo.id = cps.id_media_object
+                WHERE cps.date_departure >= '" . $date_from->format('Y-m-d') . "'
+                  AND cps.date_departure <= '" . $date_to->format('Y-m-d H:i:s') . "'
+                ORDER BY cps.date_departure"
+            );
+        } catch (Exception $e) {
+            return [
+                'error' => true,
+                'payload' => null,
+                'msg' => $e->getMessage()
+            ];
+        }
+
+        /**
+         * Build categories entity
+         * Label format: "Parent > Item" for nested items, just "Item" for root level
+         * Only includes trees defined in controller config (if configured)
+         */
+        $categories = [];
+        if (!empty($resultFilter['categories'])) {
+            foreach ($resultFilter['categories'] as $var_name => $levels) {
+                $group = $var_name;
+                if (!empty($controller_config['categories'])) {
+                    $found = false;
+                    foreach ($controller_config['categories'] as $configured_category) {
+                        if ($configured_category['var_name'] == $var_name) {
+                            $group = $configured_category['title'];
+                            $found = true;
+                        }
+                    }
+                    if ($found === false) {
+                        continue;
+                    }
+                }
+                foreach ($levels as $level => $items) {
+                    foreach ($items as $item) {
+                        if (empty($item->count_in_system) || $item->count_in_system == 0) {
+                            continue;
+                        }
+                        $label = $item->name;
+                        if (!empty($item->path_str)) {
+                            $path = (array)$item->path_str;
+                            if (isset($path[1])) {
+                                $label = $path[1] . ' > ' . $path[0];
+                            }
+                        }
+                        $categories[] = [
+                            'type' => 'category',
+                            'id' => $item->id_item,
+                            'label' => $label,
+                            'group' => $group,
+                            'search' => ['pm-c[' . $var_name . ']' => $item->id_item]
+                        ];
+                    }
+                }
+            }
+        }
+
+        /**
+         * Build products entity
+         * Compact: only id + headline
+         */
+        $products = [];
+        if (!empty($resultItems['items'])) {
+            foreach ($resultItems['items'] as $item) {
+                $products[] = [
+                    'type' => 'product',
+                    'id' => $item['id_media_object'],
+                    'label' => html_entity_decode(strip_tags($item['headline'])),
+                    'search' => ['pm-id' => (string)$item['id_media_object']]
+                ];
+            }
+        }
+
+        /**
+         * Build departures entity
+         * Combined label: "dd.mm. Product Name"
+         * Source: pmt2core_touristic_dates (SQL)
+         */
+        $departures = [];
+        $seen_departures = [];
+        foreach ($departures_raw as $row) {
+            $key = $row->id_media_object . '_' . $row->dep_id;
+            if (isset($seen_departures[$key])) {
+                continue;
+            }
+            $seen_departures[$key] = true;
+            $departures[] = [
+                'type' => 'departure',
+                'label' => $row->dep_label . ' ' . html_entity_decode(strip_tags($row->headline)),
+                'search' => ['pm-id' => (string)$row->id_media_object, 'pm-dr' => $row->dep_id]
+            ];
+        }
+
+        /**
+         * Build months entity (aggregated from SQL departure data)
+         */
+        $months = [];
+        $month_counts = [];
+        foreach ($departures_raw as $row) {
+            $month_key = substr($row->dep_id, 0, 6);
+            if (!isset($month_counts[$month_key])) {
+                $month_counts[$month_key] = 0;
+            }
+            $month_counts[$month_key]++;
+        }
+        ksort($month_counts);
+        foreach ($month_counts as $month_key => $count) {
+            $date = DateTime::createFromFormat('Ymd', $month_key . '01');
+            if ($date === false) {
+                continue;
+            }
+            $label = HelperFunctions::monthNumberToLocalMonthName($date->format('n'));
+            if ($date->format('Y') != date('Y')) {
+                $label .= ' ' . $date->format('Y');
+            }
+            $months[] = [
+                'type' => 'month',
+                'id' => $month_key,
+                'label' => $label,
+                'count' => $count,
+                'search' => ['pm-dr' => $date->format('Ymd') . '-' . $date->format('Ymt')]
+            ];
+        }
+
+        /**
+         * Build payload and compute ETag hash
+         */
+        $payload = [
+            'categories' => $categories,
+            'products' => $products,
+            'departures' => $departures,
+            'months' => $months,
+            'generated_at' => date('c')
+        ];
+
+        $etag = md5(json_encode([
+            'categories' => $categories,
+            'products' => $products,
+            'departures' => $departures,
+            'months' => $months
+        ]));
+
+        /**
+         * Application-level ETag: if client sends matching etag, return minimal response
+         */
+        if (!empty($params['etag']) && $params['etag'] === $etag) {
+            return [
+                'error' => false,
+                'payload' => ['changed' => false],
+                'msg' => null
+            ];
+        }
+
+        $payload['changed'] = true;
+        $payload['etag'] = $etag;
+
+        return [
+            'error' => false,
+            'payload' => $payload,
             'msg' => null
         ];
     }

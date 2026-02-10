@@ -748,15 +748,15 @@ class Picture extends AbstractObject
                 $storage_file = $downloader->download($download_url, $this->file_name);
                 $storage_file->name = $this->file_name;
                 $storage_file->save();
-                $this->download_successful = true;
-                $this->update();
+                // download_successful is set by the caller (e.g. ImageProcessorCommand) only after derivatives are created successfully
                 return $storage_file;
             } catch (Exception $e) {
                 $last_error = $e->getMessage();
                 Writer::write('ID ' . $this->getId() . ': Downloading image from ' . $download_url . ' failed at try ' . $retry_counter . '. Error: ' . $last_error, WRITER::OUTPUT_SCREEN, 'image_processor', Writer::TYPE_ERROR);
-                $this->downloadOriginal(false, ($retry_counter + 1), $last_error);
+                return $this->downloadOriginal(false, ($retry_counter + 1), $last_error);
             } catch (S3Exception $e) {
                 $last_error = $e->getMessage();
+                return $this->downloadOriginal(false, ($retry_counter + 1), $last_error);
             }
         } else {
             $err = 'Download of image ID: ' . $this->id . ' failed! Maximum retries of ' . $max_retries . ' exceeded! Last error: ' . $last_error;

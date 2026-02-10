@@ -21,10 +21,11 @@ use Pressmind\Storage\File;
  * Downloads and processes images, creates derivatives, and verifies image integrity.
  *
  * Usage:
- *   php cli/image_processor.php [unlock] [mediaobject <id1,id2,...>]
+ *   php cli/image_processor.php [unlock|reset-missing] [mediaobject <id1,id2,...>]
  *
  * Options:
  *   unlock                  Remove the process lock
+ *   reset-missing           Set download_successful=0 for all images that are missing (no derivatives on disk), so they are reprocessed on next run
  *   mediaobject <ids>       Process only specific media objects (comma-separated)
  */
 class ImageProcessorCommand extends AbstractCommand
@@ -56,6 +57,11 @@ class ImageProcessorCommand extends AbstractCommand
         // Handle unlock command
         if ($this->getArgument(0) === 'unlock') {
             return $this->handleUnlock();
+        }
+
+        // Handle reset-missing command (no lock required)
+        if ($this->getArgument(0) === 'reset-missing') {
+            return $this->handleResetMissing();
         }
 
         // Check for existing lock
@@ -123,6 +129,7 @@ class ImageProcessorCommand extends AbstractCommand
 
     /**
      * Cleans up original files that are no longer needed.
+     * Only deletes an original if at least one derivative exists (prevents data loss if derivatives were never created).
      */
     private function cleanupOriginalFiles(): void
     {
@@ -139,7 +146,7 @@ class ImageProcessorCommand extends AbstractCommand
         $count = 0;
         foreach ($result as $image) {
             $file = $image->getFile();
-            if ($file->exists()) {
+            if ($file->exists() && !$this->hasWorkToDo($image)) {
                 $count++;
                 $file->delete();
             }
@@ -208,6 +215,10 @@ class ImageProcessorCommand extends AbstractCommand
         // Create derivatives
         $this->createDerivatives($image, $binaryImage);
         unset($binaryImage);
+
+        // Set download_successful only after derivatives were created successfully (prevents stuck state if derivative creation fails)
+        $image->download_successful = true;
+        $image->update();
     }
 
     /**
@@ -252,8 +263,6 @@ class ImageProcessorCommand extends AbstractCommand
     {
         try {
             if ($image->exists()) {
-                $image->download_successful = true;
-                $image->update();
                 Writer::write('File exists (' . $image->file_name . '), no download required', Writer::OUTPUT_BOTH, self::PROCESS_NAME, Writer::TYPE_INFO);
                 return $image->getBinaryFile();
             }
@@ -385,12 +394,12 @@ class ImageProcessorCommand extends AbstractCommand
     }
 
     /**
-     * Verifies downloaded images and outputs statistics.
+     * Runs verification and returns statistics (without output).
+     *
+     * @return array Verification stats with keys pictures, sections, documents; each has total, exists, missing, missing_list, derivatives
      */
-    private function verifyImages(): void
+    private function runVerificationAndGetStats(): array
     {
-        Writer::write('Starting image verification...', Writer::OUTPUT_SCREEN, self::PROCESS_NAME, Writer::TYPE_INFO);
-
         $verificationStats = [
             'pictures' => ['total' => 0, 'exists' => 0, 'missing' => 0, 'missing_list' => [], 'derivatives' => []],
             'sections' => ['total' => 0, 'exists' => 0, 'missing' => 0, 'missing_list' => [], 'derivatives' => []],
@@ -405,12 +414,88 @@ class ImageProcessorCommand extends AbstractCommand
             $this->verifyPictures($pictures, $verificationStats);
             $this->verifySections($sections, $verificationStats);
             $this->verifyDocuments($documents, $verificationStats);
-
         } catch (Exception $e) {
             Writer::write('Verification error: ' . $e->getMessage(), Writer::OUTPUT_BOTH, self::PROCESS_NAME, Writer::TYPE_ERROR);
         }
 
+        return $verificationStats;
+    }
+
+    /**
+     * Verifies downloaded images and outputs statistics.
+     * Automatically resets download_successful=0 for missing images so they are reprocessed on the next run.
+     */
+    private function verifyImages(): void
+    {
+        Writer::write('Starting image verification...', Writer::OUTPUT_SCREEN, self::PROCESS_NAME, Writer::TYPE_INFO);
+        $verificationStats = $this->runVerificationAndGetStats();
+        $resetCount = $this->resetMissingImagesInStats($verificationStats);
+        if ($resetCount > 0) {
+            Writer::write('Recovery: set download_successful=0 for ' . $resetCount . ' missing image(s). They will be reprocessed on the next run.', Writer::OUTPUT_BOTH, self::PROCESS_NAME, Writer::TYPE_INFO);
+        }
         $this->outputVerificationReport($verificationStats);
+    }
+
+    /**
+     * Resets download_successful to 0 for all entries in the given stats' missing_list.
+     * Returns the number of records reset.
+     */
+    private function resetMissingImagesInStats(array $stats): int
+    {
+        $resetCount = 0;
+        foreach ($stats['pictures']['missing_list'] as $item) {
+            try {
+                $picture = new Picture();
+                $picture->read($item['id']);
+                $picture->download_successful = false;
+                $picture->update();
+                $resetCount++;
+            } catch (Exception $e) {
+                Writer::write('Failed to reset picture ID ' . $item['id'] . ': ' . $e->getMessage(), Writer::OUTPUT_BOTH, self::PROCESS_NAME, Writer::TYPE_ERROR);
+            }
+        }
+        foreach ($stats['sections']['missing_list'] as $item) {
+            try {
+                $section = new Section();
+                $section->read($item['id']);
+                $section->download_successful = false;
+                $section->update();
+                $resetCount++;
+            } catch (Exception $e) {
+                Writer::write('Failed to reset section ID ' . $item['id'] . ': ' . $e->getMessage(), Writer::OUTPUT_BOTH, self::PROCESS_NAME, Writer::TYPE_ERROR);
+            }
+        }
+        foreach ($stats['documents']['missing_list'] as $item) {
+            try {
+                $document = new DocumentMediaObject();
+                $document->read($item['id']);
+                $document->download_successful = false;
+                $document->update();
+                $resetCount++;
+            } catch (Exception $e) {
+                Writer::write('Failed to reset document media object ID ' . $item['id'] . ': ' . $e->getMessage(), Writer::OUTPUT_BOTH, self::PROCESS_NAME, Writer::TYPE_ERROR);
+            }
+        }
+        return $resetCount;
+    }
+
+    /**
+     * Resets download_successful to 0 for all images that are missing (no derivatives on disk).
+     * Run this once to requeue missing images, then run the image processor again.
+     */
+    private function handleResetMissing(): int
+    {
+        $this->config = Registry::getInstance()->get('config');
+        Writer::write('Collecting missing images...', Writer::OUTPUT_BOTH, self::PROCESS_NAME, Writer::TYPE_INFO);
+        $stats = $this->runVerificationAndGetStats();
+        $totalMissing = $stats['pictures']['missing'] + $stats['sections']['missing'] + $stats['documents']['missing'];
+        if ($totalMissing === 0) {
+            $this->output->info('No missing images found. Nothing to reset.');
+            return 0;
+        }
+        $resetCount = $this->resetMissingImagesInStats($stats);
+        $this->output->info('Reset download_successful=0 for ' . $resetCount . ' missing image(s). Run "php image_processor.php" to reprocess them.');
+        return 0;
     }
 
     /**

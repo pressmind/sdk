@@ -1,0 +1,38 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Pressmind SDK OpenSearch Index
+ *
+ * Manages the OpenSearch fulltext index for Media Objects.
+ * Requires bootstrap to be loaded (e.g. call from travelshop cli/index_opensearch.php).
+ *
+ * Usage:
+ *   php bin/index-opensearch all
+ *   php bin/index-opensearch mediaobject 12345,12346
+ *   php bin/index-opensearch search "search term" de
+ *   php bin/index-opensearch create_index_templates
+ *   php bin/index-opensearch --help
+ */
+
+// Find autoloader - supports installation as vendor package and standalone
+$autoloadPaths = [
+    __DIR__ . '/../vendor/autoload.php',           // Standalone SDK
+    __DIR__ . '/../../../autoload.php',            // Installed as vendor package
+];
+
+$autoloaderFound = false;
+foreach ($autoloadPaths as $autoloadPath) {
+    if (file_exists($autoloadPath)) {
+        require_once $autoloadPath;
+        $autoloaderFound = true;
+        break;
+    }
+}
+
+if (!$autoloaderFound) {
+    fwrite(STDERR, "Autoloader not found. Please run 'composer install'.\n");
+    exit(1);
+}
+
+$command = new \Pressmind\CLI\IndexOpenSearchCommand();
+exit($command->run($argv));

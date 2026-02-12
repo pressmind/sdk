@@ -1,0 +1,38 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Pressmind SDK Cache Primer
+ *
+ * Lists all pretty URLs for primary media types.
+ * Requires bootstrap to be loaded (e.g. call from travelshop cli/cache_primer.php).
+ *
+ * Usage:
+ *   php bin/cache-primer
+ *   php bin/cache-primer --base-url=https://example.com
+ *
+ * Options:
+ *   --base-url=URL  Prepend this URL to each pretty URL path
+ */
+
+// Find autoloader - supports installation as vendor package and standalone
+$autoloadPaths = [
+    __DIR__ . '/../vendor/autoload.php',           // Standalone SDK
+    __DIR__ . '/../../../autoload.php',            // Installed as vendor package
+];
+
+$autoloaderFound = false;
+foreach ($autoloadPaths as $autoloadPath) {
+    if (file_exists($autoloadPath)) {
+        require_once $autoloadPath;
+        $autoloaderFound = true;
+        break;
+    }
+}
+
+if (!$autoloaderFound) {
+    fwrite(STDERR, "Autoloader not found. Please run 'composer install'.\n");
+    exit(1);
+}
+
+$command = new \Pressmind\CLI\CachePrimerCommand();
+exit($command->run($argv));

@@ -1,0 +1,36 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Pressmind SDK Fulltext Indexer
+ *
+ * Creates search index for Media Objects (all or by comma-separated IDs).
+ * Requires bootstrap to be loaded (e.g. call from travelshop cli/fulltext_indexer.php).
+ *
+ * Usage:
+ *   php bin/fulltext-indexer
+ *   php bin/fulltext-indexer 123456,78901234
+ *   php bin/fulltext-indexer --help
+ */
+
+// Find autoloader - supports installation as vendor package and standalone
+$autoloadPaths = [
+    __DIR__ . '/../vendor/autoload.php',           // Standalone SDK
+    __DIR__ . '/../../../autoload.php',            // Installed as vendor package
+];
+
+$autoloaderFound = false;
+foreach ($autoloadPaths as $autoloadPath) {
+    if (file_exists($autoloadPath)) {
+        require_once $autoloadPath;
+        $autoloaderFound = true;
+        break;
+    }
+}
+
+if (!$autoloaderFound) {
+    fwrite(STDERR, "Autoloader not found. Please run 'composer install'.\n");
+    exit(1);
+}
+
+$command = new \Pressmind\CLI\FulltextIndexerCommand();
+exit($command->run($argv));

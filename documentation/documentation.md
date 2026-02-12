@@ -68,6 +68,13 @@ Welcome to the pressmind SDK documentation. This documentation covers the comple
 | [Image Processor](image-processor.md) | Image derivatives, filters, watermarks, storage providers |
 | [CheapestPrice Aggregation](cheapest-price-aggregation.md) | Price calculation pipeline, state machine, early bird discounts |
 
+### CLI Reference
+
+| Document | Description |
+|---|---|
+| [CLI Reference](cli-reference.md) | Complete CLI command reference: Import (primary), Index Mongo, and all other commands with parameter documentation |
+| [CLI WordPress Tools](cli-wordpress-tools.md) | WordPress helpers and WordPress-dependent CLI commands; CMS independence and when to use |
+
 ### API
 
 | Document | Description |
@@ -146,3 +153,4 @@ pressmind PIM
 - **Products not showing?** See [Troubleshooting](troubleshooting-missing-products.md)
 - **Building templates?** See [Template Interface](template-interface.md) → [Real-World Examples](real-world-examples.md)
 - **Understanding prices?** See [CheapestPrice Aggregation](cheapest-price-aggregation.md)
+- **CLI commands (import, index-mongo, etc.)?** See [CLI Reference](cli-reference.md); for WordPress helpers see [CLI WordPress Tools](cli-wordpress-tools.md)

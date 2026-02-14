@@ -262,7 +262,7 @@ class Catalog
         try {
             $Filter = new Filter();
             $Filter->request = $params;
-            $Filter->getFilters = !empty($params['getFilter']);
+            $Filter->getFilters = !empty($params['get_filter']);
             $Filter->returnFiltersOnly = false;
             Query::$calendar_show_departures = true;
             if (!empty($params['pm-dr'])) {

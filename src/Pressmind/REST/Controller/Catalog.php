@@ -262,15 +262,14 @@ class Catalog
         try {
             $Filter = new Filter();
             $Filter->request = $params;
-            $Filter->page_size = 1000;
-            $Filter->getFilters = true;
+            $Filter->getFilters = !empty($params['getFilter']);
             $Filter->returnFiltersOnly = false;
             Query::$calendar_show_departures = true;
             if (!empty($params['pm-dr'])) {
-                if(empty($params['pm-o'])){
+                if (empty($params['pm-o'])) {
                     $Filter->request['pm-o'] = 'date_departure-asc';
                 }
-                $Filter->output = 'date_list';
+                //$Filter->output = 'date_list';
             }
             $result = Query::getResult($Filter);
         } catch (Exception $e) {

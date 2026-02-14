@@ -466,6 +466,8 @@ class Query
             $end_time = microtime(true);
             $departure_filter_ms = ($end_time - $start_time)  * 1000;
         }
+        $config = Registry::getInstance()->get('config');
+        $duration_allowed_ranges = $config['data']['search_mongodb']['search']['touristic']['duration_ranges'] ?? [];
         $result = [
             'total_result' => !empty($result->total) ? $result->total : null,
             'current_page' => !empty($result->currentPage) ? $result->currentPage : null,
@@ -486,6 +488,7 @@ class Query
             'startingpoint_options' => $startingpoint_options,
             'duration_min' => !empty($result_filter->minDuration) ? $result_filter->minDuration : null,
             'duration_max' => !empty($result_filter->maxDuration) ? $result_filter->maxDuration : null,
+            'duration_allowed_ranges' => $duration_allowed_ranges,
             'departure_min' => !empty($result_filter->minDeparture) ? new \DateTime($result_filter->minDeparture) : null,
             'departure_max' => !empty($result_filter->maxDeparture) ? new \DateTime($result_filter->maxDeparture) : null,
             'price_min' => !empty($result_filter->minPrice) ? $result_filter->minPrice  : null,

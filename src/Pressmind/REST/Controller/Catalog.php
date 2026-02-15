@@ -440,7 +440,7 @@ class Catalog
                         if (!empty($item->path_str)) {
                             $path = (array)$item->path_str;
                             if (isset($path[1])) {
-                                $label = $path[1] . ' > ' . $path[0];
+                                $label = $path[1] . ' » ' . $path[0];
                             }
                         }
                         $categories[] = [

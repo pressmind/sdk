@@ -5,6 +5,7 @@ namespace Pressmind\CLI;
 use Exception;
 use Pressmind\Image\Processor\Adapter\Factory;
 use Pressmind\Image\Processor\Config;
+use Pressmind\Image\VerificationStats;
 use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\Itinerary\Step\DocumentMediaObject;
 use Pressmind\ORM\Object\MediaObject\DataType\Picture;
@@ -35,17 +36,15 @@ class ImageProcessorCommand extends AbstractCommand
     private array $config;
     private array $idMediaObjects = [];
 
+    /** @var Bucket|null Shared bucket instance (cached S3 client) for the duration of the run */
+    private $bucket = null;
+
     /**
      * Formats bytes into human-readable size.
      */
     public static function formatBytes(int $bytes, int $precision = 2): string
     {
-        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        $bytes = max($bytes, 0);
-        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
-        $pow = min($pow, count($units) - 1);
-        $bytes /= pow(1024, $pow);
-        return round($bytes, $precision) . ' ' . $units[$pow];
+        return VerificationStats::formatBytes($bytes, $precision);
     }
 
     protected function execute(): int
@@ -70,6 +69,7 @@ class ImageProcessorCommand extends AbstractCommand
         }
 
         try {
+            $this->bucket = new Bucket($this->config['image_handling']['storage']);
             // Delete original files that are no longer needed
             $this->cleanupOriginalFiles();
 
@@ -145,7 +145,8 @@ class ImageProcessorCommand extends AbstractCommand
 
         $count = 0;
         foreach ($result as $image) {
-            $file = $image->getFile();
+            $file = new File($this->bucket);
+            $file->name = $image->file_name;
             if ($file->exists() && !$this->hasWorkToDo($image)) {
                 $count++;
                 $file->delete();
@@ -228,20 +229,45 @@ class ImageProcessorCommand extends AbstractCommand
      */
     private function hasWorkToDo($image): bool
     {
+        if ($this->bucket->supportsPrefixListing()) {
+            $prefix = pathinfo($image->file_name, PATHINFO_FILENAME) . '_';
+            $existingFiles = $this->bucket->listByPrefix($prefix);
+            foreach ($this->config['image_handling']['processor']['derivatives'] as $derivativeName => $derivativeConfig) {
+                $extensions = ['jpg'];
+                if (!empty($derivativeConfig['webp_create'])) {
+                    $extensions[] = 'webp';
+                }
+                foreach ($extensions as $extension) {
+                    $expectedKey = $prefix . $derivativeName . '.' . $extension;
+                    if (!isset($existingFiles[$expectedKey])) {
+                        return true;
+                    }
+                }
+            }
+            if (!empty($image->sections) && is_array($image->sections)) {
+                foreach ($image->sections as $section) {
+                    if ($this->sectionHasWorkToDo($section)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         foreach ($this->config['image_handling']['processor']['derivatives'] as $derivativeName => $derivativeConfig) {
             $extensions = ['jpg'];
             if (!empty($derivativeConfig['webp_create'])) {
                 $extensions[] = 'webp';
             }
             foreach ($extensions as $extension) {
-                $file = new File(new Bucket($this->config['image_handling']['storage']));
+                $file = new File($this->bucket);
                 $file->name = pathinfo($image->file_name, PATHINFO_FILENAME) . '_' . $derivativeName . '.' . $extension;
                 if (!$file->exists()) {
                     return true;
                 }
                 if (!empty($image->sections) && is_array($image->sections)) {
                     foreach ($image->sections as $section) {
-                        $sectionFile = new File(new Bucket($this->config['image_handling']['storage']));
+                        $sectionFile = new File($this->bucket);
                         $sectionFile->name = pathinfo($section->file_name, PATHINFO_FILENAME) . '_' . $derivativeName . '.' . $extension;
                         if (!$sectionFile->exists()) {
                             return true;
@@ -345,13 +371,31 @@ class ImageProcessorCommand extends AbstractCommand
      */
     private function sectionHasWorkToDo(Section $section): bool
     {
+        if ($this->bucket->supportsPrefixListing()) {
+            $prefix = pathinfo($section->file_name, PATHINFO_FILENAME) . '_';
+            $existingFiles = $this->bucket->listByPrefix($prefix);
+            foreach ($this->config['image_handling']['processor']['derivatives'] as $derivativeName => $derivativeConfig) {
+                $extensions = ['jpg'];
+                if (!empty($derivativeConfig['webp_create'])) {
+                    $extensions[] = 'webp';
+                }
+                foreach ($extensions as $extension) {
+                    $expectedKey = $prefix . $derivativeName . '.' . $extension;
+                    if (!isset($existingFiles[$expectedKey])) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         foreach ($this->config['image_handling']['processor']['derivatives'] as $derivativeName => $derivativeConfig) {
             $extensions = ['jpg'];
             if (!empty($derivativeConfig['webp_create'])) {
                 $extensions[] = 'webp';
             }
             foreach ($extensions as $extension) {
-                $sectionFile = new File(new Bucket($this->config['image_handling']['storage']));
+                $sectionFile = new File($this->bucket);
                 $sectionFile->name = pathinfo($section->file_name, PATHINFO_FILENAME) . '_' . $derivativeName . '.' . $extension;
                 if (!$sectionFile->exists()) {
                     return true;
@@ -395,30 +439,16 @@ class ImageProcessorCommand extends AbstractCommand
 
     /**
      * Runs verification and returns statistics (without output).
+     * Uses chunked processing to support large buckets (e.g. 1M+ files) without exhausting memory.
      *
-     * @return array Verification stats with keys pictures, sections, documents; each has total, exists, missing, missing_list, derivatives
+     * @return array Verification stats with keys pictures, sections, documents; each has total, exists, missing, missing_list, derivatives (empty when chunked); plus derivative_summary
      */
     private function runVerificationAndGetStats(): array
     {
-        $verificationStats = [
-            'pictures' => ['total' => 0, 'exists' => 0, 'missing' => 0, 'missing_list' => [], 'derivatives' => []],
-            'sections' => ['total' => 0, 'exists' => 0, 'missing' => 0, 'missing_list' => [], 'derivatives' => []],
-            'documents' => ['total' => 0, 'exists' => 0, 'missing' => 0, 'missing_list' => [], 'derivatives' => []]
-        ];
-
-        try {
-            $pictures = Picture::listAll(['download_successful' => 1]);
-            $sections = Section::listAll(['download_successful' => 1]);
-            $documents = DocumentMediaObject::listAll(['download_successful' => 1]);
-
-            $this->verifyPictures($pictures, $verificationStats);
-            $this->verifySections($sections, $verificationStats);
-            $this->verifyDocuments($documents, $verificationStats);
-        } catch (Exception $e) {
-            Writer::write('Verification error: ' . $e->getMessage(), Writer::OUTPUT_BOTH, self::PROCESS_NAME, Writer::TYPE_ERROR);
-        }
-
-        return $verificationStats;
+        return VerificationStats::collect($this->config, [
+            'chunk_size' => VerificationStats::DEFAULT_CHUNK_SIZE,
+            'max_missing_list' => VerificationStats::DEFAULT_MAX_MISSING_LIST,
+        ]);
     }
 
     /**
@@ -481,211 +511,43 @@ class ImageProcessorCommand extends AbstractCommand
 
     /**
      * Resets download_successful to 0 for all images that are missing (no derivatives on disk).
-     * Run this once to requeue missing images, then run the image processor again.
+     * Runs in a loop until no missing images remain (handles capped missing_list with many missing).
+     * Then run the image processor to reprocess them.
      */
     private function handleResetMissing(): int
     {
         $this->config = Registry::getInstance()->get('config');
-        Writer::write('Collecting missing images...', Writer::OUTPUT_BOTH, self::PROCESS_NAME, Writer::TYPE_INFO);
-        $stats = $this->runVerificationAndGetStats();
-        $totalMissing = $stats['pictures']['missing'] + $stats['sections']['missing'] + $stats['documents']['missing'];
-        if ($totalMissing === 0) {
-            $this->output->info('No missing images found. Nothing to reset.');
-            return 0;
+        $maxIterations = 10000;
+        $totalReset = 0;
+        $iteration = 0;
+
+        while ($iteration < $maxIterations) {
+            $iteration++;
+            Writer::write('Collecting missing images (pass ' . $iteration . ')...', Writer::OUTPUT_BOTH, self::PROCESS_NAME, Writer::TYPE_INFO);
+            $stats = $this->runVerificationAndGetStats();
+            $totalMissing = $stats['pictures']['missing'] + $stats['sections']['missing'] + $stats['documents']['missing'];
+
+            if ($totalMissing === 0) {
+                if ($totalReset === 0) {
+                    $this->output->info('No missing images found. Nothing to reset.');
+                } else {
+                    $this->output->info('All missing images reset. Total: ' . $totalReset . ' record(s). Run "php image_processor.php" to reprocess them.');
+                }
+                return 0;
+            }
+
+            $resetCount = $this->resetMissingImagesInStats($stats);
+            $totalReset += $resetCount;
+            $this->output->info('Pass ' . $iteration . ': reset ' . $resetCount . ' missing image(s). Total reset so far: ' . $totalReset . '.');
+
+            if ($resetCount === 0) {
+                $this->output->warning('No records were reset (remaining ' . $totalMissing . ' missing could not be updated).');
+                return 0;
+            }
         }
-        $resetCount = $this->resetMissingImagesInStats($stats);
-        $this->output->info('Reset download_successful=0 for ' . $resetCount . ' missing image(s). Run "php image_processor.php" to reprocess them.');
+
+        $this->output->warning('Stopped after ' . $maxIterations . ' passes. Total reset: ' . $totalReset . '. Run again to continue or run image processor.');
         return 0;
-    }
-
-    /**
-     * Verifies pictures and collects statistics.
-     */
-    private function verifyPictures(array $pictures, array &$stats): void
-    {
-        foreach ($pictures as $picture) {
-            $stats['pictures']['total']++;
-            $hasAnyDerivative = false;
-            $pictureDerivatives = [];
-
-            foreach ($this->config['image_handling']['processor']['derivatives'] as $derivativeName => $derivativeConfig) {
-                $extensions = ['jpg'];
-                if (!empty($derivativeConfig['webp_create'])) {
-                    $extensions[] = 'webp';
-                }
-                foreach ($extensions as $extension) {
-                    $file = new File(new Bucket($this->config['image_handling']['storage']));
-                    $file->name = pathinfo($picture->file_name, PATHINFO_FILENAME) . '_' . $derivativeName . '.' . $extension;
-                    $derivativeInfo = [
-                        'name' => $derivativeName,
-                        'extension' => $extension,
-                        'file_name' => $file->name,
-                        'exists' => false,
-                        'size' => 0,
-                        'size_formatted' => '0 B'
-                    ];
-
-                    if ($file->exists()) {
-                        $hasAnyDerivative = true;
-                        try {
-                            $fileSize = $file->filesize();
-                            $derivativeInfo['exists'] = true;
-                            $derivativeInfo['size'] = $fileSize;
-                            $derivativeInfo['size_formatted'] = self::formatBytes($fileSize);
-                        } catch (Exception $e) {
-                            $derivativeInfo['size_formatted'] = 'Error: ' . $e->getMessage();
-                        }
-                    }
-                    $pictureDerivatives[] = $derivativeInfo;
-                }
-            }
-
-            $stats['pictures']['derivatives'][] = [
-                'id' => $picture->getId(),
-                'file_name' => $picture->file_name,
-                'id_media_object' => $picture->id_media_object ?? 'N/A',
-                'derivatives' => $pictureDerivatives
-            ];
-
-            if ($hasAnyDerivative) {
-                $stats['pictures']['exists']++;
-            } else {
-                $stats['pictures']['missing']++;
-                $stats['pictures']['missing_list'][] = [
-                    'id' => $picture->getId(),
-                    'file_name' => $picture->file_name,
-                    'id_media_object' => $picture->id_media_object ?? 'N/A'
-                ];
-            }
-        }
-    }
-
-    /**
-     * Verifies sections and collects statistics.
-     */
-    private function verifySections(array $sections, array &$stats): void
-    {
-        foreach ($sections as $section) {
-            $stats['sections']['total']++;
-            $hasAnyDerivative = false;
-            $sectionDerivatives = [];
-
-            foreach ($this->config['image_handling']['processor']['derivatives'] as $derivativeName => $derivativeConfig) {
-                $extensions = ['jpg'];
-                if (!empty($derivativeConfig['webp_create'])) {
-                    $extensions[] = 'webp';
-                }
-                foreach ($extensions as $extension) {
-                    $file = new File(new Bucket($this->config['image_handling']['storage']));
-                    $file->name = pathinfo($section->file_name, PATHINFO_FILENAME) . '_' . $derivativeName . '.' . $extension;
-                    $derivativeInfo = [
-                        'name' => $derivativeName,
-                        'extension' => $extension,
-                        'file_name' => $file->name,
-                        'exists' => false,
-                        'size' => 0,
-                        'size_formatted' => '0 B'
-                    ];
-
-                    if ($file->exists()) {
-                        $hasAnyDerivative = true;
-                        try {
-                            $fileSize = $file->filesize();
-                            $derivativeInfo['exists'] = true;
-                            $derivativeInfo['size'] = $fileSize;
-                            $derivativeInfo['size_formatted'] = self::formatBytes($fileSize);
-                        } catch (Exception $e) {
-                            $derivativeInfo['size_formatted'] = 'Error: ' . $e->getMessage();
-                        }
-                    }
-                    $sectionDerivatives[] = $derivativeInfo;
-                }
-            }
-
-            $stats['sections']['derivatives'][] = [
-                'id' => $section->getId(),
-                'file_name' => $section->file_name,
-                'id_media_object' => $section->id_media_object ?? 'N/A',
-                'section_name' => $section->section_name ?? 'N/A',
-                'derivatives' => $sectionDerivatives
-            ];
-
-            if ($hasAnyDerivative) {
-                $stats['sections']['exists']++;
-            } else {
-                $stats['sections']['missing']++;
-                $stats['sections']['missing_list'][] = [
-                    'id' => $section->getId(),
-                    'file_name' => $section->file_name,
-                    'id_media_object' => $section->id_media_object ?? 'N/A',
-                    'section_name' => $section->section_name ?? 'N/A'
-                ];
-            }
-        }
-    }
-
-    /**
-     * Verifies document media objects and collects statistics.
-     */
-    private function verifyDocuments(array $documents, array &$stats): void
-    {
-        foreach ($documents as $document) {
-            $stats['documents']['total']++;
-            $hasAnyDerivative = false;
-            $documentDerivatives = [];
-
-            foreach ($this->config['image_handling']['processor']['derivatives'] as $derivativeName => $derivativeConfig) {
-                $extensions = ['jpg'];
-                if (!empty($derivativeConfig['webp_create'])) {
-                    $extensions[] = 'webp';
-                }
-                foreach ($extensions as $extension) {
-                    $file = new File(new Bucket($this->config['image_handling']['storage']));
-                    $file->name = pathinfo($document->file_name, PATHINFO_FILENAME) . '_' . $derivativeName . '.' . $extension;
-                    $derivativeInfo = [
-                        'name' => $derivativeName,
-                        'extension' => $extension,
-                        'file_name' => $file->name,
-                        'exists' => false,
-                        'size' => 0,
-                        'size_formatted' => '0 B'
-                    ];
-
-                    if ($file->exists()) {
-                        $hasAnyDerivative = true;
-                        try {
-                            $fileSize = $file->filesize();
-                            $derivativeInfo['exists'] = true;
-                            $derivativeInfo['size'] = $fileSize;
-                            $derivativeInfo['size_formatted'] = self::formatBytes($fileSize);
-                        } catch (Exception $e) {
-                            $derivativeInfo['size_formatted'] = 'Error: ' . $e->getMessage();
-                        }
-                    }
-                    $documentDerivatives[] = $derivativeInfo;
-                }
-            }
-
-            $stats['documents']['derivatives'][] = [
-                'id' => $document->getId(),
-                'file_name' => $document->file_name,
-                'id_media_object' => $document->id_media_object ?? 'N/A',
-                'id_step' => $document->id_step ?? 'N/A',
-                'derivatives' => $documentDerivatives
-            ];
-
-            if ($hasAnyDerivative) {
-                $stats['documents']['exists']++;
-            } else {
-                $stats['documents']['missing']++;
-                $stats['documents']['missing_list'][] = [
-                    'id' => $document->getId(),
-                    'file_name' => $document->file_name,
-                    'id_media_object' => $document->id_media_object ?? 'N/A',
-                    'id_step' => $document->id_step ?? 'N/A'
-                ];
-            }
-        }
     }
 
     /**
@@ -753,6 +615,7 @@ class ImageProcessorCommand extends AbstractCommand
 
     /**
      * Outputs derivative summary.
+     * Uses pre-aggregated derivative_summary when present (chunked mode); otherwise builds from derivatives arrays.
      */
     private function outputDerivativeSummary(array $stats, int $tableWidth, string $borderLine): void
     {
@@ -760,42 +623,9 @@ class ImageProcessorCommand extends AbstractCommand
         echo "│" . str_pad("DERIVATIVE SUMMARY", $tableWidth - 2, ' ', STR_PAD_BOTH) . "│\n";
         echo "├" . $borderLine . "┤\n";
 
-        $derivativeSummary = [];
-
-        // Collect derivatives from all types
-        foreach (['pictures', 'sections', 'documents'] as $type) {
-            $typeName = ucfirst($type);
-            foreach ($stats[$type]['derivatives'] as $data) {
-                foreach ($data['derivatives'] as $derivative) {
-                    $key = $derivative['name'] . '.' . $derivative['extension'] . '.' . $type;
-                    if (!isset($derivativeSummary[$key])) {
-                        $derivativeSummary[$key] = [
-                            'name' => $derivative['name'],
-                            'extension' => $derivative['extension'],
-                            'total_count' => 0,
-                            'exists_count' => 0,
-                            'total_size' => 0,
-                            'type' => $typeName
-                        ];
-                    }
-                    $derivativeSummary[$key]['total_count']++;
-                    if ($derivative['exists']) {
-                        $derivativeSummary[$key]['exists_count']++;
-                        $derivativeSummary[$key]['total_size'] += $derivative['size'];
-                    }
-                }
-            }
-        }
-
-        // Sort by type and name
-        usort($derivativeSummary, function ($a, $b) {
-            $typeOrder = ['Pictures' => 1, 'Sections' => 2, 'Documents' => 3];
-            $typeCmp = $typeOrder[$a['type']] <=> $typeOrder[$b['type']];
-            if ($typeCmp !== 0) {
-                return $typeCmp;
-            }
-            return strcmp($a['name'], $b['name']);
-        });
+        $derivativeSummary = isset($stats['derivative_summary']) && is_array($stats['derivative_summary'])
+            ? $stats['derivative_summary']
+            : $this->buildDerivativeSummaryFromStats($stats);
 
         // Output summary
         $currentType = '';
@@ -817,8 +647,8 @@ class ImageProcessorCommand extends AbstractCommand
                 str_pad(number_format($summary['exists_count'], 0, ',', '.'), 8, ' ', STR_PAD_LEFT) . "/" .
                 str_pad(number_format($summary['total_count'], 0, ',', '.'), 8, ' ', STR_PAD_LEFT) . " existing (" .
                 str_pad(number_format($percentage, 1), 6, ' ', STR_PAD_LEFT) . "%) | Total: " .
-                str_pad(self::formatBytes($summary['total_size']), 15, ' ') . " | Average: " .
-                str_pad(self::formatBytes((int)$avgSize), 15, ' ');
+                str_pad(VerificationStats::formatBytes($summary['total_size']), 15, ' ') . " | Average: " .
+                str_pad(VerificationStats::formatBytes((int)$avgSize), 15, ' ');
             echo "│" . str_pad($line, $tableWidth - 2, ' ') . "│\n";
         }
 
@@ -828,6 +658,48 @@ class ImageProcessorCommand extends AbstractCommand
 
         echo "└" . $borderLine . "┘\n";
         echo "\n";
+    }
+
+    /**
+     * Builds derivative summary from full derivatives arrays (used when not in chunked mode).
+     *
+     * @return list<array{name: string, extension: string, total_count: int, exists_count: int, total_size: int, type: string}>
+     */
+    private function buildDerivativeSummaryFromStats(array $stats): array
+    {
+        $derivativeSummary = [];
+        foreach (['pictures' => 'Pictures', 'sections' => 'Sections', 'documents' => 'Documents'] as $type => $typeName) {
+            foreach ($stats[$type]['derivatives'] as $data) {
+                foreach ($data['derivatives'] as $derivative) {
+                    $key = $derivative['name'] . '.' . $derivative['extension'] . '.' . $type;
+                    if (!isset($derivativeSummary[$key])) {
+                        $derivativeSummary[$key] = [
+                            'name' => $derivative['name'],
+                            'extension' => $derivative['extension'],
+                            'total_count' => 0,
+                            'exists_count' => 0,
+                            'total_size' => 0,
+                            'type' => $typeName
+                        ];
+                    }
+                    $derivativeSummary[$key]['total_count']++;
+                    if ($derivative['exists']) {
+                        $derivativeSummary[$key]['exists_count']++;
+                        $derivativeSummary[$key]['total_size'] += $derivative['size'];
+                    }
+                }
+            }
+        }
+        $list = array_values($derivativeSummary);
+        usort($list, function ($a, $b) {
+            $typeOrder = ['Pictures' => 1, 'Sections' => 2, 'Documents' => 3];
+            $typeCmp = ($typeOrder[$a['type']] ?? 0) <=> ($typeOrder[$b['type']] ?? 0);
+            if ($typeCmp !== 0) {
+                return $typeCmp;
+            }
+            return strcmp($a['name'], $b['name']);
+        });
+        return $list;
     }
 
     /**
@@ -876,23 +748,31 @@ class ImageProcessorCommand extends AbstractCommand
 
     /**
      * Outputs total file size.
+     * When chunked verification is used, derivatives arrays are empty; total is taken from derivative_summary.
      */
     private function outputTotalSize(array $stats, int $tableWidth, string $borderLine): void
     {
         $totalFileSize = 0;
 
-        foreach (['pictures', 'sections', 'documents'] as $type) {
-            foreach ($stats[$type]['derivatives'] as $data) {
-                foreach ($data['derivatives'] as $derivative) {
-                    $totalFileSize += $derivative['size'];
+        $hasDerivatives = !empty($stats['pictures']['derivatives']) || !empty($stats['sections']['derivatives']) || !empty($stats['documents']['derivatives']);
+        if ($hasDerivatives) {
+            foreach (['pictures', 'sections', 'documents'] as $type) {
+                foreach ($stats[$type]['derivatives'] as $data) {
+                    foreach ($data['derivatives'] as $derivative) {
+                        $totalFileSize += $derivative['size'];
+                    }
                 }
+            }
+        } else {
+            foreach ($stats['derivative_summary'] ?? [] as $summary) {
+                $totalFileSize += $summary['total_size'] ?? 0;
             }
         }
 
         echo "┌" . $borderLine . "┐\n";
         echo "│" . str_pad("TOTAL SIZE OF ALL DERIVATIVES", $tableWidth - 2, ' ', STR_PAD_BOTH) . "│\n";
         echo "├" . $borderLine . "┤\n";
-        $line = str_pad("Total size:", 25, ' ') . str_pad(self::formatBytes($totalFileSize), 15, ' ', STR_PAD_LEFT);
+        $line = str_pad("Total size:", 25, ' ') . str_pad(VerificationStats::formatBytes($totalFileSize), 15, ' ', STR_PAD_LEFT);
         echo "│" . str_pad($line, $tableWidth - 2, ' ') . "│\n";
         echo "└" . $borderLine . "┘\n";
         echo "\n";

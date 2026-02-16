@@ -35,7 +35,9 @@ class IndexMongoCommand extends AbstractCommand
 
         switch ($subcommand) {
             case 'all':
+                $this->output->info('Building MongoDB index for all configured media objects...');
                 $indexer->createIndexes();
+                $this->output->success('MongoDB index build complete.');
                 break;
             case 'mediaobject':
                 $ids = $this->parseIds($idsArg);
@@ -43,7 +45,9 @@ class IndexMongoCommand extends AbstractCommand
                     $this->output->error('mediaobject requires comma-separated id(s) as second argument.');
                     return 1;
                 }
+                $this->output->info('Indexing ' . count($ids) . ' media object(s)...');
                 $indexer->upsertMediaObject($ids);
+                $this->output->success('Done.');
                 break;
             case 'destroy':
                 $ids = $this->parseIds($idsArg);
@@ -51,16 +55,24 @@ class IndexMongoCommand extends AbstractCommand
                     $this->output->error('destroy requires comma-separated id(s) as second argument.');
                     return 1;
                 }
+                $this->output->info('Removing ' . count($ids) . ' media object(s) from index...');
                 $indexer->deleteMediaObject($ids);
+                $this->output->success('Done.');
                 break;
             case 'indexes':
+                $this->output->info('Creating MongoDB collection indexes...');
                 $indexer->createCollectionIndexes();
+                $this->output->success('Collection indexes created.');
                 break;
             case 'flush':
+                $this->output->info('Flushing MongoDB collections...');
                 $indexer->flushCollections();
+                $this->output->success('Collections flushed.');
                 break;
             case 'create_collections':
+                $this->output->info('Creating MongoDB collections if not present...');
                 $indexer->createCollectionsIfNotExists();
+                $this->output->success('Collections ready.');
                 break;
             case 'remove_temp_collections':
                 $count = $indexer->removeTempCollections();

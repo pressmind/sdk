@@ -64,6 +64,23 @@ class Php implements AdapterInterface
     }
 
     /**
+     * @return array<string, array<string, mixed>>
+     */
+    public function readAllEnvironments()
+    {
+        include_once $this->_config_file;
+        /** @var array $config */
+        $dev = $config['development'] ?? [];
+        $prod = !empty($config['production']) ? $config['production'] : [];
+        $test = !empty($config['testing']) ? $config['testing'] : [];
+        return [
+            'development' => $dev,
+            'production' => array_merge($dev, $prod),
+            'testing' => array_merge($dev, $test),
+        ];
+    }
+
+    /**
      * @param $expression
      * @param bool $return
      * @return mixed|string|string[]|null

@@ -6,6 +6,43 @@
       "php_cli_binary": "php",
       "timezone": "Europe/Berlin"
     },
+    "backend": {
+      "enabled": false,
+      "cli_runner": "APPLICATION_PATH/cli/run.php",
+      "auth": {
+        "provider": "password",
+        "config": {
+          "password": "change-me-in-production"
+        }
+      },
+      "EXAMPLE_auth_providers": {
+        "password": {
+          "provider": "password",
+          "config": {
+            "password": "your-secret-password",
+            "returnUrlParam": "return_url"
+          }
+        },
+        "basic_auth": {
+          "provider": "basic_auth",
+          "config": {
+            "username": "admin",
+            "password": "your-secret-password"
+          }
+        },
+        "wordpress": {
+          "provider": "wordpress",
+          "config": {
+            "capability": "edit_pages"
+          }
+        },
+        "callback": {
+          "provider": "callback",
+          "config": {},
+          "_note": "Callbacks (isAuthenticated, getCurrentUser, etc.) must be set in PHP when registering the provider, not in JSON"
+        }
+      }
+    },
     "database": {
       "username": "",
       "password": "",

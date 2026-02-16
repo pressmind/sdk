@@ -75,6 +75,12 @@ Welcome to the pressmind SDK documentation. This documentation covers the comple
 | [CLI Reference](cli-reference.md) | Complete CLI command reference: Import (primary), Index Mongo, and all other commands with parameter documentation |
 | [CLI WordPress Tools](cli-wordpress-tools.md) | WordPress helpers and WordPress-dependent CLI commands; CMS independence and when to use |
 
+### Management Backend
+
+| Document | Description |
+|---|---|
+| [Management Backend](backend.md) | Web UI for config, commands, logs, data, search, docs, import and validation; standalone and WordPress entry points, auth providers, SSE streaming |
+
 ### API
 
 | Document | Description |
@@ -154,3 +160,4 @@ pressmind PIM
 - **Building templates?** See [Template Interface](template-interface.md) → [Real-World Examples](real-world-examples.md)
 - **Understanding prices?** See [CheapestPrice Aggregation](cheapest-price-aggregation.md)
 - **CLI commands (import, index-mongo, etc.)?** See [CLI Reference](cli-reference.md); for WordPress helpers see [CLI WordPress Tools](cli-wordpress-tools.md)
+- **Web backend (config, commands, logs, validation)?** See [Management Backend](backend.md)

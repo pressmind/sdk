@@ -21,11 +21,11 @@ class BasicAuthProvider implements ProviderInterface
 
     public function isAuthenticated(): bool
     {
+        if ($this->username === '' || $this->password === '') {
+            return false;
+        }
         $user = $_SERVER['PHP_AUTH_USER'] ?? '';
         $pass = $_SERVER['PHP_AUTH_PW'] ?? '';
-        if ($this->username === '' && $this->password === '') {
-            return true;
-        }
         return $user === $this->username && $pass === $this->password;
     }
 
@@ -59,12 +59,23 @@ class BasicAuthProvider implements ProviderInterface
 
     public function createNonce(string $action): ?string
     {
-        return bin2hex(random_bytes(16));
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $key = 'pm_backend_nonce_' . $action;
+        if (!isset($_SESSION[$key])) {
+            $_SESSION[$key] = bin2hex(random_bytes(16));
+        }
+        return $_SESSION[$key];
     }
 
     public function verifyNonce(string $nonce, string $action): bool
     {
-        return true;
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $key = 'pm_backend_nonce_' . $action;
+        return isset($_SESSION[$key]) && hash_equals($_SESSION[$key], $nonce);
     }
 
     /**

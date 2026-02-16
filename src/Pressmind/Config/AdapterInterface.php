@@ -25,4 +25,12 @@ interface AdapterInterface
      * @return void
      */
     public function write($data);
+
+    /**
+     * Read config for all environments (development, production, testing).
+     * Used for diff view. Keys: development, production, testing; each value is the full merged config for that env.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public function readAllEnvironments();
 }

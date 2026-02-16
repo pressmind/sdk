@@ -10,9 +10,10 @@ use Pressmind\HelperFunctions;
 use Pressmind\Storage\AbstractProvider;
 use Pressmind\Storage\Bucket;
 use Pressmind\Storage\File;
+use Pressmind\Storage\PrefixListableInterface;
 use Pressmind\Storage\ProviderInterface;
 
-class Filesystem extends AbstractProvider implements ProviderInterface
+class Filesystem extends AbstractProvider implements ProviderInterface, PrefixListableInterface
 {
 
     /**
@@ -176,5 +177,25 @@ class Filesystem extends AbstractProvider implements ProviderInterface
             }
         }
         return $files;
+    }
+
+    /**
+     * Lists all files whose name starts with $prefix. Returns filename => size for efficient bulk checks.
+     *
+     * @param string $prefix
+     * @param Bucket $bucket
+     * @return array<string, int> filename => filesize in bytes
+     */
+    public function listByPrefix(string $prefix, Bucket $bucket): array
+    {
+        $bucket->name = HelperFunctions::replaceConstantsFromConfig($bucket->name);
+        $result = [];
+        $pattern = $bucket->name . DIRECTORY_SEPARATOR . $prefix . '*';
+        foreach (glob($pattern) as $path) {
+            if (is_file($path)) {
+                $result[basename($path)] = (int) filesize($path);
+            }
+        }
+        return $result;
     }
 }

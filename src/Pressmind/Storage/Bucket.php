@@ -7,6 +7,8 @@ namespace Pressmind\Storage;
 use Exception;
 use Pressmind\Registry;
 use Pressmind\Storage\Provider\Factory;
+use Pressmind\Storage\ProviderInterface;
+use Pressmind\Storage\PrefixListableInterface;
 
 class Bucket
 {
@@ -16,7 +18,12 @@ class Bucket
     public $name;
 
     private $_config;
-    
+
+    /**
+     * @var ProviderInterface|null
+     */
+    private $_provider = null;
+
     public $storage = [];
 
     /**
@@ -31,14 +38,25 @@ class Bucket
     }
 
     /**
+     * Returns the storage provider instance (lazy-initialized, cached).
+     * @return ProviderInterface
+     */
+    private function getProvider(): ProviderInterface
+    {
+        if ($this->_provider === null) {
+            $this->_provider = Factory::create($this->storage);
+        }
+        return $this->_provider;
+    }
+
+    /**
      * @param $file
      * @return true
      * @throws Exception
      */
     public function addFile($file)
     {
-        $storageProvider = Factory::create($this->storage);
-        return $storageProvider->save($file, $this);
+        return $this->getProvider()->save($file, $this);
     }
 
     /**
@@ -48,8 +66,7 @@ class Bucket
      */
     public function removeFile($file)
     {
-        $storageProvider = Factory::create($this->storage);
-        return $storageProvider->delete($file, $this);
+        return $this->getProvider()->delete($file, $this);
     }
     /**
      * @return true
@@ -57,8 +74,7 @@ class Bucket
      */
     public function removeAll()
     {
-        $storageProvider = Factory::create($this->storage);
-        return $storageProvider->deleteAll($this);
+        return $this->getProvider()->deleteAll($this);
     }
 
     /**
@@ -67,8 +83,7 @@ class Bucket
      */
     public function fileExists($file)
     {
-        $storageProvider = Factory::create($this->storage);
-        return $storageProvider->fileExists($file, $this);
+        return $this->getProvider()->fileExists($file, $this);
     }
 
     /**
@@ -78,8 +93,7 @@ class Bucket
      */
     public function readFile($file)
     {
-        $storageProvider = Factory::create($this->storage);
-        return $storageProvider->readFile($file, $this);
+        return $this->getProvider()->readFile($file, $this);
     }
 
     /**
@@ -89,8 +103,7 @@ class Bucket
      */
     public function filesize($file)
     {
-        $storageProvider = Factory::create($this->storage);
-        return $storageProvider->filesize($file, $this);
+        return $this->getProvider()->filesize($file, $this);
     }
 
     /**
@@ -100,8 +113,7 @@ class Bucket
      */
     public function setFileMode($file)
     {
-        $storageProvider = Factory::create($this->storage);
-        return $storageProvider->setFileMode($file, $this);
+        return $this->getProvider()->setFileMode($file, $this);
     }
 
 
@@ -110,7 +122,29 @@ class Bucket
      * @throws Exception
      */
     public function listFiles() {
-        $storageProvider = Factory::create($this->storage);
-        return $storageProvider->listBucket($this);
+        return $this->getProvider()->listBucket($this);
+    }
+
+    /**
+     * Whether the storage provider supports listByPrefix (e.g. S3, Filesystem).
+     */
+    public function supportsPrefixListing(): bool
+    {
+        return $this->getProvider() instanceof PrefixListableInterface;
+    }
+
+    /**
+     * Lists files by prefix with their sizes. One API call per prefix (e.g. per image) instead of per-file HEAD requests.
+     *
+     * @param string $prefix Key prefix (e.g. "image_12345_")
+     * @return array<string, int> filename => size in bytes, or empty array if provider does not support prefix listing
+     */
+    public function listByPrefix(string $prefix): array
+    {
+        $provider = $this->getProvider();
+        if ($provider instanceof PrefixListableInterface) {
+            return $provider->listByPrefix($prefix, $this);
+        }
+        return [];
     }
 }

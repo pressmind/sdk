@@ -51,6 +51,7 @@ class LogController extends AbstractController
         }
 
         $baseUrl = $this->buildLogBaseUrl();
+        $truncateNonce = $this->getAuth()->createNonce('log_truncate');
         $this->render('log/index.php', [
             'title' => 'Logs',
             'rows' => $rowsPlain,
@@ -61,6 +62,7 @@ class LogController extends AbstractController
             'totalPages' => $totalPages,
             'total' => $total,
             'baseUrl' => $baseUrl,
+            'truncateNonce' => $truncateNonce,
         ]);
     }
 
@@ -132,11 +134,16 @@ class LogController extends AbstractController
     }
 
     /**
-     * Truncate all log entries (POST only).
+     * Truncate all log entries (POST only, CSRF-protected).
      */
     public function truncateAction(): void
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect($this->logPageUrl());
+            return;
+        }
+        $nonce = $_POST['_pm_nonce'] ?? '';
+        if ($nonce === '' || !$this->getAuth()->verifyNonce($nonce, 'log_truncate')) {
             $this->redirect($this->logPageUrl());
             return;
         }

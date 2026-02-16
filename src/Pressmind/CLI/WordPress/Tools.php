@@ -43,15 +43,16 @@ class Tools
      * Boots WordPress in headless mode (no theme rendering).
      *
      * @param bool $loadAdmin Also load wp-admin includes (needed for $wpdb, update_option, etc.)
+     * @param string|null $startDir Directory to start searching for wp-config.php (default: getcwd()). Use __DIR__ from your script for reliable resolution.
      * @throws RuntimeException If WordPress base path cannot be found
      */
-    public static function boot(bool $loadAdmin = false): void
+    public static function boot(bool $loadAdmin = false, ?string $startDir = null): void
     {
         if (self::$booted) {
             return;
         }
 
-        $basePath = self::findBasePath();
+        $basePath = self::findBasePath($startDir);
         if ($basePath === null) {
             throw new RuntimeException('WordPress base path not found (no wp-config.php in parent directories).');
         }

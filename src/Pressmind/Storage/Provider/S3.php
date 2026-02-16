@@ -11,9 +11,10 @@ use Pressmind\Log\Writer;
 use Pressmind\Registry;
 use Pressmind\Storage\Bucket;
 use Pressmind\Storage\File;
+use Pressmind\Storage\PrefixListableInterface;
 use Pressmind\Storage\ProviderInterface;
 
-class S3 implements ProviderInterface
+class S3 implements ProviderInterface, PrefixListableInterface
 {
 
     /**
@@ -186,5 +187,26 @@ class S3 implements ProviderInterface
             $files[] = $file;
         }
         return $files;
+    }
+
+    /**
+     * Lists all objects whose key starts with $prefix. Returns key => size for efficient bulk checks.
+     *
+     * @param string $prefix
+     * @param Bucket $bucket
+     * @return array<string, int> filename => filesize in bytes
+     */
+    public function listByPrefix(string $prefix, Bucket $bucket): array
+    {
+        $result = [];
+        $params = ['Bucket' => $bucket->name, 'Prefix' => $prefix];
+        do {
+            $response = $this->_s3_client->listObjectsV2($params);
+            foreach ($response['Contents'] ?? [] as $object) {
+                $result[$object['Key']] = (int) $object['Size'];
+            }
+            $params['ContinuationToken'] = $response['NextContinuationToken'] ?? null;
+        } while (!empty($params['ContinuationToken']));
+        return $result;
     }
 }

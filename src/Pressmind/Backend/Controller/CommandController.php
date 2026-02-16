@@ -25,16 +25,23 @@ class CommandController extends AbstractController
     {
         $commandName = $this->get('command');
         $command = $commandName ? CommandRegistry::get($commandName) : null;
+        $streamNonce = $this->getAuth()->createNonce('command_stream');
         $this->render('command/execute.php', [
             'title' => 'Execute Command',
             'command' => $command,
             'commandName' => $commandName,
             'allCommands' => CommandRegistry::getAll(),
+            'streamNonce' => $streamNonce,
         ]);
     }
 
     public function streamAction(): void
     {
+        $nonce = $this->get('_pm_nonce') ?? $_POST['_pm_nonce'] ?? '';
+        if ($nonce === '' || !$this->getAuth()->verifyNonce($nonce, 'command_stream')) {
+            $this->json(['error' => 'Invalid or missing nonce'], 403);
+            return;
+        }
         $commandName = $this->get('command');
         if ($commandName === null || $commandName === '' || !CommandRegistry::has($commandName)) {
             $this->json(['error' => 'Unknown command'], 400);
@@ -42,12 +49,12 @@ class CommandController extends AbstractController
         }
         $args = [];
         foreach ($_GET as $k => $v) {
-            if ($k !== 'page' && $k !== 'action' && $k !== 'command' && is_string($v)) {
+            if ($k !== 'page' && $k !== 'action' && $k !== 'command' && $k !== '_pm_nonce' && is_string($v)) {
                 $args[$k] = $v;
             }
         }
         foreach ($_POST as $k => $v) {
-            if ($k !== 'page' && $k !== 'action' && $k !== 'command' && is_string($v)) {
+            if ($k !== 'page' && $k !== 'action' && $k !== 'command' && $k !== '_pm_nonce' && is_string($v)) {
                 $args[$k] = $v;
             }
         }

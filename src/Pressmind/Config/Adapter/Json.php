@@ -56,4 +56,23 @@ class Json implements AdapterInterface
         $tmp_config[$this->_environment] = $data;
         file_put_contents($this->_config_file, json_encode($tmp_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    public function readAllEnvironments()
+    {
+        $tmp_config = json_decode(file_get_contents($this->_config_file), true);
+        if (!is_array($tmp_config)) {
+            return ['development' => [], 'production' => [], 'testing' => []];
+        }
+        $dev = $tmp_config['development'] ?? [];
+        $prod = $tmp_config['production'] ?? [];
+        $test = $tmp_config['testing'] ?? [];
+        return [
+            'development' => $dev,
+            'production' => array_merge($dev, $prod),
+            'testing' => array_merge($dev, $test),
+        ];
+    }
 }

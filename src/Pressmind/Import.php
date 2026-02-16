@@ -534,6 +534,7 @@ class Import
                 $tmpObject->touristic_insurances_price_tables = !empty($response[0]->insurance_group->insurances_price_tables) ? $response[0]->insurance_group->insurances_price_tables : [];
                 $tmpObject->touristic_insurance_to_attribute = !empty($response[0]->insurance_group->insurance_to_attribute) ? $response[0]->insurance_group->insurance_to_attribute : [];
                 $tmpObject->touristic_insurance_attributes = !empty($response[0]->insurance_group->insurance_attributes) ? $response[0]->insurance_group->insurance_attributes : [];
+                $tmpObject->touristic_insurance_to_alternate = !empty($response[0]->insurance_group->alternate_insurance_to_insurance) ? $response[0]->insurance_group->alternate_insurance_to_insurance : [];
                 $touristic_data_importer = new TouristicData();
                 $touristic_data_importer->import($tmpObject, $id_media_object, $this->_import_type);
             }

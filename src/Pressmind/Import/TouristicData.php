@@ -6,6 +6,7 @@ use Pressmind\DB\Adapter\AdapterInterface;
 use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup\Item;
 use Pressmind\ORM\Object\Touristic\Housing\Package;
+use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToAlternate;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToGroup;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToInsurance;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToPriceTable;
@@ -39,6 +40,7 @@ class TouristicData extends AbstractImport
         'touristic_insurances_to_price_table' => '\Insurance\InsuranceToPriceTable',
         'touristic_insurance_to_attribute' => '\Insurance\InsuranceToAttribute',
         'touristic_insurance_attributes' => '\Insurance\Attribute',
+        'touristic_insurance_to_alternate' => '\Insurance\InsuranceToAlternate',
         'touristic_option_discounts' => '\Option\Discount'
     ];
 
@@ -174,6 +176,7 @@ class TouristicData extends AbstractImport
         $insurance_to_group = [];
         $insurances_to_price_table = [];
         $insurance_to_attribute = [];
+        $insurance_to_alternate = [];
         foreach($data as $touristic_object_name => $touristic_objects){
             if($touristic_object_name == 'touristic_insurance_to_group'){
                 foreach($touristic_objects as $item){
@@ -188,6 +191,11 @@ class TouristicData extends AbstractImport
             if($touristic_object_name == 'touristic_insurance_to_attribute'){
                 foreach($touristic_objects as $item){
                     $insurance_to_attribute[$item->id_insurance][] = $item;
+                }
+            }
+            if($touristic_object_name == 'touristic_insurance_to_alternate'){
+                foreach($touristic_objects as $item){
+                    $insurance_to_alternate[$item->id_insurance][] = $item;
                 }
             }
         }
@@ -270,6 +278,33 @@ class TouristicData extends AbstractImport
             foreach ($items_to_delete as $item) {
                 $db->execute('DELETE FROM pmt2core_touristic_insurance_to_attributes WHERE id_insurance = ? AND id_attribute = ?',
                     [$item['id_insurance'], $item['id_attribute']]);
+            }
+        }
+
+        // Remove orphaned insurance_to_alternate entries
+        if (!empty($insurance_to_alternate)) {
+            $insurance_ids = array_keys($insurance_to_alternate);
+            $placeholders = implode(',', array_fill(0, count($insurance_ids), '?'));
+            $allStoredItems = $db->fetchAll(
+                "SELECT id_insurance, id_alternate_insurance FROM pmt2core_touristic_insurance_to_alternate WHERE id_insurance IN ($placeholders)",
+                $insurance_ids
+            );
+            $items_to_delete = [];
+            foreach ($allStoredItems as $storedItem) {
+                $id_insurance = $storedItem->id_insurance;
+                $id_alternate_insurance = $storedItem->id_alternate_insurance;
+                if (isset($insurance_to_alternate[$id_insurance])) {
+                    $result = array_filter($insurance_to_alternate[$id_insurance], function($v) use ($id_alternate_insurance) {
+                        return $v->id_alternate_insurance == $id_alternate_insurance;
+                    });
+                    if (count($result) == 0) {
+                        $items_to_delete[] = ['id_insurance' => $id_insurance, 'id_alternate_insurance' => $id_alternate_insurance];
+                    }
+                }
+            }
+            foreach ($items_to_delete as $item) {
+                $db->execute('DELETE FROM pmt2core_touristic_insurance_to_alternate WHERE id_insurance = ? AND id_alternate_insurance = ?',
+                    [$item['id_insurance'], $item['id_alternate_insurance']]);
             }
         }
 

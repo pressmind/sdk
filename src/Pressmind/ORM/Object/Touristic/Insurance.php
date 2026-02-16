@@ -9,6 +9,7 @@ use Pressmind\ORM\Object\Touristic\Insurance\Calculated;
 use Pressmind\ORM\Object\Touristic\Insurance\Group;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToAttribute;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToGroup;
+use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToAlternate;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToInsurance;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToPriceTable;
 use Pressmind\ORM\Object\Touristic\Insurance\Package;
@@ -36,6 +37,7 @@ use Pressmind\Registry;
  * @property string $code_ibe
  * @property PriceTable[] $price_tables
  * @property Insurance[] $sub_insurances
+ * @property Insurance[] $alternate_insurances
  * @property string $own_contribution
  * @property Attribute[] $attributes
  * @property string $request_code
@@ -280,6 +282,22 @@ class Insurance extends AbstractObject
                     'target_id' => 'id_sub_insurance',
                 ],
             ],
+            'alternate_insurances' => [
+                'name' => 'alternate_insurances',
+                'title' => 'alternate_insurances',
+                'type' => 'relation',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+                'relation' => [
+                    'type' => 'ManyToMany',
+                    'class' => Insurance::class,
+                    'relation_table' => 'pmt2core_touristic_insurance_to_alternate',
+                    'relation_class' => InsuranceToAlternate::class,
+                    'related_id' => 'id_insurance',
+                    'target_id' => 'id_alternate_insurance',
+                ],
+            ],
             'own_contribution' => [
                 'title' => 'own_contribution',
                 'name' => 'own_contribution',
@@ -462,6 +480,7 @@ class Insurance extends AbstractObject
         $price_table = new PriceTable();
         $insurance_to_price_table = new InsuranceToPriceTable();
         $insurance_to_insurance = new InsuranceToInsurance();
+        $insurance_to_alternate = new InsuranceToAlternate();
         $price_table_package = new Package();
         $price_table_to_package = new PriceTableToPackage();
         $insurance_to_attribute = new InsuranceToAttribute();
@@ -472,6 +491,7 @@ class Insurance extends AbstractObject
         $db->truncate($price_table->getDbTableName());
         $db->truncate($insurance_to_price_table->getDbTableName());
         $db->truncate($insurance_to_insurance->getDbTableName());
+        $db->truncate($insurance_to_alternate->getDbTableName());
         $db->truncate($price_table_package->getDbTableName());
         $db->truncate($price_table_to_package->getDbTableName());
         $db->truncate($insurance_to_attribute->getDbTableName());

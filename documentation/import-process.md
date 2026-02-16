@@ -194,6 +194,7 @@ Delete existing media object (cascade)
 - Booking packages, dates, housing packages, options
 - Transport options, starting point options
 - Insurance groups and insurances
+- Alternate insurance mappings (insurance → alternate insurance with order)
 - Collects linked media object IDs from touristic data
 
 **3.3 – Import Starting Point Options** (`StartingPointOptions::import()`)

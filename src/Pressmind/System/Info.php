@@ -67,6 +67,7 @@ class Info
         '\Touristic\Insurance\Attribute',
         '\Touristic\Insurance\InsuranceToGroup',
         '\Touristic\Insurance\InsuranceToInsurance',
+        '\Touristic\Insurance\InsuranceToAlternate',
         '\Touristic\Insurance\InsuranceToAttribute',
         '\Touristic\Insurance\InsuranceToPriceTable',
         '\Touristic\Insurance\PriceTable',

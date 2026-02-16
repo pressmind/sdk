@@ -337,6 +337,8 @@ MongoDB::getResult()
 
 **Why this pattern?** Travel websites often need to integrate external data sources (availability APIs, partner inventories). The hook system allows this without forking the SDK.
 
+**Search Hooks during validation:** After import (and when opening validation in the Backend), `MediaObject::validate()` runs. To check whether the product appears in the MongoDB search index (“MongoIndex Results”), it calls `Query::getResult()` with a filter limited to that media object. That goes through the full search pipeline, so `executePreSearch` and `executePostSearch` are always called. If you want to avoid triggering external hooks during validation, set `QueryFilter->skip_search_hooks = true` before calling `Query::getResult()` in validation code; the hooks will then be skipped for that request.
+
 ---
 
 ### 8. Value Object

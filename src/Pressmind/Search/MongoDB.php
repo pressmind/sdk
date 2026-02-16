@@ -333,9 +333,10 @@ class MongoDB extends AbstractSearch
      * @param boolean $getFilters
      * @param boolean $returnFiltersOnly
      * @param \DateTime|null $preview_date
+     * @param array $options Optional: ['skip_search_hooks' => true] to skip pre/post search hooks (e.g. validation)
      * @return mixed
      */
-    public function getResult($getFilters = false, $returnFiltersOnly = false, $ttl = 0, $output = null, $preview_date = null, $allowed_visibilities = [30], SearchType $search_type = SearchType::DEFAULT)
+    public function getResult($getFilters = false, $returnFiltersOnly = false, $ttl = 0, $output = null, $preview_date = null, $allowed_visibilities = [30], SearchType $search_type = SearchType::DEFAULT, array $options = [])
     {
         $this->_addLog('getResult(): starting query');
         if (!empty($ttl) && Registry::getInstance()->get('config')['cache']['enabled'] && in_array('MONGODB', Registry::getInstance()->get('config')['cache']['types']) && $this->_skip_cache == false) {
@@ -361,6 +362,7 @@ class MongoDB extends AbstractSearch
             'conditions' => $this->_conditions,
             'sort' => $this->_sort,
             'search_type' => $search_type,
+            'skip_search_hooks' => !empty($options['skip_search_hooks']),
         ];
         
         $hookResult = SearchHookManager::executePreSearch($this->_conditions, $hookContext);

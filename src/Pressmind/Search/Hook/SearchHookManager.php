@@ -175,6 +175,9 @@ class SearchHookManager
      */
     public static function executePreSearch(array $conditions, array $context): ?SearchHookResult
     {
+        if (!empty($context['skip_search_hooks'])) {
+            return null;
+        }
         self::initFromConfig();
         self::sortHooks();
         
@@ -220,6 +223,9 @@ class SearchHookManager
      */
     public static function executePostSearch(object $result, array $context): object
     {
+        if (!empty($context['skip_search_hooks'])) {
+            return $result;
+        }
         self::initFromConfig();
         self::sortHooks();
         

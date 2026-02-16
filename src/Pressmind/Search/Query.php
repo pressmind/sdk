@@ -87,13 +87,15 @@ class Query
                 $QueryFilter->preview_date,
                 $QueryFilter->allowed_visibilities,
                 $QueryFilter->search_type,
-                $QueryFilter->ttl_filter
+                $QueryFilter->ttl_filter,
+                $QueryFilter->skip_search_hooks ?? false,
             ]));
             $start_time = microtime(true);
             if(isset(self::$_run_time_cache_filter[$filter_cache_key])){
                 $result_filter = self::$_run_time_cache_filter[$filter_cache_key];
             }else{
-                $result_filter = $filter->getResult(true, true, $QueryFilter->ttl_filter, null, $QueryFilter->preview_date, $QueryFilter->allowed_visibilities, $QueryFilter->search_type);
+                $options = ['skip_search_hooks' => !empty($QueryFilter->skip_search_hooks)];
+                $result_filter = $filter->getResult(true, true, $QueryFilter->ttl_filter, null, $QueryFilter->preview_date, $QueryFilter->allowed_visibilities, $QueryFilter->search_type, $options);
                 self::$_run_time_cache_filter[$filter_cache_key] = $result_filter;
             }
             $end_time = microtime(true);
@@ -108,7 +110,8 @@ class Query
                 self::$_run_time_cache_search[$cache_key] = $search;
             }
             $start_time = microtime(true);
-            $result = $search->getResult(true, false, $QueryFilter->ttl_search, $QueryFilter->output, $QueryFilter->preview_date, $QueryFilter->allowed_visibilities, $QueryFilter->search_type);
+            $options = ['skip_search_hooks' => !empty($QueryFilter->skip_search_hooks)];
+            $result = $search->getResult(true, false, $QueryFilter->ttl_search, $QueryFilter->output, $QueryFilter->preview_date, $QueryFilter->allowed_visibilities, $QueryFilter->search_type, $options);
             $end_time = microtime(true);
             $duration_search_ms = ($end_time - $start_time) * 1000;
             $item_count = 0;

@@ -2528,6 +2528,7 @@ class MediaObject extends AbstractObject
                     $QueryFilter = new Query\Filter();
                     $QueryFilter->request = ['pm-id' => $this->getId()];
                     $QueryFilter->occupancy = null;
+                    $QueryFilter->skip_search_hooks = true;
                     Query::$agency_id_price_index = $agency;
                     $r = Query::getResult($QueryFilter);
                     if($r['total_result'] > 0){
@@ -2551,6 +2552,7 @@ class MediaObject extends AbstractObject
             $QueryFilter = new Query\Filter();
             $QueryFilter->request = ['pm-id' => $this->getId()];
             $QueryFilter->occupancy = null;
+            $QueryFilter->skip_search_hooks = true;
             $r = Query::getResult($QueryFilter);
             $result[] = '     '.($r['total_result'] > 0 ? '✅' : '❌') . ' MongoIndex Results (count: '.$r['total_result'].')';
             if($r['total_result'] == 0 && !empty($r['mongodb']['aggregation_pipeline_search'])){

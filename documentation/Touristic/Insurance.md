@@ -112,8 +112,7 @@ Links insurances to attributes (coverage items). Composite primary key.
 |----------|------|-------------|
 | `id_insurance` | string(32) | Insurance ID |
 | `id_attribute` | string(32) | Attribute ID |
-
-The API may send an `order` field per assignment; it is not stored in this table (it is stripped during import). Sort order for displaying attributes is determined by the Attribute’s own `order` field.
+| `order` | integer | Sort order for this attribute within the insurance (imported from API). |
 
 ---
 

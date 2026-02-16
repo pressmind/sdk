@@ -17,4 +17,7 @@ class Filter
     public $custom_conditions = [];
     public $allowed_visibilities = [30];
     public SearchType $search_type = SearchType::DEFAULT;
+
+    /** If true, pre/post search hooks are not executed (e.g. for MediaObject validation). */
+    public $skip_search_hooks = false;
 }

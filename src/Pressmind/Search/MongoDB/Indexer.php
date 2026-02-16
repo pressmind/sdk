@@ -1363,6 +1363,7 @@ class Indexer extends AbstractIndex
                 $result->earlybird_discount = floatval($result->earlybird_discount);
                 $result->earlybird_discount_f = floatval($result->earlybird_discount_f);
                 $result->quota_pax = intval($result->quota_pax);
+                $result->state = intval($result->state);
                 if (!empty($result->startingpoint_id_city)) {
                     $result->startingpoint_option = new \stdClass();
                     $result->startingpoint_option->id_city = $result->startingpoint_id_city;
@@ -1482,6 +1483,7 @@ class Indexer extends AbstractIndex
                 $result->earlybird_discount = floatval($result->earlybird_discount);
                 $result->earlybird_discount_f = floatval($result->earlybird_discount_f);
                 $result->quota_pax = intval($result->quota_pax);
+                $result->state = intval($result->state);
                 if (!empty($result->startingpoint_city)) {
                     $result->startingpoint_option = new \stdClass();
                     $result->startingpoint_option->id_city = $result->startingpoint_id_city;

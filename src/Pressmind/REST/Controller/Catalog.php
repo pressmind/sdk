@@ -466,7 +466,7 @@ class Catalog
                     'type' => 'product',
                     'id' => $item['id_media_object'],
                     'label' => html_entity_decode(strip_tags($item['headline'])),
-                    'search' => ['pm-id' => (string)$item['id_media_object']]
+                    'search' => []
                 ];
             }
         }
@@ -487,7 +487,8 @@ class Catalog
             $departures[] = [
                 'type' => 'departure',
                 'label' => $row->dep_label . ' ' . html_entity_decode(strip_tags($row->headline)),
-                'search' => ['pm-id' => (string)$row->id_media_object, 'pm-dr' => $row->dep_id]
+                'id' => $row->id_media_object,
+                'search' => ['pm-dr' => $row->dep_id]
             ];
         }
 

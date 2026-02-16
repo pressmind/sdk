@@ -101,10 +101,6 @@ class TouristicData extends AbstractImport
                     if($touristic_object_name == 'touristic_option_discounts') {
                         unset($touristic_object->import_code);
                     }
-                    if($touristic_object_name == 'touristic_insurance_to_attribute') {
-                        // Strip fields not defined in InsuranceToAttribute model, get fixed in api soon
-                        unset($touristic_object->order);
-                    }
                     $class_name = '\Pressmind\ORM\Object\Touristic' . $this->_touristic_object_map[$touristic_object_name];
                     foreach ($touristic_object as $key => $value) {
                         if (isset($this->_touristic_object_field_map[$touristic_object_name][$key])) {

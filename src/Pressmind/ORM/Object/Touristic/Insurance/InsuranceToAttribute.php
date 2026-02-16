@@ -13,6 +13,7 @@ use Pressmind\Registry;
  * @package Pressmind\ORM\Object\Touristic\Insurance
  * @property string $id_insurance
  * @property string $id_attribute
+ * @property integer $order
  */
 class InsuranceToAttribute extends AbstractObject
 {
@@ -64,6 +65,23 @@ class InsuranceToAttribute extends AbstractObject
                     'index' => [
                         'id_attribute' => 'index'
                     ]
+                ],
+                'order' => [
+                    'title' => 'Order',
+                    'name' => 'order',
+                    'type' => 'integer',
+                    'required' => false,
+                    'validators' => [
+                        [
+                            'name' => 'maxlength',
+                            'params' => 11,
+                        ],
+                        [
+                            'name' => 'unsigned',
+                            'params' => null,
+                        ]
+                    ],
+                    'filters' => NULL,
                 ]
             ]
     );

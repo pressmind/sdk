@@ -201,9 +201,6 @@ class Entrypoint
             if(!empty($params['filter_transport_type'])){
                 unset($Calendar->filter['transport_types']);
             }
-            if ( !empty($MediaObject->touristic_base->booking_on_request)) {
-                throw new Exception('booking_on_request is active');
-            }
             if (empty($CheapestPrice)) {
                 throw new Exception('No cheapest price available');
             }

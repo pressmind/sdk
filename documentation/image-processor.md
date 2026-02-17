@@ -28,9 +28,11 @@
   - [GrayscaleFilter](#grayscalefilter)
   - [Creating Custom Filters](#creating-custom-filters)
 - [Storage Providers](#storage-providers)
+- [Image Verification](#image-verification)
 - [Image Downloader](#image-downloader)
 - [ORM Integration (Derivative Records)](#orm-integration-derivative-records)
 - [How Images Are Triggered](#how-images-are-triggered)
+- [CLI Options](#cli-options)
 
 ---
 
@@ -472,6 +474,36 @@ The `http_src` config defines the public URL prefix for accessing stored images:
 
 In templates, images are accessed via: `$picture->getUri('teaser')` which returns the full HTTP path to the derivative.
 
+**Custom storage providers:** For efficient verification on large buckets, implement `Pressmind\Storage\FullScanInterface` and provide `scanAllKeys(callable $callback, Bucket $bucket): void`, which should invoke the callback for each object key and size without loading all keys into memory. The built-in **S3** and **Filesystem** providers implement this interface.
+
+---
+
+## Image Verification
+
+After processing and MongoDB index updates, the CLI runs an **image verification** step. It checks that all derivatives for entities with `download_successful=1` actually exist on storage and prints a report (summary, per-type counts, derivative summary, missing list, total size). Images that are reported as missing get `download_successful=0` so they are reprocessed on the next run.
+
+### Large buckets (S3, 1M+ files)
+
+For large buckets (e.g. 1 million images with many derivatives), verification uses a **streaming scan** instead of one storage API call per image:
+
+- The bucket is scanned once (paginated, e.g. 1000 keys per request).
+- An entity prefix map is built from the database (Pictures, Sections, Documents with `download_successful=1`).
+- Each storage key is matched against expected derivative keys; no full key list is kept in memory.
+
+This avoids an N+1 pattern (one API call per image) and keeps memory usage low (~150–200 MB for the prefix map). Progress is printed every 100,000 keys and a final line shows total keys and duration.
+
+**Progress output example:**
+
+```
+Starting image verification...
+Scanning bucket: 100.000 keys processed...
+Scanning bucket: 200.000 keys processed...
+...
+Bucket scan complete: 16.234.567 keys processed in 42 minutes
+```
+
+If the storage provider does not support full-scan (e.g. custom provider without `FullScanInterface`), verification falls back to the previous chunked, per-entity listing (slower for very large buckets).
+
 ---
 
 ## Image Downloader
@@ -551,3 +583,22 @@ php cli/image_processor.php mediaobject 123    # Process images for specific obj
 ```
 
 The processor checks if each derivative already exists before generating it, so running it multiple times is safe (idempotent).
+
+---
+
+## CLI Options
+
+| Argument / Option | Description |
+|-------------------|-------------|
+| `skip-verification` | Skip the verification step (no storage scan, no verification report). Use when you only want to process pending images and not wait for verification on very large buckets. |
+| `--skip-verification` | Same as the `skip-verification` argument. |
+
+**Examples:**
+
+```bash
+php cli/image_processor.php skip-verification
+php cli/image_processor.php --skip-verification
+php cli/image_processor.php mediaobject 123 skip-verification
+```
+
+See [CLI Reference](cli-reference.md#image-processor) for all image processor arguments (`unlock`, `reset-missing`, `mediaobject`, etc.).

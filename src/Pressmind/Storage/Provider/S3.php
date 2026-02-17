@@ -11,10 +11,11 @@ use Pressmind\Log\Writer;
 use Pressmind\Registry;
 use Pressmind\Storage\Bucket;
 use Pressmind\Storage\File;
+use Pressmind\Storage\FullScanInterface;
 use Pressmind\Storage\PrefixListableInterface;
 use Pressmind\Storage\ProviderInterface;
 
-class S3 implements ProviderInterface, PrefixListableInterface
+class S3 implements ProviderInterface, PrefixListableInterface, FullScanInterface
 {
 
     /**
@@ -208,5 +209,24 @@ class S3 implements ProviderInterface, PrefixListableInterface
             $params['ContinuationToken'] = $response['NextContinuationToken'] ?? null;
         } while (!empty($params['ContinuationToken']));
         return $result;
+    }
+
+    /**
+     * Iterates over all object keys in the bucket page-by-page without loading into memory.
+     *
+     * @param callable $callback Called as (string $key, int $sizeInBytes) for each object
+     * @param Bucket $bucket
+     * @return void
+     */
+    public function scanAllKeys(callable $callback, Bucket $bucket): void
+    {
+        $params = ['Bucket' => $bucket->name, 'MaxKeys' => 1000];
+        do {
+            $response = $this->_s3_client->listObjectsV2($params);
+            foreach ($response['Contents'] ?? [] as $object) {
+                $callback($object['Key'], (int) $object['Size']);
+            }
+            $params['ContinuationToken'] = $response['NextContinuationToken'] ?? null;
+        } while (!empty($params['ContinuationToken']));
     }
 }

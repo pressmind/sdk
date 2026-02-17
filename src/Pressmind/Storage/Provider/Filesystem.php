@@ -10,10 +10,13 @@ use Pressmind\HelperFunctions;
 use Pressmind\Storage\AbstractProvider;
 use Pressmind\Storage\Bucket;
 use Pressmind\Storage\File;
+use Pressmind\Storage\FullScanInterface;
 use Pressmind\Storage\PrefixListableInterface;
 use Pressmind\Storage\ProviderInterface;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 
-class Filesystem extends AbstractProvider implements ProviderInterface, PrefixListableInterface
+class Filesystem extends AbstractProvider implements ProviderInterface, PrefixListableInterface, FullScanInterface
 {
 
     /**
@@ -197,5 +200,36 @@ class Filesystem extends AbstractProvider implements ProviderInterface, PrefixLi
             }
         }
         return $result;
+    }
+
+    /**
+     * Iterates over all file keys under the bucket path without loading into memory.
+     * Key is the path relative to bucket root (forward slashes), matching S3 key style.
+     *
+     * @param callable $callback Called as (string $key, int $sizeInBytes) for each file
+     * @param Bucket $bucket
+     * @return void
+     * @throws Exception
+     */
+    public function scanAllKeys(callable $callback, Bucket $bucket): void
+    {
+        $bucket->name = HelperFunctions::replaceConstantsFromConfig($bucket->name);
+        $basePath = rtrim($bucket->name, DIRECTORY_SEPARATOR);
+        if (!is_dir($basePath)) {
+            return;
+        }
+        $it = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($basePath, RecursiveDirectoryIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::SELF_FIRST
+        );
+        $baseLen = strlen($basePath) + 1;
+        foreach ($it as $path => $fileInfo) {
+            if ($fileInfo->isFile()) {
+                $relativePath = substr($path, $baseLen);
+                $key = str_replace(DIRECTORY_SEPARATOR, '/', $relativePath);
+                $size = @filesize($path);
+                $callback($key, $size !== false ? (int) $size : 0);
+            }
+        }
     }
 }

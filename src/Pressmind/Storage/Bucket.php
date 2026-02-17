@@ -7,6 +7,7 @@ namespace Pressmind\Storage;
 use Exception;
 use Pressmind\Registry;
 use Pressmind\Storage\Provider\Factory;
+use Pressmind\Storage\FullScanInterface;
 use Pressmind\Storage\ProviderInterface;
 use Pressmind\Storage\PrefixListableInterface;
 
@@ -146,5 +147,28 @@ class Bucket
             return $provider->listByPrefix($prefix, $this);
         }
         return [];
+    }
+
+    /**
+     * Whether the storage provider supports streaming full bucket scan (e.g. S3, Filesystem).
+     */
+    public function supportsFullScan(): bool
+    {
+        return $this->getProvider() instanceof FullScanInterface;
+    }
+
+    /**
+     * Iterates over all object keys in the bucket via callback. No keys are held in memory.
+     * Use for large buckets (e.g. 1M+ files). Does nothing if provider does not implement FullScanInterface.
+     *
+     * @param callable $callback Called as (string $key, int $sizeInBytes) for each object
+     * @return void
+     */
+    public function scanAllKeys(callable $callback): void
+    {
+        $provider = $this->getProvider();
+        if ($provider instanceof FullScanInterface) {
+            $provider->scanAllKeys($callback, $this);
+        }
     }
 }

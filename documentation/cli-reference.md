@@ -361,14 +361,16 @@ php cli/index_opensearch.php create_index_templates
 
 ### Image Processor
 
-**Purpose:** Downloads and processes images, creates derivatives, and can reset missing images for reprocessing.
+**Purpose:** Downloads and processes images, creates derivatives, verifies storage (with optional skip), and can reset missing images for reprocessing.
 
-| Argument | Description |
-|----------|-------------|
-| *(none)* | Process all pending images (normal run). |
+| Argument / Option | Description |
+|-------------------|-------------|
+| *(none)* | Process all pending images, then run verification (storage scan and report). |
 | `unlock` | Removes the image processor process lock. |
 | `reset-missing` | Sets `download_successful=0` for images whose files are missing, so they are reprocessed on the next run. |
 | `mediaobject` | Second argument: `<id>[,<id>...]`. Process only images for the given media object(s). |
+| `skip-verification` | Skip the verification step after processing (no storage scan, no verification report). Useful for very large buckets when you only need to process pending images. |
+| `--skip-verification` | Same as `skip-verification`. |
 
 **Examples:**
 
@@ -377,7 +379,12 @@ php cli/image_processor.php
 php cli/image_processor.php unlock
 php cli/image_processor.php reset-missing
 php cli/image_processor.php mediaobject 12345,12346
+php cli/image_processor.php skip-verification
+php cli/image_processor.php --skip-verification
+php cli/image_processor.php mediaobject 12345,12346 skip-verification
 ```
+
+For details on verification (streaming scan, progress output, report) see [Image Processor – Image Verification](image-processor.md#image-verification).
 
 ---
 

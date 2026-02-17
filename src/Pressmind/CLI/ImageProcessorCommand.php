@@ -79,8 +79,12 @@ class ImageProcessorCommand extends AbstractCommand
             // Update MongoDB index if needed
             $this->updateMongoDbIndex();
 
-            // Verify downloaded images
-            $this->verifyImages();
+            // Verify downloaded images (unless skipped)
+            if ($this->shouldSkipVerification()) {
+                Writer::write('Verification skipped', Writer::OUTPUT_SCREEN, self::PROCESS_NAME, Writer::TYPE_INFO);
+            } else {
+                $this->verifyImages();
+            }
 
         } finally {
             Writer::write('Image processor finished, removing lock', Writer::OUTPUT_FILE, self::PROCESS_NAME, Writer::TYPE_INFO);
@@ -438,16 +442,47 @@ class ImageProcessorCommand extends AbstractCommand
     }
 
     /**
+     * Whether verification should be skipped (--skip-verification or argument skip-verification).
+     */
+    private function shouldSkipVerification(): bool
+    {
+        return $this->hasOption('skip-verification')
+            || $this->getArgument(0) === 'skip-verification'
+            || $this->getArgument(1) === 'skip-verification';
+    }
+
+    /**
      * Runs verification and returns statistics (without output).
-     * Uses chunked processing to support large buckets (e.g. 1M+ files) without exhausting memory.
+     * Uses streaming scan when bucket supports it (large buckets); otherwise chunked processing.
      *
      * @return array Verification stats with keys pictures, sections, documents; each has total, exists, missing, missing_list, derivatives (empty when chunked); plus derivative_summary
      */
     private function runVerificationAndGetStats(): array
     {
+        $startTime = microtime(true);
+        $progressCallback = function (int $keysProcessed, bool $isFinal = false) use ($startTime) {
+            if ($isFinal) {
+                $durationMinutes = round((microtime(true) - $startTime) / 60, 1);
+                Writer::write(
+                    'Bucket scan complete: ' . number_format($keysProcessed, 0, ',', '.') . ' keys processed in ' . $durationMinutes . ' minutes',
+                    Writer::OUTPUT_SCREEN,
+                    self::PROCESS_NAME,
+                    Writer::TYPE_INFO
+                );
+            } else {
+                Writer::write(
+                    'Scanning bucket: ' . number_format($keysProcessed, 0, ',', '.') . ' keys processed...',
+                    Writer::OUTPUT_SCREEN,
+                    self::PROCESS_NAME,
+                    Writer::TYPE_INFO
+                );
+            }
+        };
+
         return VerificationStats::collect($this->config, [
             'chunk_size' => VerificationStats::DEFAULT_CHUNK_SIZE,
             'max_missing_list' => VerificationStats::DEFAULT_MAX_MISSING_LIST,
+            'progress_callback' => $progressCallback,
         ]);
     }
 

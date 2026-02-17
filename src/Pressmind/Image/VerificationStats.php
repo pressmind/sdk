@@ -61,7 +61,10 @@ class VerificationStats
 
         try {
             $bucket = new Bucket($config['image_handling']['storage']);
-            if ($chunkSize > 0) {
+            if ($chunkSize > 0 && $bucket->supportsFullScan()) {
+                $progressCallback = $options['progress_callback'] ?? null;
+                self::collectStreaming($config, $verificationStats, $derivativeSummaryMap, $maxMissingList, $bucket, $progressCallback);
+            } elseif ($chunkSize > 0) {
                 self::collectChunked($config, $verificationStats, $derivativeSummaryMap, $chunkSize, $maxMissingList, $bucket);
             } else {
                 $pictures = Picture::listAll(['download_successful' => 1]);
@@ -104,6 +107,201 @@ class VerificationStats
             self::verifyDocuments($chunk, $config, $stats, false, $maxMissingList, $derivativeSummaryMap, $bucket);
             $offset += count($chunk);
         } while (count($chunk) >= $chunkSize);
+    }
+
+    /**
+     * Streaming verification: build entity prefix map from DB, then scan bucket once and match keys.
+     * Memory-efficient for 1M+ files. Requires bucket to support FullScanInterface.
+     *
+     * @param array $config
+     * @param array $stats
+     * @param array $derivativeSummaryMap
+     * @param int $maxMissingList
+     * @param Bucket $bucket
+     * @param callable|null $progressCallback Optional, called as (int $keysProcessed, bool $isFinal = false) periodically and at end
+     */
+    private static function collectStreaming(
+        array $config,
+        array &$stats,
+        array &$derivativeSummaryMap,
+        int $maxMissingList,
+        Bucket $bucket,
+        ?callable $progressCallback = null
+    ): void {
+        $derivativesConfig = $config['image_handling']['processor']['derivatives'] ?? [];
+        $chunkSize = self::DEFAULT_CHUNK_SIZE;
+
+        // Build derivative suffix list: suffix => [name, extension] for matching
+        $suffixList = [];
+        foreach ($derivativesConfig as $derivativeName => $derivativeConfig) {
+            $extensions = ['jpg'];
+            if (!empty($derivativeConfig['webp_create'])) {
+                $extensions[] = 'webp';
+            }
+            foreach ($extensions as $extension) {
+                $suffix = $derivativeName . '.' . $extension;
+                $suffixList[$suffix] = ['name' => $derivativeName, 'extension' => $extension];
+            }
+        }
+
+        // Phase 1: Build entity prefix map and counts from DB (chunked)
+        $entityMap = [];
+        $countByType = ['pictures' => 0, 'sections' => 0, 'documents' => 0];
+
+        $offset = 0;
+        do {
+            $chunk = Picture::listAll(['download_successful' => 1], null, [$offset, $chunkSize]);
+            foreach ($chunk as $picture) {
+                $prefix = pathinfo($picture->file_name, PATHINFO_FILENAME) . '_';
+                $entityMap[$prefix] = [
+                    'type' => 'pictures',
+                    'id' => $picture->getId(),
+                    'file_name' => $picture->file_name,
+                    'id_media_object' => $picture->id_media_object ?? 'N/A',
+                    'section_name' => null,
+                    'id_step' => null
+                ];
+                $countByType['pictures']++;
+            }
+            $offset += count($chunk);
+        } while (count($chunk) >= $chunkSize);
+
+        $offset = 0;
+        do {
+            $chunk = Section::listAll(['download_successful' => 1], null, [$offset, $chunkSize]);
+            foreach ($chunk as $section) {
+                $prefix = pathinfo($section->file_name, PATHINFO_FILENAME) . '_';
+                $entityMap[$prefix] = [
+                    'type' => 'sections',
+                    'id' => $section->getId(),
+                    'file_name' => $section->file_name,
+                    'id_media_object' => $section->id_media_object ?? 'N/A',
+                    'section_name' => $section->section_name ?? 'N/A',
+                    'id_step' => null
+                ];
+                $countByType['sections']++;
+            }
+            $offset += count($chunk);
+        } while (count($chunk) >= $chunkSize);
+
+        $offset = 0;
+        do {
+            $chunk = DocumentMediaObject::listAll(['download_successful' => 1], null, [$offset, $chunkSize]);
+            foreach ($chunk as $document) {
+                $prefix = pathinfo($document->file_name, PATHINFO_FILENAME) . '_';
+                $entityMap[$prefix] = [
+                    'type' => 'documents',
+                    'id' => $document->getId(),
+                    'file_name' => $document->file_name,
+                    'id_media_object' => $document->id_media_object ?? 'N/A',
+                    'section_name' => null,
+                    'id_step' => $document->id_step ?? 'N/A'
+                ];
+                $countByType['documents']++;
+            }
+            $offset += count($chunk);
+        } while (count($chunk) >= $chunkSize);
+
+        $typeNames = ['pictures' => 'Pictures', 'sections' => 'Sections', 'documents' => 'Documents'];
+
+        // Init derivative summary with total_count per (name, extension, type)
+        foreach (['pictures', 'sections', 'documents'] as $type) {
+            foreach ($suffixList as $suffix => $info) {
+                $key = $info['name'] . '.' . $info['extension'] . '.' . $type;
+                $derivativeSummaryMap[$key] = [
+                    'name' => $info['name'],
+                    'extension' => $info['extension'],
+                    'total_count' => $countByType[$type],
+                    'exists_count' => 0,
+                    'total_size' => 0,
+                    'type' => $typeNames[$type]
+                ];
+            }
+        }
+
+        $stats['pictures']['total'] = $countByType['pictures'];
+        $stats['sections']['total'] = $countByType['sections'];
+        $stats['documents']['total'] = $countByType['documents'];
+
+        $foundPrefixes = [];
+        $keysProcessed = 0;
+        $progressInterval = 100000;
+
+        $scanCallback = function (string $key, int $size) use (
+            $entityMap,
+            $suffixList,
+            &$derivativeSummaryMap,
+            $typeNames,
+            &$foundPrefixes,
+            &$keysProcessed,
+            $progressInterval,
+            $progressCallback
+) {
+            $keysProcessed++;
+            if (is_callable($progressCallback) && ($keysProcessed % $progressInterval) === 0) {
+                $progressCallback($keysProcessed, false);
+            }
+
+            // Support keys with path (e.g. "subdir/abc123_thumb.jpg") by matching on the filename part
+            $keyBasename = strpos($key, '/') !== false ? basename($key) : $key;
+            foreach ($suffixList as $suffix => $info) {
+                if (strlen($keyBasename) >= strlen($suffix) && substr($keyBasename, -strlen($suffix)) === $suffix) {
+                    $candidatePrefix = substr($keyBasename, 0, -strlen($suffix));
+                    if (substr($candidatePrefix, -1) !== '_') {
+                        continue;
+                    }
+                    if (!isset($entityMap[$candidatePrefix])) {
+                        continue;
+                    }
+                    $entity = $entityMap[$candidatePrefix];
+                    $foundPrefixes[$candidatePrefix] = true;
+                    $summaryKey = $info['name'] . '.' . $info['extension'] . '.' . $entity['type'];
+                    if (isset($derivativeSummaryMap[$summaryKey])) {
+                        $derivativeSummaryMap[$summaryKey]['exists_count']++;
+                        $derivativeSummaryMap[$summaryKey]['total_size'] += $size;
+                    }
+                    break;
+                }
+            }
+        };
+
+        $bucket->scanAllKeys($scanCallback);
+
+        if (is_callable($progressCallback)) {
+            $progressCallback($keysProcessed, true);
+        }
+
+        // Derive exists/missing and missing_list from entityMap and foundPrefixes
+        foreach (['pictures', 'sections', 'documents'] as $type) {
+            $exists = 0;
+            $missingListCount = 0;
+            foreach ($entityMap as $prefix => $entity) {
+                if ($entity['type'] !== $type) {
+                    continue;
+                }
+                if (!empty($foundPrefixes[$prefix])) {
+                    $exists++;
+                } else {
+                    $stats[$type]['missing']++;
+                    if ($missingListCount < $maxMissingList) {
+                        $entry = [
+                            'id' => $entity['id'],
+                            'file_name' => $entity['file_name'],
+                            'id_media_object' => $entity['id_media_object']
+                        ];
+                        if ($type === 'sections' && $entity['section_name'] !== null) {
+                            $entry['section_name'] = $entity['section_name'];
+                        }
+                        if ($type === 'documents' && $entity['id_step'] !== null) {
+                            $entry['id_step'] = $entity['id_step'];
+                        }
+                        $stats[$type]['missing_list'][] = $entry;
+                        $missingListCount++;
+                    }
+                }
+            }
+            $stats[$type]['exists'] = $exists;
+        }
     }
 
     /**

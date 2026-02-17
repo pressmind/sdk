@@ -468,6 +468,10 @@ class Insurance extends AbstractObject
     }
 
     /**
+     * Resets all insurance-related tables.
+     * Uses DELETE instead of TRUNCATE to maintain transaction safety
+     * (TRUNCATE causes implicit COMMIT in MySQL, breaking active transactions).
+     *
      * @return void
      * @throws \Exception
      */
@@ -485,16 +489,18 @@ class Insurance extends AbstractObject
         $price_table_to_package = new PriceTableToPackage();
         $insurance_to_attribute = new InsuranceToAttribute();
         $insurance_attribute = new Attribute();
-        $db->truncate($insurance_group->getDbTableName());
-        $db->truncate($insurance->getDbTableName());
-        $db->truncate($insurance_to_group->getDbTableName());
-        $db->truncate($price_table->getDbTableName());
-        $db->truncate($insurance_to_price_table->getDbTableName());
-        $db->truncate($insurance_to_insurance->getDbTableName());
-        $db->truncate($insurance_to_alternate->getDbTableName());
-        $db->truncate($price_table_package->getDbTableName());
-        $db->truncate($price_table_to_package->getDbTableName());
-        $db->truncate($insurance_to_attribute->getDbTableName());
-        $db->truncate($insurance_attribute->getDbTableName());
+        
+        // Use DELETE instead of TRUNCATE to preserve transaction integrity
+        $db->delete($insurance_to_attribute->getDbTableName());
+        $db->delete($insurance_attribute->getDbTableName());
+        $db->delete($price_table_to_package->getDbTableName());
+        $db->delete($price_table_package->getDbTableName());
+        $db->delete($insurance_to_alternate->getDbTableName());
+        $db->delete($insurance_to_insurance->getDbTableName());
+        $db->delete($insurance_to_price_table->getDbTableName());
+        $db->delete($price_table->getDbTableName());
+        $db->delete($insurance_to_group->getDbTableName());
+        $db->delete($insurance->getDbTableName());
+        $db->delete($insurance_group->getDbTableName());
     }
 }

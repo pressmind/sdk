@@ -68,7 +68,9 @@ class ImportCommand extends AbstractCommand
                 return 0;
             }
 
-            $this->handleStaleLock();
+            if ($this->handleStaleLock()) {
+                return 1;
+            }
             ProcessList::lock('import', getmypid());
             $locked = true;
 
@@ -120,17 +122,22 @@ class ImportCommand extends AbstractCommand
         $this->output->writeln('WARNING: lock removed! Check if PID ' . $lock->pid . ' exists and kill it with "sudo kill -9 ' . $lock->pid . '" - before you run this script again', null);
     }
 
-    private function handleStaleLock(): void
+    /**
+     * Checks for a stale lock. Returns true if the import is still running and we should abort.
+     */
+    private function handleStaleLock(): bool
     {
         if (!ProcessList::isLocked('import')) {
-            return;
+            return false;
         }
         $lock = ProcessList::getLock('import');
         if (file_exists("/proc/{$lock->pid}")) {
-            Writer::write('is still running, check pid: ' . $lock->pid . ', or try "sudo kill -9 ' . $lock->pid . ' | php import.php unlock"', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
-            throw new \RuntimeException('Import is still running (pid: ' . $lock->pid . ')');
+            $this->output->error('Import is still running (pid: ' . $lock->pid . '). Try "sudo kill -9 ' . $lock->pid . '" and then "php import.php unlock" before running again.');
+            Writer::write('Import is still running, check pid: ' . $lock->pid, Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
+            return true;
         }
         ProcessList::unlock('import');
+        return false;
     }
 
     private function dispatchSubcommand(string $subcommand): int

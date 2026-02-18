@@ -466,7 +466,7 @@ class Catalog
                     'type' => 'product',
                     'id' => $item['id_media_object'],
                     'label' => html_entity_decode(strip_tags($item['headline'])),
-                    'search' => []
+                    'search' => new stdClass()
                 ];
             }
         }

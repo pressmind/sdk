@@ -1197,10 +1197,12 @@ class MediaObject extends AbstractObject
     }
 
     /**
+     * @param string|null $language
+     * @param array $pretty_urls_from_api Optional. Array of stdClass with id_channel, url (from API response pretty_urls). Required when strategy is "channel".
      * @return string[]
      * @throws Exception
      */
-    public function buildPrettyUrls($language = null)
+    public function buildPrettyUrls($language = null, array $pretty_urls_from_api = [])
     {
         $config = Registry::getInstance()->get('config');
         $is_legancy = !isset($config['data']['media_types_pretty_url'][array_key_first($config['data']['media_types_pretty_url'])]['id_object_type']);
@@ -1209,23 +1211,48 @@ class MediaObject extends AbstractObject
         $strategy = 'unique';
         $prefix = '/';
         $suffix = '';
+        $id_channel = null;
         if($is_legancy){
             $fields = $config['data']['media_types_pretty_url'][$this->id_object_type]['fields'] ?? ['name'];
             $separator = $config['data']['media_types_pretty_url'][$this->id_object_type]['separator'] ?? $separator;
             $strategy = $config['data']['media_types_pretty_url'][$this->id_object_type]['strategy'] ?? $strategy;
             $prefix = $config['data']['media_types_pretty_url'][$this->id_object_type]['prefix'] ?? $prefix;
             $suffix = $config['data']['media_types_pretty_url'][$this->id_object_type]['suffix'] ?? $suffix;
+            $id_channel = $config['data']['media_types_pretty_url'][$this->id_object_type]['id_channel'] ?? null;
         }else{
             foreach($config['data']['media_types_pretty_url'] as $v){
-                if($v['id_object_type'] == $this->id_object_type && $v['language'] == $language){
-                    $fields = $v['field'] ?? ['name'];
+                $languageMatch = ($v['language'] === null || $v['language'] == $language);
+                if($v['id_object_type'] == $this->id_object_type && $languageMatch){
+                    $fields = $v['field'] ?? $v['fields'] ?? ['name'];
                     $separator = $v['separator'] ?? $separator;
                     $strategy = $v['strategy'] ?? $strategy;
                     $prefix = $v['prefix'] ?? $prefix;
                     $suffix = $v['suffix'] ?? $suffix;
+                    $id_channel = $v['id_channel'] ?? null;
                     break;
                 }
             }
+        }
+        if ($strategy === 'channel') {
+            if ($id_channel === null || $id_channel === '') {
+                throw new Exception('URL strategy "channel" requires "id_channel" to be configured in media_types_pretty_url for object type ' . $this->id_object_type);
+            }
+            if (empty($pretty_urls_from_api)) {
+                return [];
+            }
+            foreach ($pretty_urls_from_api as $pretty_url) {
+                $pu = is_array($pretty_url) ? (object) $pretty_url : $pretty_url;
+                if ((int) $pu->id_channel === (int) $id_channel) {
+                    if ($pu->url === null || $pu->url === '') {
+                        throw new Exception('URL strategy "channel": channel id ' . $id_channel . ' found in pretty_urls but url is empty for media object ' . $this->id);
+                    }
+                    return [$prefix . $pu->url . $suffix];
+                }
+            }
+            throw new Exception('URL strategy "channel": no entry found for id_channel ' . $id_channel . ' in pretty_urls of media object ' . $this->id . '. Check that the channel is assigned in pressmind.');
+        }
+        if (!is_array($fields)) {
+            $fields = [$fields];
         }
         $url_array = [];
         foreach ($fields as $field) {

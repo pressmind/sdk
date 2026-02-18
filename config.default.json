@@ -167,7 +167,37 @@
       ],
       "primary_media_type_ids": null,
       "media_types": {},
-      "media_types_pretty_url": {},
+      "media_types_pretty_url": [
+        {
+          "_example": "RECOMMENDED - channel strategy: URL is taken 1:1 from pressmind channel. Set id_object_type and id_channel to your values.",
+          "id_object_type": 0,
+          "language": null,
+          "strategy": "channel",
+          "id_channel": 0,
+          "prefix": "",
+          "suffix": ""
+        },
+        {
+          "_example": "count-up strategy: URL from multiple fields (e.g. code + name). Duplicates get numeric suffix (-001, -002, ...).",
+          "id_object_type": 0,
+          "language": null,
+          "strategy": "count-up",
+          "fields": ["code", "name"],
+          "separator": "-",
+          "prefix": "/",
+          "suffix": ""
+        },
+        {
+          "_example": "unique strategy: URL from fields (e.g. headline). Throws error if same URL exists.",
+          "id_object_type": 0,
+          "language": null,
+          "strategy": "unique",
+          "fields": ["headline"],
+          "separator": "-",
+          "prefix": "/",
+          "suffix": ""
+        }
+      ],
       "media_types_fulltext_index_fields": {},
       "sections": {
         "allowed": [

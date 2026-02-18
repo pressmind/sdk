@@ -656,89 +656,11 @@ file_put_contents(
 
 ## Pretty URLs (`data.media_types_pretty_url`)
 
-| Property | Value |
-|---|---|
-| **Type** | `object` |
-| **Default** | `{}` |
-| **Used in** | `ORM\Object\MediaObject.php` |
+URL (route) generation for media objects is configured under **`data.media_types_pretty_url`**. This includes the three URL strategies (**channel**, **unique**, **count-up**), supported field types, legacy vs. new format, and all related errors and warnings.
 
-#### Description
+**→ Full documentation: [URL Strategies](config-url-strategies.md)**
 
-Configures SEO-friendly URL generation per object type. Supports both a legacy format and a newer format with language support.
-
-### Legacy Format
-
-```json
-"media_types_pretty_url": {
-  "123": {
-    "fields": ["name"],
-    "separator": "-",
-    "strategy": "unique",
-    "prefix": "trip",
-    "suffix": ""
-  }
-}
-```
-
-### New Format (with language support)
-
-```json
-"media_types_pretty_url": [
-  {
-    "id_object_type": 123,
-    "language": "de",
-    "field": "name",
-    "separator": "-",
-    "strategy": "unique",
-    "prefix": "reise",
-    "suffix": ""
-  },
-  {
-    "id_object_type": 123,
-    "language": "en",
-    "field": "name",
-    "separator": "-",
-    "strategy": "unique",
-    "prefix": "trip",
-    "suffix": ""
-  }
-]
-```
-
-### Properties
-
-| Property | Type | Default | Description |
-|---|---|---|---|
-| `fields` / `field` | `array` / `string` | `["name"]` | Fields used for URL generation |
-| `separator` | `string` | `"-"` | Separator between words |
-| `strategy` | `string` | `"unique"` | `"unique"` (appends ID if needed) or `"slug"` |
-| `prefix` | `string` | `""` | URL prefix |
-| `suffix` | `string` | `""` | URL suffix |
-
-### Usage in Code
-
-```php
-// src/Pressmind/ORM/Object/MediaObject.php:1206-1228
-$is_legacy = !isset($config['data']['media_types_pretty_url'][array_key_first($config['data']['media_types_pretty_url'])]['id_object_type']);
-
-if ($is_legacy) {
-    $fields = $config['data']['media_types_pretty_url'][$this->id_object_type]['fields'] ?? ['name'];
-    $separator = $config['data']['media_types_pretty_url'][$this->id_object_type]['separator'] ?? $separator;
-    $strategy = $config['data']['media_types_pretty_url'][$this->id_object_type]['strategy'] ?? $strategy;
-    $prefix = $config['data']['media_types_pretty_url'][$this->id_object_type]['prefix'] ?? $prefix;
-    $suffix = $config['data']['media_types_pretty_url'][$this->id_object_type]['suffix'] ?? $suffix;
-}
-```
-
-### Example URLs
-
-With the configuration:
-```json
-{"prefix": "trip", "separator": "-", "fields": ["name"]}
-```
-
-A media object with `name: "Beautiful Mallorca Holiday"` generates:
-`/trip/beautiful-mallorca-holiday`
+There you will find strategy overview, recommendation for new setups (channel strategy), configuration examples, and the warnings/errors reference.
 
 ---
 
@@ -766,22 +688,25 @@ A media object with `name: "Beautiful Mallorca Holiday"` generates:
           "dir": "/var/www/my-site/languages"
         }
       },
-      "media_types_pretty_url": {
-        "123": {
-          "fields": ["name"],
-          "separator": "-",
-          "strategy": "unique",
-          "prefix": "trip",
+      "media_types_pretty_url": [
+        {
+          "id_object_type": 607,
+          "language": null,
+          "strategy": "channel",
+          "id_channel": 1053,
+          "prefix": "",
           "suffix": ""
         },
-        "456": {
-          "fields": ["name", "city"],
+        {
+          "id_object_type": 123,
+          "language": null,
+          "strategy": "count-up",
+          "fields": ["code", "name"],
           "separator": "-",
-          "strategy": "unique",
-          "prefix": "hotel",
+          "prefix": "/trip",
           "suffix": ""
         }
-      },
+      ],
       "schema_migration": {
         "mode": "auto",
         "log_changes": true

@@ -366,6 +366,13 @@ class MongoDB extends AbstractSearch
         ];
         
         $hookResult = SearchHookManager::executePreSearch($this->_conditions, $hookContext);
+
+        // Debug output for pre-search hook (always when debug=1, even when result is null)
+        if (!empty($_GET['debug']) || (defined('PM_SDK_DEBUG') && PM_SDK_DEBUG)) {
+            if ($hookResult === null) {
+                echo '<pre style="background:#fff3e0;padding:10px;margin:10px 0;border-left:4px solid #ff9800;">SearchHook preSearch: no result (hook returned null – no active provider or no data)</pre>';
+            }
+        }
         
         if ($hookResult !== null) {
             $this->_addLog('getResult(): applying pre-search hook result');

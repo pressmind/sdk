@@ -89,6 +89,7 @@ Each section is documented in detail in its own file:
 | Search (MongoDB, OpenSearch, Hooks) | [config-search.md](config-search.md) | MongoDB indexing, OpenSearch, search hooks |
 | Cache | [config-cache.md](config-cache.md) | Redis cache, cache types, TTL, parameters |
 | Image & File Handling | [config-image-file-handling.md](config-image-file-handling.md) | Derivatives, filters, storage (filesystem/S3), WebP |
+| URL Strategies | [config-url-strategies.md](config-url-strategies.md) | Pretty URLs: channel, unique, count-up; config, field types, errors |
 | Sections, Languages & Misc | [config-sections-languages-misc.md](config-sections-languages-misc.md) | Sections, languages, price format, views, scaffolder |
 
 ---
@@ -125,7 +126,7 @@ Each section is documented in detail in its own file:
 | `data.sections.*` | various | – | [Sections](config-sections-languages-misc.md) |
 | `data.languages.*` | various | – | [Languages](config-sections-languages-misc.md) |
 | `data.media_types` | object | `{}` | [Touristic](config-touristic-data.md) |
-| `data.media_types_pretty_url` | object | `{}` | [Misc](config-sections-languages-misc.md) |
+| `data.media_types_pretty_url` | object / array | `[]` | [URL Strategies](config-url-strategies.md) |
 | `data.media_types_fulltext_index_fields` | object | `{}` | [Search](config-search.md) |
 | `data.media_types_allowed_visibilities` | object | `{}` | [Touristic](config-touristic-data.md) |
 | `data.schema_migration` | object | `{...}` | [Misc](config-sections-languages-misc.md) |

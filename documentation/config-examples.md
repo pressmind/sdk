@@ -269,7 +269,7 @@ Defines which object types are indexed for MongoDB search. Each entry specifies 
 
 ### categories
 
-Define which category tree fields are indexed for faceted search filters:
+Define which category tree fields are indexed for faceted search filters. For the full reference (all five types, virtual trees, aggregations, Filter class), see **[Categories Configuration Guide](categories-configuration-guide.md)**.
 
 ```php
 'categories' => [

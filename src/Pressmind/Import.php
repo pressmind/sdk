@@ -695,17 +695,17 @@ class Import
                     $this->importMediaObjectsFromArray($linked_media_object_ids);
                 }
 
-                //$media_object->readRelations();
-                $this->_log[] = ' Deleting Route entries for media object id: ' . $id_media_object;
-                $this->_db->delete('pmt2core_routes', ['id_media_object = ?', $id_media_object]);
-                $this->_log[] = ' Inserting Route entries for media object id: ' . $id_media_object;
-
-                if (is_array($imported_languages)) {
-                    // Collect all routes first, then batch insert
+                $primary_ids = $config['data']['primary_media_type_ids'] ?? [];
+                $should_build_routes = empty($primary_ids) || $media_object->isAPrimaryType();
+                if (is_array($imported_languages) && $should_build_routes) {
+                    $this->_log[] = ' Deleting Route entries for media object id: ' . $id_media_object;
+                    $this->_db->delete('pmt2core_routes', ['id_media_object = ?', $id_media_object]);
+                    $this->_log[] = ' Inserting Route entries for media object id: ' . $id_media_object;
+                    $pretty_urls_from_api = isset($response[0]->pretty_urls) && is_array($response[0]->pretty_urls) ? $response[0]->pretty_urls : [];
                     $route_data = [];
                     foreach ($imported_languages as $language) {
                         try {
-                            $urls = $media_object->buildPrettyUrls($language);
+                            $urls = $media_object->buildPrettyUrls($language, $pretty_urls_from_api);
                             foreach ($urls as $url) {
                                 $route_data[] = [
                                     'id_media_object' => $id_media_object,
@@ -719,7 +719,6 @@ class Import
                             $this->_errors[] = ' Creating routes failed for media object id ' . $id_media_object . ': ' . $e->getMessage();
                         }
                     }
-                    // Batch insert all routes at once
                     if (!empty($route_data)) {
                         $this->_batchInsertRoutes($route_data);
                     }

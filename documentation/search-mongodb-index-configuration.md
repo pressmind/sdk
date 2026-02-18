@@ -318,6 +318,8 @@ class Filter {
 
 The `categories` section defines which category tree fields are indexed and made searchable via the `pm-c[field]` parameter.
 
+**For a complete reference** with all five configuration types (Direct Tree, from ObjectLink, Plaintext Virtual, Aggregation, TreeBuilder), ASCII diagrams, a full Filter class example, and FAQ, see **[Categories Configuration Guide](categories-configuration-guide.md)**.
+
 ```json
 {
   "categories": {

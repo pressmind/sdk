@@ -25,6 +25,7 @@ Welcome to the pressmind SDK documentation. This documentation covers the comple
 | [Search (MongoDB, OpenSearch, Hooks)](config-search.md) | MongoDB indexing, OpenSearch integration, search hooks |
 | [Cache](config-cache.md) | Redis cache, cache types, TTL, bypass parameters |
 | [Image & File Handling](config-image-file-handling.md) | Derivatives, WebP, filters, storage providers (filesystem/S3) |
+| [URL Strategies](config-url-strategies.md) | Pretty URLs: channel, unique, count-up; config, field types, errors |
 | [Sections, Languages & Misc](config-sections-languages-misc.md) | Sections, languages, price format, views, scaffolder |
 
 ### Data Model

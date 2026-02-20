@@ -118,6 +118,7 @@ class Query
             foreach ($result->documents as $document) {
                 $document = json_decode(json_encode($document), true);
                 $item = (array)$document['description'];
+                $item = self::transformImageUrlsToWebp($item);
                 $item['id_media_object'] = $document['id_media_object'];
                 $item['id_object_type'] = $document['id_object_type'];
                 $item_count++;
@@ -538,6 +539,7 @@ class Query
      *  - pm-pf    int     Powerfilter,  e.g. '123456789'
      *  - pm-l     string  limit e.g. '0,10' pagination
      *  - pm-o     string  order e.g. 'rand', 'price-desc', 'price-asc', 'date_departure-asc', 'date_departure-desc', 'score-asc', 'score-desc', 'recommendation_rate-asc', 'recommendation_rate-desc', 'priority', 'list', 'valid_from-asc', 'valid_from-desc'), list = order from items in pm-id
+     *  - pm-ap     string DUS
      * @param $request
      * @param string $prefix
      * @param bool $paginator
@@ -1079,6 +1081,25 @@ class Query
             unset($options[$option]);
         }
         return $options;
+    }
+
+    /**
+     * Transform image URLs to WebP format if browser supports it.
+     * Detects image fields by checking for objects with both 'url' and 'size' properties.
+     * @param array $description
+     * @return array
+     */
+    private static function transformImageUrlsToWebp(array $description): array
+    {
+        if (!defined('WEBP_SUPPORT') || WEBP_SUPPORT !== true) {
+            return $description;
+        }
+        foreach ($description as $key => $value) {
+            if (is_array($value) && isset($value['url']) && isset($value['size'])) {
+                $description[$key]['url'] = preg_replace('/\.(jpe?g|png|gif)$/i', '.webp', $value['url']);
+            }
+        }
+        return $description;
     }
 
 }

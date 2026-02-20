@@ -21,6 +21,14 @@ class ObjectType
     }
 
     /**
+     * @return array
+     */
+    public function getObjectTypes(): array
+    {
+        return is_array($this->_id_object_types) ? $this->_id_object_types : [$this->_id_object_types];
+    }
+
+    /**
      * @return string
      */
     public function getType(){

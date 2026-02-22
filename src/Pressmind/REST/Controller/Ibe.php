@@ -462,5 +462,24 @@ class Ibe
         return $map;
     }
 
+    /**
+     * Returns the geodata row count for system health checks
+     * @param $params
+     * @return array
+     */
+    public function pressmind_ib3_v2_get_geodata_status($params)
+    {
+        $db = Registry::getInstance()->get('db');
+        $result = $db->fetchAll('SELECT COUNT(*) as cnt FROM pmt2core_geodata');
+        $count = !empty($result[0]->cnt) ? (int)$result[0]->cnt : 0;
+        return [
+            'success' => true,
+            'data' => [
+                'geodata_count' => $count,
+                'has_geodata' => $count > 0
+            ]
+        ];
+    }
+
 }
 

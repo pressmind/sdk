@@ -16,17 +16,17 @@ class DataValidator
      *
      * @param array|object $data Raw API response data (array of stdClass or single stdClass)
      * @param string $context Label for error messages (e.g. "startingPoints")
-     * @param string $path Internal path for recursion (do not pass)
+     * @param array $excludePaths Paths to skip (many-to-many relations where shared IDs are expected), e.g. ['insurances.price_tables']
      * @throws Exception when duplicate IDs are found in nested entities
      */
-    public static function validateUniqueIds($data, $context = '', $path = '')
+    public static function validateUniqueIds($data, $context = '', $excludePaths = [])
     {
         if (is_array($data)) {
-            self::validateArray($data, $context, $path);
+            self::validateArray($data, $context, '', $excludePaths);
             return;
         }
         if (is_object($data)) {
-            self::validateObject($data, $context, $path);
+            self::validateObject($data, $context, '', $excludePaths);
             return;
         }
     }
@@ -35,9 +35,10 @@ class DataValidator
      * @param array $data
      * @param string $context
      * @param string $path
+     * @param array $excludePaths
      * @throws Exception
      */
-    private static function validateArray(array $data, $context, $path)
+    private static function validateArray(array $data, $context, $path, array $excludePaths)
     {
         if (empty($data)) {
             return;
@@ -48,24 +49,26 @@ class DataValidator
             return;
         }
 
-        $ids = [];
-        foreach ($data as $item) {
-            if (is_object($item) && isset($item->id)) {
-                $ids[] = $item->id;
+        if (!in_array($path, $excludePaths, true)) {
+            $ids = [];
+            foreach ($data as $item) {
+                if (is_object($item) && isset($item->id)) {
+                    $ids[] = $item->id;
+                }
             }
-        }
 
-        if (!empty($ids)) {
-            $duplicates = self::findDuplicateIds($ids);
-            if (!empty($duplicates)) {
-                self::throwDuplicateException($context, $path, $duplicates);
+            if (!empty($ids)) {
+                $duplicates = self::findDuplicateIds($ids);
+                if (!empty($duplicates)) {
+                    self::throwDuplicateException($context, $path, $duplicates);
+                }
             }
         }
 
         $childCollections = self::gatherChildCollections($data);
         foreach ($childCollections as $propertyName => $childArray) {
             $childPath = $path !== '' ? $path . '.' . $propertyName : $propertyName;
-            self::validateArray($childArray, $context, $childPath);
+            self::validateArray($childArray, $context, $childPath, $excludePaths);
         }
     }
 
@@ -73,17 +76,18 @@ class DataValidator
      * @param object $data
      * @param string $context
      * @param string $path
+     * @param array $excludePaths
      * @throws Exception
      */
-    private static function validateObject($data, $context, $path)
+    private static function validateObject($data, $context, $path, array $excludePaths)
     {
         foreach (get_object_vars($data) as $propertyName => $value) {
             if (is_array($value)) {
                 $childPath = $path !== '' ? $path . '.' . $propertyName : $propertyName;
-                self::validateArray($value, $context, $childPath);
+                self::validateArray($value, $context, $childPath, $excludePaths);
             } elseif (is_object($value)) {
                 $childPath = $path !== '' ? $path . '.' . $propertyName : $propertyName;
-                self::validateObject($value, $context, $childPath);
+                self::validateObject($value, $context, $childPath, $excludePaths);
             }
         }
     }

@@ -64,6 +64,8 @@ class Server
         $this->_router->addRoute(new Router\Route('touristic/insurance/calculatePrices', 'GET', '\\Pressmind\\REST\\Controller\\Touristic', 'Insurance', 'calculatePrices'));
         $this->_router->addRoute(new Router\Route('touristic/insurance/calculatePrices', 'POST', '\\Pressmind\\REST\\Controller\\Touristic', 'Insurance', 'calculatePrices'));
         $this->_router->addRoute(new Router\Route('import/touristicByCode', 'POST', '\\Pressmind\\REST\\Controller', 'Import', 'touristicByCode'));
+        $this->_router->addRoute(new Router\Route('command/stream', 'GET', '\\Pressmind\\REST\\Controller', 'Command', 'stream'));
+        $this->_router->addRoute(new Router\Route('command/list', 'GET', '\\Pressmind\\REST\\Controller', 'Command', 'listCommands'));
         $pieces = (array_map('ucfirst', explode('/', $this->_request->getUri())));
         if(class_exists('\Custom\\REST\\Controller\\' . implode('\\', $pieces))) {
             $this->_router->addRoute(new Router\Route($this->_request->getUri(), 'GET', '\\Custom\\REST\\Controller', implode('\\', $pieces), 'index'));
@@ -83,18 +85,43 @@ class Server
     private function _checkAuthentication()
     {
         $config = Registry::getInstance()->get('config');
-        if(!empty($config['rest']['server']['api_user']) && !empty($config['rest']['server']['api_password'])) {
+
+        $serverApiKey = $config['rest']['server']['api_key'] ?? '';
+        if (!empty($serverApiKey)) {
+            $providedKey = $this->_extractApiKey();
+            if ($providedKey !== '' && hash_equals($serverApiKey, $providedKey)) {
+                return true;
+            }
+        }
+
+        if (!empty($config['rest']['server']['api_user']) && !empty($config['rest']['server']['api_password'])) {
             if ($auth = $this->_request->getParsedBasicAuth()) {
                 if ($auth[0] == $config['rest']['server']['api_user'] && $auth[1] == $config['rest']['server']['api_password']) {
                     return true;
                 }
-            } else {
-                return false;
             }
-        } else {
-            return true;
+            return false;
         }
-        return false;
+
+        return true;
+    }
+
+    /**
+     * Extract API key from X-Api-Key header, Bearer header, or (fallback) api_key query parameter.
+     * Prefer X-Api-Key or Bearer; query parameter is insecure (logs, referrer).
+     * @return string
+     */
+    private function _extractApiKey(): string
+    {
+        $xApiKey = $_SERVER['HTTP_X_API_KEY'] ?? '';
+        if ($xApiKey !== '' && is_string($xApiKey)) {
+            return $xApiKey;
+        }
+        $header = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+        if (stripos($header, 'Bearer ') === 0) {
+            return substr($header, 7);
+        }
+        return $_GET['api_key'] ?? '';
     }
 
     /**
@@ -111,7 +138,7 @@ class Server
                 $this->_response->addHeader('Allow', implode(',', array_merge($this->_output_methods, $this->_header_methods)));
                 $this->_response->addHeader('Access-Control-Allow-Origin', '*');
                 $this->_response->addHeader('Access-Control-Allow-Methods', implode(',', array_merge($this->_output_methods, $this->_header_methods)));
-                $this->_response->addHeader('Access-Control-Allow-Headers', 'Origin, Content-Type, X-Auth-Token, Authorization, Cache-Control, Pragma, Expires');
+                $this->_response->addHeader('Access-Control-Allow-Headers', 'Origin, Content-Type, X-Auth-Token, X-Api-Key, Authorization, Cache-Control, Pragma, Expires');
                 $this->_response->addHeader('Access-Control-Max-Age', '60');
             }
             $this->_response->setCode(204);
@@ -122,7 +149,7 @@ class Server
             $this->_response->setContentType('application/json');
             $this->_response->addHeader('Access-Control-Allow-Origin', '*');
             $this->_response->addHeader('Access-Control-Allow-Methods', implode(',', array_merge($this->_output_methods, $this->_header_methods)));
-            $this->_response->addHeader('Access-Control-Allow-Headers', 'Origin, Content-Type, X-Auth-Token, Authorization, Cache-Control, Pragma, Expires');
+            $this->_response->addHeader('Access-Control-Allow-Headers', 'Origin, Content-Type, X-Auth-Token, X-Api-Key, Authorization, Cache-Control, Pragma, Expires');
             $this->_response->addHeader('Cache-Control', 'no-cache');
             if(in_array('gzip', array_map('trim', explode(',', (string)$this->_request->getHeader('Accept-Encoding'))))) {
                 $this->_response->addHeader('Content-Encoding', 'gzip');

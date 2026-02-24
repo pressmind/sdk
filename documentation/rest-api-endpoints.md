@@ -11,11 +11,11 @@ The SDK provides a built-in REST API server (`Pressmind\REST\Server`) that expos
 ### Base Configuration
 
 - **Endpoint:** Configured via `rest.server.api_endpoint` (default: `/rest`)
-- **Authentication:** HTTP Basic Auth via `rest.server.api_user` / `rest.server.api_password` (disabled when empty)
-- **Response Format:** JSON with `Content-Type: application/json`
+- **Authentication:** API key (`rest.server.api_key`, sent via **X-Api-Key** header or Bearer) **or** HTTP Basic Auth via `rest.server.api_user` / `rest.server.api_password` (disabled when both empty)
+- **Response Format:** JSON with `Content-Type: application/json` (except `command/stream`, which uses SSE)
 - **Compression:** Gzip (when `Accept-Encoding: gzip` is sent)
 - **CORS:** `Access-Control-Allow-Origin: *`
-- **Caching:** Response caching via Redis (when `cache.enabled` and `"REST"` in `cache.types`)
+- **Caching:** Response caching via Redis (when `cache.enabled` and `"REST"` in `cache.types`); `command/stream` is not cached
 
 ### Routing
 
@@ -28,19 +28,75 @@ Custom controllers under `\Custom\REST\Controller\*` take priority over SDK cont
 
 ---
 
-## Authentication
+## Authentication (Login-Mechanismus)
 
-All endpoints require authentication when `rest.server.api_user` and `rest.server.api_password` are configured.
+The REST API uses two authentication modes depending on the endpoint group. Credentials are read from config (`rest.server.api_key`, `rest.server.api_user`, `rest.server.api_password`). See [REST API Config](config-rest-api.md) for configuration details.
 
+### Endpoint groups and requirements
+
+| Endpoint group | Endpoints | Auth required | What to send |
+|----------------|-----------|---------------|--------------|
+| **General** | `/catalog`, `/import/*`, `/mediaObject/*`, `/entrypoint/*`, `/ibe/*`, `/touristic/*`, dynamic ORM routes, etc. | Only if config is set | **Either** a valid API key **or** valid Basic Auth (one is enough). |
+| **Command** | `/command/list`, `/command/stream` | Always for these routes | **Both** a valid API key **and** valid Basic Auth. |
+| **Redis** | `/redis/getKeys`, `/redis/getKeyValue`, `/redis/getInfo` | Always for these routes | **Both** a valid API key **and** valid Basic Auth. |
+
+If neither API key nor Basic Auth is configured for the server, **general** endpoints are open (no login). Command and Redis endpoints always require both credentials to be configured and sent.
+
+### How the server decides (general endpoints)
+
+Before routing, the server runs a single auth check:
+
+1. **API key:** If `rest.server.api_key` is set, the server looks for a key in the request (in this order):
+   - Header **`X-Api-Key: <key>`** (recommended)
+   - Header **`Authorization: Bearer <key>`**
+   - Query parameter **`?api_key=<key>`** (fallback; avoid in production – appears in logs and referrer)
+   - If a value is found and equals the configured key (timing-safe), the request is **authenticated**.
+2. **Basic Auth:** If step 1 did not authenticate and `rest.server.api_user` and `rest.server.api_password` are set, the server checks the **`Authorization: Basic <base64(user:password)>`** header. If it matches the config, the request is **authenticated**.
+3. **No auth:** If neither API key nor Basic Auth is configured, the request is allowed (API open).
+
+If the request reaches a **Command** or **Redis** action, the controller runs a second check: it **requires both** a valid API key **and** valid Basic Auth (same config keys). If either is missing or wrong, the controller throws an exception (HTTP 500 with message). So for Command/Redis you must send **two** things: API key (prefer **X-Api-Key** header) and Basic Auth (**Authorization: Basic**).
+
+### Where to send the credentials
+
+- **API key (recommended):** Request header **`X-Api-Key`** with the value of `rest.server.api_key` (e.g. from `PM_REST_SERVER_API_KEY`). No API key in the URL.
+- **API key (alternative for general only):** Header **`Authorization: Bearer <api_key>`** (cannot be combined with Basic Auth in one header).
+- **Basic Auth:** Header **`Authorization: Basic <base64(username:password)>`**. Username = `rest.server.api_user`, password = `rest.server.api_password`.
+
+For **Command/Redis** the same request must contain:
+- **`X-Api-Key: <api_key>`** (or Bearer/query fallback for the key), and  
+- **`Authorization: Basic <base64(api_user:api_password)>`**.
+
+### Examples
+
+**General endpoint with API key (X-Api-Key):**
 ```bash
-# Authenticated request
-curl -u "api_user:api_password" https://example.com/rest/catalog
-
-# Unauthenticated (when auth is disabled)
-curl https://example.com/rest/catalog
+curl -H "X-Api-Key: YOUR_API_KEY" "https://example.com/rest/catalog"
 ```
 
-**Response on authentication failure:** HTTP `403 Forbidden`
+**General endpoint with API key (Bearer):**
+```bash
+curl -H "Authorization: Bearer YOUR_API_KEY" "https://example.com/rest/catalog"
+```
+
+**General endpoint with Basic Auth only:**
+```bash
+curl -u "api_user:api_password" "https://example.com/rest/catalog"
+```
+
+**Command/Redis (API key + Basic Auth):**
+```bash
+curl -u "api_user:api_password" -H "X-Api-Key: YOUR_API_KEY" "https://example.com/rest/command/list"
+```
+
+**Postman (Command/Redis):**  
+- **Auth** tab → Type **Basic Auth** → enter `api_user` and `api_password`.  
+- **Headers** → add **X-Api-Key** = `YOUR_API_KEY`.  
+- Do **not** put the API key in the URL.
+
+### Error responses
+
+- **403 Forbidden** – General endpoints: no valid API key and no valid Basic Auth (or Basic Auth required but not sent/wrong).
+- **500** + exception message – Command/Redis: API key or Basic Auth not configured, or not sent, or invalid (e.g. *"These endpoints require API key. Send it in the X-Api-Key header …"* or *"These endpoints require Basic Auth …"*).
 
 ### Cache Bypass
 
@@ -508,9 +564,26 @@ Calculates insurance prices for a specific trip configuration.
 
 Endpoints for triggering and managing data imports.
 
+**Queue-based vs. direct:** The endpoints `addToQueue`, `fullimport`, and `fullimportTouristic` **only fill the import queue** (database table). They do **not** run the actual import. A **cron job** (or similar scheduler) must be configured to process the queue periodically; otherwise queued items are never imported. See [Import Process](import-process.md) and [CLI Reference – Import](cli-reference.md#import-primary-command).
+
+**Cron example (process queue with `import resume`):** The CLI subcommand `resume` processes the import queue. Run it every 5 minutes (or as needed) from the theme directory or via the SDK `bin/` script. `-c=` / `PM_CONFIG` is optional if the config is found by default (e.g. single config in theme).
+
+```bash
+# From Travelshop theme – without explicit config (uses default, e.g. pm-config.php in theme)
+*/5 * * * * cd /path/to/wp-content/themes/travelshop && php cli/import.php resume
+
+# From Travelshop theme – with explicit config (optional)
+*/5 * * * * cd /path/to/wp-content/themes/travelshop && php cli/import.php resume -c=pm-config.php
+
+# SDK bin script – with PM_CONFIG (optional if default applies)
+*/5 * * * * cd /path/to/sdk && PM_CONFIG=pm-config.php php bin/import resume
+```
+
+The endpoint `touristicByCode` is different: it writes touristic data **directly** and synchronously (no queue).
+
 ### `GET/POST /import/addToQueue`
 
-Adds a media object to the import queue.
+Adds one or more media objects to the import queue. The actual import runs when the queue is processed (e.g. by the configured cron job).
 
 **Parameters:**
 
@@ -536,7 +609,7 @@ Adds a media object to the import queue.
 
 ### `GET/POST /import/fullimport`
 
-Triggers a full import of all media objects.
+Enqueues a **full import** of all media objects: it determines which IDs to import and adds them to the queue. It does **not** run the import itself. Processing happens when the queue worker runs (cron job must be configured).
 
 **Response:**
 
@@ -550,7 +623,7 @@ Triggers a full import of all media objects.
 
 ### `GET/POST /import/fullimportTouristic`
 
-Triggers a full import of touristic data only (prices, dates, availability).
+Enqueues a **full touristic import** (prices, dates, availability only). Like `fullimport`, this only loads the queue; the configured cron job processes the queue later.
 
 **Response:**
 
@@ -564,7 +637,7 @@ Triggers a full import of touristic data only (prices, dates, availability).
 
 ### `POST /import/touristicByCode`
 
-Imports touristic data for a specific product code with custom booking package data.
+Imports touristic data for a specific product code **directly** (synchronous). Does **not** use the queue; data is written in the same request. Use for push-based updates with custom booking package payload.
 
 **Parameters:**
 
@@ -592,9 +665,90 @@ Imports touristic data for a specific product code with custom booking package d
 
 ---
 
+## Command (CLI streaming)
+
+Endpoints to run SDK CLI commands remotely with Server-Sent Events (SSE) streaming. Intended for the Pressmind Electron/Browser app or other headless clients.
+
+**Authentication:** These endpoints require **both API key and Basic Auth**. Configure `rest.server.api_key` and `rest.server.api_user` / `rest.server.api_password`. Send Basic Auth in the `Authorization` header and the API key in the **X-Api-Key** header (recommended). If either is missing or invalid, the server throws an exception (HTTP `500`).
+
+**Config:** `rest.server.api_key`, `rest.server.api_user`, `rest.server.api_password` (all required for command endpoints), `backend.cli_runner` (required for streaming). See [REST API Config](config-rest-api.md).
+
+### `GET /command/list`
+
+Returns all available CLI commands (name, description, arguments, danger level). Use this to build a UI (e.g. dropdown of commands).
+
+**Parameters:** API key in **X-Api-Key** header (required), plus Basic Auth (required).
+
+**Response:**
+
+```json
+{
+  "fullimport": {
+    "name": "fullimport",
+    "description": "Vollimport aller Media Objects",
+    "arguments": [],
+    "danger": "low"
+  },
+  "import mediaobject": {
+    "name": "import mediaobject",
+    "description": "Einzelne MOs importieren",
+    "arguments": [{"name": "ids", "label": "IDs (kommasepariert)", "required": false}],
+    "danger": "low"
+  }
+}
+```
+
+**Example:**
+
+```bash
+curl -u "api_user:api_password" -H "X-Api-Key: YOUR_API_KEY" "https://example.com/rest/command/list"
+```
+
+### `GET /command/stream`
+
+Runs a CLI command and streams stdout/stderr as Server-Sent Events (SSE). Response is `Content-Type: text/event-stream`. Do not use for long-running or destructive commands without user confirmation.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `command` | string | Yes | Command name from registry (e.g. `import mediaobject`, `rebuild-cache`). Must exist in `CommandRegistry`. |
+| **Header** `X-Api-Key` | string | Yes | API key (recommended; avoids key in URL). Alternatively `Authorization: Bearer <key>` for general endpoints. |
+| Command-specific | various | No | Passed as CLI args (e.g. `ids=123,456` for `import mediaobject`) |
+
+**Excluded commands:** The command `reset` (full system reset) is **not** allowed via REST and returns `403` with `{"error": "Command not allowed via REST API"}`.
+
+**Response:** SSE stream. Events include `start`, `message` (stdout/stderr lines), `error`, `complete`. Example:
+
+```
+data: {"event":"start","message":"Process started"}
+
+data: {"type":"line","text":"Importing..."}
+
+event: complete
+data: {"event":"complete","success":true,"exitCode":0}
+```
+
+**Examples:**
+
+```bash
+# Stream import (Basic Auth + X-Api-Key header)
+curl -N -u "api_user:api_password" -H "X-Api-Key: YOUR_API_KEY" \
+  "https://example.com/rest/command/stream?command=import%20mediaobject&ids=2197278"
+```
+
+**Error responses:**
+
+- `500` – API key or Basic Auth not configured or not sent/invalid. Exception message e.g. *"These endpoints require API key. Send it in the X-Api-Key header …"* or *"These endpoints require Basic Auth …"*
+- `400` – Unknown or missing `command`
+- `403` – Disallowed command (e.g. `reset`)
+- SSE `error` / `complete` with `success: false` – CLI runner not configured or process failed
+
+---
+
 ## Redis Cache
 
-Endpoints for inspecting and managing the Redis cache.
+Endpoints for inspecting and managing the Redis cache. **Authentication:** Same as Command endpoints: **both API key and Basic Auth** are required. Send Basic Auth in `Authorization` and API key in the **X-Api-Key** header.
 
 ### `GET /redis/getKeys`
 
@@ -817,6 +971,8 @@ Accessible at: `GET/POST /availability?id_media_object=123`
 | GET/POST | `/import/fullimport` | Import | Full import |
 | GET/POST | `/import/fullimportTouristic` | Import | Touristic import |
 | POST | `/import/touristicByCode` | Import | Import by code |
+| GET | `/command/list` | Command | List CLI commands |
+| GET | `/command/stream` | Command | Run CLI command (SSE) |
 | GET | `/redis/getKeys` | Redis | List cache keys |
 | GET | `/redis/getKeyValue` | Redis | Get cached value |
 | GET | `/redis/getInfo` | Redis | Cache key metadata |

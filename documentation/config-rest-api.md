@@ -105,7 +105,7 @@ Password for HTTP Basic Authentication when making requests to the Pressmind Web
 
 ## REST Server (`rest.server`)
 
-The REST server provides its own API through which external systems (e.g., the Travelshop) can query data from the local database.
+The REST server provides its own API through which external systems (e.g., the Travelshop) can query data from the local database. For a full description of the login mechanism (which endpoints need which credentials, headers, and examples), see [REST API Endpoints – Authentication](rest-api-endpoints.md#authentication-login-mechanismus).
 
 ```json
 "rest": {
@@ -159,12 +159,36 @@ The base path for the REST server endpoint. Defines under which URL path the API
 |---|---|
 | **Type** | `string` |
 | **Default** | `""` |
-| **Required** | No |
-| **Used in** | – (reserved) |
+| **Required** | Yes for `/command/*` and `/redis/*` (together with Basic Auth); optional for other endpoints (enables API key auth) |
+| **Used in** | `REST\Server.php` (`_checkAuthentication()`, `_extractApiKey()`) |
 
 #### Description
 
-API key for server authentication. This value is defined in the config but is currently **not actively used** in the server authentication code. Authentication is handled exclusively via `api_user` and `api_password`.
+API key for REST server authentication. When set, the server accepts **either** API key **or** Basic Auth for **general** endpoints (catalog, import, mediaObject, etc.).
+
+**Command and Redis endpoints** (`/command/list`, `/command/stream`, `/redis/getKeys`, …) require **both** API key **and** Basic Auth: the request must send a valid API key (preferably in a header) and valid Basic Auth. If either is missing or invalid, the controller throws an exception (HTTP 500). All other REST endpoints are unchanged.
+
+**Accepted formats (priority order):**
+
+- **X-Api-Key header (recommended):** `X-Api-Key: <api_key>` — use for Command/Redis (where `Authorization` is used for Basic Auth) and for general endpoints; avoids API key in URLs and logs.
+- **Authorization Bearer:** `Authorization: Bearer <api_key>` — for general endpoints when no Basic Auth is used.
+- **Query parameter (fallback, insecure):** `?api_key=<api_key>` — not recommended (logs, referrer); only for legacy or when custom headers are not possible (e.g. plain `EventSource`).
+
+Comparison is timing-safe (`hash_equals()`). If `api_key` is empty, only Basic Auth (or no auth when user/password are empty) applies for general endpoints; command and redis endpoints then throw when called.
+
+#### Example (e.g. in Travelshop `.env`)
+
+```bash
+PM_REST_SERVER_API_KEY=your-secret-api-key
+```
+
+Config (e.g. `pm-config.php`):
+
+```json
+"api_key": ""
+```
+
+Typically filled via `getenv("PM_REST_SERVER_API_KEY")` so the secret stays in `.env`.
 
 ---
 
@@ -183,26 +207,15 @@ Username for HTTP Basic Authentication of the REST server. Used together with `a
 
 #### Authentication Logic
 
-```php
-// src/Pressmind/REST/Server.php:86-88
-if (!empty($config['rest']['server']['api_user']) 
-    && !empty($config['rest']['server']['api_password'])) {
-    // Basic Auth is ENABLED
-    if ($auth = $this->_request->getParsedBasicAuth()) {
-        if ($auth[0] == $config['rest']['server']['api_user'] 
-            && $auth[1] == $config['rest']['server']['api_password']) {
-            return true;  // Authentication successful
-        }
-    }
-    return false;  // Authentication failed
-}
-// If user/password are empty: Authentication is DISABLED
-return true;
-```
+The server checks in order:
+
+1. **API key** (if `rest.server.api_key` is set): from **X-Api-Key** header (recommended), then `Authorization: Bearer <key>`, then `?api_key=<key>` (fallback). If valid (timing-safe compare), request is authenticated.
+2. **Basic Auth** (if `api_user` and `api_password` are set): from `Authorization: Basic ...`. If credentials match, request is authenticated.
+3. If neither API key nor Basic Auth is configured → authentication is **disabled** (API is open).
 
 **Important behavior:**
-- If **both** values (`api_user` and `api_password`) are set and non-empty → Basic Auth is **enabled**
-- If either or both values are empty → Authentication is **disabled** (API is open)
+- If **both** values (`api_user` and `api_password`) are set and non-empty → Basic Auth is **enabled** (when API key is not used or not set).
+- If either or both values are empty and no API key is set → Authentication is **disabled** (API is open).
 
 #### Example
 
@@ -297,6 +310,36 @@ If no mapping is configured for a category, the internal variable name is used.
       }
     ]
   }
+}
+```
+
+---
+
+## Backend (for REST Command streaming)
+
+The REST endpoints `command/stream` and `command/list` run CLI commands via the SDK Backend. They require the Backend CLI runner path.
+
+### `backend.cli_runner`
+
+| Property | Value |
+|---|---|
+| **Type** | `string` |
+| **Default** | – |
+| **Required** | Yes (for `command/stream`) |
+| **Used in** | `REST\Controller\Command::stream()`, Backend `CommandController` |
+
+#### Description
+
+Path to the CLI runner script (e.g. `APPLICATION_PATH/cli/run.php`) that executes registered commands. Placeholders `APPLICATION_PATH` and `BASE_PATH` are replaced at runtime. If not set or invalid, `command/stream` returns an error and does not execute.
+
+See [Backend](backend.md) for full Backend configuration.
+
+#### Example
+
+```json
+"backend": {
+  "enabled": true,
+  "cli_runner": "APPLICATION_PATH/cli/run.php"
 }
 ```
 

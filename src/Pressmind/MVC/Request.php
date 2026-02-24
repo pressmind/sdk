@@ -100,7 +100,7 @@ class Request
     public function getParsedBasicAuth()
     {
         if(isset($this->_headers['Authorization']) && !empty($this->_headers['Authorization'])) {
-            if(strpos('Basic ') !== false) {
+            if(strpos($this->_headers['Authorization'], 'Basic ') === 0) {
                 return explode(':', base64_decode(str_replace('Basic ', '', $this->_headers['Authorization'])));
             }
         }

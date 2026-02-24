@@ -98,5 +98,5 @@ class Info
         '\ProcessList'
     ];
 
-    const IBE_IMPORT_VERSION = '6_0';
+    const IBE_IMPORT_VERSION = '6_1';
 }

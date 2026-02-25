@@ -11,6 +11,7 @@ use Pressmind\ORM\Object\Touristic\Insurance;
  * @property string $name
  * @property string $description
  * @property boolean $active
+ * @property string $mode
  * @property Insurance[] $insurances
  */
 class Group extends AbstractObject
@@ -68,6 +69,19 @@ class Group extends AbstractObject
                 'type' => 'boolean',
                 'required' => false,
                 'validators' => null,
+                'filters' => NULL,
+            ],
+            'mode' => [
+                'title' => 'Mode',
+                'name' => 'mode',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'inarray',
+                        'params' => ['single_selection', 'multi_selection', null, ''],
+                    ],
+                ],
                 'filters' => NULL,
             ],
             'insurances' => [

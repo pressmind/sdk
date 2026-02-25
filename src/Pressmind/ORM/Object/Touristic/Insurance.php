@@ -36,13 +36,15 @@ use Pressmind\Registry;
  * @property string $code
  * @property string $code_ibe
  * @property PriceTable[] $price_tables
- * @property Insurance[] $sub_insurances
+ * @property Insurance[] $additional_insurances
  * @property Insurance[] $alternate_insurances
  * @property string $own_contribution
  * @property Attribute[] $attributes
  * @property string $request_code
  * @property string $price_group
  * @property string $product_group
+ * @property boolean $is_recommendation
+ * @property integer $priority
  */
 class Insurance extends AbstractObject
 {
@@ -266,9 +268,9 @@ class Insurance extends AbstractObject
                     'target_id' => 'id_attribute',
                 ],
             ],
-            'sub_insurances' => [
-                'name' => 'sub_insurances',
-                'title' => 'sub_insurances',
+            'additional_insurances' => [
+                'name' => 'additional_insurances',
+                'title' => 'additional_insurances',
                 'type' => 'relation',
                 'required' => false,
                 'validators' => NULL,
@@ -279,7 +281,7 @@ class Insurance extends AbstractObject
                     'relation_table' => 'pmt2core_touristic_insurance_to_insurance',
                     'relation_class' => InsuranceToInsurance::class,
                     'related_id' => 'id_insurance',
-                    'target_id' => 'id_sub_insurance',
+                    'target_id' => 'id_additional_insurance',
                 ],
             ],
             'alternate_insurances' => [
@@ -350,6 +352,31 @@ class Insurance extends AbstractObject
                 ],
                 'filters' => NULL,
             ],
+            'is_recommendation' => [
+                'title' => 'Is_recommendation',
+                'name' => 'is_recommendation',
+                'type' => 'boolean',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'priority' => [
+                'title' => 'Priority',
+                'name' => 'priority',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 11,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ]
+                ],
+                'filters' => NULL,
+            ],
         ]
     );
 
@@ -387,6 +414,8 @@ class Insurance extends AbstractObject
             $calculated_insurance->pax_min = 0;
             $calculated_insurance->pax_max = 0;
             $calculated_insurance->price = 0.00;
+            $calculated_insurance->is_recommendation = $this->is_recommendation;
+            $calculated_insurance->priority = $this->priority;
             return $calculated_insurance;
         }
         $matches = array();
@@ -450,11 +479,13 @@ class Insurance extends AbstractObject
                     $calculated_insurance->pax_min = $matches[0][2]->pax_min;
                     $calculated_insurance->pax_max = $matches[0][2]->pax_max;
                     $calculated_insurance->price = floatval(bcmul($price, 1, 2));
-                    $calculated_insurance->sub_insurances = [];
-                    if(is_array($this->sub_insurances)) {
-                        foreach ($this->sub_insurances as $sub_insurance) {
-                            if($calculated_sub_insurance = $sub_insurance->isAvailableForTravelDateAndPriceAndPersonAge($dateStart, $dateEnd, $travelPrice, $duration, $personAge, $total_number_of_persons, true)) {
-                                $calculated_insurance->sub_insurances[] = $calculated_sub_insurance;
+                    $calculated_insurance->is_recommendation = $this->is_recommendation;
+                    $calculated_insurance->priority = $this->priority;
+                    $calculated_insurance->additional_insurances = [];
+                    if(is_array($this->additional_insurances)) {
+                        foreach ($this->additional_insurances as $additional_insurance) {
+                            if($calculated_sub_insurance = $additional_insurance->isAvailableForTravelDateAndPriceAndPersonAge($dateStart, $dateEnd, $travelPrice, $duration, $personAge, $total_number_of_persons, true)) {
+                                $calculated_insurance->additional_insurances[] = $calculated_sub_insurance;
                             }
                         }
                     }

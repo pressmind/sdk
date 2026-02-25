@@ -86,7 +86,17 @@ class Calculated
     public $pax_min;
 
     /**
+     * @var boolean
+     */
+    public $is_recommendation;
+
+    /**
+     * @var integer
+     */
+    public $priority;
+
+    /**
      * @var Insurance[]
      */
-    public $sub_insurances;
+    public $additional_insurances;
 }

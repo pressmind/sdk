@@ -100,6 +100,13 @@ class Import
     ];
 
     /**
+     * Insurance IDs already imported in this run. Used to skip redundant insurance_group imports
+     * when multiple media objects share the same insurances.
+     * @var array
+     */
+    private static $_importedInsuranceIds = [];
+
+    /**
      * Reset global import flags (useful for testing or long-running processes)
      */
     public static function resetGlobalImportFlags()
@@ -111,6 +118,7 @@ class Import
             'powerfilter' => false,
             'earlybird' => false,
         ];
+        self::$_importedInsuranceIds = [];
     }
 
     /**
@@ -178,7 +186,7 @@ class Import
             $this->_api_import_successful = true;
         } catch (Exception $e) {
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::import(): API ID retrieval failed: ' . $e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-            $this->_errors[] = 'Importer::import(): API ID retrieval failed: ' . $e->getMessage();
+            $this->_errors[] = '[API] Importer::import(): API ID retrieval failed: ' . $e->getMessage();
         }
         $this->importMediaObjectsFromFolder();
         $this->removeOrphans();
@@ -344,7 +352,7 @@ class Import
                 }
             } catch (Exception $e) {
                 $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Import failed for ' . $id . ': ' . $e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-                $this->_errors[] = 'Import failed for ' . $id . ': ' . $e->getMessage();
+                $this->_errors[] = '[Import] Import failed for ' . $id . ': ' . $e->getMessage();
             } finally {
                 Queue::remove($id);
             }
@@ -379,12 +387,12 @@ class Import
             $media_object = new MediaObject($id_media_object);
         } catch (Exception $e) {
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . '): Media object not found: ' . $e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-            $this->_errors[] = 'Importer::importTouristicDataOnly(' . $id_media_object . '): Media object not found: ' . $e->getMessage();
+            $this->_errors[] = '[TouristicDataOnly] Importer::importTouristicDataOnly(' . $id_media_object . '): Media object not found: ' . $e->getMessage();
             return false;
         }
         if (empty($media_object->id)) {
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . '): Media object does not exist in database', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-            $this->_errors[] = 'Importer::importTouristicDataOnly(' . $id_media_object . '): Media object does not exist in database';
+            $this->_errors[] = '[TouristicDataOnly] Importer::importTouristicDataOnly(' . $id_media_object . '): Media object does not exist in database';
             return false;
         }
         $id_object_type = $media_object->id_object_type;
@@ -406,16 +414,12 @@ class Import
                 }
                 foreach ($custom_import_class->getErrors() as $error) {
                     Writer::write($error, WRITER::OUTPUT_BOTH, 'custom_import_hook', WRITER::TYPE_ERROR);
-                }
-                if (count($custom_import_class->getErrors()) > 0) {
-                    $this->_errors[] = count($custom_import_class->getErrors()) . ' errors in custom import hook. See log "custom_import_hook" for details';
+                    $this->_errors[] = '[CustomImportHook] ' . $error;
                 }
                 if (method_exists($custom_import_class, 'getWarnings')) {
                     foreach ($custom_import_class->getWarnings() as $warning) {
                         Writer::write($warning, WRITER::OUTPUT_BOTH, 'custom_import_hook', WRITER::TYPE_WARNING);
-                    }
-                    if (count($custom_import_class->getWarnings()) > 0) {
-                        $this->_errors[] = count($custom_import_class->getWarnings()) . ' warnings in custom import hook. See log "custom_import_hook" for details';
+                        $this->_errors[] = '[CustomImportHook] ' . $warning;
                     }
                 }
             }
@@ -436,7 +440,7 @@ class Import
                 'import',
                 Writer::TYPE_ERROR
             );
-            $this->_errors[] = 'TRANSACTION ROLLBACK for importTouristicDataOnly(' . $id_media_object . '): ' . $e->getMessage();
+            $this->_errors[] = '[TransactionRollback] TRANSACTION ROLLBACK for importTouristicDataOnly(' . $id_media_object . '): ' . $e->getMessage();
             return false;
         }
         if ($config['cache']['enabled'] == true && in_array('OBJECT', $config['cache']['types'])) {
@@ -449,14 +453,14 @@ class Import
                 $media_object->createMongoDBIndex();
             } catch (Exception $e) {
                 $this->_log[] = 'Error during creating MongoDBIndex: ' . $e->getMessage();
-                $this->_errors[] = 'Error during creating MongoDBIndex: ' . $e->getMessage();
+                $this->_errors[] = '[MongoDB] Error during creating MongoDBIndex: ' . $e->getMessage();
             }
             try {
                 $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . '): createMongoDBCalendar', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
                 $media_object->createMongoDBCalendar();
             } catch (Exception $e) {
                 $this->_log[] = 'Error during creating createMongoDBCalendar: ' . $e->getMessage();
-                $this->_errors[] = 'Error during creating createMongoDBCalendar: ' . $e->getMessage();
+                $this->_errors[] = '[MongoDB] Error during creating createMongoDBCalendar: ' . $e->getMessage();
             }
         }
         if (isset($config['data']['search_opensearch']['enabled']) && $config['data']['search_opensearch']['enabled'] === true) {
@@ -465,7 +469,7 @@ class Import
                 $media_object->createOpenSearchIndex();
             } catch (Exception $e) {
                 $this->_log[] = 'Error during creating OpenSearch: ' . $e->getMessage();
-                $this->_errors[] = 'Error during creating OpenSearch: ' . $e->getMessage();
+                $this->_errors[] = '[OpenSearch] Error during creating OpenSearch: ' . $e->getMessage();
             }
         }
         unset($media_object);
@@ -525,18 +529,42 @@ class Import
             $current_object->delete(true);
 
             if (!empty($response[0]->insurance_group) && is_a($response[0]->insurance_group, 'stdClass')) {
-                Writer::write('import insurances from main media_object (alternative booking tab in pm)', WRITER::OUTPUT_SCREEN, 'media_object_insurance_import', WRITER::TYPE_INFO);
-                $tmpObject = new \stdClass();
-                $tmpObject->touristic_insurance_groups = !empty($response[0]->insurance_group->insurance_groups) ? $response[0]->insurance_group->insurance_groups : [];
-                $tmpObject->touristic_insurance_to_group = !empty($response[0]->insurance_group->insurance_to_group) ? $response[0]->insurance_group->insurance_to_group : [];
-                $tmpObject->touristic_insurances = !empty($response[0]->insurance_group->insurances) ? $response[0]->insurance_group->insurances : [];
-                $tmpObject->touristic_insurances_to_price_table = !empty($response[0]->insurance_group->insurances_to_price_table) ? $response[0]->insurance_group->insurances_to_price_table : [];
-                $tmpObject->touristic_insurances_price_tables = !empty($response[0]->insurance_group->insurances_price_tables) ? $response[0]->insurance_group->insurances_price_tables : [];
-                $tmpObject->touristic_insurance_to_attribute = !empty($response[0]->insurance_group->insurance_to_attribute) ? $response[0]->insurance_group->insurance_to_attribute : [];
-                $tmpObject->touristic_insurance_attributes = !empty($response[0]->insurance_group->insurance_attributes) ? $response[0]->insurance_group->insurance_attributes : [];
-                $tmpObject->touristic_insurance_to_alternate = !empty($response[0]->insurance_group->alternate_insurance_to_insurance) ? $response[0]->insurance_group->alternate_insurance_to_insurance : [];
-                $touristic_data_importer = new TouristicData();
-                $touristic_data_importer->import($tmpObject, $id_media_object, $this->_import_type);
+                $incomingInsuranceIds = [];
+                if (!empty($response[0]->insurance_group->insurances)) {
+                    foreach ($response[0]->insurance_group->insurances as $ins) {
+                        $incomingInsuranceIds[] = $ins->id;
+                    }
+                }
+                $newIds = array_diff($incomingInsuranceIds, self::$_importedInsuranceIds);
+
+                if (!empty($newIds)) {
+                    $this->_log[] = Writer::write(
+                        $this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): importing insurance data (' . count($incomingInsuranceIds) . ' insurances, ' . count($newIds) . ' new)',
+                        Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO
+                    );
+                    $tmpObject = new \stdClass();
+                    $tmpObject->touristic_insurance_groups = !empty($response[0]->insurance_group->insurance_groups) ? $response[0]->insurance_group->insurance_groups : [];
+                    $tmpObject->touristic_insurance_to_group = !empty($response[0]->insurance_group->insurance_to_group) ? $response[0]->insurance_group->insurance_to_group : [];
+                    $tmpObject->touristic_insurances = !empty($response[0]->insurance_group->insurances) ? $response[0]->insurance_group->insurances : [];
+                    $tmpObject->touristic_insurances_to_price_table = !empty($response[0]->insurance_group->insurances_to_price_table) ? $response[0]->insurance_group->insurances_to_price_table : [];
+                    $tmpObject->touristic_insurances_price_tables = !empty($response[0]->insurance_group->insurances_price_tables) ? $response[0]->insurance_group->insurances_price_tables : [];
+                    $tmpObject->touristic_insurance_to_attribute = !empty($response[0]->insurance_group->insurance_to_attribute) ? $response[0]->insurance_group->insurance_to_attribute : [];
+                    $tmpObject->touristic_insurance_attributes = !empty($response[0]->insurance_group->insurance_attributes) ? $response[0]->insurance_group->insurance_attributes : [];
+                    $tmpObject->touristic_insurance_to_alternate = !empty($response[0]->insurance_group->alternate_insurance_to_insurance) ? $response[0]->insurance_group->alternate_insurance_to_insurance : [];
+                    $tmpObject->touristic_insurance_to_insurance = !empty($response[0]->insurance_group->additional_insurance_to_insurance) ? $response[0]->insurance_group->additional_insurance_to_insurance : [];
+                    $touristic_data_importer = new TouristicData();
+                    $touristic_data_importer->import($tmpObject, $id_media_object, $this->_import_type);
+                    self::$_importedInsuranceIds = array_values(array_unique(array_merge(self::$_importedInsuranceIds, $incomingInsuranceIds)));
+                    $this->_log[] = Writer::write(
+                        $this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): insurance import done',
+                        Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO
+                    );
+                } else {
+                    $this->_log[] = Writer::write(
+                        $this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): insurance data already imported, skipping (' . count($incomingInsuranceIds) . ' insurances)',
+                        Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO
+                    );
+                }
             }
 
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): parsing data', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
@@ -551,9 +579,7 @@ class Import
                 }
                 foreach ($touristic_data_importer->getErrors() as $error) {
                     Writer::write($error, WRITER::OUTPUT_FILE, 'touristic_data_import', WRITER::TYPE_ERROR);
-                }
-                if (count($touristic_data_importer->getErrors()) > 0) {
-                    $this->_errors[] = 'Error in ' . TouristicData::class . '. See log "touristic_data_import" for details';
+                    $this->_errors[] = '[TouristicData] ' . $error;
                 }
 
                 if (is_array($starting_point_ids) && count($starting_point_ids) > 0) {
@@ -602,9 +628,7 @@ class Import
                 }
                 foreach ($agency_importer->getErrors() as $error) {
                     Writer::write($error, WRITER::OUTPUT_FILE, 'agency_import', WRITER::TYPE_ERROR);
-                }
-                if (count($agency_importer->getErrors()) > 0) {
-                    $this->_errors[] = 'Error in agency import. See log "agency_import" for details';
+                    $this->_errors[] = '[Agency] ' . $error;
                 }
             }
 
@@ -669,7 +693,7 @@ class Import
                     $media_object->insertCheapestPrice();
                 } catch (Exception $e) {
                     $this->_log[] = ' Importer::importMediaObject(' . $media_object->getId() . '):  Creating cheapest price failed: ' . $e->getMessage();
-                    $this->_errors[] = 'Importer::importMediaObject(' . $media_object->getId() . '):  Creating cheapest price failed: ' . $e->getMessage();
+                    $this->_errors[] = '[CheapestPrice] Importer::importMediaObject(' . $media_object->getId() . '):  Creating cheapest price failed: ' . $e->getMessage();
                 }
             }
 
@@ -716,7 +740,7 @@ class Import
                             }
                         } catch (Exception $e) {
                             $this->_log[] = ' Creating routes failed for media object id ' . $id_media_object . ': ' . $e->getMessage();
-                            $this->_errors[] = ' Creating routes failed for media object id ' . $id_media_object . ': ' . $e->getMessage();
+                            $this->_errors[] = '[Routes] Creating routes failed for media object id ' . $id_media_object . ': ' . $e->getMessage();
                         }
                     }
                     if (!empty($route_data)) {
@@ -742,9 +766,7 @@ class Import
                         }
                         foreach ($custom_importer->getErrors() as $error) {
                             Writer::write($error, WRITER::OUTPUT_FILE, 'my_content_class_map', WRITER::TYPE_ERROR);
-                        }
-                        if(count($custom_importer->getErrors()) > 0) {
-                            $this->_errors[] = 'Error in hook invoked by MyContent class map. See log "my_content_class_map" for details';
+                            $this->_errors[] = '[MyContent] ' . $error;
                         }
                     }
                 }
@@ -761,16 +783,12 @@ class Import
                     }
                     foreach ($custom_import_class->getErrors() as $error) {
                         Writer::write($error, WRITER::OUTPUT_BOTH, 'custom_import_hook', WRITER::TYPE_ERROR);
-                    }
-                    if(count($custom_import_class->getErrors()) > 0) {
-                        $this->_errors[] = count($custom_import_class->getErrors()). ' errors in custom import hook. See log "custom_import_hook" for details';
+                        $this->_errors[] = '[CustomImportHook] ' . $error;
                     }
                     if(method_exists($custom_import_class, 'getWarnings')){
                         foreach ($custom_import_class->getWarnings() as $warning) {
                             Writer::write($warning, WRITER::OUTPUT_BOTH, 'custom_import_hook', WRITER::TYPE_WARNING);
-                        }
-                        if(count($custom_import_class->getWarnings()) > 0) {
-                            $this->_errors[] = count($custom_import_class->getWarnings()). ' warnings in custom import hook. See log "custom_import_hook" for details';
+                            $this->_errors[] = '[CustomImportHook] ' . $warning;
                         }
                     }
                 }
@@ -790,7 +808,7 @@ class Import
                     'import',
                     Writer::TYPE_ERROR
                 );
-                $this->_errors[] = 'TRANSACTION ROLLBACK for MediaObject ' . $id_media_object
+                $this->_errors[] = '[TransactionRollback] TRANSACTION ROLLBACK for MediaObject ' . $id_media_object
                     . ': ' . $e->getMessage();
                 return false;
             }
@@ -810,7 +828,7 @@ class Import
                     $media_object->createMongoDBIndex();
                 } catch (Exception $e) {
                     $this->_log[] = 'Error during creating MongoDBIndex: ' . $e->getMessage();
-                    $this->_errors[] = 'Error during creating MongoDBIndex: ' . $e->getMessage();
+                    $this->_errors[] = '[MongoDB] Error during creating MongoDBIndex: ' . $e->getMessage();
                 }
                 try {
                     $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): createMongoDBCalendar', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
@@ -819,7 +837,7 @@ class Import
                     $this->_log[] = 'Error during creating createMongoDBCalendar: ' . $e->getMessage();
 
                     echo $e->getTraceAsString();
-                    $this->_errors[] = 'Error during creating createMongoDBCalendar: ' . $e->getMessage();
+                    $this->_errors[] = '[MongoDB] Error during creating createMongoDBCalendar: ' . $e->getMessage();
                 }
             }
 
@@ -829,7 +847,7 @@ class Import
                     $media_object->createOpenSearchIndex();
                 } catch (Exception $e) {
                     $this->_log[] = 'Error during creating OpenSearch: ' . $e->getMessage();
-                    $this->_errors[] = 'Error during creating OpenSearch: ' . $e->getMessage();
+                    $this->_errors[] = '[OpenSearch] Error during creating OpenSearch: ' . $e->getMessage();
                 }
             }
 
@@ -844,7 +862,7 @@ class Import
             return ($import_error == false);
         } else {
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): RestClient-Request for Media Object ID: ' . $id_media_object . ' failed', Writer::OUTPUT_FILE, 'import', Writer::TYPE_ERROR);
-            $this->_errors[] = 'Importer::importMediaObject(' . $id_media_object . '): RestClient-Request for Media Object ID: ' . $id_media_object . ' failed';
+            $this->_errors[] = '[RestClient] Importer::importMediaObject(' . $id_media_object . '): RestClient-Request for Media Object ID: ' . $id_media_object . ' failed';
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . '--------------------------------------------------------------------------------', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
         }
         return false;
@@ -883,7 +901,7 @@ class Import
         } catch (Exception $e) {
             $this->_api_import_successful = false;
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::removeOrphans(): API call failed, skipping orphan removal: ' . $e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-            $this->_errors[] = 'Importer::removeOrphans(): API call failed, skipping orphan removal: ' . $e->getMessage();
+            $this->_errors[] = '[OrphanRemoval] Importer::removeOrphans(): API call failed, skipping orphan removal: ' . $e->getMessage();
             return;
         }
         $pending_ids = Queue::getAllPending();
@@ -957,7 +975,7 @@ class Import
                     'import',
                     Writer::TYPE_ERROR
                 );
-                $this->_errors[] = 'Orphan removal aborted: delete ratio ' . round($ratio * 100, 1) . '% exceeds threshold ' . ($max_ratio * 100) . '%';
+                $this->_errors[] = '[OrphanRemoval] Orphan removal aborted: delete ratio ' . round($ratio * 100, 1) . '% exceeds threshold ' . ($max_ratio * 100) . '%';
                 return;
             }
         }
@@ -974,7 +992,7 @@ class Import
                 $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Orphan: ' . $media_object->id . ' deleted from mysql', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             } catch (Exception $e) {
                 $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Deletion of Orphan ' . $media_object->id . ' failed: ' . $e->getMessage(), Writer::OUTPUT_FILE, 'import', Writer::TYPE_ERROR);
-                $this->_errors[] = 'Deletion of Orphan ' . $media_object->id . '): failed: ' . $e->getMessage();
+                $this->_errors[] = '[OrphanRemoval] Deletion of Orphan ' . $media_object->id . '): failed: ' . $e->getMessage();
             }
         }
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Finding and removing Orphans done', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
@@ -1052,16 +1070,12 @@ class Import
                     }
                     foreach ($custom_import_class->getErrors() as $error) {
                         Writer::write($error, WRITER::OUTPUT_FILE, 'custom_post_import_hook', WRITER::TYPE_ERROR);
-                    }
-                    if(count($custom_import_class->getErrors()) > 0) {
-                        $this->_errors[] = count($custom_import_class->getErrors()). ' errors in custom post import hook. See log "custom_post_import_hook" for details';
+                        $this->_errors[] = '[CustomPostImportHook] ' . $error;
                     }
                     if(method_exists($custom_import_class, 'getWarnings')){
                         foreach ($custom_import_class->getWarnings() as $warning) {
                             Writer::write($warning, WRITER::OUTPUT_FILE, 'custom_post_import_hook', WRITER::TYPE_WARNING);
-                        }
-                        if(count($custom_import_class->getWarnings()) > 0) {
-                            $this->_errors[] = count($custom_import_class->getWarnings()). ' warnings in custom post import hook. See log "custom_post_import_hook" for details';
+                            $this->_errors[] = '[CustomPostImportHook] ' . $warning;
                         }
                     }
                 }
@@ -1146,6 +1160,72 @@ class Import
     public function getErrors()
     {
         return $this->_errors;
+    }
+
+    /**
+     * Normalizes error detail by removing Importer method prefix with media object ID
+     * so that the same error across multiple media objects groups into one line.
+     *
+     * @param string $detail
+     * @return string
+     */
+    private function _normalizeErrorDetailForGrouping(string $detail): string
+    {
+        return trim(preg_replace(
+            '/^Importer::(_importMediaObjectTouristicData|importMediaObject|importTouristicDataOnly)\(\d+\):\s*/',
+            '',
+            $detail
+        ));
+    }
+
+    /**
+     * Returns a grouped, deduplicated error summary for CLI output.
+     * Same errors are grouped with count. Full messages are shown (no truncation).
+     * Limits to 5 unique error messages per category to avoid flooding the console.
+     *
+     * @return string
+     */
+    public function getGroupedErrorSummary(): string
+    {
+        if (empty($this->_errors)) {
+            return '';
+        }
+
+        $grouped = [];
+        foreach ($this->_errors as $error) {
+            if (preg_match('/^\[([^\]]+)\]\s*(.+)$/s', $error, $matches)) {
+                $category = $matches[1];
+                $detail = $matches[2];
+            } else {
+                $category = 'General';
+                $detail = $error;
+            }
+            $detail = $this->_normalizeErrorDetailForGrouping($detail);
+            $grouped[$category][] = $detail;
+        }
+
+        $lines = [];
+        $lines[] = 'WARNING: Import completed with ' . count($this->_errors) . ' error(s):';
+        $lines[] = '';
+
+        $maxUniquePerCategory = 5;
+        foreach ($grouped as $category => $errors) {
+            $uniqueErrors = array_count_values($errors);
+            $lines[] = '  [' . $category . '] (' . count($errors) . ' error(s))';
+            $displayed = 0;
+            foreach ($uniqueErrors as $msg => $count) {
+                if ($displayed >= $maxUniquePerCategory) {
+                    $remaining = count($uniqueErrors) - $maxUniquePerCategory;
+                    $lines[] = '    ... and ' . $remaining . ' more unique error type(s). See log for details.';
+                    break;
+                }
+                $prefix = $count > 1 ? '    (' . $count . 'x) ' : '    - ';
+                $lines[] = $prefix . $msg;
+                $displayed++;
+            }
+            $lines[] = '';
+        }
+        return implode("\n", $lines);
     }
 
     /**

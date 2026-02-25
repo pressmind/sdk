@@ -8,6 +8,7 @@ use Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup\Item;
 use Pressmind\ORM\Object\Touristic\Housing\Package;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToAlternate;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToGroup;
+use Pressmind\ORM\Object\Touristic\Insurance;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToInsurance;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToPriceTable;
 use Pressmind\ORM\Object\Touristic\Option\Discount;
@@ -41,6 +42,7 @@ class TouristicData extends AbstractImport
         'touristic_insurance_to_attribute' => '\Insurance\InsuranceToAttribute',
         'touristic_insurance_attributes' => '\Insurance\Attribute',
         'touristic_insurance_to_alternate' => '\Insurance\InsuranceToAlternate',
+        'touristic_insurance_to_insurance' => '\Insurance\InsuranceToInsurance',
         'touristic_option_discounts' => '\Option\Discount'
     ];
 
@@ -94,7 +96,7 @@ class TouristicData extends AbstractImport
                         unset($touristic_object->id_insurance);
                         $insuranceToinsurance = new InsuranceToInsurance();
                         $insuranceToinsurance->id_insurance = $main_insurance_id;
-                        $insuranceToinsurance->id_sub_insurance = $touristic_object->id;
+                        $insuranceToinsurance->id_additional_insurance = $touristic_object->id;
                         $insuranceToinsurance->delete();
                         $insuranceToinsurance->create();
                     }
@@ -108,6 +110,13 @@ class TouristicData extends AbstractImport
                             $touristic_object->$new_key = $value;
                             unset($touristic_object->$key);
                         }
+                    }
+                    if ($touristic_object_name === 'touristic_insurances') {
+                        // These ManyToMany relations are imported separately as
+                        // touristic_insurance_to_insurance / touristic_insurance_to_alternate.
+                        // Strip them to prevent _createManyToManyRelations from creating duplicate rows.
+                        unset($touristic_object->additional_insurances);
+                        unset($touristic_object->alternate_insurances);
                     }
                     try {
                         /**@var AbstractObject $object * */
@@ -160,6 +169,36 @@ class TouristicData extends AbstractImport
     }
 
     /**
+     * Batch delete relation rows to avoid N round-trips when table has many rows (e.g. 1M+ alternate insurances).
+     * @param AdapterInterface $db
+     * @param string $table
+     * @param array $items Each element: [col1 => val1, col2 => val2]
+     * @param string $columnKey1
+     * @param string $columnKey2
+     * @param int $chunkSize
+     */
+    private function _batchDeleteInsuranceRelation($db, $table, array $items, $columnKey1, $columnKey2, $chunkSize = 500)
+    {
+        if (empty($items)) {
+            return;
+        }
+        $chunks = array_chunk($items, $chunkSize);
+        foreach ($chunks as $chunk) {
+            $pairs = [];
+            $params = [];
+            foreach ($chunk as $item) {
+                $pairs[] = '(?,?)';
+                $params[] = $item[$columnKey1];
+                $params[] = $item[$columnKey2];
+            }
+            $db->execute(
+                "DELETE FROM {$table} WHERE ({$columnKey1}, {$columnKey2}) IN (" . implode(',', $pairs) . ")",
+                $params
+            );
+        }
+    }
+
+    /**
      * @param $data
      * @return void
      * @throws Exception
@@ -169,10 +208,19 @@ class TouristicData extends AbstractImport
          * @var $db AdapterInterface
          */
         $db = Registry::getInstance()->get('db');
+        $dataKeys = is_object($data) ? array_keys(get_object_vars($data)) : array_keys($data);
+        $insuranceOnlyKeys = [
+            'touristic_insurance_groups', 'touristic_insurance_to_group', 'touristic_insurances',
+            'touristic_additional_insurances', 'touristic_insurances_price_tables', 'touristic_insurances_to_price_table',
+            'touristic_insurance_to_attribute', 'touristic_insurance_attributes', 'touristic_insurance_to_alternate',
+            'touristic_insurance_to_insurance'
+        ];
+        $isInsuranceOnlyImport = (count(array_diff($dataKeys, $insuranceOnlyKeys)) === 0);
         $insurance_to_group = [];
         $insurances_to_price_table = [];
         $insurance_to_attribute = [];
         $insurance_to_alternate = [];
+        $insurance_to_insurance = [];
         foreach($data as $touristic_object_name => $touristic_objects){
             if($touristic_object_name == 'touristic_insurance_to_group'){
                 foreach($touristic_objects as $item){
@@ -192,6 +240,11 @@ class TouristicData extends AbstractImport
             if($touristic_object_name == 'touristic_insurance_to_alternate'){
                 foreach($touristic_objects as $item){
                     $insurance_to_alternate[$item->id_insurance][] = $item;
+                }
+            }
+            if($touristic_object_name == 'touristic_insurance_to_insurance'){
+                foreach($touristic_objects as $item){
+                    $insurance_to_insurance[$item->id_insurance][] = $item;
                 }
             }
         }
@@ -217,10 +270,7 @@ class TouristicData extends AbstractImport
                     }
                 }
             }
-            foreach ($items_to_delete as $item) {
-                $db->execute('DELETE FROM pmt2core_touristic_insurance_to_group WHERE id_insurance = ? AND id_insurance_group = ?',
-                    [$item['id_insurance'], $item['id_insurance_group']]);
-            }
+            $this->_batchDeleteInsuranceRelation($db, 'pmt2core_touristic_insurance_to_group', $items_to_delete, 'id_insurance', 'id_insurance_group');
         }
         if (!empty($insurances_to_price_table)) {
             $insurance_ids = array_keys($insurances_to_price_table);
@@ -242,13 +292,12 @@ class TouristicData extends AbstractImport
                     }
                 }
             }
-            foreach ($items_to_delete as $item) {
-                $db->execute('DELETE FROM pmt2core_touristic_insurance_to_price_table WHERE id_insurance = ? AND id_price_table = ?',
-                    [$item['id_insurance'], $item['id_price_table']]);
-            }
+            $this->_batchDeleteInsuranceRelation($db, 'pmt2core_touristic_insurance_to_price_table', $items_to_delete, 'id_insurance', 'id_price_table');
         }
 
-        $db->execute('DELETE FROM pmt2core_touristic_insurances_price_tables WHERE id NOT IN (SELECT id_price_table FROM pmt2core_touristic_insurance_to_price_table)');
+        if (!$isInsuranceOnlyImport) {
+            $db->execute('DELETE FROM pmt2core_touristic_insurances_price_tables WHERE id NOT IN (SELECT id_price_table FROM pmt2core_touristic_insurance_to_price_table)');
+        }
 
         // Remove orphaned insurance_to_attribute entries
         if (!empty($insurance_to_attribute)) {
@@ -271,10 +320,7 @@ class TouristicData extends AbstractImport
                     }
                 }
             }
-            foreach ($items_to_delete as $item) {
-                $db->execute('DELETE FROM pmt2core_touristic_insurance_to_attributes WHERE id_insurance = ? AND id_attribute = ?',
-                    [$item['id_insurance'], $item['id_attribute']]);
-            }
+            $this->_batchDeleteInsuranceRelation($db, 'pmt2core_touristic_insurance_to_attributes', $items_to_delete, 'id_insurance', 'id_attribute');
         }
 
         // Remove orphaned insurance_to_alternate entries
@@ -298,14 +344,36 @@ class TouristicData extends AbstractImport
                     }
                 }
             }
-            foreach ($items_to_delete as $item) {
-                $db->execute('DELETE FROM pmt2core_touristic_insurance_to_alternate WHERE id_insurance = ? AND id_alternate_insurance = ?',
-                    [$item['id_insurance'], $item['id_alternate_insurance']]);
-            }
+            $this->_batchDeleteInsuranceRelation($db, 'pmt2core_touristic_insurance_to_alternate', $items_to_delete, 'id_insurance', 'id_alternate_insurance');
         }
 
-        // Remove orphaned insurance attributes not referenced by any insurance
-        $db->execute('DELETE FROM pmt2core_touristic_insurance_attributes WHERE id NOT IN (SELECT id_attribute FROM pmt2core_touristic_insurance_to_attributes)');
+        // Remove orphaned insurance_to_insurance (additional insurances) entries
+        if (!empty($insurance_to_insurance)) {
+            $insurance_ids = array_keys($insurance_to_insurance);
+            $placeholders = implode(',', array_fill(0, count($insurance_ids), '?'));
+            $allStoredItems = $db->fetchAll(
+                "SELECT id_insurance, id_additional_insurance FROM pmt2core_touristic_insurance_to_insurance WHERE id_insurance IN ($placeholders)",
+                $insurance_ids
+            );
+            $items_to_delete = [];
+            foreach ($allStoredItems as $storedItem) {
+                $id_insurance = $storedItem->id_insurance;
+                $id_additional_insurance = $storedItem->id_additional_insurance;
+                if (isset($insurance_to_insurance[$id_insurance])) {
+                    $result = array_filter($insurance_to_insurance[$id_insurance], function($v) use ($id_additional_insurance) {
+                        return $v->id_additional_insurance == $id_additional_insurance;
+                    });
+                    if (count($result) == 0) {
+                        $items_to_delete[] = ['id_insurance' => $id_insurance, 'id_additional_insurance' => $id_additional_insurance];
+                    }
+                }
+            }
+            $this->_batchDeleteInsuranceRelation($db, 'pmt2core_touristic_insurance_to_insurance', $items_to_delete, 'id_insurance', 'id_additional_insurance');
+        }
+
+        if (!$isInsuranceOnlyImport) {
+            $db->execute('DELETE FROM pmt2core_touristic_insurance_attributes WHERE id NOT IN (SELECT id_attribute FROM pmt2core_touristic_insurance_to_attributes)');
+        }
     }
 
     /**

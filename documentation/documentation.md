@@ -125,7 +125,7 @@ MediaObject
       │    └── insurances (Insurance[])
       │         ├── price_tables
       │         ├── attributes
-      │         ├── sub_insurances
+      │         ├── additional_insurances
       │         └── alternate_insurances
       ├── extras (Option[])             → additional services
       ├── tickets (Option[])            → entrance tickets

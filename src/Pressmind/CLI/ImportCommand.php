@@ -5,6 +5,7 @@ namespace Pressmind\CLI;
 use Exception;
 use Pressmind\Import;
 use Pressmind\Import\CategoryTree;
+use Pressmind\Registry;
 use Pressmind\Import\Itinerary as ItineraryImporter;
 use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\MediaObject;
@@ -206,7 +207,13 @@ class ImportCommand extends AbstractCommand
         try {
             $importer->import();
             if ($importer->hasErrors()) {
-                $this->output->writeln("WARNING: Import threw errors:\n" . implode("\n", $importer->getErrors()) . "\nSEE " . $logPath . " for details", null);
+                $this->output->writeln($importer->getGroupedErrorSummary(), null);
+                $config = Registry::getInstance()->get('config');
+                if (isset($config['logging']['storage']) && $config['logging']['storage'] === 'database') {
+                    $this->output->writeln('Details: See database log table (pmt2core_logs)', null);
+                } else {
+                    $this->output->writeln('Details: ' . $logPath, null);
+                }
             }
             Writer::write('Import done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         } catch (Exception $e) {
@@ -231,7 +238,13 @@ class ImportCommand extends AbstractCommand
                 return 0;
             }
             if ($importer->hasErrors()) {
-                $this->output->writeln("WARNING: Import threw errors:\n" . implode("\n", $importer->getErrors()) . "\nSEE " . $logPath . " for details", null);
+                $this->output->writeln($importer->getGroupedErrorSummary(), null);
+                $config = Registry::getInstance()->get('config');
+                if (isset($config['logging']['storage']) && $config['logging']['storage'] === 'database') {
+                    $this->output->writeln('Details: See database log table (pmt2core_logs)', null);
+                } else {
+                    $this->output->writeln('Details: ' . $logPath, null);
+                }
             }
             Writer::write('Import done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         } catch (Exception $e) {
@@ -260,7 +273,13 @@ class ImportCommand extends AbstractCommand
             Writer::write('Import done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             $importer->postImport($ids);
             if ($importer->hasErrors()) {
-                $this->output->writeln("WARNING: Import threw errors:\n" . implode("\n", $importer->getErrors()) . "\nSEE " . $logPath . " for details", null);
+                $this->output->writeln($importer->getGroupedErrorSummary(), null);
+                $config = Registry::getInstance()->get('config');
+                if (isset($config['logging']['storage']) && $config['logging']['storage'] === 'database') {
+                    $this->output->writeln('Details: See database log table (pmt2core_logs)', null);
+                } else {
+                    $this->output->writeln('Details: ' . $logPath, null);
+                }
             }
         } catch (Exception $e) {
             Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
@@ -321,7 +340,13 @@ class ImportCommand extends AbstractCommand
             $importer->importMediaObjectTypes($ids);
             Writer::write('Import done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             if ($importer->hasErrors()) {
-                $this->output->writeln("WARNING: Import threw errors:\n" . implode("\n", $importer->getErrors()) . "\nSEE " . $logPath . " for details", null);
+                $this->output->writeln($importer->getGroupedErrorSummary(), null);
+                $config = Registry::getInstance()->get('config');
+                if (isset($config['logging']['storage']) && $config['logging']['storage'] === 'database') {
+                    $this->output->writeln('Details: See database log table (pmt2core_logs)', null);
+                } else {
+                    $this->output->writeln('Details: ' . $logPath, null);
+                }
             }
         } catch (Exception $e) {
             Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
@@ -533,7 +558,13 @@ class ImportCommand extends AbstractCommand
             Writer::write('Touristic import done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             $importer->postImport($ids);
             if ($importer->hasErrors()) {
-                $this->output->writeln("WARNING: Import threw errors:\n" . implode("\n", $importer->getErrors()) . "\nSEE " . $logPath . " for details", null);
+                $this->output->writeln($importer->getGroupedErrorSummary(), null);
+                $config = Registry::getInstance()->get('config');
+                if (isset($config['logging']['storage']) && $config['logging']['storage'] === 'database') {
+                    $this->output->writeln('Details: See database log table (pmt2core_logs)', null);
+                } else {
+                    $this->output->writeln('Details: ' . $logPath, null);
+                }
             }
         } catch (Exception $e) {
             Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
@@ -568,7 +599,13 @@ class ImportCommand extends AbstractCommand
                 }
             }
             if ($importer->hasErrors()) {
-                $this->output->writeln("WARNING: Import threw errors:\n" . implode("\n", $importer->getErrors()) . "\nSEE " . $logPath . " for details", null);
+                $this->output->writeln($importer->getGroupedErrorSummary(), null);
+                $config = Registry::getInstance()->get('config');
+                if (isset($config['logging']['storage']) && $config['logging']['storage'] === 'database') {
+                    $this->output->writeln('Details: See database log table (pmt2core_logs)', null);
+                } else {
+                    $this->output->writeln('Details: ' . $logPath, null);
+                }
             }
             Writer::write('Touristic fullimport done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         } catch (Exception $e) {

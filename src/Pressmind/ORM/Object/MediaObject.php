@@ -1508,6 +1508,7 @@ class MediaObject extends AbstractObject
                         $tmpOption = new Option();
                         $tmpOption->name = '';
                         $tmpOption->price = 0;
+                        $tmpOption->state = 3;
                         $options[] = $tmpOption;
                     }
                     if(empty($options)){

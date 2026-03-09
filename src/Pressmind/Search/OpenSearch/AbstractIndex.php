@@ -2,7 +2,7 @@
 
 namespace Pressmind\Search\OpenSearch;
 
-use OpenSearch\GuzzleClientFactory;
+use OpenSearch\SymfonyClientFactory;
 use Pressmind\DB\Adapter\Pdo;
 use Pressmind\HelperFunctions;
 use Pressmind\ORM\Object\MediaObject;
@@ -66,12 +66,12 @@ class AbstractIndex
         $this->_allowed_visibilities = Registry::getInstance()->get('config')['data']['media_types_allowed_visibilities'];
         $options = [
             'base_uri' => $this->_config['uri'],
-            'verify' => false,
+            'verify_peer' => false,
         ];
         if (!empty($this->_config['username']) && !empty($this->_config['password'])) {
-            $options['auth'] = [$this->_config['username'], $this->_config['password']];
+            $options['auth_basic'] = [$this->_config['username'], $this->_config['password']];
         }
-        $this->client = (new GuzzleClientFactory())->create($options);
+        $this->client = (new SymfonyClientFactory())->create($options);
         $this->_number_of_shards = isset($this->_config['number_of_shards']) ? $this->_config['number_of_shards'] : 1;
         $this->_number_of_replicas = isset($this->_config['number_of_replicas']) ? $this->_config['number_of_replicas'] : 0;
         $this->_languages = $this->getLanguages();

@@ -184,6 +184,10 @@ class Indexer extends AbstractIndex
         foreach ($fields as $property_name => $property) {
             $string = '';
             $field_name = $property['name'];
+            if ($field_name === 'id') {
+                $searchObject->{$property_name} = (string) $mediaObject->id;
+                continue;
+            }
             if (in_array($field_name, ['code', 'name', 'tags'])) {
                 if (isset($mediaObject->{$field_name}) && !empty($mediaObject->{$field_name})) {
                     $string = $mediaObject->{$field_name};

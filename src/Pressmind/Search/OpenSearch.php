@@ -178,6 +178,44 @@ class OpenSearch extends AbstractSearch
     {
         $allHits = [];
         $searchAfter = null;
+        $textFields = $this->_getFields('text');
+        $keywordFields = $this->_getFields('keyword');
+
+        $shouldClauses = [];
+        if (!empty($textFields)) {
+            $shouldClauses[] = [
+                'multi_match' => [
+                    'query' => $this->_search_term,
+                    'fields' => $textFields,
+                    'type' => 'best_fields',
+                    'operator' => 'and',
+                    'fuzziness' => 'AUTO',
+                    'prefix_length' => 3
+                ]
+            ];
+        }
+        if (!empty($keywordFields)) {
+            $shouldClauses[] = [
+                'multi_match' => [
+                    'query' => $this->_search_term,
+                    'fields' => $keywordFields,
+                    'type' => 'best_fields',
+                    'operator' => 'and'
+                ]
+            ];
+        }
+
+        if (empty($shouldClauses)) {
+            $shouldClauses[] = [
+                'multi_match' => [
+                    'query' => $this->_search_term,
+                    'fields' => $this->_getFields(),
+                    'type' => 'best_fields',
+                    'operator' => 'and'
+                ]
+            ];
+        }
+
         while (true) {
             $body = [
                 '_source' => false,
@@ -188,18 +226,8 @@ class OpenSearch extends AbstractSearch
                 ],
                 'query' => [
                     'bool' => [
-                        'must' => [
-                            [
-                                'multi_match' => [
-                                    'query' => $this->_search_term,
-                                    'fields' => $this->_getFields(),
-                                    'type' => 'best_fields',
-                                    'operator' => 'and',
-                                    'fuzziness' => 'AUTO',
-                                    'prefix_length' => 3
-                                ]
-                            ]
-                        ],
+                        'should' => $shouldClauses,
+                        'minimum_should_match' => 1,
                         'filter' => []
                     ]
                 ]

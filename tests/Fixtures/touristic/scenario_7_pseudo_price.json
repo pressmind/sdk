@@ -1,0 +1,24 @@
+[
+  {
+    "_comment": "Pseudo price (Streichpreis) only, no EarlyBird",
+    "id": 12,
+    "id_media_object": "100012",
+    "id_booking_package": "bp7",
+    "id_housing_package": "hp7",
+    "id_date": "d7",
+    "id_option": "o7",
+    "duration": 3,
+    "date_departure_offset": 14,
+    "date_arrival_offset": 17,
+    "option_name": "Test Option Pseudo Only",
+    "option_occupancy": 2,
+    "price_total": 299,
+    "price_regular_before_discount": 299,
+    "price_option_pseudo": 399,
+    "earlybird_discount": null,
+    "earlybird_discount_f": null,
+    "state": 3,
+    "transport_type": "BUS",
+    "price_mix": "date_housing"
+  }
+]

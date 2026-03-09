@@ -41,7 +41,7 @@ class BookingState implements ConditionInterface
     {
         $item_id_strings = [];
         $term_counter = 0;
-        foreach ($this->_item_ids as $item_id) {
+        foreach ($this->_state_ids as $item_id) {
             $term_counter++;
             $item_id_strings[] = 'pmt2core_touristic_options.state = :booking_state' . $term_counter;
             $this->_values[':booking_state' . $term_counter] = $item_id;

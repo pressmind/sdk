@@ -44,6 +44,17 @@ class S3 implements ProviderInterface, PrefixListableInterface, FullScanInterfac
     }
 
     /**
+     * Set the S3 client (e.g. for testing with a mock). Does not change existing behaviour when not used.
+     *
+     * @param S3Client $client
+     * @return void
+     */
+    public function setS3Client(S3Client $client): void
+    {
+        $this->_s3_client = $client;
+    }
+
+    /**
      * @param File $file
      * @param Bucket $bucket
      * @return true

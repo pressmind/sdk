@@ -1,0 +1,111 @@
+{
+  "cheapest_price_speed": {
+    "id": 999001,
+    "id_media_object": 999100,
+    "id_booking_package": "bp_test_999",
+    "id_housing_package": "hp_test_999",
+    "id_date": "dt_test_999",
+    "id_option": "opt_test_999",
+    "duration": 7,
+    "date_departure_offset": 30,
+    "date_arrival_offset": 37,
+    "option_name": "Doppelzimmer Test",
+    "option_occupancy": 2,
+    "option_occupancy_min": 1,
+    "option_occupancy_max": 3,
+    "price_mix": "date_housing",
+    "price_option": 199.00,
+    "price_total": 399.00,
+    "price_transport_total": 0,
+    "state": 0,
+    "transport_type": "BUS"
+  },
+  "touristic_booking_package": {
+    "id": "bp_test_999",
+    "id_media_object": 999100,
+    "name": "Test Booking Package",
+    "duration": 7,
+    "order": 0,
+    "price_mix": "date_housing",
+    "code": "TBP999",
+    "price_group": null,
+    "product_group": null,
+    "request_code": null,
+    "ibe_type": 0,
+    "product_type_ibe": null
+  },
+  "touristic_date": {
+    "id": "dt_test_999",
+    "id_media_object": 999100,
+    "id_booking_package": "bp_test_999",
+    "id_starting_point": null,
+    "departure_offset": 30,
+    "arrival_offset": 37,
+    "season": "S",
+    "state": 0,
+    "pax_min": 1,
+    "pax_max": 99,
+    "code": null
+  },
+  "geodata": [
+    {"postleitzahl": "10115", "gemeinde_name": "Berlin", "ort_name": "Berlin", "gemeinde_lat": 52.532, "gemeinde_lon": 13.383, "ort_lat": 52.532, "ort_lon": 13.383},
+    {"postleitzahl": "20095", "gemeinde_name": "Hamburg", "ort_name": "Hamburg", "gemeinde_lat": 53.551, "gemeinde_lon": 9.993, "ort_lat": 53.551, "ort_lon": 9.993}
+  ],
+  "startingpoint": {
+    "id": "sp_test_999",
+    "code": "BER-ZOB",
+    "name": "Berlin ZOB"
+  },
+  "startingpoint_options": [
+    {
+      "id": "spo_test_001",
+      "id_startingpoint": "sp_test_999",
+      "code": "BER",
+      "name": "Berlin Alexanderplatz",
+      "zip": "10178",
+      "city": "Berlin",
+      "price": 0,
+      "start_time": "08:00:00",
+      "entry": 1,
+      "exit": 0,
+      "is_pickup_service": 0,
+      "ibe_clients": null
+    },
+    {
+      "id": "spo_test_002",
+      "id_startingpoint": "sp_test_999",
+      "code": "HAM",
+      "name": "Hamburg Hauptbahnhof",
+      "zip": "20095",
+      "city": "Hamburg",
+      "price": 15.00,
+      "start_time": "06:30:00",
+      "entry": 1,
+      "exit": 0,
+      "is_pickup_service": 0,
+      "ibe_clients": null
+    },
+    {
+      "id": "spo_test_003",
+      "id_startingpoint": "sp_test_999",
+      "code": "BER-PU",
+      "name": "Berlin Haustuerabholung",
+      "zip": "10115",
+      "city": "Berlin",
+      "price": 25.00,
+      "start_time": null,
+      "entry": 1,
+      "exit": 0,
+      "is_pickup_service": 1,
+      "ibe_clients": null
+    }
+  ],
+  "zip_ranges": [
+    {
+      "id": "zr_test_001",
+      "id_option": "spo_test_003",
+      "from": "10000",
+      "to": "10999"
+    }
+  ]
+}

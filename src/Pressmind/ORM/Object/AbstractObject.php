@@ -898,7 +898,7 @@ abstract class AbstractObject
     /**
      * @throws Exception
      */
-    private function _createHasManyRelations()
+    protected function _createHasManyRelations()
     {
         foreach ($this->_definitions['properties'] as $property) {
             if($property['type'] == 'relation' && isset($property['relation']) && $property['relation']['type'] == 'hasMany') {
@@ -927,7 +927,7 @@ abstract class AbstractObject
     /**
      * @throws Exception
      */
-    private function _createHasOneRelations() {
+    protected function _createHasOneRelations() {
         foreach ($this->_definitions['properties'] as $property) {
             if ($property['type'] == 'relation' && isset($property['relation']) && $property['relation']['type'] == 'hasOne') {
                 $key = $property['name'];
@@ -947,7 +947,7 @@ abstract class AbstractObject
     /**
      * @throws Exception
      */
-    private function _createBelongsToRelations() {
+    protected function _createBelongsToRelations() {
         foreach ($this->_definitions['properties'] as $property) {
             if ($property['type'] == 'relation' && isset($property['relation']) && $property['relation']['type'] == 'belongsTo') {
                 $key = $property['name'];
@@ -967,7 +967,7 @@ abstract class AbstractObject
         }
     }
 
-    private function _createManyToManyRelations() {
+    protected function _createManyToManyRelations() {
         foreach ($this->_definitions['properties'] as $property) {
             if ($property['type'] == 'relation' && isset($property['relation']) && strtolower($property['relation']['type']) == 'manytomany') {
                 $relation_table_object_class_name = $property['relation']['relation_class'];
@@ -1109,7 +1109,7 @@ abstract class AbstractObject
      * @return mixed|null
      * @throws Exception
      */
-    private function parsePropertyValue($name, $value, $direction = 'input')
+    protected function parsePropertyValue($name, $value, $direction = 'input')
     {
         $property_info = $this->_definitions['properties'][$name];
         if ($property_info['type'] == 'relation') {

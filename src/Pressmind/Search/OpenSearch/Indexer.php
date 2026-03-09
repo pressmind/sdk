@@ -217,7 +217,7 @@ class Indexer extends AbstractIndex
             foreach ($this->_config['index'] as $property_name => $property) {
                 if (isset($property['object_type_mapping'][$id_object_type]) && is_array($property['object_type_mapping'][$id_object_type])) {
                     foreach ($property['object_type_mapping'][$id_object_type] as $field) {
-                        if (empty($field['language']) || strtolower($field['language']) == strtolower($language)) {
+                        if (empty($field['language']) || strtolower($field['language']) == strtolower($language ?? '')) {
                             $fields[$property_name] = $field['field'];
                         }
                     }

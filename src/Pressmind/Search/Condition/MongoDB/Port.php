@@ -29,8 +29,8 @@ class Port
 
     public function getQuery($type = 'first_match')
     {
-        if($type == 'first_match') { // TODO
-            return ['sold_out' => $this->_sold_out];
+        if($type == 'first_match') {
+            return ['ports.id' => ['$in' => $this->_ports]];
         }
         return null;
     }

@@ -45,6 +45,11 @@ class Fulltext implements ConditionInterface
     private $_logic_operator;
 
     /**
+     * @var int|null
+     */
+    private $_object_type_id = null;
+
+    /**
      * Fulltext constructor.
      * @param string $pSearchTerms
      * @param array $pProperties
@@ -131,7 +136,7 @@ class Fulltext implements ConditionInterface
      */
     private function _splitSearchTerms($pSearchTerms)
     {
-        $this->_search_terms = explode(' ', $pSearchTerms);
+        $this->_search_terms = explode(' ', $pSearchTerms ?? '');
     }
 
     /**

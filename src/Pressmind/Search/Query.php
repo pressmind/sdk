@@ -162,10 +162,10 @@ class Query
                     $item['cheapest_price']->earlybird_discount_date_to = $document['prices']['earlybird_discount_date_to'] != null ? new \DateTime($document['prices']['earlybird_discount_date_to']) : null;
                     $item['cheapest_price']->option_name = $document['prices']['option_name'] ?? null;
                     $item['cheapest_price']->housing_package_name = $document['prices']['housing_package_name'] ?? null;
-                    $item['cheapest_price']->option_board_type = $document['prices']['option_board_type'];
-                    $item['cheapest_price']->transport_type = $document['prices']['transport_type'];
-                    $item['cheapest_price']->occupancy = $document['prices']['occupancy'];
-                    $item['cheapest_price']->occupancy_child = $document['prices']['occupancy_child'];
+                    $item['cheapest_price']->option_board_type = $document['prices']['option_board_type'] ?? null;
+                    $item['cheapest_price']->transport_type = $document['prices']['transport_type'] ?? null;
+                    $item['cheapest_price']->occupancy = $document['prices']['occupancy'] ?? null;
+                    $item['cheapest_price']->occupancy_child = $document['prices']['occupancy_child'] ?? null;
                     $item['cheapest_price']->startingpoint_id_city = !empty($document['prices']['startingpoint_option']['id']) ? $document['prices']['startingpoint_option']['id'] : null;
                     $item['cheapest_price']->startingpoint_city = !empty($document['prices']['startingpoint_option']['city']) ? $document['prices']['startingpoint_option']['city'] : null;
                     $item['cheapest_price']->startingpoint_zip = !empty($document['prices']['startingpoint_option']['zip']) ? $document['prices']['startingpoint_option']['zip'] : null;
@@ -473,9 +473,9 @@ class Query
         $config = Registry::getInstance()->get('config');
         $duration_allowed_ranges = $config['data']['search_mongodb']['search']['touristic']['duration_ranges'] ?? [];
         $result = [
-            'total_result' => !empty($result->total) ? $result->total : null,
-            'current_page' => !empty($result->currentPage) ? $result->currentPage : null,
-            'pages' => !empty($result->pages) ? $result->pages : null,
+            'total_result' => isset($result->total) ? (int)$result->total : 0,
+            'current_page' => isset($result->currentPage) ? (int)$result->currentPage : 1,
+            'pages' => isset($result->pages) ? (int)$result->pages : 0,
             'page_size' => $QueryFilter->page_size,
             'query_string' => self::getCurrentQueryString(),
             'cache' => [

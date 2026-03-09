@@ -42,7 +42,6 @@ class ImportCommand extends AbstractCommand
     protected function parseArguments(array $argv): void
     {
         parent::parseArguments($argv);
-        // Support -c=file (short option with value)
         $fixed = [];
         foreach ($this->options as $key => $value) {
             if (str_contains((string) $key, '=')) {
@@ -200,25 +199,36 @@ class ImportCommand extends AbstractCommand
         }
     }
 
+    private function reportErrors(Import $importer, string $logPath): void
+    {
+        if (!$importer->hasErrors()) {
+            return;
+        }
+        $this->output->writeln($importer->getGroupedErrorSummary(), null);
+        $config = Registry::getInstance()->get('config');
+        if (isset($config['logging']['storage']) && $config['logging']['storage'] === 'database') {
+            $this->output->writeln('Details: See database log table (pmt2core_logs)', null);
+        } else {
+            $this->output->writeln('Details: ' . $logPath, null);
+        }
+    }
+
+    private function logImportException(Exception $e, string $logPath, string $context = 'Import threw errors'): void
+    {
+        Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
+        $this->output->error("WARNING: {$context}:\n" . $e->getMessage() . "\nSEE " . $logPath . " for details");
+    }
+
     private function subFullimport(string $logPath): int
     {
         $importer = new Import('fullimport');
         Writer::write('Importing all media objects', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         try {
             $importer->import();
-            if ($importer->hasErrors()) {
-                $this->output->writeln($importer->getGroupedErrorSummary(), null);
-                $config = Registry::getInstance()->get('config');
-                if (isset($config['logging']['storage']) && $config['logging']['storage'] === 'database') {
-                    $this->output->writeln('Details: See database log table (pmt2core_logs)', null);
-                } else {
-                    $this->output->writeln('Details: ' . $logPath, null);
-                }
-            }
+            $this->reportErrors($importer, $logPath);
             Writer::write('Import done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         } catch (Exception $e) {
-            Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-            $this->output->error("WARNING: Import threw errors:\n" . $e->getMessage() . "\nSEE " . $logPath . " for details");
+            $this->logImportException($e, $logPath);
             return 1;
         } finally {
             $importer->postImport();
@@ -237,19 +247,10 @@ class ImportCommand extends AbstractCommand
             if (empty($ids)) {
                 return 0;
             }
-            if ($importer->hasErrors()) {
-                $this->output->writeln($importer->getGroupedErrorSummary(), null);
-                $config = Registry::getInstance()->get('config');
-                if (isset($config['logging']['storage']) && $config['logging']['storage'] === 'database') {
-                    $this->output->writeln('Details: See database log table (pmt2core_logs)', null);
-                } else {
-                    $this->output->writeln('Details: ' . $logPath, null);
-                }
-            }
+            $this->reportErrors($importer, $logPath);
             Writer::write('Import done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         } catch (Exception $e) {
-            Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-            $this->output->error("WARNING: Import threw errors:\n" . $e->getMessage() . "\nSEE " . $logPath . " for details");
+            $this->logImportException($e, $logPath);
             return 1;
         } finally {
             $importer->postImport();
@@ -272,18 +273,9 @@ class ImportCommand extends AbstractCommand
             $importer->importMediaObjectsFromArray($ids);
             Writer::write('Import done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             $importer->postImport($ids);
-            if ($importer->hasErrors()) {
-                $this->output->writeln($importer->getGroupedErrorSummary(), null);
-                $config = Registry::getInstance()->get('config');
-                if (isset($config['logging']['storage']) && $config['logging']['storage'] === 'database') {
-                    $this->output->writeln('Details: See database log table (pmt2core_logs)', null);
-                } else {
-                    $this->output->writeln('Details: ' . $logPath, null);
-                }
-            }
+            $this->reportErrors($importer, $logPath);
         } catch (Exception $e) {
-            Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-            $this->output->error("WARNING: Import threw errors:\n" . $e->getMessage() . "\nSEE " . $logPath . " for details");
+            $this->logImportException($e, $logPath);
             return 1;
         }
         $importedIds = $importer->getImportedIds();
@@ -321,8 +313,7 @@ class ImportCommand extends AbstractCommand
                 $itineraryImporter->import();
             }
         } catch (Exception $e) {
-            Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-            $this->output->error("WARNING: Import threw errors:\n" . $e->getMessage() . "\nSEE " . $logPath . " for details");
+            $this->logImportException($e, $logPath);
             return 1;
         }
         return 0;
@@ -339,18 +330,9 @@ class ImportCommand extends AbstractCommand
         try {
             $importer->importMediaObjectTypes($ids);
             Writer::write('Import done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
-            if ($importer->hasErrors()) {
-                $this->output->writeln($importer->getGroupedErrorSummary(), null);
-                $config = Registry::getInstance()->get('config');
-                if (isset($config['logging']['storage']) && $config['logging']['storage'] === 'database') {
-                    $this->output->writeln('Details: See database log table (pmt2core_logs)', null);
-                } else {
-                    $this->output->writeln('Details: ' . $logPath, null);
-                }
-            }
+            $this->reportErrors($importer, $logPath);
         } catch (Exception $e) {
-            Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-            $this->output->error("WARNING: Import threw errors:\n" . $e->getMessage() . "\nSEE " . $logPath . " for details");
+            $this->logImportException($e, $logPath);
             return 1;
         }
         return 0;
@@ -370,8 +352,7 @@ class ImportCommand extends AbstractCommand
                 $mediaObject->createMongoDBIndex();
                 Writer::write('Mediaobject ' . $id . ' successfully depublished (visibility set to 10/nobody)', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             } catch (Exception $e) {
-                Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-                $this->output->error("WARNING: Depublish for id " . $id . " failed:\n" . $e->getMessage() . "\nSEE " . $logPath . " for details");
+                $this->logImportException($e, $logPath, 'Depublish for id ' . $id . ' failed');
             }
         }
         return 0;
@@ -389,8 +370,7 @@ class ImportCommand extends AbstractCommand
                 $mediaObject->delete(true);
                 Writer::write('Mediaobject ' . $id . ' successfully destroyed', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             } catch (Exception $e) {
-                Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-                $this->output->error("WARNING: Destruction for mediaobject " . $id . " failed:\n" . $e->getMessage() . "\nSEE " . $logPath . " for details");
+                $this->logImportException($e, $logPath, 'Destruction for mediaobject ' . $id . ' failed');
             }
         }
         return 0;
@@ -403,8 +383,7 @@ class ImportCommand extends AbstractCommand
         try {
             $importer->removeOrphans();
         } catch (Exception $e) {
-            Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-            $this->output->error("WARNING: Import threw errors:\n" . $e->getMessage() . "\nSEE " . $logPath . " for details");
+            $this->logImportException($e, $logPath);
             return 1;
         }
         return 0;
@@ -418,8 +397,7 @@ class ImportCommand extends AbstractCommand
             $system->updateTags(['id_object_type' => $idObjectType]);
             Writer::write('updating tags done', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         } catch (Exception $e) {
-            Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-            $this->output->error("WARNING: Import threw errors:\n" . $e->getMessage() . "\nSEE " . $logPath . " for details");
+            $this->logImportException($e, $logPath);
             return 1;
         }
         return 0;
@@ -438,8 +416,7 @@ class ImportCommand extends AbstractCommand
                 $mediaObject->createMongoDBIndex();
                 Writer::write('Mediaobject offers (cheapestPrices) for ' . $id . ' successfully regenerated', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             } catch (Exception $e) {
-                Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-                $this->output->error("WARNING: Regenerate offers for id " . $id . " failed:\n" . $e->getMessage() . "\nSEE " . $logPath . " for details");
+                $this->logImportException($e, $logPath, 'Regenerate offers for id ' . $id . ' failed');
             }
         }
         return 0;
@@ -454,8 +431,7 @@ class ImportCommand extends AbstractCommand
             $indexer = new \Pressmind\Search\MongoDB\Indexer();
             $indexer->upsertPowerfilter();
         } catch (Exception $e) {
-            Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-            $this->output->error("WARNING: Powerfilter Import failed\n" . $e->getMessage() . "\nSEE " . $logPath . " for details");
+            $this->logImportException($e, $logPath, 'Powerfilter Import failed');
             return 1;
         }
         return 0;
@@ -474,8 +450,7 @@ class ImportCommand extends AbstractCommand
                 $mediaObject->createMongoDBCalendar();
                 Writer::write('Mediaobject calendars for ' . $id . ' successfully regenerated', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             } catch (Exception $e) {
-                Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-                $this->output->error("WARNING: Regenerate calendars for id " . $id . " failed:\n" . $e->getMessage() . "\nSEE " . $logPath . " for details");
+                $this->logImportException($e, $logPath, 'Regenerate calendars for id ' . $id . ' failed');
             }
         }
         return 0;
@@ -489,8 +464,7 @@ class ImportCommand extends AbstractCommand
             $importer->postImport($ids);
             Writer::write('Post import completed (image generation is running in background perhaps', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         } catch (Exception $e) {
-            Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-            $this->output->error("WARNING: post import failed:\n" . $e->getMessage() . "\nSEE " . $logPath . " for details");
+            $this->logImportException($e, $logPath, 'post import failed');
             return 1;
         }
         return 0;
@@ -504,8 +478,7 @@ class ImportCommand extends AbstractCommand
             $categoryImporter->import();
             Writer::write('Import completed', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         } catch (Exception $e) {
-            Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-            $this->output->error("WARNING: CategoryTree import failed:\n" . $e->getMessage() . "\nSEE " . $logPath . " for details");
+            $this->logImportException($e, $logPath, 'CategoryTree import failed');
             return 1;
         }
         return 0;
@@ -525,8 +498,7 @@ class ImportCommand extends AbstractCommand
             }
             Writer::write('Completed', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         } catch (Exception $e) {
-            Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-            $this->output->error("WARNING: Create Translations failed:\n" . $e->getMessage() . "\nSEE " . $logPath . " for details");
+            $this->logImportException($e, $logPath, 'Create Translations failed');
             return 1;
         }
         return 0;
@@ -538,8 +510,7 @@ class ImportCommand extends AbstractCommand
             Insurance::resetInsurances();
             Writer::write('insurance reset completed', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         } catch (Exception $e) {
-            Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-            $this->output->error("WARNING: Import threw errors:\n" . $e->getMessage() . "\nSEE " . $logPath . " for details");
+            $this->logImportException($e, $logPath);
             return 1;
         }
         return 0;
@@ -557,18 +528,9 @@ class ImportCommand extends AbstractCommand
             $importer->importTouristicDataFromArray($ids);
             Writer::write('Touristic import done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             $importer->postImport($ids);
-            if ($importer->hasErrors()) {
-                $this->output->writeln($importer->getGroupedErrorSummary(), null);
-                $config = Registry::getInstance()->get('config');
-                if (isset($config['logging']['storage']) && $config['logging']['storage'] === 'database') {
-                    $this->output->writeln('Details: See database log table (pmt2core_logs)', null);
-                } else {
-                    $this->output->writeln('Details: ' . $logPath, null);
-                }
-            }
+            $this->reportErrors($importer, $logPath);
         } catch (Exception $e) {
-            Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-            $this->output->error("WARNING: Import threw errors:\n" . $e->getMessage() . "\nSEE " . $logPath . " for details");
+            $this->logImportException($e, $logPath);
             return 1;
         }
         $importedIds = $importer->getImportedIds();
@@ -598,19 +560,10 @@ class ImportCommand extends AbstractCommand
                     \Pressmind\ORM\Object\Import\Queue::remove($id);
                 }
             }
-            if ($importer->hasErrors()) {
-                $this->output->writeln($importer->getGroupedErrorSummary(), null);
-                $config = Registry::getInstance()->get('config');
-                if (isset($config['logging']['storage']) && $config['logging']['storage'] === 'database') {
-                    $this->output->writeln('Details: See database log table (pmt2core_logs)', null);
-                } else {
-                    $this->output->writeln('Details: ' . $logPath, null);
-                }
-            }
+            $this->reportErrors($importer, $logPath);
             Writer::write('Touristic fullimport done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         } catch (Exception $e) {
-            Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-            $this->output->error("WARNING: Import threw errors:\n" . $e->getMessage() . "\nSEE " . $logPath . " for details");
+            $this->logImportException($e, $logPath);
             return 1;
         } finally {
             $importer->postImport();

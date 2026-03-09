@@ -1,0 +1,23 @@
+[
+  {
+    "id": 2,
+    "id_media_object": "100002",
+    "id_booking_package": "bp2",
+    "id_housing_package": "hp2",
+    "id_date": "d2",
+    "id_option": "o2",
+    "duration": 14,
+    "date_departure_offset": 50,
+    "date_arrival_offset": 64,
+    "earlybird_discount_date_to_offset": 20,
+    "option_name": "Test Option Flight Standard",
+    "option_description": "Test Housing Double Room",
+    "option_occupancy": 2,
+    "price_total": 1199.0,
+    "price_regular_before_discount": 1410.0,
+    "earlybird_discount": 15.0,
+    "state": 1,
+    "transport_type": "FLUG",
+    "price_mix": "date_housing"
+  }
+]

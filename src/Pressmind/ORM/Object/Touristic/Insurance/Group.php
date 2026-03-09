@@ -79,7 +79,7 @@ class Group extends AbstractObject
                 'validators' => [
                     [
                         'name' => 'inarray',
-                        'params' => ['single_selection', 'multi_selection', null, ''],
+                        'params' => ['single_selection', 'multi_selection', ''],
                     ],
                 ],
                 'filters' => NULL,

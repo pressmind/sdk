@@ -88,7 +88,7 @@ class MediaObjectCheapestPrice extends AbstractImport
                $Option->occupancy_max = $priceObject->occupancy_max;
                $Option->occupancy = $priceObject->occupancy;
                $Option->price = $priceObject->price;
-               $Option->price_pseudo = $priceObject->price_pseudo;
+               $Option->price_pseudo = $priceObject->price_pseudo ?? null;
                $Option->name = $priceObject->description_1;
                $Option->description_long = $priceObject->description_2;
                $Option->season = 'A';

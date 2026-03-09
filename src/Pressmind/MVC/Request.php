@@ -99,10 +99,9 @@ class Request
 
     public function getParsedBasicAuth()
     {
-        if(isset($this->_headers['Authorization']) && !empty($this->_headers['Authorization'])) {
-            if(strpos($this->_headers['Authorization'], 'Basic ') === 0) {
-                return explode(':', base64_decode(str_replace('Basic ', '', $this->_headers['Authorization'])));
-            }
+        $header = $this->_headers['authorization'] ?? $this->_headers['Authorization'] ?? '';
+        if(!empty($header) && strpos($header, 'Basic ') === 0) {
+            return explode(':', base64_decode(substr($header, 6)), 2);
         }
         return false;
     }
@@ -211,7 +210,7 @@ class Request
     private function _parseRequestBody()
     {
         if ($this->_method == 'POST' || $this->_method == 'PUT') {
-            $content_type = explode(';', $this->getHeader('Content-Type'))[0];
+            $content_type = explode(';', $this->getHeader('Content-Type') ?? '')[0];
             switch ($content_type) {
                 case 'application/x-www-form-urlencoded':
                 case 'multipart/form-data':

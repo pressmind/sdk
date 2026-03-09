@@ -90,15 +90,9 @@ class MediaObjectData extends AbstractImport implements ImportInterface
                         implode(', ', array_keys($migrationResult['fields']));
                 }
 
-                // log_only mode: Remove unknown fields from import data before processing
-                if (!empty($migrationResult['ignore_fields'])) {
-                    foreach ($this->_data->data as $dataField) {
-                        if (in_array(HelperFunctions::human_to_machine($dataField->var_name), $migrationResult['ignore_fields'])) {
-                            $dataField->sections = []; // Empty sections so the field is effectively ignored
-                        }
-                    }
-                    $this->_log[] = $this->_getElapsedTimeAndHeap() . ' MediaObjectData::import(' . $this->_id_media_object . '): Ignored unknown fields: ' .
-                        implode(', ', $migrationResult['ignore_fields']);
+                if (!empty($migrationResult['obsolete_fields'])) {
+                    $this->_log[] = $this->_getElapsedTimeAndHeap() . ' MediaObjectData::import(' . $this->_id_media_object . '): Obsolete fields detected: ' .
+                        implode(', ', $migrationResult['obsolete_fields']);
                 }
             } catch (Exception $e) {
                 // Re-throw schema exceptions to stop the import if mode is 'abort'

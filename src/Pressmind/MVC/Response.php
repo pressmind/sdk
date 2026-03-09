@@ -76,6 +76,38 @@ class Response
         $this->_headers[$pKey] = $pValue;
     }
 
+    /**
+     * @return int
+     */
+    public function getCode(): int
+    {
+        return $this->_code;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getBody()
+    {
+        return $this->_body;
+    }
+
+    /**
+     * @return array
+     */
+    public function getHeaders(): array
+    {
+        return $this->_headers;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getContentType(): ?string
+    {
+        return $this->_content_type;
+    }
+
     public function send()
     {
         $this->addHeader('Content-Type', $this->_content_type);

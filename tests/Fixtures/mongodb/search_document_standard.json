@@ -1,0 +1,51 @@
+{
+  "_id": 100001,
+  "id_media_object": 100001,
+  "id_object_type": 2000,
+  "code": "TEST-001",
+  "url": "/test-product-001",
+  "description": {
+    "name": "Test Product Standard"
+  },
+  "categories": [
+    {
+      "field_name": "destination",
+      "id_item": 1,
+      "path_str": "Test Region > Test Area"
+    }
+  ],
+  "groups": [],
+  "prices": [
+    {
+      "price_total": 899.0,
+      "duration": 7,
+      "occupancy": 2,
+      "transport_type": "BUS",
+      "option_board_type": "HP",
+      "state": 3,
+      "date_departures": ["DYNAMIC_+30", "DYNAMIC_+60"],
+      "startingpoint_option": {
+        "id_city": "city_1"
+      }
+    },
+    {
+      "price_total": 1299.0,
+      "duration": 14,
+      "occupancy": 2,
+      "transport_type": "FLUG",
+      "option_board_type": "AI",
+      "state": 1,
+      "date_departures": ["DYNAMIC_+45"],
+      "startingpoint_option": {
+        "id_city": "city_2"
+      }
+    }
+  ],
+  "best_price_meta": {
+    "price_total": 899.0,
+    "duration": 7,
+    "state": 3
+  },
+  "departure_date_count": 3,
+  "possible_durations": [7, 14]
+}

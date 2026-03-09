@@ -66,7 +66,7 @@ class Mysql
     public function mapTypeFromORMToMysqlWithPropertyDefinition($property)
     {
         if(key_exists($property['type'], $this->_orm_mapping_table)) {
-            $return = strtolower($this->_orm_mapping_table[$property['type']]);
+            $return = strtolower($this->_orm_mapping_table[$property['type']] ?? '');
             if(isset($property['validators']) && is_array($property['validators']) && $property['type'] != 'boolean') {
                 foreach ($property['validators'] as $validator) {
                     if($validator['name'] == 'maxlength') {

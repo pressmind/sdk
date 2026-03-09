@@ -34,13 +34,17 @@ class Redis implements AdapterInterface
     public function __construct()
     {
         $this->_config = Registry::getInstance()->get('config')['cache'];
-        $this->_server = new \Redis();
-        $this->_server->connect($this->_config['adapter']['config']['host'], $this->_config['adapter']['config']['port']);
-        if(!empty($this->_config['adapter']['config']['password'])) {
-            $this->_server->auth($this->_config['adapter']['config']['password']);
+        $adapterConfig = $this->_config['adapter']['config'] ?? null;
+        if ($adapterConfig === null || empty($adapterConfig['host'])) {
+            throw new \RuntimeException('Redis cache adapter config is missing or incomplete (host required)');
         }
-        $this->_ttl = $this->_config['max_idle_time'];
-        $this->_prefix = HelperFunctions::replaceConstantsFromConfig($this->_config['key_prefix']);
+        $this->_server = new \Redis();
+        $this->_server->connect($adapterConfig['host'], $adapterConfig['port'] ?? 6379);
+        if (!empty($adapterConfig['password'])) {
+            $this->_server->auth($adapterConfig['password']);
+        }
+        $this->_ttl = $this->_config['max_idle_time'] ?? null;
+        $this->_prefix = HelperFunctions::replaceConstantsFromConfig($this->_config['key_prefix'] ?? '');
     }
 
     public function isEnabled()

@@ -1,0 +1,7 @@
+vendor/
+.git/
+.phpunit.cache/
+.phpunit.result.cache
+.cursor/
+documentation/
+.DS_Store

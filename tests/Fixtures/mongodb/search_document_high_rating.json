@@ -1,0 +1,51 @@
+{
+  "_id": 100006,
+  "id_media_object": 100006,
+  "id_object_type": 2000,
+  "code": "TOP-001",
+  "url": "/test-high-rating-product",
+  "description": {
+    "name": "Test High Rating Product"
+  },
+  "categories": [
+    {
+      "field_name": "destination",
+      "id_item": 6,
+      "path_str": "Premium Region > Top Area"
+    }
+  ],
+  "groups": [],
+  "prices": [
+    {
+      "price_total": 1999.0,
+      "duration": 14,
+      "occupancy": 2,
+      "transport_type": "FLUG",
+      "option_board_type": "AI",
+      "state": 1,
+      "date_departures": ["DYNAMIC_+20", "DYNAMIC_+35", "DYNAMIC_+50"],
+      "startingpoint_option": {
+        "id_city": "city_2"
+      }
+    }
+  ],
+  "best_price_meta": {
+    "price_total": 1999.0,
+    "duration": 14,
+    "state": 1
+  },
+  "departure_date_count": 3,
+  "possible_durations": [14],
+  "recommendation_rate": 95,
+  "sales_priority": "A000001",
+  "custom_order": {
+    "brand": "PremiumBrand",
+    "region": "Europe"
+  },
+  "valid_from": null,
+  "valid_to": null,
+  "visibility": 30,
+  "has_price": true,
+  "sold_out": false,
+  "is_running": false
+}

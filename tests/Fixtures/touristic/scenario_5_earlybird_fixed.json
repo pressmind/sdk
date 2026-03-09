@@ -1,0 +1,25 @@
+[
+  {
+    "_comment": "Fixed amount EarlyBird (Type F): 50 EUR off",
+    "id": 10,
+    "id_media_object": "100010",
+    "id_booking_package": "bp5",
+    "id_housing_package": "hp5",
+    "id_date": "d5",
+    "id_option": "o5",
+    "duration": 7,
+    "date_departure_offset": 45,
+    "date_arrival_offset": 52,
+    "earlybird_discount_date_to_offset": 30,
+    "option_name": "Test Option Fixed EarlyBird",
+    "option_occupancy": 2,
+    "price_total": 450,
+    "price_regular_before_discount": 500,
+    "earlybird_discount": 0,
+    "earlybird_discount_f": 50,
+    "earlybird_name": "50 EUR Rabatt",
+    "state": 3,
+    "transport_type": "BUS",
+    "price_mix": "date_housing"
+  }
+]

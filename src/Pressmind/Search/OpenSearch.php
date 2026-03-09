@@ -2,7 +2,7 @@
 
 namespace Pressmind\Search;
 
-use OpenSearch\ClientBuilder;
+use OpenSearch\GuzzleClientFactory;
 use Pressmind\Cache\Adapter\Factory;
 use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\FulltextSearch;
@@ -64,12 +64,15 @@ class OpenSearch extends AbstractSearch
         } elseif (!is_null($language)) {
             $this->_language = $language;
         }
-        $this->_client = ClientBuilder::create()->setHosts([$this->_config['data']['search_opensearch']['uri']]);
-        if (!empty($this->_config['data']['search_opensearch']['username']) && !empty($this->_config['data']['search_opensearch']['password'])) {
-            $this->_client->setBasicAuthentication($this->_config['data']['search_opensearch']['username'], $this->_config['data']['search_opensearch']['password']);
+        $opensearchConfig = $this->_config['data']['search_opensearch'];
+        $options = [
+            'base_uri' => $opensearchConfig['uri'],
+            'verify' => false,
+        ];
+        if (!empty($opensearchConfig['username']) && !empty($opensearchConfig['password'])) {
+            $options['auth'] = [$opensearchConfig['username'], $opensearchConfig['password']];
         }
-        $this->_client->setSSLVerification(false);
-        $this->_client = $this->_client->build();
+        $this->_client = (new GuzzleClientFactory())->create($options);
         $this->_search_term = $this->sanitizeSearchTerm($search_term);
         $this->_index_name = $this->getIndexTemplateName($language);
         $this->_limit = $limit;
@@ -153,7 +156,7 @@ class OpenSearch extends AbstractSearch
             $info->type = 'OPENSEARCH';
             $info->classname = self::class;
             $info->method = 'updateCache';
-            $info->parameters = ['term' => $this->_search_term, 'limit' => $limit];
+            $info->parameters = ['term' => $this->_search_term, 'limit' => $this->_limit];
             $cache_adapter->add($key, json_encode($result), $info, $ttl);
         }
         $this->_addLog('getResult(): query completed');

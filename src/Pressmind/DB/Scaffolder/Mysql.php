@@ -95,7 +95,14 @@ class Mysql
         $db = Registry::getInstance()->get('db');
         if(count($this->_indexes_to_be_created) > 0) {
             foreach ($this->_indexes_to_be_created as $sql) {
-                $db->execute($sql);
+                if (preg_match('/^DROP INDEX IF EXISTS (\S+) ON (\S+)$/i', $sql, $m)) {
+                    $exists = $db->fetchAll("SHOW INDEX FROM " . $m[2] . " WHERE Key_name = '" . $m[1] . "'");
+                    if (!empty($exists)) {
+                        $db->execute("DROP INDEX " . $m[1] . " ON " . $m[2]);
+                    }
+                } else {
+                    $db->execute($sql);
+                }
             }
         }
     }
@@ -248,7 +255,8 @@ class Mysql
                     }
                 }
                 if($validator_info['name'] == 'inarray') {
-                    $return = "ENUM('" . implode("','", $validator_info['params']) . "')";
+                    $enum_values = array_unique(array_map('strval', array_filter($validator_info['params'], function($v) { return $v !== null; })));
+                    $return = "ENUM('" . implode("','", $enum_values) . "')";
                 }
                 if($validator_info['name'] == 'unsigned') {
                     $return .= ' unsigned';

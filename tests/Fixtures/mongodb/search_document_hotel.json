@@ -1,0 +1,64 @@
+{
+  "_id": 100004,
+  "id_media_object": 100004,
+  "id_object_type": 3000,
+  "code": "HOTEL-001",
+  "url": "/test-hotel-product",
+  "description": {
+    "name": "Test Hotel Product"
+  },
+  "categories": [
+    {
+      "field_name": "destination",
+      "id_item": 10,
+      "path_str": "Hotel Region > Beach Area"
+    },
+    {
+      "field_name": "category",
+      "id_item": 20,
+      "path_str": "4-Star Hotels"
+    }
+  ],
+  "groups": [],
+  "prices": [
+    {
+      "price_total": 450.0,
+      "duration": 3,
+      "occupancy": 2,
+      "transport_type": "PKW",
+      "option_board_type": "HP",
+      "state": 3,
+      "date_departures": ["DYNAMIC_+15", "DYNAMIC_+22"],
+      "startingpoint_option": {
+        "id_city": "city_1"
+      }
+    },
+    {
+      "price_total": 720.0,
+      "duration": 7,
+      "occupancy": 2,
+      "transport_type": "FLUG",
+      "option_board_type": "AI",
+      "state": 1,
+      "date_departures": ["DYNAMIC_+40"],
+      "startingpoint_option": {
+        "id_city": "city_2"
+      }
+    }
+  ],
+  "best_price_meta": {
+    "price_total": 450.0,
+    "duration": 3,
+    "state": 3
+  },
+  "departure_date_count": 3,
+  "possible_durations": [3, 7],
+  "recommendation_rate": 88,
+  "sales_priority": "B000100",
+  "valid_from": null,
+  "valid_to": null,
+  "visibility": 30,
+  "has_price": true,
+  "sold_out": false,
+  "is_running": false
+}

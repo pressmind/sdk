@@ -7,6 +7,7 @@ use Pressmind\CLI\DatabaseIntegrityCheckCommand;
 use Pressmind\CLI\FileDownloaderCommand;
 use Pressmind\CLI\FulltextIndexerCommand;
 use Pressmind\CLI\ImportCommand;
+use Pressmind\CLI\InstallCommand;
 use Pressmind\CLI\IndexMongoCommand;
 use Pressmind\CLI\IndexOpenSearchCommand;
 use Pressmind\CLI\LogCleanupCommand;
@@ -111,6 +112,12 @@ class CLIRouter
             return new TouristicOrphansCommand();
         }
 
+        // install: strip command name so InstallCommand sees positional args (only_static, drop_tables) as getArgument(0)
+        if ($first === 'install') {
+            $argv = array_merge([$argv[0]], array_slice($argv, 2));
+            return new InstallCommand();
+        }
+
         // Single-token commands: pass argv as-is (command may ignore positional args)
         switch ($first) {
             case 'rebuild-cache':
@@ -144,7 +151,7 @@ class CLIRouter
         $scriptName = basename($script);
         echo "Usage: php {$scriptName} <command> [args...]\n";
         echo "\nCommands (see Backend CommandRegistry):\n";
-        echo "  fullimport, import <subcommand> [ids], rebuild-cache, rebuild-routes,\n";
+        echo "  install [options], fullimport, import <subcommand> [ids], rebuild-cache, rebuild-routes,\n";
         echo "  index-mongo <all|mediaobject|destroy>, index-opensearch <all|mediaobject|...>,\n";
         echo "  fulltext-indexer [ids], file-downloader, log-cleanup,\n";
         echo "  database-integrity-check, touristic-orphans [options], reset\n";

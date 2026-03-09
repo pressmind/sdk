@@ -1151,6 +1151,9 @@ class MediaObject extends AbstractObject
                 }
             }
         }
+        if (empty($result->calendar->month)) {
+            return $result;
+        }
         $from = clone $result->calendar->month[0]->days[0]->date;
         $to = clone $result->calendar->month[array_key_last($result->calendar->month)]->days[0]->date;
         if (count($result->calendar->month) < $min_columns) {
@@ -2328,7 +2331,7 @@ class MediaObject extends AbstractObject
             $tmp = new stdClass();
             $tmp->id = $row->id;
             $tmp->name = $row->name;
-            $tmp->id_starting_point_options = explode($row->id_starting_point_options);
+            $tmp->id_starting_point_options = explode(',', $row->id_starting_point_options);
             $output[] = $tmp;
         }
         return $output;
@@ -2381,7 +2384,7 @@ class MediaObject extends AbstractObject
         $db = Registry::getInstance()->get('db');
         $config = Registry::getInstance()->get('config');
         if($property === 'code'){
-            $query = 'select id_media_object from pmt2core_media_objects where code = "'.$crs_id.'"';
+            $query = 'select id as id_media_object from pmt2core_media_objects where code = "'.$crs_id.'"';
         }else{
             $queries = [];
             foreach ($config['data']['media_types'] as $media_type_id => $media_type_name) {
@@ -2389,7 +2392,7 @@ class MediaObject extends AbstractObject
                 if(!$DataType->hasProperty($property)){
                     continue;
                 }
-                $queries = 'select id_media_object from '.$DataType->getDbTableName().' where '.$property.' = "'.$crs_id.'"';
+                $queries[] = 'select id_media_object from '.$DataType->getDbTableName().' where '.$property.' = "'.$crs_id.'"';
             }
             if(empty($queries)){
                 return [];
@@ -2400,7 +2403,7 @@ class MediaObject extends AbstractObject
         $result = $db->fetchAll($query);
         foreach($result as $row) {
             $tmp = new stdClass();
-            $tmp->id = $row->id;
+            $tmp->id = $row->id_media_object;
             $output[] = $tmp;
         }
         return $output;
@@ -2426,7 +2429,7 @@ class MediaObject extends AbstractObject
         $output = [];
         foreach($result as $row) {
             $tmp = new stdClass();
-            $tmp->id = $row->id;
+            $tmp->id = $row->id_media_object;
             $tmp->count = $row->count;
             $output[] = $tmp;
         }

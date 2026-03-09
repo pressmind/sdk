@@ -1,0 +1,47 @@
+{
+  "_id": 100007,
+  "id_media_object": 100007,
+  "id_object_type": 2000,
+  "code": ["MULTI-01", "MULTI-02", "ALT-CODE"],
+  "url": "/test-code-search-product",
+  "description": {
+    "name": "Test Code Search Product"
+  },
+  "categories": [
+    {
+      "field_name": "destination",
+      "id_item": 7,
+      "path_str": "Test Region > Code Area"
+    }
+  ],
+  "groups": [],
+  "prices": [
+    {
+      "price_total": 599.0,
+      "duration": 5,
+      "occupancy": 2,
+      "occupancy_additional": 1,
+      "transport_type": "BUS",
+      "option_board_type": "VP",
+      "state": 3,
+      "date_departures": ["DYNAMIC_+25", "DYNAMIC_+40"],
+      "startingpoint_option": {
+        "id_city": "city_1"
+      }
+    }
+  ],
+  "best_price_meta": {
+    "price_total": 599.0,
+    "duration": 5,
+    "state": 3
+  },
+  "departure_date_count": 2,
+  "possible_durations": [5],
+  "fulltext": "multi code search product special offer",
+  "valid_from": null,
+  "valid_to": null,
+  "visibility": 30,
+  "has_price": true,
+  "sold_out": false,
+  "is_running": false
+}

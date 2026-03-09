@@ -1,0 +1,20 @@
+[
+  {
+    "id": 6,
+    "id_media_object": "100004",
+    "id_booking_package": "bp4",
+    "id_housing_package": "hp4",
+    "id_date": "d4",
+    "id_option": "o4",
+    "duration": 1,
+    "date_departure_offset": 14,
+    "date_arrival_offset": 14,
+    "option_name": "Test Day Trip Ticket",
+    "option_occupancy": 1,
+    "price_total": 49.0,
+    "price_regular_before_discount": 49.0,
+    "state": 3,
+    "transport_type": "BUS",
+    "price_mix": "date_ticket"
+  }
+]

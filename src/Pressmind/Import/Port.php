@@ -5,7 +5,6 @@ namespace Pressmind\Import;
 
 
 use Exception;
-use Pressmind\REST\Client;
 
 class Port extends AbstractImport implements ImportInterface
 {
@@ -15,7 +14,7 @@ class Port extends AbstractImport implements ImportInterface
      */
     public function import()
     {
-        $client = new Client();
+        $client = $this->getClient();
         try {
             $response = $client->sendRequest('Ports', 'getAll');
             $this->_checkApiResponse($response);

@@ -97,6 +97,13 @@ Welcome to the pressmind SDK documentation. This documentation covers the comple
 | [Template Interface](template-interface.md) | PHP template system, scaffolding, `MediaObject::render()` |
 | [Real-World Examples](real-world-examples.md) | 13 proven SDK usage patterns from ~80 production installations |
 
+### Testing
+
+| Document | Description |
+|---|---|
+| [Testing Guide](testing.md) | Test suites (Unit, Integration, ImportIntegration), Docker setup, API snapshot recording, coverage, writing tests |
+| [Makefile Reference](makefile.md) | All Make targets for build, test runs, coverage, snapshot recording, and cleanup with usage examples |
+
 ### Troubleshooting
 
 | Document | Description |
@@ -169,3 +176,4 @@ pressmind PIM
 - **Understanding prices?** See [CheapestPrice Aggregation](cheapest-price-aggregation.md)
 - **CLI commands (import, index-mongo, etc.)?** See [CLI Reference](cli-reference.md); for WordPress helpers see [CLI WordPress Tools](cli-wordpress-tools.md)
 - **Web backend (config, commands, logs, validation)?** See [Management Backend](backend.md)
+- **Running or writing tests?** See [Testing Guide](testing.md) → [Makefile Reference](makefile.md); for coverage metrics see [Code Coverage Summary](code-coverage-summary.md)

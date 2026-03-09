@@ -114,15 +114,14 @@ class AbstractIndex
      */
     public function createCollectionIfNotExists($collection_name)
     {
-        foreach($this->db->listCollections() as $collection){
-            if($collection['name'] == $collection_name){
-                return true;
-            }else{
-                $this->db->createCollection($collection_name, ['collation' => [ 'locale' => 'de' ]]);
-                $this->createCollectionIndex($collection_name);
+        foreach ($this->db->listCollections() as $collection) {
+            if ($collection['name'] == $collection_name) {
                 return true;
             }
         }
+        $this->db->createCollection($collection_name, ['collation' => ['locale' => 'de']]);
+        $this->createCollectionIndex($collection_name);
+        return true;
     }
 
     /**

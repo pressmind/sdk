@@ -1,0 +1,44 @@
+[
+  {
+    "_comment": "Discount scale: Babies 0-2 years 100%, valid window via offset",
+    "id": "scale-1",
+    "id_touristic_option_discount": "disc-1",
+    "name": "Babies bis 2 Jahre kostenlos",
+    "type": "P",
+    "value": 100,
+    "occupancy": 2,
+    "age_from": 0,
+    "age_to": 2,
+    "valid_from_offset": -30,
+    "valid_to_offset": 90,
+    "frequency": "E"
+  },
+  {
+    "_comment": "Discount scale: Children 2-13 years 15%",
+    "id": "scale-2",
+    "id_touristic_option_discount": "disc-1",
+    "name": "Kinder bis 13 Jahre reduziert",
+    "type": "P",
+    "value": 15,
+    "occupancy": 2,
+    "age_from": 2,
+    "age_to": 13,
+    "valid_from_offset": -30,
+    "valid_to_offset": 90,
+    "frequency": "E"
+  },
+  {
+    "_comment": "Discount scale: Fixed amount for 2-13",
+    "id": "scale-3",
+    "id_touristic_option_discount": "disc-2",
+    "name": "Kinderermäßigung",
+    "type": "F",
+    "value": 18,
+    "occupancy": 2,
+    "age_from": 2,
+    "age_to": 13,
+    "valid_from_offset": 0,
+    "valid_to_offset": 60,
+    "frequency": "E"
+  }
+]

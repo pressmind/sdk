@@ -2,3 +2,16 @@
 test/
 docs_and_concepts/
 vendor
+composer.lock
+.env
+build/
+.phpunit.cache/
+.phpunit.result.cache
+tests/ImportIntegration/_app/Custom/
+tests/ImportIntegration/_app/docs/
+tests/ImportIntegration/_app/logs/
+tests/ImportIntegration/_app/tmp/
+.cursor
+
+# API replay fixtures contain live API data; generate locally, do not commit
+tests/Fixtures/api/*.json

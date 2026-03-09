@@ -1,17 +1,17 @@
 {
     "name": "pressmind/sdk",
-    "description": "Core functionality for the pressmind Web-Core SDK",
+    "description": "PHP SDK for pressmind PIM – imports, caches and indexes touristic and editorial content (MySQL, MongoDB, OpenSearch) with a full search and template API",
     "type": "library",
     "license": "MIT",
     "authors": [
         {
-            "name": "Michael Graute",
-            "email": "m.graute@team-braeutigam.de"
+            "name": "Pressmind Applications GmbH",
+            "email": "support@pressmind.de"
         }
     ],
     "minimum-stability": "stable",
     "require": {
-        "php": "^7.4 || ^8.0",
+        "php": "^8.0",
         "ext-json": "*",
         "ext-curl": "*",
         "ext-bcmath": "*",
@@ -24,11 +24,15 @@
         "ext-fileinfo": "*",
         "ext-redis": "*",
         "ext-imagick": "*",
-        "gettext/gettext": "*",
-        "jc21/clitable": "*"
+        "gettext/gettext": "^5.7",
+        "jc21/clitable": "^1.3"
     },
     "require-dev": {
-        "phpunit/phpunit": "^9.0 || ^10.0"
+        "phpunit/phpunit": "^10.0",
+        "opensearch-project/opensearch-php": "^2.4",
+        "symfony/http-client": "^7.0",
+        "nyholm/psr7": "^1.8",
+        "aws/aws-sdk-php": "^3.0"
     },
     "autoload": {
         "psr-4": {
@@ -47,12 +51,18 @@
         "integrity-check": "php bin/integrity-check",
         "post-update-cmd": [
             "@php bin/integrity-check --non-interactive"
-        ]
+        ],
+        "test": "vendor/bin/phpunit --testsuite Unit --no-coverage",
+        "test:integration": "vendor/bin/phpunit --testsuite Integration --no-coverage",
+        "test:import": "vendor/bin/phpunit --testsuite ImportIntegration --no-coverage",
+        "test:all": "vendor/bin/phpunit --no-coverage",
+        "test:coverage": "vendor/bin/phpunit --testsuite Unit --coverage-html build/coverage --coverage-text build/coverage.txt"
     },
     "suggest": {
-        "opensearch-project/opensearch-php": "OpenSearch PHP-Client ^2.4.3",
-        "symfony/http-client": "Symfony HTTP-Client ^7.3",
-        "nyholm/psr7": "PSR-7 HTTP Message Implementation ^1.8"
+        "opensearch-project/opensearch-php": "Required for OpenSearch indexing and search (^2.4)",
+        "symfony/http-client": "Required for OpenSearch connectivity via PSR-18 (^7.0)",
+        "nyholm/psr7": "PSR-7/PSR-17 HTTP message implementation, required for OpenSearch (^1.8)",
+        "aws/aws-sdk-php": "Required for S3 storage provider (^3.0)"
     },
     "config": {
         "allow-plugins": {

@@ -6,8 +6,6 @@ namespace Pressmind\Import;
 use Exception;
 use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\DataView\SearchCondition;
-use Pressmind\REST\Client;
-
 class DataView extends AbstractImport implements ImportInterface
 {
 
@@ -31,7 +29,7 @@ class DataView extends AbstractImport implements ImportInterface
 
     public function import()
     {
-        $client = new Client();
+        $client = $this->getClient();
         try {
             $response = $client->sendRequest('Filter', 'search');
             $this->_checkApiResponse($response);

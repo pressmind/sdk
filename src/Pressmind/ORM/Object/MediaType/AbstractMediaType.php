@@ -2,12 +2,15 @@
 
 namespace Pressmind\ORM\Object\MediaType;
 
+use Exception;
 use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\MediaObject\DataType\Picture;
 use Pressmind\Registry;
 
 class AbstractMediaType extends AbstractObject
 {
+    /** Cache of existing table columns per table name (avoid repeated DESCRIBE) */
+    private static array $_tableColumnsCache = [];
     /**
      * Allow dynamic properties for fields that are not yet defined in the class.
      * This enables runtime schema migration when new fields are added in Pressmind.
@@ -77,42 +80,64 @@ class AbstractMediaType extends AbstractObject
     }
 
     /**
-     * Override create() to include dynamic properties in the INSERT statement.
-     * Dynamic properties are fields that were received from the API but are not yet
-     * defined in the class. The SchemaMigrator must have already added the DB columns.
+     * Get column names that exist in the database table (so INSERT does not break when class has obsolete properties).
+     *
+     * @return array<string>
+     */
+    protected function getExistingTableColumns(): array
+    {
+        $tableName = $this->getDbTableName();
+        if (!isset(self::$_tableColumnsCache[$tableName])) {
+            $columnInfo = $this->_db->fetchAll('DESCRIBE ' . $tableName);
+            self::$_tableColumnsCache[$tableName] = [];
+            foreach ($columnInfo as $column) {
+                self::$_tableColumnsCache[$tableName][] = $column->Field;
+            }
+        }
+        return self::$_tableColumnsCache[$tableName];
+    }
+
+    /**
+     * Filter values to only include keys that exist as columns in the table.
+     * Prevents "Unknown column" when the class has more properties than the table (obsolete fields).
+     *
+     * @param array $values
+     * @return array
+     */
+    protected function filterValuesToExistingColumns(array $values): array
+    {
+        $existingColumns = $this->getExistingTableColumns();
+        return array_intersect_key($values, array_flip($existingColumns));
+    }
+
+    /**
+     * Override create() to include dynamic properties and to INSERT only existing table columns.
+     * So import and templates do not break when the class has obsolete properties (more than table).
      *
      * @return bool
-     * @throws \Exception
+     * @throws Exception
      */
     public function create()
     {
-        // If no dynamic properties, use parent implementation
-        if (empty($this->_dynamic_properties)) {
-            return parent::create();
-        }
-
-        // For dynamic properties: Custom logic that includes them in the INSERT
-        // Note: We skip checkForRequiredProperties() here as it's private in parent
         $field_list = $this->getPropertyNames();
         $values = [];
 
-        // Standard properties from definitions
         foreach ($field_list as $index => $field_name) {
             if ($field_name != $this->getDbPrimaryKey() || $this->_dont_use_autoincrement_on_primary_key == true) {
                 $values[$field_name] = $this->parsePropertyValue($field_name, $this->$field_name, 'output');
             }
         }
 
-        // Add dynamic properties (new fields from API not yet in class definition)
-        // Note: SchemaMigrator must have already added the DB columns before this is called
-        foreach ($this->_dynamic_properties as $field_name => $field_value) {
-            // Skip relation-type values (objects/arrays of objects)
-            if (is_object($field_value) || (is_array($field_value) && !empty($field_value) && is_object(reset($field_value)))) {
-                continue;
+        if (!empty($this->_dynamic_properties)) {
+            foreach ($this->_dynamic_properties as $field_name => $field_value) {
+                if (is_object($field_value) || (is_array($field_value) && !empty($field_value) && is_object(reset($field_value)))) {
+                    continue;
+                }
+                $values[$field_name] = $field_value;
             }
-            // Simple values can be added directly
-            $values[$field_name] = $field_value;
         }
+
+        $values = $this->filterValuesToExistingColumns($values);
 
         $id = $this->_db->insert($this->getDbTableName(), $values, $this->_replace_into_on_create);
         if ($this->_dont_use_autoincrement_on_primary_key == false) {

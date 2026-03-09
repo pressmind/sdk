@@ -17,7 +17,7 @@ class Occupancy
         if(!is_array($occupancies)) {
             $occupancies = [$occupancies];
         }
-        if(!is_array($occupancies)) {
+        if(!is_array($child_occupancies)) {
             $child_occupancies = [$child_occupancies];
         }
         $this->_occupancies = array_merge([null], $occupancies);

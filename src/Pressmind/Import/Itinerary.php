@@ -11,8 +11,6 @@ use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\Itinerary\Step;
 use Pressmind\ORM\Object\Itinerary\Step\TextMediaObject;
 use Pressmind\ORM\Object\Itinerary\Variant;
-use Pressmind\REST\Client;
-
 class Itinerary extends AbstractImport implements ImportInterface
 {
     /**
@@ -32,7 +30,7 @@ class Itinerary extends AbstractImport implements ImportInterface
 
     public function import()
     {
-        $client = new Client();
+        $client = $this->getClient();
         $id_media_object = $this->_id_media_object;
         $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::importItinerary(' . $id_media_object . '):  Starting import';
         try {

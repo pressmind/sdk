@@ -5,7 +5,6 @@ namespace Pressmind\Import;
 
 
 use Exception;
-use Pressmind\REST\Client;
 
 class Brand extends AbstractImport implements ImportInterface
 {
@@ -15,7 +14,7 @@ class Brand extends AbstractImport implements ImportInterface
      */
     public function import()
     {
-        $client = new Client();
+        $client = $this->getClient();
         try {
             $response = $client->sendRequest('Brand', 'search');
             $this->_checkApiResponse($response);

@@ -258,8 +258,8 @@
               }
             },
             {
-              "126": {
-                "field": "website_ausgabe_default",
+              "EXAMPLE_126": {
+                "field": "EXAMPLE_website_ausgabe_default",
                 "filter": "\\Custom\\Filter::treeToGroup"
               }
             }
@@ -278,21 +278,21 @@
               "headline": {
                 "field": "name",
                 "from": null,
-                "filter": "\\Custom\\Filter::strip"
+                "filter": null
               },
               "subline": {
                 "field": "subline_default",
                 "from": "unterkuenfte_default",
-                "filter": "\\Custom\\Filter::strip"
+                "filter": null
               },
               "destination": {
                 "field": "zielgebiet_default",
                 "from": "unterkuenfte_default",
-                "filter": "\\Custom\\Filter::lastTreeItemAsString"
+                "filter": null
               },
               "images": {
                 "field": "bilder_default",
-                "filter": "\\Custom\\Filter::firstPicture",
+                "filter": null,
                 "params": {
                   "derivative": "teaser"
                 }

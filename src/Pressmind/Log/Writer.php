@@ -32,7 +32,8 @@ class Writer
     {
         $config = Registry::getInstance()->get('config');
         $log_file_name = $filename;
-        $log_modes = is_array($config['logging']['mode']) ? $config['logging']['mode'] : [$config['logging']['mode']];
+        $configMode = $config['logging']['mode'] ?? 'ALL';
+        $log_modes = is_array($configMode) ? $configMode : [$configMode];
         $log_categories = (isset($config['logging']['categories']) && is_array($config['logging']['categories'])) ? $config['logging']['categories'] : [$filename];
         if($type != self::TYPE_INFO) {
             $log_file_name .= '_' . strtolower($type);
@@ -46,9 +47,10 @@ class Writer
         }
         if($output == self::OUTPUT_FILE || $output == self::OUTPUT_BOTH) {
             $date = new DateTime();
-            if($config['logging']['storage'] == 'filesystem') {
+            $storage = $config['logging']['storage'] ?? 'filesystem';
+            if($storage == 'filesystem') {
                 $log_text = '[' . $date->format('Y-m-d H:i:s') . '] ' . print_r($log, true);
-                if ($config['logging']['mode'] == 'ALL' || $type == $config['logging']['mode']) {
+                if ($configMode == 'ALL' || $type == $configMode) {
                     $log_dir = self::getLogFilePath();
                     if (!is_dir($log_dir)) {
                         mkdir($log_dir, 0644, true);
@@ -57,7 +59,7 @@ class Writer
                         throw new Exception('Failed to write logfile ' . $log_dir . DIRECTORY_SEPARATOR . $filename);
                     }
                 }
-            } else if($config['logging']['storage'] == 'database') {
+            } else if($storage == 'database') {
                 if ((in_array('ALL', $log_modes) || in_array($type, $log_modes)) && (in_array('ALL', $log_categories) || in_array($filename, $log_categories))) {
                     $log_set = new Log();
                     $log_set->type = $type;

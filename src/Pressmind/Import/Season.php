@@ -4,14 +4,12 @@
 namespace Pressmind\Import;
 
 
-use Pressmind\REST\Client;
-
 class Season extends AbstractImport implements ImportInterface
 {
 
     public function import()
     {
-        $client = new Client();
+        $client = $this->getClient();
         try {
             $response = $client->sendRequest('Saison', 'search');
             $this->_checkApiResponse($response);

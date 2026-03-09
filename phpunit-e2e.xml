@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.0/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         colors="true"
+         cacheDirectory=".phpunit.cache">
+    <testsuites>
+        <testsuite name="E2E and Indexer Calendar">
+            <file>tests/Integration/Search/MongoDBSearchE2ETest.php</file>
+            <file>tests/Integration/Search/IndexerInfrastructureTest.php</file>
+            <file>tests/Integration/Search/CalendarIntegrationTest.php</file>
+        </testsuite>
+        <testsuite name="Ibe E2E">
+            <file>tests/Integration/REST/Controller/IbeE2ETest.php</file>
+            <file>tests/Integration/REST/Controller/IbeIntegrationTest.php</file>
+        </testsuite>
+    </testsuites>
+    <php>
+        <env name="DB_HOST" value="localhost"/>
+        <env name="DB_NAME" value="pressmind_test"/>
+        <env name="DB_USER" value="root"/>
+        <env name="DB_PASS" value=""/>
+        <env name="MONGODB_URI" value="mongodb://localhost:27017"/>
+        <env name="MONGODB_DB" value="pressmind_test"/>
+        <env name="OPENSEARCH_URI" value="http://opensearch:9200"/>
+    </php>
+</phpunit>

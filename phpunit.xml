@@ -1,17 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.0/phpunit.xsd"
-         bootstrap="vendor/autoload.php"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
          colors="true"
          cacheDirectory=".phpunit.cache">
     <testsuites>
         <testsuite name="Unit">
-            <directory>tests</directory>
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+        <testsuite name="ImportIntegration">
+            <directory>tests/ImportIntegration</directory>
         </testsuite>
     </testsuites>
-    <source>
+    <source restrictDeprecations="true" restrictNotices="true" restrictWarnings="true">
         <include>
             <directory>src</directory>
         </include>
     </source>
+    <coverage includeUncoveredFiles="true">
+        <report>
+            <text outputFile="build/coverage.txt" showUncoveredFiles="true" showOnlySummary="false"/>
+            <html outputDirectory="build/coverage"/>
+        </report>
+    </coverage>
+    <php>
+        <env name="DB_HOST" value="localhost"/>
+        <env name="DB_NAME" value="pressmind_test"/>
+        <env name="DB_USER" value="root"/>
+        <env name="DB_PASS" value=""/>
+        <env name="MONGODB_URI" value="mongodb://localhost:27017"/>
+        <env name="MONGODB_DB" value="pressmind_test"/>
+        <!-- Integration suite: Docker uses opensearch:9200; local runs skip when unreachable -->
+        <env name="OPENSEARCH_URI" value="http://opensearch:9200"/>
+    </php>
 </phpunit>

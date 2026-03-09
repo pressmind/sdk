@@ -21,6 +21,9 @@ class Factory {
      */
     public static function createById($pMediaTypeId, $pReadRelations = false) {
         $config = Registry::getInstance()->get('config');
+        if (empty($config['data']['media_types'][$pMediaTypeId])) {
+            throw new \RuntimeException('No media type configured for id ' . $pMediaTypeId);
+        }
         $media_type_name = ucfirst(HelperFunctions::human_to_machine($config['data']['media_types'][$pMediaTypeId]));
         return self::create($media_type_name, $pReadRelations);
     }

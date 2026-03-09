@@ -25,63 +25,70 @@ class Entrypoint
                 throw new Exception('No IB3 endpoint configured, see sdk config: ib3.endpoint');
             }
             set_error_handler(function($errno, $errstr, $errfile, $errline) {
+                if ($errno === E_USER_DEPRECATED || $errno === E_DEPRECATED) {
+                    return false;
+                }
                 throw new \ErrorException($errstr, 0, $errno, $errfile, $errline);
             });
-            if(empty($params['id_offer']) || !is_numeric($params['id_offer'])){
-                throw new Exception('Parameter id_offer is missing or not an integer');
-            }
-            if(empty($params['pax']) || !is_numeric($params['pax'])){
-                throw new Exception('Parameter pax is missing or not an integer');
-            }
-            $CheapestPrice = new \Pressmind\ORM\Object\CheapestPriceSpeed($params['id_offer']);
-            if(!$CheapestPrice->isValid()){
-                throw new Exception('No cheapest price for offer id '.$params['id_offer'].' available');
-            }
-            $url  = \Pressmind\ORM\Object\MediaObject::getBookingLink($CheapestPrice, null, null, null, true);
-            $url .= '&px='.$params['pax'];
-            if(!empty($CheapestPrice->startingpoint_id_city)){
-                $url .= '&idspc='.$CheapestPrice->startingpoint_id_city;
-            }
-            if(!empty($params['ida']) && $params['ida'] != 'null') {
-                $url .= '&ida='.trim($params['ida']);
-            }
-            $curl = curl_init();
-            $request = new stdClass();
-            $request->checks = [];
-            $check = new stdClass();
-            $check->id_offer = $CheapestPrice->id;
-            $check->quantity = $params['pax'];
-            $check->quantity_unit = 'pax';
-            $request->checks[] = $check;
-            curl_setopt_array($curl, array(
-                CURLOPT_URL => $ib3_endpoint.'/api/external/checkAvailability',
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => '',
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 0,
-                CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => 'POST',
-                CURLOPT_POSTFIELDS => json_encode($request),
-                CURLOPT_HTTPHEADER => array(
-                    'Content-Type: application/json'
-                ),
-                CURLOPT_USERAGENT => __CLASS__.':'.__FUNCTION__
-            ));
-            $raw = curl_exec($curl);
-            $status_code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-            curl_close($curl);
-            if($status_code != 200){
-                throw new Exception('Invalid response code: '.$status_code);
-            }
-            $response = json_decode($raw);
-            if(json_last_error() > 0){
-                throw new Exception('Invalid json response');
-            }
-            $payload = $response->data[0];
-            $payload->url = $url;
-            if(empty($response)){
-                throw new Exception('No availability check response. '.$raw);
+            try {
+                if(empty($params['id_offer']) || !is_numeric($params['id_offer'])){
+                    throw new Exception('Parameter id_offer is missing or not an integer');
+                }
+                if(empty($params['pax']) || !is_numeric($params['pax'])){
+                    throw new Exception('Parameter pax is missing or not an integer');
+                }
+                $CheapestPrice = new \Pressmind\ORM\Object\CheapestPriceSpeed($params['id_offer']);
+                if(!$CheapestPrice->isValid()){
+                    throw new Exception('No cheapest price for offer id '.$params['id_offer'].' available');
+                }
+                $url  = \Pressmind\ORM\Object\MediaObject::getBookingLink($CheapestPrice, null, null, null, true);
+                $url .= '&px='.$params['pax'];
+                if(!empty($CheapestPrice->startingpoint_id_city)){
+                    $url .= '&idspc='.$CheapestPrice->startingpoint_id_city;
+                }
+                if(!empty($params['ida']) && $params['ida'] != 'null') {
+                    $url .= '&ida='.trim($params['ida']);
+                }
+                $curl = curl_init();
+                $request = new stdClass();
+                $request->checks = [];
+                $check = new stdClass();
+                $check->id_offer = $CheapestPrice->id;
+                $check->quantity = $params['pax'];
+                $check->quantity_unit = 'pax';
+                $request->checks[] = $check;
+                curl_setopt_array($curl, array(
+                    CURLOPT_URL => $ib3_endpoint.'/api/external/checkAvailability',
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_ENCODING => '',
+                    CURLOPT_MAXREDIRS => 10,
+                    CURLOPT_TIMEOUT => 0,
+                    CURLOPT_FOLLOWLOCATION => true,
+                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                    CURLOPT_CUSTOMREQUEST => 'POST',
+                    CURLOPT_POSTFIELDS => json_encode($request),
+                    CURLOPT_HTTPHEADER => array(
+                        'Content-Type: application/json'
+                    ),
+                    CURLOPT_USERAGENT => __CLASS__.':'.__FUNCTION__
+                ));
+                $raw = curl_exec($curl);
+                $status_code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+                curl_close($curl);
+                if($status_code != 200){
+                    throw new Exception('Invalid response code: '.$status_code);
+                }
+                $response = json_decode($raw);
+                if(json_last_error() > 0){
+                    throw new Exception('Invalid json response');
+                }
+                $payload = $response->data[0];
+                $payload->url = $url;
+                if(empty($response)){
+                    throw new Exception('No availability check response. '.$raw);
+                }
+            } finally {
+                restore_error_handler();
             }
         } catch (Exception $e) {
             return [

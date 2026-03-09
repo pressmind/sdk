@@ -8,8 +8,6 @@ use Exception;
 use Pressmind\DB\Adapter\Pdo;
 use Pressmind\ORM\Object\Touristic\Startingpoint\Option;
 use Pressmind\Registry;
-use Pressmind\REST\Client;
-
 class StartingPointOptions extends AbstractImport implements ImportInterface
 {
 
@@ -34,7 +32,7 @@ class StartingPointOptions extends AbstractImport implements ImportInterface
      */
     public function import()
     {
-        $client = new Client();
+        $client = $this->getClient();
         $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_importMediaObjectTouristicStartingPointOptions(' . implode(',', $this->_ids) . '): REST request started';
         $response = $client->sendRequest('StartingPoint', 'getById', ['ids' => implode(',', $this->_ids)]);
         $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_importMediaObjectTouristicStartingPointOptions(' . implode(',', $this->_ids) . '): REST request done';

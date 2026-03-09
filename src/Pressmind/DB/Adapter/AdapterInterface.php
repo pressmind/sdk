@@ -23,12 +23,26 @@ interface AdapterInterface
     public function fetchRow($query, $params = null);
 
     /**
+     * Executes a query and returns the first column of the first row (scalar)
+     * @param string $query
+     * @param null $params
+     * @return mixed
+     */
+    public function fetchOne($query, $params = null);
+
+    /**
      * Executes a query, does not return anything, for select queries better use fetchAll or fetchRow
      * @param string $query
      * @param null $params
      * @return void
      */
     public function execute($query, $params = null);
+
+    /**
+     * Returns the number of rows affected by the last execute() (e.g. DELETE, UPDATE).
+     * @return int
+     */
+    public function getAffectedRows();
 
     /**
      * Inserts or Replaces associated array $data in table $tableName.

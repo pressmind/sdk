@@ -10,8 +10,6 @@ use Pressmind\HelperFunctions;
 use Pressmind\ORM\Object\Touristic\Date;
 use Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup;
 use Pressmind\Registry;
-use Pressmind\REST\Client;
-
 class EarlyBird extends AbstractImport implements ImportInterface
 {
 
@@ -20,7 +18,7 @@ class EarlyBird extends AbstractImport implements ImportInterface
      */
     public function import()
     {
-        $client = new Client();
+        $client = $this->getClient();
         $today = new \DateTime();
         $today->setTime(0, 0, 0);
         try {

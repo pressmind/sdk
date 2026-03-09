@@ -71,7 +71,7 @@ class Registry
      */
     public function get($key)
     {
-        return $this->_registry[$key];
+        return $this->_registry[$key] ?? null;
     }
 
     /**

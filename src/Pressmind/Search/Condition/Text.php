@@ -132,7 +132,7 @@ class Text implements ConditionInterface
      */
     private function _splitSearchTerms($pSearchTerms)
     {
-        $this->_search_terms = explode(' ', $pSearchTerms);
+        $this->_search_terms = explode(' ', $pSearchTerms ?? '');
     }
 
     /**

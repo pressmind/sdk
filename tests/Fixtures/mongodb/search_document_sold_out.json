@@ -1,0 +1,45 @@
+{
+  "_id": 100005,
+  "id_media_object": 100005,
+  "id_object_type": 2000,
+  "code": "SOLD-001",
+  "url": "/test-sold-out-product",
+  "description": {
+    "name": "Test Sold Out Product"
+  },
+  "categories": [
+    {
+      "field_name": "destination",
+      "id_item": 5,
+      "path_str": "Test Region > Sold Area"
+    }
+  ],
+  "groups": [],
+  "prices": [
+    {
+      "price_total": 999.0,
+      "duration": 7,
+      "occupancy": 2,
+      "transport_type": "BUS",
+      "option_board_type": "HP",
+      "state": 5,
+      "date_departures": ["DYNAMIC_+10"],
+      "startingpoint_option": {
+        "id_city": "city_1"
+      }
+    }
+  ],
+  "best_price_meta": {
+    "price_total": 999.0,
+    "duration": 7,
+    "state": 5
+  },
+  "departure_date_count": 1,
+  "possible_durations": [7],
+  "sold_out": true,
+  "is_running": false,
+  "valid_from": null,
+  "valid_to": null,
+  "visibility": 30,
+  "has_price": true
+}

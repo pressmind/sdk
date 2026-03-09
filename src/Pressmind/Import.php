@@ -136,7 +136,7 @@ class Import
         $this->_db = Registry::getInstance()->get('db');
         
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::__construct()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
-        $this->_client = new Client();
+        $this->_client = Registry::getInstance()->get('rest_client') ?? new Client();
         $this->_import_type = $importType;
         $this->checkLegacyIssues();
         Writer::cleanup();

@@ -2,7 +2,7 @@
 
 namespace Pressmind\Search\OpenSearch;
 
-use OpenSearch\ClientBuilder;
+use OpenSearch\GuzzleClientFactory;
 use Pressmind\DB\Adapter\Pdo;
 use Pressmind\HelperFunctions;
 use Pressmind\ORM\Object\MediaObject;
@@ -64,12 +64,14 @@ class AbstractIndex
     {
         $this->_config = Registry::getInstance()->get('config')['data']['search_opensearch'];
         $this->_allowed_visibilities = Registry::getInstance()->get('config')['data']['media_types_allowed_visibilities'];
-        $this->client = ClientBuilder::create()->setHosts([$this->_config['uri']]);
+        $options = [
+            'base_uri' => $this->_config['uri'],
+            'verify' => false,
+        ];
         if (!empty($this->_config['username']) && !empty($this->_config['password'])) {
-            $this->client->setBasicAuthentication($this->_config['username'], $this->_config['password']);
+            $options['auth'] = [$this->_config['username'], $this->_config['password']];
         }
-        $this->client->setSSLVerification(false);
-        $this->client = $this->client->build();
+        $this->client = (new GuzzleClientFactory())->create($options);
         $this->_number_of_shards = isset($this->_config['number_of_shards']) ? $this->_config['number_of_shards'] : 1;
         $this->_number_of_replicas = isset($this->_config['number_of_replicas']) ? $this->_config['number_of_replicas'] : 0;
         $this->_languages = $this->getLanguages();
@@ -114,7 +116,11 @@ class AbstractIndex
             }
             if (strpos($index['index'], 'index_' . $hash) === false) {
                 $this->client->indices()->delete(['index' => $index['index']]);
-                $this->client->indices()->deleteTemplate(['name' => $index['index']]);
+                try {
+                    $this->client->indices()->deleteTemplate(['name' => $index['index']]);
+                } catch (\OpenSearch\Common\Exceptions\Missing404Exception|\OpenSearch\Exception\NotFoundHttpException $e) {
+                    // Template may not exist for every index
+                }
             }
         }
     }

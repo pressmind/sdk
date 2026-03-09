@@ -1,8 +1,8 @@
 <?php
 namespace Pressmind\Import;
+
 use Exception;
 use Pressmind\Registry;
-use Pressmind\REST\Client;
 
 class Powerfilter extends AbstractImport implements ImportInterface
 {
@@ -12,7 +12,7 @@ class Powerfilter extends AbstractImport implements ImportInterface
      */
     public function import()
     {
-        $client = new Client();
+        $client = $this->getClient();
         try {
             $response = $client->sendRequest('Filter', 'search', ['type' => 'power', 'active' => 'true']);
             $this->_checkApiResponse($response);

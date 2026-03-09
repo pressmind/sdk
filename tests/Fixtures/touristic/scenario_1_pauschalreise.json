@@ -1,0 +1,23 @@
+[
+  {
+    "_comment": "Minimal touristic fixture: 7-day trip, departure in 30 days, earlybird valid 15 days",
+    "id": 1,
+    "id_media_object": "100001",
+    "id_booking_package": "bp1",
+    "id_housing_package": "hp1",
+    "id_date": "d1",
+    "id_option": "o1",
+    "duration": 7,
+    "date_departure_offset": 30,
+    "date_arrival_offset": 37,
+    "earlybird_discount_date_to_offset": 15,
+    "option_name": "Test Option abc123",
+    "option_occupancy": 2,
+    "price_total": 899.00,
+    "price_regular_before_discount": 999.00,
+    "earlybird_discount": 10.0,
+    "state": 3,
+    "transport_type": "BUS",
+    "price_mix": "date_housing"
+  }
+]

@@ -1284,13 +1284,15 @@ class MongoDB extends AbstractSearch
 
         if(!is_null($this->_paginator) && is_a($this->_paginator, \Pressmind\Search\Paginator::class)) {
             $addFieldsStage['$addFields']['currentPage'] = $this->_paginator->getCurrentPage();
-            $project['$project']['documents'] = [
-                '$slice' => [
-                    '$documents',
-                    ($this->_paginator->getCurrentPage() -1) * $this->_paginator->getPageSize(),
-                    $this->_paginator->getPageSize()
-                ]
-            ];
+            if ($this->_return_filters_only !== true) {
+                $project['$project']['documents'] = [
+                    '$slice' => [
+                        '$documents',
+                        ($this->_paginator->getCurrentPage() -1) * $this->_paginator->getPageSize(),
+                        $this->_paginator->getPageSize()
+                    ]
+                ];
+            }
             $project['$project']['currentPage'] = 1;
             $project['$project']['pages'] = [
                 '$ceil' => [

@@ -5,9 +5,16 @@ namespace Pressmind\Import;
 
 
 use Exception;
+use Pressmind\Registry;
+use Pressmind\REST\Client;
 
 class AbstractImport
 {
+    /**
+     * @var \Pressmind\REST\Client|null
+     */
+    protected $_client = null;
+
     /**
      * @var array
      */
@@ -74,5 +81,17 @@ class AbstractImport
         $text = number_format(microtime(true) - $this->_start_time, 4) . ' sec | Heap: ';
         $text .= bcdiv(memory_get_usage(), (1000 * 1000), 2) . ' MByte';
         return $text;
+    }
+
+    /**
+     * Returns the REST client (Registry or new instance). Lazy-init for testability.
+     * @return \Pressmind\REST\Client
+     */
+    protected function getClient(): \Pressmind\REST\Client
+    {
+        if ($this->_client === null) {
+            $this->_client = Registry::getInstance()->get('rest_client') ?? new Client();
+        }
+        return $this->_client;
     }
 }

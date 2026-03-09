@@ -13,17 +13,23 @@ use Pressmind\REST\Client;
 
 /**
  * SchemaMigrator handles runtime schema migration for MediaTypes.
- * 
+ *
  * When Pressmind adds new fields to an Object Type, this class:
  * 1. Detects missing fields by comparing API response with local class definition
  * 2. Adds missing database columns via ALTER TABLE
  * 3. Updates the PHP class file in the background for future requests
- * 
- * This enables imports to continue without manual intervention when new fields
- * are added in Pressmind.
+ *
+ * When Pressmind removes fields (deleted in API): obsolete fields are detected and logged only.
+ * No columns are dropped during import; INSERT uses only existing table columns so import
+ * and templates do not break. Use Database Integrity Check CLI for optional cleanup.
+ *
+ * Strategy: Add new columns (immediate access to new data), skip missing/obsolete (no DROP in import).
  */
 class SchemaMigrator
 {
+    /** Reserved table columns that must never be dropped. */
+    private const RESERVED_COLUMNS = ['id', 'id_media_object', 'language'];
+
     /**
      * MySQL type mapping for field types from the API.
      * @var array
@@ -60,64 +66,79 @@ class SchemaMigrator
         $mode = $config['data']['schema_migration']['mode'] ?? 'log_only';
         $logChanges = $config['data']['schema_migration']['log_changes'] ?? true;
 
-        // Detect missing fields
         $missingFields = self::detectMissingFields($objectTypeId, $importData);
+        $obsoleteFields = self::detectObsoleteFields($objectTypeId, $importData);
 
-        if (empty($missingFields)) {
-            return ['migrated' => false, 'fields' => []];
+        if (empty($missingFields) && empty($obsoleteFields)) {
+            return ['migrated' => false, 'fields' => [], 'obsolete_fields' => []];
         }
 
-        // Log the detected missing fields
-        if ($logChanges) {
+        // Handle missing fields (new in API, not in class)
+        if (!empty($missingFields)) {
+            if ($logChanges) {
+                Writer::write(
+                    'SchemaMigrator: Detected ' . count($missingFields) . ' missing fields for ObjectType ' . $objectTypeId . ': ' . implode(', ', array_keys($missingFields)),
+                    Writer::OUTPUT_FILE,
+                    'schema_migration',
+                    Writer::TYPE_ERROR
+                );
+            }
+
+            switch ($mode) {
+                case 'auto':
+                    self::addDatabaseColumns($objectTypeId, $missingFields);
+                    self::updateClassFileAsync($objectTypeId);
+                    if ($logChanges) {
+                        Writer::write(
+                            'SchemaMigrator: Successfully added missing fields for ObjectType ' . $objectTypeId,
+                            Writer::OUTPUT_FILE,
+                            'schema_migration',
+                            Writer::TYPE_ERROR
+                        );
+                    }
+                    break;
+
+                case 'log_only':
+                    Writer::write(
+                        'SchemaMigrator: Schema mismatch for ObjectType ' . $objectTypeId . ' (log_only mode). Ignoring fields: ' . implode(', ', array_keys($missingFields)),
+                        Writer::OUTPUT_FILE,
+                        'schema_migration',
+                        Writer::TYPE_ERROR
+                    );
+                    break;
+
+                case 'abort':
+                default:
+                    throw new Exception(
+                        'Schema mismatch for ObjectType ' . $objectTypeId .
+                        '. Missing fields: ' . implode(', ', array_keys($missingFields)) .
+                        '. Run ObjectTypeScaffolder or set schema_migration.mode to "auto".'
+                    );
+            }
+        }
+
+        // Handle obsolete fields (in class/DB but removed in API) - log only, no DROP in import
+        if (!empty($obsoleteFields) && $logChanges) {
             Writer::write(
-                'SchemaMigrator: Detected ' . count($missingFields) . ' missing fields for ObjectType ' . $objectTypeId . ': ' . implode(', ', array_keys($missingFields)),
+                'SchemaMigrator: Detected ' . count($obsoleteFields) . ' obsolete (removed in API) fields for ObjectType ' . $objectTypeId . ': ' . implode(', ', $obsoleteFields),
                 Writer::OUTPUT_FILE,
                 'schema_migration',
                 Writer::TYPE_ERROR
             );
         }
 
-        switch ($mode) {
-            case 'auto':
-                // Add missing database columns
-                self::addDatabaseColumns($objectTypeId, $missingFields);
-                
-                // Update PHP class file asynchronously
-                self::updateClassFileAsync($objectTypeId);
+        $migrated = !empty($missingFields) && $mode === 'auto';
 
-                if ($logChanges) {
-                    Writer::write(
-                        'SchemaMigrator: Successfully migrated schema for ObjectType ' . $objectTypeId,
-                        Writer::OUTPUT_FILE,
-                        'schema_migration',
-                        Writer::TYPE_ERROR
-                    );
-                }
-
-                return ['migrated' => true, 'fields' => $missingFields];
-
-            case 'log_only':
-                Writer::write(
-                    'SchemaMigrator: Schema mismatch for ObjectType ' . $objectTypeId . ' (log_only mode). Ignoring fields: ' . implode(', ', array_keys($missingFields)),
-                    Writer::OUTPUT_FILE,
-                    'schema_migration',
-                    Writer::TYPE_ERROR
-                );
-                return ['migrated' => false, 'fields' => $missingFields, 'ignore_fields' => array_keys($missingFields)];
-
-            case 'abort':
-            default:
-                throw new Exception(
-                    'Schema mismatch for ObjectType ' . $objectTypeId . 
-                    '. Missing fields: ' . implode(', ', array_keys($missingFields)) .
-                    '. Run ObjectTypeScaffolder or set schema_migration.mode to "auto".'
-                );
-        }
+        return [
+            'migrated' => $migrated,
+            'fields' => $missingFields,
+            'obsolete_fields' => $obsoleteFields,
+        ];
     }
 
     /**
      * Detect fields that exist in the import data but not in the local class definition.
-     * 
+     *
      * @param int $objectTypeId
      * @param array $importData The 'data' array from the API response
      * @return array Associative array of fieldName => fieldType
@@ -125,15 +146,12 @@ class SchemaMigrator
     public static function detectMissingFields(int $objectTypeId, array $importData): array
     {
         $config = Registry::getInstance()->get('config');
-        $missingFields = [];
+        $expectedFields = self::buildExpectedFieldsFromImportData($importData, $config);
 
         try {
-            // Get the local MediaType class
             $mediaType = Factory::createById($objectTypeId);
-            $definitions = $mediaType->getPropertyDefinitions();
-            $existingProperties = array_keys($definitions);
-        } catch (Exception $e) {
-            // Class doesn't exist at all - this is a bigger problem
+            $existingProperties = array_keys($mediaType->getPropertyDefinitions());
+        } catch (\Throwable $e) {
             Writer::write(
                 'SchemaMigrator: Could not load MediaType class for ObjectType ' . $objectTypeId . ': ' . $e->getMessage(),
                 Writer::OUTPUT_FILE,
@@ -143,16 +161,71 @@ class SchemaMigrator
             return [];
         }
 
-        // Iterate over the import data fields
+        $missingFields = [];
+        foreach ($expectedFields as $fieldName => $fieldType) {
+            if (!in_array($fieldName, $existingProperties, true)) {
+                $missingFields[$fieldName] = $fieldType;
+            }
+        }
+        return $missingFields;
+    }
+
+    /**
+     * Detect fields that exist in the local class but are no longer in the API import data (deleted in Pressmind).
+     *
+     * @param int $objectTypeId
+     * @param array $importData The 'data' array from the API response
+     * @return array List of field names that are obsolete and can be dropped
+     */
+    public static function detectObsoleteFields(int $objectTypeId, array $importData): array
+    {
+        $config = Registry::getInstance()->get('config');
+        $expectedFields = self::buildExpectedFieldsFromImportData($importData, $config);
+        $expectedFieldNames = array_merge(self::RESERVED_COLUMNS, array_keys($expectedFields));
+
+        try {
+            $mediaType = Factory::createById($objectTypeId);
+            $existingProperties = array_keys($mediaType->getPropertyDefinitions());
+        } catch (\Throwable $e) {
+            Writer::write(
+                'SchemaMigrator: Could not load MediaType class for ObjectType ' . $objectTypeId . ': ' . $e->getMessage(),
+                Writer::OUTPUT_FILE,
+                'schema_migration',
+                Writer::TYPE_ERROR
+            );
+            return [];
+        }
+
+        $obsolete = [];
+        foreach ($existingProperties as $name) {
+            if (in_array($name, self::RESERVED_COLUMNS, true)) {
+                continue;
+            }
+            if (!in_array($name, $expectedFieldNames, true)) {
+                $obsolete[] = $name;
+            }
+        }
+
+        return $obsolete;
+    }
+
+    /**
+     * Build expected field list from API import data: field name => type.
+     * Uses same naming as ObjectTypeScaffolder (section replace, human_to_machine).
+     *
+     * @param array $importData
+     * @param array $config
+     * @return array<string, string> fieldName => fieldType
+     */
+    private static function buildExpectedFieldsFromImportData(array $importData, array $config): array
+    {
+        $fields = [];
         foreach ($importData as $dataField) {
             if (!isset($dataField->sections) || !is_array($dataField->sections)) {
                 continue;
             }
-
             foreach ($dataField->sections as $section) {
                 $sectionName = $section->name;
-                
-                // Apply section name replacement from config (same logic as ObjectTypeScaffolder)
                 if (isset($config['data']['sections']['replace']) && !empty($config['data']['sections']['replace']['regular_expression'])) {
                     $sectionName = preg_replace(
                         $config['data']['sections']['replace']['regular_expression'],
@@ -160,18 +233,69 @@ class SchemaMigrator
                         $sectionName
                     );
                 }
-
-                // Build the field name (same logic as ObjectTypeScaffolder)
                 $fieldName = HelperFunctions::human_to_machine($dataField->var_name . '_' . $sectionName);
-
-                // Check if this field exists in the local class
-                if (!in_array($fieldName, $existingProperties)) {
-                    $missingFields[$fieldName] = $dataField->type ?? 'text';
-                }
+                $fields[$fieldName] = $dataField->type ?? 'text';
             }
         }
+        return $fields;
+    }
 
-        return $missingFields;
+    /**
+     * Drop obsolete columns from the database table.
+     * Reserved columns (id, id_media_object, language) are never dropped.
+     *
+     * @param int $objectTypeId
+     * @param array $fieldNames
+     * @throws Exception
+     */
+    public static function dropDatabaseColumns(int $objectTypeId, array $fieldNames): void
+    {
+        /** @var AdapterInterface $db */
+        $db = Registry::getInstance()->get('db');
+        $tableName = 'objectdata_' . $objectTypeId;
+
+        $existingColumns = [];
+        try {
+            $columnInfo = $db->fetchAll('DESCRIBE ' . $tableName);
+            foreach ($columnInfo as $column) {
+                $existingColumns[] = $column->Field;
+            }
+        } catch (Exception $e) {
+            Writer::write(
+                'SchemaMigrator: Could not describe table ' . $tableName . ': ' . $e->getMessage(),
+                Writer::OUTPUT_FILE,
+                'schema_migration',
+                Writer::TYPE_ERROR
+            );
+            throw $e;
+        }
+
+        foreach ($fieldNames as $fieldName) {
+            if (in_array($fieldName, self::RESERVED_COLUMNS, true)) {
+                continue;
+            }
+            if (!in_array($fieldName, $existingColumns, true)) {
+                continue;
+            }
+            $sql = "ALTER TABLE `{$tableName}` DROP COLUMN `{$fieldName}`";
+            try {
+                $db->execute($sql);
+                Writer::write(
+                    'SchemaMigrator: Dropped column ' . $fieldName . ' from ' . $tableName,
+                    Writer::OUTPUT_FILE,
+                    'schema_migration',
+                    Writer::TYPE_ERROR
+                );
+            } catch (Exception $e) {
+                Writer::write(
+                    'SchemaMigrator: Failed to drop column ' . $fieldName . ' from ' . $tableName . ': ' . $e->getMessage(),
+                    Writer::OUTPUT_FILE,
+                    'schema_migration',
+                    Writer::TYPE_ERROR
+                );
+                throw $e;
+            }
+        }
     }
 
     /**

@@ -1,0 +1,86 @@
+name: Tests
+
+on:
+  push:
+    branches: [master, development]
+  pull_request:
+    branches: [master, development]
+
+jobs:
+  unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: json, curl, bcmath, pdo, pdo_mysql, mbstring, gd, zlib, fileinfo, redis, imagick
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-scripts
+
+      - name: Run Unit tests
+        run: composer test
+
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: pressmind_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: --health-cmd="mongosh --eval 'db.runCommand({ ping: 1 })'" --health-interval=10s --health-timeout=5s --health-retries=3
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=5s --health-timeout=3s --health-retries=3
+      opensearch:
+        image: opensearchproject/opensearch:2.11.0
+        env:
+          discovery.type: single-node
+          DISABLE_SECURITY_PLUGIN: "true"
+          action.auto_create_index: "true"
+          OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+        ports:
+          - 9200:9200
+        options: --health-cmd="curl -sf http://localhost:9200/_cluster/health || exit 1" --health-interval=10s --health-timeout=5s --health-retries=20 --health-start-period=45s
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: json, curl, bcmath, pdo, pdo_mysql, mbstring, gd, zlib, fileinfo, redis, mongodb, imagick
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-scripts
+
+      - name: Run Integration tests
+        env:
+          DB_HOST: 127.0.0.1
+          DB_NAME: pressmind_test
+          DB_USER: root
+          DB_PASS: root
+          DB_PORT: "3306"
+          MONGODB_URI: mongodb://localhost:27017
+          MONGODB_DB: pressmind_test
+          OPENSEARCH_URI: http://localhost:9200
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: "6379"
+        run: composer test:integration

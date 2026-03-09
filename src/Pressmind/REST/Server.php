@@ -46,13 +46,16 @@ class Server
 
     /**
      * Server constructor.
-     * @param null $pApiBaseUrl
+     * @param string|null $pApiBaseUrl
+     * @param Request|null $request Inject custom request (for testing); null = create from globals
+     * @param Response|null $response Inject custom response (for testing); null = create new
+     * @param Router|null $router Inject custom router (for testing); null = create and register default routes
      */
-    public function __construct($pApiBaseUrl = null)
+    public function __construct($pApiBaseUrl = null, ?Request $request = null, ?Response $response = null, ?Router $router = null)
     {
-        $this->_request = new Request($pApiBaseUrl);
-        $this->_response = new Response();
-        $this->_router = new Router();
+        $this->_request = $request ?? new Request($pApiBaseUrl);
+        $this->_response = $response ?? new Response();
+        $this->_router = $router ?? new Router();
         $this->_router->addRoute(new Router\Route('system/updateTags', 'GET', '\\Pressmind\\REST\\Controller', 'System', 'updateTags'));
         $this->_router->addRoute(new Router\Route('search', 'POST', '\\Pressmind\\REST\\Controller', 'Search', 'search'));
         $this->_router->addRoute(new Router\Route('import', 'GET', '\\Pressmind\\REST\\Controller', 'Import', 'index'));
@@ -125,13 +128,16 @@ class Server
     }
 
     /**
-     * @return void
+     * Process the request and return the Response without sending or exiting.
+     * Use this in tests to inspect the response object.
+     *
+     * @return Response
      */
-    public function handle() {
+    public function run(): Response
+    {
         if(!in_array($this->_request->getMethod(), array_merge($this->_output_methods, $this->_header_methods))) {
             $this->_response->setCode(405);
-            $this->_response->send();
-            die();
+            return $this->_response;
         }
         if(in_array($this->_request->getMethod(), $this->_header_methods)) {
             if($this->_request->getMethod() == 'OPTIONS') {
@@ -142,8 +148,7 @@ class Server
                 $this->_response->addHeader('Access-Control-Max-Age', '60');
             }
             $this->_response->setCode(204);
-            $this->_response->send();
-            die();
+            return $this->_response;
         }
         if($this->_checkAuthentication()) {
             $this->_response->setContentType('application/json');
@@ -180,7 +185,16 @@ class Server
         } else {
             $this->_response->setCode(403);
         }
-        $this->_response->send();
+        return $this->_response;
+    }
+
+    /**
+     * Process the request, send the response and exit. Legacy entry point.
+     * @return void
+     */
+    public function handle() {
+        $this->run()->send();
+        die();
     }
 
     /**

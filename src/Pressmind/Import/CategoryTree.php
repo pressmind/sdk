@@ -11,7 +11,6 @@ use Pressmind\HelperFunctions;
 use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\CategoryTree\Item;
 use Pressmind\Registry;
-use Pressmind\REST\Client;
 use Gettext\Translations;
 
 class CategoryTree extends AbstractImport implements ImportInterface
@@ -68,7 +67,7 @@ class CategoryTree extends AbstractImport implements ImportInterface
         $_RUNTIME_IMPORTED_CATEGORY_IDS = array_merge($_RUNTIME_IMPORTED_CATEGORY_IDS, $request);
         $this->_linked_media_objects = [];
         $this->_config = Registry::getInstance()->get('config');
-        $client = new Client();
+        $client = $this->getClient();
         $response = $client->sendRequest('Category', 'all', empty(array_filter($this->_ids)) ? [] : ['ids' => implode(',', $this->_ids)]);
         $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::_importCategoryTrees(): REST request done';
         $this->_checkApiResponse($response);

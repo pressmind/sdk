@@ -16,9 +16,15 @@ use \stdClass;
 class Client
 {
     /**
+     * Webcore API version used for ImportIntegration snapshot/replay.
+     * When upgrading: update this constant and re-record fixtures (php tests/bin/record-api-snapshot.php).
+     */
+    public const WEBCORE_API_VERSION = 'v2-25';
+
+    /**
      * @var string
      */
-    private $_api_endpoint = 'https://webcore.pressmind.io/v2-25/rest/';
+    private $_api_endpoint = 'https://webcore.pressmind.io/' . self::WEBCORE_API_VERSION . '/rest/';
 
     /**
      * @var string
@@ -152,18 +158,17 @@ class Client
             $url .= '/' . $action;
         }
 
-        // Set URL for this request (only thing that changes between requests)
-        curl_setopt($ch, CURLOPT_URL, $url . $get_params);
-
         Writer::write('Sending request to: ' . $this->_api_endpoint . $this->_api_key . '/' . $controller . '/' . $action . $get_params, Writer::OUTPUT_FILE, 'restclient', Writer::TYPE_INFO);
-        $response = curl_exec($ch);
+        $result = $this->executeRequest($ch, $url . $get_params);
+        $response = $result['body'];
+        $status_code = $result['http_code'];
+
         if($response === false) {
             Writer::write('Got no response from: ' . $this->_api_endpoint . $this->_api_key . '/' . $controller . '/' . $action . $get_params, Writer::OUTPUT_FILE, 'restclient', Writer::TYPE_ERROR);
             throw new Exception(curl_error($ch));
-        } else {
-            Writer::write('Got response from: ' . $this->_api_endpoint . $this->_api_key . '/' . $controller . '/' . $action . $get_params, Writer::OUTPUT_FILE, 'restclient', Writer::TYPE_INFO);
-            Writer::write('Parsing response data ...', Writer::OUTPUT_FILE, 'restclient', Writer::TYPE_INFO);
         }
+        Writer::write('Got response from: ' . $this->_api_endpoint . $this->_api_key . '/' . $controller . '/' . $action . $get_params, Writer::OUTPUT_FILE, 'restclient', Writer::TYPE_INFO);
+        Writer::write('Parsing response data ...', Writer::OUTPUT_FILE, 'restclient', Writer::TYPE_INFO);
         if (defined('PM_SDK_DEBUG') && PM_SDK_DEBUG) {
             $debug_str = '== DEBUG =='."\n";
             $debug_str .= $this->_api_user . ":" . $this->_api_password."\n";
@@ -178,7 +183,6 @@ class Client
             $debug_str .= '== DEBUG END =='."\n";
             Writer::write($debug_str, Writer::OUTPUT_SCREEN, 'restclient', Writer::TYPE_INFO);
         }
-        $status_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         if($status_code != 200) {
             Writer::write('Response status code for: ' . $this->_api_endpoint . $this->_api_key . '/' . $controller . '/' . $action . $get_params . ' is: ' . $status_code, Writer::OUTPUT_FILE, 'restclient', Writer::TYPE_ERROR);
             throw new Exception('Response status code is: ' . $status_code. "\nResponse: ".$response);
@@ -212,5 +216,21 @@ class Client
         }
         return $json;
 
+    }
+
+    /**
+     * Execute the HTTP request and return raw response and status code.
+     * Override in tests to inject responses without real HTTP.
+     *
+     * @param resource|\CurlHandle $ch
+     * @param string $url
+     * @return array{body: string|false, http_code: int}
+     */
+    protected function executeRequest($ch, $url): array
+    {
+        curl_setopt($ch, CURLOPT_URL, $url);
+        $body = curl_exec($ch);
+        $http_code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        return ['body' => $body, 'http_code' => $http_code];
     }
 }

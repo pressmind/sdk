@@ -1,0 +1,75 @@
+{
+  "_id": 100002,
+  "id_media_object": 100002,
+  "id_object_type": 2000,
+  "code": "TEST-002",
+  "url": "/test-product-earlybird",
+  "description": {
+    "name": "Test Product Earlybird"
+  },
+  "categories": [
+    {
+      "field_name": "destination",
+      "id_item": 2,
+      "path_str": "Test Region > Test Coast"
+    }
+  ],
+  "groups": [],
+  "prices": [
+    {
+      "price_total": 759.0,
+      "price_regular_before_discount": 899.0,
+      "earlybird_discount": 15.5,
+      "earlybird_name": "Test Earlybird Discount",
+      "earlybird_discount_date_to": "DYNAMIC_+20",
+      "duration": 7,
+      "occupancy": 2,
+      "transport_type": "BUS",
+      "option_board_type": "HP",
+      "state": 3,
+      "date_departures": ["DYNAMIC_+40", "DYNAMIC_+55"],
+      "startingpoint_option": {
+        "id_city": "city_1"
+      }
+    },
+    {
+      "price_total": 1199.0,
+      "price_regular_before_discount": 1410.0,
+      "earlybird_discount": 15.0,
+      "earlybird_name": "Test Earlybird Discount",
+      "earlybird_discount_date_to": "DYNAMIC_+25",
+      "duration": 14,
+      "occupancy": 2,
+      "transport_type": "FLUG",
+      "option_board_type": "AI",
+      "state": 1,
+      "date_departures": ["DYNAMIC_+50"],
+      "startingpoint_option": {
+        "id_city": "city_2"
+      }
+    },
+    {
+      "price_total": 949.0,
+      "price_regular_before_discount": 949.0,
+      "earlybird_discount": 10.0,
+      "earlybird_name": "Test Expired Earlybird",
+      "earlybird_discount_date_to": "DYNAMIC_-5",
+      "duration": 7,
+      "occupancy": 2,
+      "transport_type": "BUS",
+      "option_board_type": "VP",
+      "state": 3,
+      "date_departures": ["DYNAMIC_+35"],
+      "startingpoint_option": {
+        "id_city": "city_3"
+      }
+    }
+  ],
+  "best_price_meta": {
+    "price_total": 759.0,
+    "duration": 7,
+    "state": 3
+  },
+  "departure_date_count": 4,
+  "possible_durations": [7, 14]
+}

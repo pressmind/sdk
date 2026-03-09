@@ -1,0 +1,26 @@
+[
+  {
+    "_comment": "Both EarlyBird and Pseudo: display uses EarlyBird (priority)",
+    "id": 13,
+    "id_media_object": "100013",
+    "id_booking_package": "bp8",
+    "id_housing_package": "hp8",
+    "id_date": "d8",
+    "id_option": "o8",
+    "duration": 7,
+    "date_departure_offset": 60,
+    "date_arrival_offset": 67,
+    "earlybird_discount_date_to_offset": 45,
+    "option_name": "Test Option EarlyBird + Pseudo",
+    "option_occupancy": 2,
+    "price_total": 900,
+    "price_regular_before_discount": 1000,
+    "price_option_pseudo": 1200,
+    "earlybird_discount": 10,
+    "earlybird_discount_f": 100,
+    "earlybird_name": "Frühbucher",
+    "state": 3,
+    "transport_type": "BUS",
+    "price_mix": "date_housing"
+  }
+]

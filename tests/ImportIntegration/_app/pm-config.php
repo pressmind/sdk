@@ -1,0 +1,679 @@
+<?php
+$config = [
+    'development' => [
+        'server' => [
+            'document_root' => 'BASE_PATH/httpdocs',
+            'webserver_http' => '',
+            'php_cli_binary' => '/opt/homebrew/Cellar/php@8.3/8.3.25/bin/php',
+            'timezone' => 'Europe/Berlin',
+        ],
+        'backend' => [
+            'enabled' => false,
+            'cli_runner' => 'APPLICATION_PATH/cli/run.php',
+            'auth' => [
+                'provider' => 'password',
+                'config' => [
+                    'password' => 'change-me-in-production',
+                ],
+            ],
+            'EXAMPLE_auth_providers' => [
+                'password' => [
+                    'provider' => 'password',
+                    'config' => [
+                        'password' => 'your-secret-password',
+                        'returnUrlParam' => 'return_url',
+                    ],
+                ],
+                'basic_auth' => [
+                    'provider' => 'basic_auth',
+                    'config' => [
+                        'username' => 'admin',
+                        'password' => 'your-secret-password',
+                    ],
+                ],
+                'wordpress' => [
+                    'provider' => 'wordpress',
+                    'config' => [
+                        'capability' => 'edit_pages',
+                    ],
+                ],
+                'callback' => [
+                    'provider' => 'callback',
+                    'config' => [
+                    ],
+                    '_note' => 'Callbacks (isAuthenticated, getCurrentUser, etc.) must be set in PHP when registering the provider, not in JSON',
+                ],
+            ],
+        ],
+        'database' => [
+            'username' => 'root',
+            'password' => '',
+            'host' => 'localhost',
+            'port' => '3306',
+            'dbname' => 'pressmind_test',
+            'engine' => 'MySQL',
+        ],
+        'rest' => [
+            'client' => [
+                'api_key' => 'test',
+                'api_user' => 'test',
+                'api_password' => 'test',
+            ],
+            'server' => [
+                'api_endpoint' => '/rest',
+                'api_key' => '',
+                'api_user' => '',
+                'api_password' => '',
+                'controller' => [
+                    'catalog' => [
+                        'categories' => [
+                            0 => [
+                                'var_name' => 'zielgebiet_default',
+                                'title' => 'Zielgebiet',
+                            ],
+                            1 => [
+                                'var_name' => 'reiseart_default',
+                                'title' => 'Reiseart',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        'ib3' => [
+            'endpoint' => '',
+        ],
+        'docs_dir' => 'WEBSERVER_DOCUMENT_ROOT/docs',
+        'logging' => [
+            'mode' => [
+                0 => 'ERROR',
+            ],
+            'categories' => [
+                0 => 'ALL',
+            ],
+            'storage' => 'database',
+            'log_file_path' => 'APPLICATION_PATH/logs',
+            'lifetime' => 86400,
+            'keep_log_types' => [
+                0 => 'ERROR',
+            ],
+            'enable_advanced_object_log' => false,
+            'enable_database_query_logging' => false,
+            'database_query_log_file' => 'APPLICATION_PATH/logs/db_query_log.txt',
+        ],
+        'data' => [
+            'touristic' => [
+                'origins' => [
+                    0 => '0',
+                ],
+                'my_content_class_map' => [
+                ],
+                'disable_touristic_data_import' => [
+                ],
+                'disable_virtual_price_calculation' => [
+                ],
+                'disable_manual_cheapest_price_import' => [
+                ],
+                'generate_single_room_index' => false,
+                'max_offers_per_product' => 5000,
+                'generate_offer_for_each_startingpoint_option' => false,
+                'generate_offer_for_each_transport_type' => false,
+                'generate_offer_for_each_option_board_type' => false,
+                'ibe_client' => NULL,
+                'include_negative_option_in_cheapest_price' => true,
+                'label_price_mix_date_transport' => 'Teilnahmegebühr',
+                'date_filter' => [
+                    'active' => true,
+                    'orientation' => 'arrival',
+                    'offset' => 0,
+                    'allowed_states' => [
+                        0 => 0,
+                        1 => 1,
+                        2 => 2,
+                        3 => 4,
+                        4 => 5,
+                    ],
+                    'max_date_offset' => 730,
+                ],
+                'housing_option_filter' => [
+                    'active' => true,
+                    'allowed_states' => [
+                        0 => 0,
+                        1 => 1,
+                        2 => 2,
+                        3 => 3,
+                    ],
+                ],
+                'transport_filter' => [
+                    'active' => true,
+                    'allowed_states' => [
+                        0 => 0,
+                        1 => 2,
+                        2 => 3,
+                    ],
+                ],
+                'agency_based_option_and_prices' => [
+                    'enabled' => false,
+                    'allowed_agencies' => [
+                        0 => 0,
+                        1 => 1,
+                        2 => 2,
+                        3 => 3,
+                    ],
+                ],
+            ],
+            'media_type_custom_import_hooks' => [
+            ],
+            'media_type_custom_post_import_hooks' => [
+            ],
+            'search_hooks' => [
+            ],
+            'EXAMPLE_search_hooks' => [
+                0 => [
+                    'class' => '\\Custom\\Search\\Hook\\ExternalApiProvider',
+                    'config' => [
+                        'enabled' => true,
+                        'api_url' => 'https://api.example.com/offers',
+                        'object_types' => [
+                            0 => 123,
+                            1 => 456,
+                        ],
+                        'default_params' => [
+                            'per_page' => 500,
+                        ],
+                        'priority' => 10,
+                        'redis' => [
+                            'enabled' => true,
+                            'host' => '127.0.0.1',
+                            'port' => 6379,
+                            'password' => NULL,
+                            'database' => 2,
+                            'prefix' => 'myapp:search:',
+                            'ttl' => 10800,
+                        ],
+                        'runtime_cache' => [
+                            'enabled' => true,
+                        ],
+                    ],
+                ],
+            ],
+            'primary_media_type_ids' => NULL,
+            'media_types' => [
+            ],
+            'media_types_pretty_url' => [
+                0 => [
+                    '_example' => 'RECOMMENDED - channel strategy: URL is taken 1:1 from pressmind channel. Set id_object_type and id_channel to your values.',
+                    'id_object_type' => 0,
+                    'language' => NULL,
+                    'strategy' => 'channel',
+                    'id_channel' => 0,
+                    'prefix' => '',
+                    'suffix' => '',
+                ],
+                1 => [
+                    '_example' => 'count-up strategy: URL from multiple fields (e.g. code + name). Duplicates get numeric suffix (-001, -002, ...).',
+                    'id_object_type' => 0,
+                    'language' => NULL,
+                    'strategy' => 'count-up',
+                    'fields' => [
+                        0 => 'code',
+                        1 => 'name',
+                    ],
+                    'separator' => '-',
+                    'prefix' => '/',
+                    'suffix' => '',
+                ],
+                2 => [
+                    '_example' => 'unique strategy: URL from fields (e.g. headline). Throws error if same URL exists.',
+                    'id_object_type' => 0,
+                    'language' => NULL,
+                    'strategy' => 'unique',
+                    'fields' => [
+                        0 => 'headline',
+                    ],
+                    'separator' => '-',
+                    'prefix' => '/',
+                    'suffix' => '',
+                ],
+            ],
+            'media_types_fulltext_index_fields' => [
+            ],
+            'sections' => [
+                'allowed' => [
+                    0 => 'Default',
+                ],
+                'default' => 'Default',
+                'fallback' => 'Default',
+                'fallback_on_empty_values' => true,
+                'replace' => [
+                    'regular_expression' => NULL,
+                    'replacement' => NULL,
+                ],
+            ],
+            'languages' => [
+                'allowed' => [
+                    0 => 'de',
+                ],
+                'default' => 'de',
+                'gettext' => [
+                    'active' => false,
+                    'dir' => '/path/to/languagefiles',
+                ],
+            ],
+            'search_mongodb' => [
+                'enabled' => true,
+                'database' => [
+                    'uri' => 'mongodb://localhost:27017',
+                    'db' => 'pressmind_test',
+                ],
+                'search' => [
+                    'build_for' => [
+                        123 => [
+                            0 => [
+                                'language' => 'de',
+                                'origin' => 0,
+                                'disable_language_prefix_in_url' => false,
+                            ],
+                        ],
+                    ],
+                    'code_delimiter' => ',',
+                    'groups' => [
+                        0 => [
+                            123 => [
+                                'field' => 'agencies',
+                                'filter' => NULL,
+                            ],
+                        ],
+                        1 => [
+                            124 => [
+                                'field' => 'id_pool',
+                                'filter' => NULL,
+                            ],
+                        ],
+                        2 => [
+                            125 => [
+                                'field' => 'brand',
+                                'filter' => NULL,
+                            ],
+                        ],
+                        3 => [
+                            'EXAMPLE_126' => [
+                                'field' => 'EXAMPLE_website_ausgabe_default',
+                                'filter' => '\\Custom\\Filter::treeToGroup',
+                            ],
+                        ],
+                    ],
+                    'categories' => [
+                        123 => [
+                            'zielgebiet_default' => NULL,
+                            'reiseart_default' => NULL,
+                            'sterne_default' => [
+                                'from' => 'unterkuenfte_default',
+                            ],
+                        ],
+                    ],
+                    'descriptions' => [
+                        123 => [
+                            'headline' => [
+                                'field' => 'name',
+                                'from' => NULL,
+                                'filter' => NULL,
+                            ],
+                            'subline' => [
+                                'field' => 'subline_default',
+                                'from' => 'unterkuenfte_default',
+                                'filter' => NULL,
+                            ],
+                            'destination' => [
+                                'field' => 'zielgebiet_default',
+                                'from' => 'unterkuenfte_default',
+                                'filter' => NULL,
+                            ],
+                            'images' => [
+                                'field' => 'bilder_default',
+                                'filter' => NULL,
+                                'params' => [
+                                    'derivative' => 'teaser',
+                                ],
+                            ],
+                        ],
+                    ],
+                    'custom_order' => [
+                        123 => [
+                            'destination' => [
+                                'field' => 'zielgebiet_default',
+                                'from' => NULL,
+                                'filter' => NULL,
+                                'params' => [
+                                ],
+                            ],
+                            'region' => [
+                                'field' => 'region_default',
+                                'from' => NULL,
+                                'filter' => NULL,
+                                'params' => [
+                                ],
+                            ],
+                            'country' => [
+                                'field' => 'name',
+                                'from' => 'laender_default',
+                                'filter' => NULL,
+                                'params' => [
+                                ],
+                            ],
+                        ],
+                    ],
+                    'five_dates_per_month_list' => false,
+                    'possible_duration_list' => false,
+                    'allow_invalid_offers' => [
+                        0 => 123,
+                        1 => 124,
+                    ],
+                    'order_by_primary_object_type_priority' => false,
+                    'touristic' => [
+                        'occupancies' => [
+                            0 => 1,
+                            1 => 2,
+                            2 => 3,
+                            3 => 4,
+                            4 => 5,
+                            5 => 6,
+                        ],
+                        'occupancy_additional' => [
+                            0 => 1,
+                            1 => 2,
+                        ],
+                        'duration_ranges' => [
+                            0 => [
+                                0 => 1,
+                                1 => 3,
+                            ],
+                            1 => [
+                                0 => 4,
+                                1 => 7,
+                            ],
+                            2 => [
+                                0 => 8,
+                                1 => 99,
+                            ],
+                        ],
+                    ],
+                ],
+                'calendar' => [
+                    'include_startingpoint_option' => false,
+                ],
+            ],
+            'search_opensearch' => [
+                'enabled' => false,
+                'enabled_in_mongo_search' => true,
+                'uri' => 'http://opensearch:9200',
+                'user' => NULL,
+                'password' => NULL,
+                'number_of_shards' => 1,
+                'number_of_replicas' => 0,
+                'index' => [
+                    'code' => [
+                        'type' => 'keyword',
+                        'object_type_mapping' => [
+                            607 => [
+                                0 => [
+                                    'language' => NULL,
+                                    'field' => [
+                                        'name' => 'code',
+                                        'params' => [
+                                        ],
+                                    ],
+                                ],
+                            ],
+                            609 => [
+                                0 => [
+                                    'language' => NULL,
+                                    'field' => [
+                                        'name' => 'code',
+                                        'params' => [
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                    'headline_default' => [
+                        'type' => 'text',
+                        'object_type_mapping' => [
+                            607 => [
+                                0 => [
+                                    'language' => NULL,
+                                    'field' => [
+                                        'name' => 'headline_default',
+                                        'params' => [
+                                        ],
+                                    ],
+                                ],
+                            ],
+                            609 => [
+                                0 => [
+                                    'language' => NULL,
+                                    'field' => [
+                                        'name' => 'headline_default',
+                                        'params' => [
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                    'subline_default' => [
+                        'type' => 'text',
+                        'boost' => 2,
+                        'object_type_mapping' => [
+                            607 => [
+                                0 => [
+                                    'language' => NULL,
+                                    'field' => [
+                                        'name' => 'subline_default',
+                                        'params' => [
+                                        ],
+                                    ],
+                                ],
+                            ],
+                            609 => [
+                                0 => [
+                                    'language' => NULL,
+                                    'field' => [
+                                        'name' => 'subline_default',
+                                        'params' => [
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                    'zielgebiet_default' => [
+                        'type' => 'text',
+                        'boost' => 2,
+                        'object_type_mapping' => [
+                            607 => [
+                                0 => [
+                                    'language' => NULL,
+                                    'field' => [
+                                        'name' => 'zielgebiet_default',
+                                        'params' => [
+                                        ],
+                                    ],
+                                ],
+                            ],
+                            609 => [
+                                0 => [
+                                    'language' => NULL,
+                                    'field' => [
+                                        'name' => 'zielgebiet_default',
+                                        'params' => [
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            'media_types_allowed_visibilities' => [
+                123 => [
+                    0 => 30,
+                    1 => 60,
+                ],
+            ],
+            'disable_recursive_import' => [
+                123 => [
+                    0 => '{varname}_{section}',
+                ],
+            ],
+            'schema_migration' => [
+                'mode' => 'log_only',
+                'log_changes' => true,
+            ],
+            'import' => [
+                'max_orphan_delete_ratio' => 0.5,
+                'force_orphan_removal' => false,
+            ],
+        ],
+        'price_format' => [
+            'de' => [
+                'decimals' => 2,
+                'decimal_separator' => ',',
+                'thousands_separator' => '.',
+                'position' => 'LEFT',
+                'currency' => '€',
+            ],
+        ],
+        'cache' => [
+            'enabled' => false,
+            'adapter' => [
+                'name' => 'Redis',
+                'config' => [
+                    'host' => '127.0.0.1',
+                    'port' => 6379,
+                    'connection_string' => NULL,
+                ],
+            ],
+            'key_prefix' => 'DATABASE_NAME',
+            'disable_parameter' => [
+                'key' => 'no_cache',
+                'value' => 1,
+            ],
+            'update_parameter' => [
+                'key' => 'update_cache',
+                'value' => 1,
+            ],
+            'types' => [
+                0 => 'REST',
+                1 => 'SEARCH',
+                2 => 'SEARCH_FILTER',
+                3 => 'OBJECT',
+                4 => 'MONGODB',
+            ],
+            'update_frequency' => 3600,
+            'max_idle_time' => 86400,
+        ],
+        'view_scripts' => [
+            'base_path' => 'APPLICATION_PATH/Custom/Views',
+        ],
+        'scaffolder_templates' => [
+            'overwrite_existing_templates' => false,
+            'base_path' => 'APPLICATION_PATH/ObjectTypeScaffolderTemplates',
+        ],
+        'file_handling' => [
+            'processor' => [
+            ],
+            'storage' => [
+                'provider' => 'filesystem',
+                'bucket' => 'WEBSERVER_DOCUMENT_ROOT/assets/files',
+                'credentials' => [
+                ],
+            ],
+            'http_src' => 'WEBSERVER_HTTP/assets/files',
+        ],
+        'image_handling' => [
+            'processor' => [
+                'adapter' => 'ImageMagick',
+                'webp_support' => false,
+                'derivatives' => [
+                    'thumbnail' => [
+                        'max_width' => '125',
+                        'max_height' => '83',
+                        'preserve_aspect_ratio' => false,
+                        'crop' => true,
+                        'horizontal_crop' => 'center',
+                        'vertical_crop' => 'center',
+                        'webp_create' => false,
+                        'webp_quality' => 80,
+                    ],
+                    'teaser' => [
+                        'max_width' => '500',
+                        'max_height' => '333',
+                        'preserve_aspect_ratio' => false,
+                        'crop' => true,
+                        'horizontal_crop' => 'center',
+                        'vertical_crop' => 'center',
+                        'webp_create' => false,
+                        'webp_quality' => 80,
+                    ],
+                    'EXAMPLE_with_filters' => [
+                        'max_width' => '800',
+                        'max_height' => '600',
+                        'preserve_aspect_ratio' => true,
+                        'crop' => false,
+                        'webp_create' => false,
+                        'webp_quality' => 80,
+                        'filters' => [
+                            0 => [
+                                'class' => '\\Pressmind\\Image\\Filter\\WatermarkFilter',
+                                'params' => [
+                                    'image' => 'APPLICATION_PATH/assets/watermark.png',
+                                    'position' => 'bottom-right',
+                                    'size' => 15,
+                                    'margin_x' => 20,
+                                    'margin_y' => 20,
+                                    'opacity' => 0.7,
+                                ],
+                            ],
+                            1 => [
+                                'class' => '\\Pressmind\\Image\\Filter\\InstaFilter',
+                                'params' => [
+                                    'preset' => 'vintage',
+                                    'intensity' => 0.5,
+                                ],
+                            ],
+                            2 => [
+                                'class' => '\\Pressmind\\Image\\Filter\\GrayscaleFilter',
+                                'params' => [
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            'storage' => [
+                'provider' => 'filesystem',
+                'bucket' => 'WEBSERVER_DOCUMENT_ROOT/assets/images',
+                'credentials' => [
+                ],
+            ],
+            'EXAMPLE_storage' => [
+                'provider' => 'S3',
+                'bucket' => 'pressmind',
+                'region' => 'eu-west-1',
+                'version' => 'latest',
+                'endpoint' => '',
+                'credentials' => [
+                    'key' => '',
+                    'secret' => '',
+                ],
+            ],
+            'http_src' => 'WEBSERVER_HTTP/assets/images',
+        ],
+    ],
+    'testing' => [
+    ],
+    'production' => [
+    ],
+];

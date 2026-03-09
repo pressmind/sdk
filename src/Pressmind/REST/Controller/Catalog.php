@@ -46,7 +46,7 @@ class Catalog
                 $Filter->output = 'date_list';
             }
             $result = Query::getResult($Filter);
-        }catch (Exception $e){
+        }catch (\Throwable $e){
             return [
                 'error' => true,
                 'payload' => null,
@@ -272,7 +272,7 @@ class Catalog
                 //$Filter->output = 'date_list';
             }
             $result = Query::getResult($Filter);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return [
                 'error' => true,
                 'payload' => null,
@@ -402,7 +402,7 @@ class Catalog
                   AND cps.date_departure <= '" . $date_to->format('Y-m-d H:i:s') . "'
                 ORDER BY cps.date_departure"
             );
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return [
                 'error' => true,
                 'payload' => null,

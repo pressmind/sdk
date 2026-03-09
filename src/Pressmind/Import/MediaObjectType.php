@@ -7,8 +7,6 @@ namespace Pressmind\Import;
 use Exception;
 use Pressmind\DB\Scaffolder\Mysql;
 use Pressmind\ObjectTypeScaffolder;
-use Pressmind\REST\Client;
-
 class MediaObjectType extends AbstractImport implements ImportInterface
 {
 
@@ -27,7 +25,7 @@ class MediaObjectType extends AbstractImport implements ImportInterface
      */
     public function import($drop_tables = false)
     {
-        $client = new Client();
+        $client = $this->getClient();
         $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::importMediaObjectTypes(' . implode(',' ,$this->_ids) . '): Starting import';
         $response = $client->sendRequest('ObjectType', 'getById', ['ids' => implode(',', $this->_ids)]);
         $this->_checkApiResponse($response);

@@ -1,0 +1,24 @@
+[
+  {
+    "_comment": "Expired EarlyBird: valid_to 10 days in the past",
+    "id": 11,
+    "id_media_object": "100011",
+    "id_booking_package": "bp6",
+    "id_housing_package": "hp6",
+    "id_date": "d6",
+    "id_option": "o6",
+    "duration": 5,
+    "date_departure_offset": 20,
+    "date_arrival_offset": 25,
+    "earlybird_discount_date_to_offset": -10,
+    "option_name": "Test Option Expired EarlyBird",
+    "option_occupancy": 2,
+    "price_total": 800,
+    "price_regular_before_discount": 800,
+    "earlybird_discount": 0,
+    "earlybird_discount_f": 0,
+    "state": 3,
+    "transport_type": "BUS",
+    "price_mix": "date_housing"
+  }
+]

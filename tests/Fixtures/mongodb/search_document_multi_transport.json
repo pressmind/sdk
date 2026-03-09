@@ -1,0 +1,87 @@
+{
+  "_id": 100003,
+  "id_media_object": 100003,
+  "id_object_type": 2000,
+  "code": "TEST-003",
+  "url": "/test-product-multi-transport",
+  "description": {
+    "name": "Test Product Multi Transport"
+  },
+  "categories": [
+    {
+      "field_name": "destination",
+      "id_item": 3,
+      "path_str": "Test Region > Test Valley"
+    }
+  ],
+  "groups": [],
+  "prices": [
+    {
+      "price_total": 499.0,
+      "duration": 5,
+      "occupancy": 2,
+      "transport_type": "BUS",
+      "option_board_type": "HP",
+      "state": 3,
+      "date_departures": ["DYNAMIC_+30"],
+      "startingpoint_option": {
+        "id_city": "city_1"
+      }
+    },
+    {
+      "price_total": 399.0,
+      "duration": 5,
+      "occupancy": 2,
+      "transport_type": "PKW",
+      "option_board_type": "HP",
+      "state": 3,
+      "date_departures": ["DYNAMIC_+30"],
+      "startingpoint_option": {
+        "id_city": "city_1"
+      }
+    },
+    {
+      "price_total": 899.0,
+      "duration": 7,
+      "occupancy": 2,
+      "transport_type": "FLUG",
+      "option_board_type": "AI",
+      "state": 1,
+      "date_departures": ["DYNAMIC_+45"],
+      "startingpoint_option": {
+        "id_city": "city_2"
+      }
+    },
+    {
+      "price_total": 549.0,
+      "duration": 5,
+      "occupancy": 2,
+      "transport_type": "BAH",
+      "option_board_type": "HP",
+      "state": 3,
+      "date_departures": ["DYNAMIC_+30", "DYNAMIC_+60"],
+      "startingpoint_option": {
+        "id_city": "city_1"
+      }
+    },
+    {
+      "price_total": 1599.0,
+      "duration": 10,
+      "occupancy": 2,
+      "transport_type": "SCH",
+      "option_board_type": "VP",
+      "state": 1,
+      "date_departures": ["DYNAMIC_+90"],
+      "startingpoint_option": {
+        "id_city": "city_4"
+      }
+    }
+  ],
+  "best_price_meta": {
+    "price_total": 399.0,
+    "duration": 5,
+    "state": 3
+  },
+  "departure_date_count": 5,
+  "possible_durations": [5, 7, 10]
+}

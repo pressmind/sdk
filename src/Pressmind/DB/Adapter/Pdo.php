@@ -70,6 +70,14 @@ class Pdo implements AdapterInterface
     }
 
     /**
+     * @return int
+     */
+    public function getAffectedRows()
+    {
+        return $this->statement ? $this->statement->rowCount() : 0;
+    }
+
+    /**
      * @param null $query
      * @param null $parameters
      * @param null $class_name
@@ -109,16 +117,37 @@ class Pdo implements AdapterInterface
      */
     public function fetchRow($query = null, $parameters = null, $class_name = null)
     {
-        if(strpos($query, 'LIMIT') === false) {
-            $query .= ' LIMIT 0,1';
-        } else {
-            $query = preg_replace('/(LIMIT) (\d*),\d*/', '$1 $2,1', $query);
+        $trimmed = ltrim($query);
+        $isMetaQuery = preg_match('/^(SHOW|DESCRIBE|EXPLAIN|SET)\b/i', $trimmed);
+        if (!$isMetaQuery) {
+            if (strpos($query, 'LIMIT') === false) {
+                $query .= ' LIMIT 0,1';
+            } else {
+                $query = preg_replace('/(LIMIT) (\d*),\d*/', '$1 $2,1', $query);
+            }
         }
         $result = $this->fetchAll($query, $parameters, $class_name);
         if (count($result) > 0) {
             return $result[0];
         }
         return null;
+    }
+
+    /**
+     * @param string|null $query
+     * @param array|null $parameters
+     * @return mixed Scalar value (first column of first row) or null
+     * @throws Exception
+     */
+    public function fetchOne($query = null, $parameters = null)
+    {
+        $row = $this->fetchRow($query, $parameters);
+        if ($row === null) {
+            return null;
+        }
+        $arr = (array) $row;
+        $val = reset($arr);
+        return $val !== false ? $val : null;
     }
 
     /**

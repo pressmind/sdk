@@ -1,8 +1,6 @@
 <?php
 namespace Pressmind;
 
-use jc21\CliTable;
-
 class HelperFunctions
 {
 
@@ -663,7 +661,7 @@ class HelperFunctions
         $config = Registry::getInstance()->get('config');
         return str_replace(
             ['BASE_PATH','APPLICATION_PATH','WEBSERVER_DOCUMENT_ROOT','WEBSERVER_HTTP','DATABASE_NAME'],
-            [BASE_PATH,APPLICATION_PATH,WEBSERVER_DOCUMENT_ROOT,WEBSERVER_HTTP, $config['database']['dbname']],
+            [BASE_PATH,APPLICATION_PATH,WEBSERVER_DOCUMENT_ROOT,WEBSERVER_HTTP, $config['database']['dbname'] ?? ''],
             $string
         );
     }
@@ -720,32 +718,5 @@ class HelperFunctions
             }
         }
         return $data;
-    }
-
-    /**
-     * Dumps a orm based object to a nice cli table
-     * @param $ormObjectList
-     * @return void
-     */
-    public static function toCliTable($ormObjectList){
-        /**
-         * @var $ormObject \Pressmind\ORM\Object\AbstractObject
-         */
-        $table = new CliTable();
-        $table->
-        $rows = [];
-        foreach($ormObjectList as $i =>$ormObject){
-            $stdClass = $ormObject->toStdClass();
-            foreach($stdClass as $key => $value){
-                if($i == 0){
-                    $table->addField($key, $key);
-                }
-                $rows[$i][$key] = is_string($value) ? $value : '-';
-            }
-        }
-        $table->injectData($rows);
-        $table->display();
-
-
     }
 }

@@ -723,7 +723,7 @@ class Indexer extends AbstractIndex
     private function _filterFunction($item, $first_param = null, $agency = null){
         try {
             return $this->_callMethod($item['filter'], !empty($item['params']) ? $item['params'] : [], $first_param, $agency);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             echo 'Error in filter function ' .  $item['filter'] . ': ' . $e->getMessage();
             return false;
         }
@@ -1260,31 +1260,31 @@ class Indexer extends AbstractIndex
         // Query 1: price_mix = 'date_housing' - all occupancies and duration ranges in one query
         $query = "SELECT 
                     option_occupancy as occupancy,
-                    option_occupancy_child as occupancy_child,
+                    MIN(option_occupancy_child) as occupancy_child,
                     group_concat(date_departure) as date_departures,
                     max(duration) as duration,
                     price_total,
-                    price_regular_before_discount,
-                    earlybird_discount,
-                    earlybird_discount_f,
-                    earlybird_discount_date_to,
-                    earlybird_name,
-                    option_name,
-                    option_board_type,
-                    price_mix,
-                    transport_type,
-                    guaranteed,
-                    startingpoint_id_city,
-                    startingpoint_city,
-                    housing_package_name,
-                    housing_package_id_name,
-                    quota_pax,
-                    CASE
+                    MIN(price_regular_before_discount) as price_regular_before_discount,
+                    MIN(earlybird_discount) as earlybird_discount,
+                    MIN(earlybird_discount_f) as earlybird_discount_f,
+                    MIN(earlybird_discount_date_to) as earlybird_discount_date_to,
+                    MIN(earlybird_name) as earlybird_name,
+                    MIN(option_name) as option_name,
+                    MIN(option_board_type) as option_board_type,
+                    MIN(price_mix) as price_mix,
+                    MIN(transport_type) as transport_type,
+                    MAX(guaranteed) as guaranteed,
+                    MIN(startingpoint_id_city) as startingpoint_id_city,
+                    MIN(startingpoint_city) as startingpoint_city,
+                    MIN(housing_package_name) as housing_package_name,
+                    MIN(housing_package_id_name) as housing_package_id_name,
+                    MIN(quota_pax) as quota_pax,
+                    MIN(CASE
                         WHEN state = 3 THEN 100
                         WHEN state = 1 THEN 200
                         WHEN state = 5 THEN 300
                         ELSE 300
-                    END AS state
+                    END) AS state
                 FROM (
                     SELECT state,
                         option_occupancy,
@@ -1377,31 +1377,31 @@ class Indexer extends AbstractIndex
         
         // Query 2: price_mix != 'date_housing' - all duration ranges in one query
         $query = "SELECT 
-                    option_occupancy as occupancy,
+                    MIN(option_occupancy) as occupancy,
                     group_concat(date_departure) as date_departures,
                     max(duration) as duration,
                     price_total,
-                    price_regular_before_discount,
-                    earlybird_discount,
-                    earlybird_discount_f,
-                    earlybird_discount_date_to,
-                    earlybird_name,
-                    option_name,
-                    option_board_type,
-                    price_mix,
-                    transport_type,
-                    guaranteed,
-                    startingpoint_city,
-                    startingpoint_id_city,
-                    housing_package_name,
-                    housing_package_id_name,
-                    quota_pax,
-                    CASE
+                    MIN(price_regular_before_discount) as price_regular_before_discount,
+                    MIN(earlybird_discount) as earlybird_discount,
+                    MIN(earlybird_discount_f) as earlybird_discount_f,
+                    MIN(earlybird_discount_date_to) as earlybird_discount_date_to,
+                    MIN(earlybird_name) as earlybird_name,
+                    MIN(option_name) as option_name,
+                    MIN(option_board_type) as option_board_type,
+                    MIN(price_mix) as price_mix,
+                    MIN(transport_type) as transport_type,
+                    MAX(guaranteed) as guaranteed,
+                    MIN(startingpoint_city) as startingpoint_city,
+                    MIN(startingpoint_id_city) as startingpoint_id_city,
+                    MIN(housing_package_name) as housing_package_name,
+                    MIN(housing_package_id_name) as housing_package_id_name,
+                    MIN(quota_pax) as quota_pax,
+                    MIN(CASE
                         WHEN state = 3 THEN 100
                         WHEN state = 1 THEN 200
                         WHEN state = 5 THEN 300
                         ELSE 300
-                    END AS state
+                    END) AS state
                 FROM (
                     SELECT state,
                         option_occupancy,

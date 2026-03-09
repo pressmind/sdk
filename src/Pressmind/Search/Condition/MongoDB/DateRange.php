@@ -53,6 +53,18 @@ class DateRange
         return $this->_dateTo;
     }
 
+    /**
+     * Upper bound for date range: $lt with next day handles ISO date strings
+     * stored as "2026-04-30T00:00:00.000+02:00" which lexicographically
+     * exceed the short format "2026-04-30" used by $lte.
+     */
+    private function _getExclusiveUpperBound(): string
+    {
+        $nextDay = clone $this->_dateTo;
+        $nextDay->modify('+1 day');
+        return $nextDay->format('Y-m-d');
+    }
+
     public function getQuery($type = 'first_match')
     {
         if($type == 'first_match') {
@@ -61,7 +73,7 @@ class DateRange
                     'date_departures' => [
                         '$elemMatch' => [
                             '$gte' => $this->_dateFrom->format('Y-m-d'),
-                            '$lte' => $this->_dateTo->format('Y-m-d')
+                            '$lt' => $this->_getExclusiveUpperBound()
                             ]
                         ]
                 ]
@@ -95,9 +107,9 @@ class DateRange
                                                                             ]
                                                                         ],
                                                                         [
-                                                                            '$lte' => [
+                                                                            '$lt' => [
                                                                                 '$$a2',
-                                                                                $this->_dateTo->format('Y-m-d')
+                                                                                $this->_getExclusiveUpperBound()
                                                                             ]
                                                                         ]
                                                                     ]

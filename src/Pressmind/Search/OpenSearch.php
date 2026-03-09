@@ -2,7 +2,7 @@
 
 namespace Pressmind\Search;
 
-use OpenSearch\GuzzleClientFactory;
+use OpenSearch\SymfonyClientFactory;
 use Pressmind\Cache\Adapter\Factory;
 use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\FulltextSearch;
@@ -67,12 +67,12 @@ class OpenSearch extends AbstractSearch
         $opensearchConfig = $this->_config['data']['search_opensearch'];
         $options = [
             'base_uri' => $opensearchConfig['uri'],
-            'verify' => false,
+            'verify_peer' => false,
         ];
         if (!empty($opensearchConfig['username']) && !empty($opensearchConfig['password'])) {
-            $options['auth'] = [$opensearchConfig['username'], $opensearchConfig['password']];
+            $options['auth_basic'] = [$opensearchConfig['username'], $opensearchConfig['password']];
         }
-        $this->_client = (new GuzzleClientFactory())->create($options);
+        $this->_client = (new SymfonyClientFactory())->create($options);
         $this->_search_term = $this->sanitizeSearchTerm($search_term);
         $this->_index_name = $this->getIndexTemplateName($language);
         $this->_limit = $limit;

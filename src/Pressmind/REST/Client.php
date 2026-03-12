@@ -19,7 +19,7 @@ class Client
      * Webcore API version used for ImportIntegration snapshot/replay.
      * When upgrading: update this constant and re-record fixtures (php tests/bin/record-api-snapshot.php).
      */
-    public const WEBCORE_API_VERSION = 'v2-25';
+    public const WEBCORE_API_VERSION = 'v2-26';
 
     /**
      * @var string

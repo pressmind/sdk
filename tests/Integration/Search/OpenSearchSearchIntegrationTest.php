@@ -2,7 +2,7 @@
 
 namespace Pressmind\Tests\Integration\Search;
 
-use OpenSearch\GuzzleClientFactory;
+use OpenSearch\SymfonyClientFactory;
 use Pressmind\Search\OpenSearch;
 use Pressmind\Tests\Integration\AbstractIntegrationTestCase;
 
@@ -68,12 +68,12 @@ class OpenSearchSearchIntegrationTest extends AbstractIntegrationTestCase
         $config = \Pressmind\Registry::getInstance()->get('config')['data']['search_opensearch'];
         $options = [
             'base_uri' => $config['uri'],
-            'verify' => false,
+            'verify_peer' => false,
         ];
         if (!empty($config['username']) && !empty($config['password'])) {
-            $options['auth'] = [$config['username'], $config['password']];
+            $options['auth_basic'] = [$config['username'], $config['password']];
         }
-        return (new \OpenSearch\GuzzleClientFactory())->create($options);
+        return (new SymfonyClientFactory())->create($options);
     }
 
     private function deleteCreatedIndex(): void

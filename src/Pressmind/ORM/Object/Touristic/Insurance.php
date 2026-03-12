@@ -15,6 +15,7 @@ use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToPriceTable;
 use Pressmind\ORM\Object\Touristic\Insurance\Package;
 use Pressmind\ORM\Object\Touristic\Insurance\PriceTable;
 use Pressmind\ORM\Object\Touristic\Insurance\PriceTableToPackage;
+use Pressmind\ORM\Object\Touristic\Insurance\Surcharge;
 use Pressmind\Registry;
 
 /**
@@ -38,6 +39,7 @@ use Pressmind\Registry;
  * @property PriceTable[] $price_tables
  * @property Insurance[] $additional_insurances
  * @property Insurance[] $alternate_insurances
+ * @property Surcharge[] $surcharges
  * @property string $own_contribution
  * @property Attribute[] $attributes
  * @property string $request_code
@@ -302,6 +304,19 @@ class Insurance extends AbstractObject
                     'target_id' => 'id_alternate_insurance',
                 ],
             ],
+            'surcharges' => [
+                'name' => 'surcharges',
+                'title' => 'surcharges',
+                'type' => 'relation',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+                'relation' => [
+                    'type' => 'hasMany',
+                    'related_id' => 'id_insurance',
+                    'class' => Surcharge::class,
+                ],
+            ],
             'own_contribution' => [
                 'title' => 'own_contribution',
                 'name' => 'own_contribution',
@@ -522,8 +537,10 @@ class Insurance extends AbstractObject
         $price_table_to_package = new PriceTableToPackage();
         $insurance_to_attribute = new InsuranceToAttribute();
         $insurance_attribute = new Attribute();
-        
+        $surcharge = new Surcharge();
+
         // Use DELETE instead of TRUNCATE to preserve transaction integrity
+        $db->delete($surcharge->getDbTableName());
         $db->delete($insurance_to_attribute->getDbTableName());
         $db->delete($insurance_attribute->getDbTableName());
         $db->delete($price_table_to_package->getDbTableName());

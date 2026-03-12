@@ -73,6 +73,7 @@ class Info
         '\Touristic\Insurance\PriceTable',
         '\Touristic\Insurance\Package',
         '\Touristic\Insurance\PriceTableToPackage',
+        '\Touristic\Insurance\Surcharge',
         '\Touristic\Option',
         '\Touristic\Option\Description',
         '\Touristic\Option\Discount',

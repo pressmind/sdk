@@ -2,7 +2,7 @@
 
 namespace Pressmind\Tests\Integration\Search;
 
-use OpenSearch\GuzzleClientFactory;
+use OpenSearch\SymfonyClientFactory;
 use Pressmind\Registry;
 use Pressmind\Search\OpenSearch\Indexer;
 use Pressmind\Tests\Integration\AbstractIntegrationTestCase;
@@ -88,12 +88,12 @@ class OpenSearchIndexerTemplateTest extends AbstractIntegrationTestCase
         $config = Registry::getInstance()->get('config')['data']['search_opensearch'];
         $options = [
             'base_uri' => $config['uri'],
-            'verify' => false,
+            'verify_peer' => false,
         ];
         if (!empty($config['username']) && !empty($config['password'])) {
-            $options['auth'] = [$config['username'], $config['password']];
+            $options['auth_basic'] = [$config['username'], $config['password']];
         }
-        return (new \OpenSearch\GuzzleClientFactory())->create($options);
+        return (new SymfonyClientFactory())->create($options);
     }
 
     private function createIndexWithRetry(\OpenSearch\Client $client, string $indexName, array $body, int $maxAttempts = 5): void

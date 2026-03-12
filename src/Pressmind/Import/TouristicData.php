@@ -43,6 +43,7 @@ class TouristicData extends AbstractImport
         'touristic_insurance_attributes' => '\Insurance\Attribute',
         'touristic_insurance_to_alternate' => '\Insurance\InsuranceToAlternate',
         'touristic_insurance_to_insurance' => '\Insurance\InsuranceToInsurance',
+        'touristic_insurance_surcharges' => '\Insurance\Surcharge',
         'touristic_option_discounts' => '\Option\Discount'
     ];
 
@@ -114,9 +115,11 @@ class TouristicData extends AbstractImport
                     if ($touristic_object_name === 'touristic_insurances') {
                         // These ManyToMany relations are imported separately as
                         // touristic_insurance_to_insurance / touristic_insurance_to_alternate.
+                        // Surcharges are imported as touristic_insurance_surcharges.
                         // Strip them to prevent _createManyToManyRelations from creating duplicate rows.
                         unset($touristic_object->additional_insurances);
                         unset($touristic_object->alternate_insurances);
+                        unset($touristic_object->surcharges);
                     }
                     try {
                         /**@var AbstractObject $object * */
@@ -213,7 +216,7 @@ class TouristicData extends AbstractImport
             'touristic_insurance_groups', 'touristic_insurance_to_group', 'touristic_insurances',
             'touristic_additional_insurances', 'touristic_insurances_price_tables', 'touristic_insurances_to_price_table',
             'touristic_insurance_to_attribute', 'touristic_insurance_attributes', 'touristic_insurance_to_alternate',
-            'touristic_insurance_to_insurance'
+            'touristic_insurance_to_insurance', 'touristic_insurance_surcharges'
         ];
         $isInsuranceOnlyImport = (count(array_diff($dataKeys, $insuranceOnlyKeys)) === 0);
         $insurance_to_group = [];

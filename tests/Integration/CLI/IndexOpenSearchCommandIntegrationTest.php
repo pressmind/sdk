@@ -96,9 +96,9 @@ class IndexOpenSearchCommandIntegrationTest extends AbstractIntegrationTestCase
 
     private function createOpenSearchClient(): \OpenSearch\Client
     {
-        return (new \OpenSearch\GuzzleClientFactory())->create([
+        return (new \OpenSearch\SymfonyClientFactory())->create([
             'base_uri' => $this->opensearchUri,
-            'verify' => false,
+            'verify_peer' => false,
         ]);
     }
 

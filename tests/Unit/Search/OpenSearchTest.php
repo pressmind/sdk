@@ -8,7 +8,7 @@ use Pressmind\Tests\Unit\AbstractTestCase;
 
 /**
  * Unit tests for Search\OpenSearch: getIndexTemplateName, getConfigHash, sanitizeSearchTerm, getLog, generateCacheKey.
- * No real OpenSearch client; stub used to avoid GuzzleClientFactory in constructor.
+ * No real OpenSearch client; stub used to avoid SymfonyClientFactory in constructor.
  */
 class OpenSearchTest extends AbstractTestCase
 {

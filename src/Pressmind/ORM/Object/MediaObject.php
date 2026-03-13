@@ -2011,23 +2011,18 @@ class MediaObject extends AbstractObject
      * @param boolean $deleteRelations
      * @throws Exception
      */
-    /*
-   public function delete($deleteRelations = false)
-   {
-       $config = Registry::getInstance()->get('config');
-       $this->_db->delete($this->getDbTableName(), [$this->getDbPrimaryKey() . " = ?", $this->getId()]);
-       if(true === $deleteRelations){
-           $this->_deleteRelations();
-       }
-       if($config['cache']['enabled'] === true) {
-           $this->removeFromCache();
-       }
-       if($config['data']['search_mongodb']['enabled'] === true) {
-           $this->deleteMongoDBIndex();
-           $this->deleteMongoDBCalendar();
-       }
-   }
-   */
+    public function delete($deleteRelations = false)
+    {
+        $config = Registry::getInstance()->get('config');
+        if (!empty($config['data']['search_mongodb']['enabled'])) {
+            $this->deleteMongoDBIndex();
+            $this->deleteMongoDBCalendar();
+        }
+        if (!empty($config['cache']['enabled'])) {
+            $this->removeFromCache();
+        }
+        parent::delete($deleteRelations);
+    }
 
     /**
      * @throws Exception

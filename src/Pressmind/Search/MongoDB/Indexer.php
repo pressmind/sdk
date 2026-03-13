@@ -134,6 +134,22 @@ class Indexer extends AbstractIndex
             }
         }
         $this->upsertMediaObject($ids);
+
+        // Remove orphan documents from MongoDB that no longer exist in MySQL (e.g. after DB restore or manual deletes)
+        if (!empty($ids)) {
+            foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
+                foreach ($build_infos as $build_info) {
+                    foreach ($this->_agencies as $agency) {
+                        $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
+                        $collection = $this->db->$collection_name;
+                        $collection->deleteMany(['_id' => ['$nin' => $ids]]);
+                        $collection_name_description = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency, 'description_');
+                        $collection_description = $this->db->$collection_name_description;
+                        $collection_description->deleteMany(['_id' => ['$nin' => $ids]]);
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -283,6 +299,9 @@ class Indexer extends AbstractIndex
                         $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
                         $collection = $this->db->$collection_name;
                         $collection->deleteOne(['_id' => $id_media_object]);
+                        $collection_name_description = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency, 'description_');
+                        $collection_description = $this->db->$collection_name_description;
+                        $collection_description->deleteOne(['_id' => $id_media_object]);
                     }
                 }
             }
@@ -1859,7 +1878,7 @@ class Indexer extends AbstractIndex
                             earlybird_discount_f,
                             earlybird_discount_date_to,
                             guaranteed,
-                            ROW_NUMBER() OVER (PARTITION BY date_departure ORDER BY FIELD(state, 3, 1, 5, 0), FIELD(option_occupancy, 2, 1, 3, 4, 5, 6, 8, 9, 10) ASC, date_departure ASC, duration ASC) AS r
+                            ROW_NUMBER() OVER (PARTITION BY date_departure ORDER BY FIELD(state, 3, 1, 5, 0), FIELD(option_occupancy, 2, 1, 3, 4, 5, 6, 8, 9, 10) ASC, date_departure ASC, duration ASC, price_total ASC) AS r
                           from pmt2core_cheapest_price_speed
                           where 
                             date_departure BETWEEN :departure_from AND :departure_to

@@ -80,12 +80,13 @@ class EnvironmentValidationTest extends TestCase
 
     // --- validateIBETeamVersion ---
 
-    public function testValidateIBETeamVersionFailsWhenNoConfigFound(): void
+    public function testValidateIBETeamVersionSkipsWhenNoConfigFound(): void
     {
         $result = EnvironmentValidation::validateIBETeamVersion('/non/existent/path');
 
-        $this->assertFalse($result['valid']);
+        $this->assertTrue($result['valid']);
         $this->assertNull($result['configPath']);
+        $this->assertStringContainsString('check skipped', $result['message']);
     }
 
     public function testValidateIBETeamVersionDetectsHardcodedValue(): void
@@ -287,16 +288,15 @@ class EnvironmentValidationTest extends TestCase
         $this->assertStringContainsString('not executable', $result['message']);
     }
 
-    public function testValidateIBETeamVersionConstantNotFoundInFile(): void
+    public function testValidateIBETeamVersionSkipsWhenNoDefineInConfigFile(): void
     {
         $configFile = $this->tempDir . '/app-config.php';
         file_put_contents($configFile, "<?php\n\$other = '6_0';\n");
-        // findIBETeamConfigFile only returns files that contain define('IBETEAM_VERSION', ...); this file does not
         $result = EnvironmentValidation::validateIBETeamVersion($this->tempDir);
 
-        $this->assertFalse($result['valid']);
+        $this->assertTrue($result['valid']);
         $this->assertNull($result['configPath']);
-        $this->assertStringContainsString('No IBE-Team config file found', $result['message']);
+        $this->assertStringContainsString('check skipped', $result['message']);
     }
 
     public function testPatchIBETeamVersionReturnsFalseWhenFileNotWritable(): void

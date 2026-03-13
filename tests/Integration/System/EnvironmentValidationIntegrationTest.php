@@ -74,9 +74,10 @@ class EnvironmentValidationIntegrationTest extends AbstractIntegrationTestCase
     {
         $result = EnvironmentValidation::validateIBETeamVersion($this->tempDir);
 
-        $this->assertFalse($result['valid']);
+        $this->assertTrue($result['valid']);
         $this->assertNull($result['configPath']);
         $this->assertFalse($result['usesConstantReference']);
+        $this->assertStringContainsString('check skipped', $result['message']);
     }
 
     public function testValidateIBETeamVersionHardcodedValue(): void

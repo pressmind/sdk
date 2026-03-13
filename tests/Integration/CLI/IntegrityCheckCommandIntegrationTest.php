@@ -125,7 +125,7 @@ class IntegrityCheckCommandIntegrationTest extends AbstractIntegrationTestCase
         $this->assertSame(1, $result['exit']);
     }
 
-    public function testNoCustomPathShowsError(): void
+    public function testNoCustomPathSkipsCheck(): void
     {
         $result = $this->runCommand([
             'integrity-check',
@@ -134,6 +134,7 @@ class IntegrityCheckCommandIntegrationTest extends AbstractIntegrationTestCase
             '--env=testing',
         ]);
 
-        $this->assertSame(1, $result['exit']);
+        $this->assertSame(0, $result['exit']);
+        $this->assertStringContainsString('check skipped', $result['output']);
     }
 }

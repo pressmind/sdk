@@ -65,8 +65,8 @@ class EnvironmentValidation
         
         if ($configPath === null) {
             return [
-                'valid' => false,
-                'message' => 'No IBE-Team config file found in: ' . $customPath,
+                'valid' => true,
+                'message' => 'No IBE-Team config file found - check skipped.',
                 'configPath' => null,
                 'currentDefinition' => null,
                 'usesConstantReference' => false

@@ -49,6 +49,9 @@
     ],
     "scripts": {
         "integrity-check": "php bin/integrity-check",
+        "post-install-cmd": [
+            "@php bin/integrity-check --non-interactive"
+        ],
         "post-update-cmd": [
             "@php bin/integrity-check --non-interactive"
         ],

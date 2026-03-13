@@ -135,19 +135,56 @@ class Indexer extends AbstractIndex
         }
         $this->upsertMediaObject($ids);
 
-        // Remove orphan documents from MongoDB that no longer exist in MySQL (e.g. after DB restore or manual deletes)
+        // Remove orphan documents from MongoDB that no longer exist in MySQL (e.g. after DB restore or manual deletes).
+        // Use $in-based delete with batching for better performance than $nin with large ID lists.
         if (!empty($ids)) {
+            $validIdsSet = array_flip(array_map('intval', $ids));
+            $batchSize = 5000;
             foreach ($this->_config['search']['build_for'] as $id_object_type => $build_infos) {
                 foreach ($build_infos as $build_info) {
                     foreach ($this->_agencies as $agency) {
-                        $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
-                        $collection = $this->db->$collection_name;
-                        $collection->deleteMany(['_id' => ['$nin' => $ids]]);
-                        $collection_name_description = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency, 'description_');
-                        $collection_description = $this->db->$collection_name_description;
-                        $collection_description->deleteMany(['_id' => ['$nin' => $ids]]);
+                        $this->_deleteOrphanDocumentsFromCollection(
+                            $build_info,
+                            $agency,
+                            $validIdsSet,
+                            $batchSize
+                        );
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Delete MongoDB documents whose _id is not in the valid IDs set ($in-based, batched for performance).
+     *
+     * @param array $build_info
+     * @param string|null $agency
+     * @param array<int, int> $validIdsSet Keys are valid media object IDs (from array_flip)
+     * @param int $batchSize
+     */
+    private function _deleteOrphanDocumentsFromCollection(array $build_info, $agency, array $validIdsSet, $batchSize = 5000)
+    {
+        $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
+        $collection = $this->db->$collection_name;
+        $collection_name_description = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency, 'description_');
+        $collection_description = $this->db->$collection_name_description;
+
+        foreach ([$collection, $collection_description] as $coll) {
+            try {
+                $allIdsInCollection = $coll->distinct('_id');
+            } catch (\Exception $e) {
+                continue;
+            }
+            $orphanIds = [];
+            foreach ($allIdsInCollection as $mongoId) {
+                $id = (int) $mongoId;
+                if (!isset($validIdsSet[$id])) {
+                    $orphanIds[] = $id;
+                }
+            }
+            foreach (array_chunk($orphanIds, $batchSize) as $batch) {
+                $coll->deleteMany(['_id' => ['$in' => $batch]]);
             }
         }
     }

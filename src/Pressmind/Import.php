@@ -27,7 +27,6 @@ use Pressmind\ORM\Object\MediaObject;
 use Pressmind\ORM\Object\Route;
 use Pressmind\REST\Client;
 use \Exception;
-use Pressmind\Search\MongoDB\Calendar;
 use Pressmind\Search\MongoDB\Indexer;
 use Pressmind\System\EnvironmentValidation;
 
@@ -985,15 +984,9 @@ class Import
             $media_object_to_remove = new MediaObject($media_object->id);
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Found Orphan: ' . $media_object->id . ' -> deleting ...', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             try {
-                if(isset($config['data']['search_mongodb']['enabled']) && $config['data']['search_mongodb']['enabled'] === true) {
-                    $Indexer = new Indexer();
-                    $Indexer->deleteMediaObject($media_object->id);
-                    $Calendar = new Calendar();
-                    $Calendar->deleteMediaObject($media_object->id);
-                    $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Orphan: ' . $media_object->id . ' deleted from mongodb index', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
-                }
+                // MediaObject::delete() handles MongoDB index/calendar and MySQL
                 $media_object_to_remove->delete(true);
-                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Orphan: ' . $media_object->id . ' deleted from mysql', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Orphan: ' . $media_object->id . ' deleted', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             } catch (Exception $e) {
                 $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Deletion of Orphan ' . $media_object->id . ' failed: ' . $e->getMessage(), Writer::OUTPUT_FILE, 'import', Writer::TYPE_ERROR);
                 $this->_errors[] = '[OrphanRemoval] Deletion of Orphan ' . $media_object->id . '): failed: ' . $e->getMessage();

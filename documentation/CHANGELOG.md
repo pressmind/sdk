@@ -52,6 +52,9 @@ Previously, different code paths used inconsistent criteria (e.g. price-only, or
 - **`Indexer::_occupancyRank()`**: New helper method for occupancy ranking (DZ=0, EZ=1, other=2).
 - **`Housing\Package::getCheapestPrice()`**: Refactored to delegate to `MediaObject::getCheapestPrice()` with `id_housing_package` filter (removes duplicate logic).
 - **`Booking\Package::getCheapestPrice()`**: Refactored to delegate to `MediaObject::getCheapestPrice()` with `id_booking_package` filter.
+- **`Calendar.php`**: Calendar indexer now writes `state` into the `cheapest_price` reduced object so calendar merge can compare by state priority.
+
+**Important**: The state-priority sort (`_sortCheapestPricesByStateAndPrice`) is applied only in `getCheapestPrice()` (singular), **not** in `getCheapestPrices()` (plural). This preserves the caller-specified SQL order (e.g. `date_departure ASC` for calendar indexing).
 
 **Action required:**
 

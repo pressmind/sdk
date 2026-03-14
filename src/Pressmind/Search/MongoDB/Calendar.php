@@ -353,6 +353,7 @@ class Calendar extends AbstractIndex
               $cheapestPriceReduced->price_option_pseudo = $date_to_cheapest_price[$current_date]->price_option_pseudo;
               $cheapestPriceReduced->id_transport_1 = $date_to_cheapest_price[$current_date]->id_transport_1;
               $cheapestPriceReduced->id_transport_2 = $date_to_cheapest_price[$current_date]->id_transport_2;
+              $cheapestPriceReduced->state = $date_to_cheapest_price[$current_date]->state;
               $date->cheapest_price = $cheapestPriceReduced;
             }
             $month->days[] = $date;

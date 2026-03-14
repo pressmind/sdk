@@ -704,8 +704,12 @@ class MediaObject extends AbstractObject
      */
     public function getCheapestPrice($filters = null)
     {
-        $CheapestPrice = $this->getCheapestPrices($filters, ['price_total' => 'ASC', 'duration' => 'DESC', 'date_departure' => 'ASC'], [0,1]);
-        return empty($CheapestPrice[0]) ? null : $CheapestPrice[0];
+        $CheapestPrices = $this->getCheapestPrices($filters, ['price_total' => 'ASC', 'duration' => 'DESC', 'date_departure' => 'ASC']);
+        $CheapestPrices = $this->_sortCheapestPricesByStateAndPrice($CheapestPrices);
+        if(!empty($CheapestPrices[0])){
+            return $CheapestPrices[0];
+        }
+        return null;
     }
 
     /**
@@ -815,7 +819,6 @@ class MediaObject extends AbstractObject
                 $cheapest_prices = $this->getCheapestPrices($fallback_filter, $order, $limit);
             }
         }
-        $cheapest_prices = $this->_sortCheapestPricesByStateAndPrice($cheapest_prices);
         return $cheapest_prices;
     }
 
@@ -864,8 +867,8 @@ class MediaObject extends AbstractObject
     public static function _calendarMergeShouldReplace($existingCheapestPrice, $newCheapestPrice): bool
     {
         $statePriority = [3 => 0, 1 => 1, 5 => 2, 0 => 3];
-        $existingState = (int)$existingCheapestPrice->state;
-        $newState = (int)$newCheapestPrice->state;
+        $existingState = (int)($existingCheapestPrice->state ?? 0);
+        $newState = (int)($newCheapestPrice->state ?? 0);
         $existingPrio = isset($statePriority[$existingState]) ? $statePriority[$existingState] : 3;
         $newPrio = isset($statePriority[$newState]) ? $statePriority[$newState] : 3;
         $betterStateWins = $newPrio < $existingPrio;
@@ -1164,7 +1167,7 @@ class MediaObject extends AbstractObject
                 $merged_calendar_object = clone $document;
                 $merged_calendar_object->month = [];
             }
-            foreach($document->month as $month) {
+            foreach(($document->month ?? []) as $month) {
                 $month_key = $month->year . '-' . $month->month;
                 if(empty($merged_calendar_object->month[$month_key])) {
                     $merged_calendar_object->month[$month_key] = $month;

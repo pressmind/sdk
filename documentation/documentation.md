@@ -59,6 +59,7 @@ Welcome to the pressmind SDK documentation. This documentation covers the comple
 | [MongoDB Search API (`pm-*` Parameters)](search-mongodb-api.md) | Complete query parameter reference for the MongoDB search |
 | [MongoDB Index Configuration](search-mongodb-index-configuration.md) | How to configure the search index (descriptions, categories, touristic, groups) |
 | [OpenSearch Configuration](search-opensearch.md) | OpenSearch fulltext search and MongoDB integration |
+| [Price Selection Logic](price-selection-logic.md) | How the displayed “cheapest” price is chosen (occupancy, state, fallbacks); methods and config |
 
 ### Import & Processing
 
@@ -173,7 +174,7 @@ pressmind PIM
 - **Setting up search?** See [MongoDB Index Configuration](search-mongodb-index-configuration.md) → [Search API](search-mongodb-api.md)
 - **Products not showing?** See [Troubleshooting](troubleshooting-missing-products.md)
 - **Building templates?** See [Template Interface](template-interface.md) → [Real-World Examples](real-world-examples.md)
-- **Understanding prices?** See [CheapestPrice Aggregation](cheapest-price-aggregation.md)
+- **Understanding prices?** See [CheapestPrice Aggregation](cheapest-price-aggregation.md) and [Price Selection Logic](price-selection-logic.md)
 - **CLI commands (import, index-mongo, etc.)?** See [CLI Reference](cli-reference.md); for WordPress helpers see [CLI WordPress Tools](cli-wordpress-tools.md)
 - **Web backend (config, commands, logs, validation)?** See [Management Backend](backend.md)
 - **Running or writing tests?** See [Testing Guide](testing.md) → [Makefile Reference](makefile.md); for coverage metrics see [Code Coverage Summary](code-coverage-summary.md)

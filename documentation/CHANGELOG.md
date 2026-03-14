@@ -12,6 +12,7 @@ Changes are categorized as:
 
 ## Table of Contents
 
+- [March 2026](#march-2026)
 - [February 2026](#february-2026)
 - [January 2026](#january-2026)
 - [December 2025](#december-2025)
@@ -26,6 +27,44 @@ Changes are categorized as:
 - [March 2025](#march-2025)
 - [February 2025](#february-2025)
 - [Summary of Breaking Changes](#summary-of-breaking-changes)
+
+---
+
+## March 2026
+
+### CHANGE: Consistent Price Selection Logic – Occupancy > State > Price > Duration
+
+The "cheapest price" selection across all SDK layers now follows a unified priority:
+
+1. **Occupancy** – Double room (2) preferred, then single (1), then other
+2. **State** – Bookable (3/100) preferred, then on-request (1/200), then stop (5/300)
+3. **Price** – Lowest `price_total` wins
+4. **Duration** – Longest duration wins (when price is equal)
+
+Previously, different code paths used inconsistent criteria (e.g. price-only, or wrong sort direction), which could display a single room or on-request price when a bookable double room existed.
+
+**Affected components:**
+
+- **`MongoDB.php` – `$reduce` pipeline**: Extended with `$let`/`$switch` for occupancy rank and multi-level comparison (occupancy → state → price → duration). Previously only compared `price_total`.
+- **`MediaObject::getCheapestPrices()`**: New `_sortCheapestPricesByStateAndPrice()` sorts results by state priority then price after MySQL fetch. Occupancy fallback (DZ → EZ → all) was already present.
+- **`MediaObject::getCalendar()`**: New `_calendarMergeShouldReplace()` ensures calendar merge prefers better state before lower price.
+- **`Indexer::_priceSort()`**: Changed from descending `price_total` sort to multi-criteria sort matching the unified priority. Ensures `best_price_meta = prices[0]` is the actual best price.
+- **`Indexer::_occupancyRank()`**: New helper method for occupancy ranking (DZ=0, EZ=1, other=2).
+- **`Housing\Package::getCheapestPrice()`**: Refactored to delegate to `MediaObject::getCheapestPrice()` with `id_housing_package` filter (removes duplicate logic).
+- **`Booking\Package::getCheapestPrice()`**: Refactored to delegate to `MediaObject::getCheapestPrice()` with `id_booking_package` filter.
+
+**Action required:**
+
+- After SDK update, run a **MongoDB search index rebuild** so that existing `best_price_meta` values reflect the new sort order.
+- No configuration changes needed; existing `pm-config.php` settings (`occupancies`, `allowed_states`, etc.) continue to work as before.
+
+### FEATURE: Price Selection Documentation (`price-selection-logic.md`)
+
+New documentation covering the price selection logic for both project managers and developers:
+
+- Business rules (goal, priority, occupancy/state fallback, examples)
+- Developer reference (methods, CheapestPrice filter, config options, MongoDB pipeline, Indexer)
+- Added to the documentation index (`documentation.md`)
 
 ---
 

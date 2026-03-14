@@ -47,7 +47,7 @@ class MediaObjectCheapestPriceTest extends AbstractTestCase
         return $db;
     }
 
-    private function createCheapestPriceSpeedRow(int $id = 1, float $priceTotal = 999.99, string $dateDeparture = '2026-06-01 00:00:00'): stdClass
+    private function createCheapestPriceSpeedRow(int $id = 1, float $priceTotal = 999.99, string $dateDeparture = '2026-06-01 00:00:00', int $optionOccupancy = 2, int $state = 3): stdClass
     {
         $row = new stdClass();
         $row->id = $id;
@@ -55,7 +55,8 @@ class MediaObjectCheapestPriceTest extends AbstractTestCase
         $row->price_total = $priceTotal;
         $row->date_departure = $dateDeparture;
         $row->duration = 7;
-        $row->option_occupancy = 2;
+        $row->option_occupancy = $optionOccupancy;
+        $row->state = $state;
         $row->transport_type = 'bus';
         $row->transport_1_airport = null;
         $row->transport_1_airport_name = null;
@@ -293,5 +294,192 @@ class MediaObjectCheapestPriceTest extends AbstractTestCase
         $mo->booking_packages = [];
         $mo->insertCheapestPrice();
         $this->addToAssertionCount(1);
+    }
+
+    // ------------------------------------------------------------------
+    // Occupancy fallback (DZ -> EZ -> all) and state fallback
+    // ------------------------------------------------------------------
+
+    public function testOccupancyFallbackDoubleRoomFirst(): void
+    {
+        $futureDate = (new DateTime('+30 days'))->format('Y-m-d 00:00:00');
+        $rowDz = $this->createCheapestPriceSpeedRow(1, 4899, $futureDate, 2, 3);
+        $db = $this->createMock(\Pressmind\DB\Adapter\AdapterInterface::class);
+        $db->method('fetchAll')->willReturnCallback(function ($query) use ($rowDz) {
+            if (strpos($query, 'cheapest_price_speed') !== false && strpos($query, 'option_occupancy = 2') !== false) {
+                return [$rowDz];
+            }
+            return [];
+        });
+        $this->attachDefaultDbMethods($db);
+        Registry::getInstance()->add('db', $db);
+
+        $mo = $this->createMediaObject();
+        $mo->setId(100);
+        $filter = new CheapestPrice();
+        $result = $mo->getCheapestPrices($filter);
+        $this->assertCount(1, $result);
+        $this->assertSame(4899.0, (float)$result[0]->price_total);
+        $this->assertSame(2, (int)$result[0]->option_occupancy);
+    }
+
+    public function testOccupancyFallbackToSingleWhenNoDouble(): void
+    {
+        $futureDate = (new DateTime('+30 days'))->format('Y-m-d 00:00:00');
+        $rowEz = $this->createCheapestPriceSpeedRow(2, 3399, $futureDate, 1, 3);
+        $db = $this->createMock(\Pressmind\DB\Adapter\AdapterInterface::class);
+        $db->method('fetchAll')->willReturnCallback(function ($query) use ($rowEz) {
+            if (strpos($query, 'cheapest_price_speed') === false) {
+                return [];
+            }
+            if (strpos($query, 'option_occupancy = 2') !== false) {
+                return [];
+            }
+            if (strpos($query, 'option_occupancy = 1') !== false) {
+                return [$rowEz];
+            }
+            return [];
+        });
+        $this->attachDefaultDbMethods($db);
+        Registry::getInstance()->add('db', $db);
+
+        $mo = $this->createMediaObject();
+        $mo->setId(100);
+        $filter = new CheapestPrice();
+        $result = $mo->getCheapestPrices($filter);
+        $this->assertCount(1, $result);
+        $this->assertSame(3399.0, (float)$result[0]->price_total);
+        $this->assertSame(1, (int)$result[0]->option_occupancy);
+    }
+
+    public function testOccupancyFallbackToAllWhenNoDoubleOrSingle(): void
+    {
+        $futureDate = (new DateTime('+30 days'))->format('Y-m-d 00:00:00');
+        $rowAll = $this->createCheapestPriceSpeedRow(3, 2999, $futureDate, 3, 3);
+        $db = $this->createMock(\Pressmind\DB\Adapter\AdapterInterface::class);
+        $callCount = 0;
+        $db->method('fetchAll')->willReturnCallback(function ($query) use ($rowAll, &$callCount) {
+            if (strpos($query, 'cheapest_price_speed') === false) {
+                return [];
+            }
+            $callCount++;
+            if (strpos($query, 'option_occupancy = 2') !== false || strpos($query, 'option_occupancy = 1') !== false) {
+                return [];
+            }
+            return [$rowAll];
+        });
+        $this->attachDefaultDbMethods($db);
+        Registry::getInstance()->add('db', $db);
+
+        $mo = $this->createMediaObject();
+        $mo->setId(100);
+        $filter = new CheapestPrice();
+        $result = $mo->getCheapestPrices($filter);
+        $this->assertCount(1, $result);
+        $this->assertSame(2999.0, (float)$result[0]->price_total);
+        $this->assertSame(3, (int)$result[0]->option_occupancy);
+    }
+
+    public function testStateFallbackBookableFirst(): void
+    {
+        $futureDate = (new DateTime('+30 days'))->format('Y-m-d 00:00:00');
+        $row = $this->createCheapestPriceSpeedRow(1, 4899, $futureDate, 2, 3);
+        Registry::getInstance()->add('db', $this->createMockDbForCheapestPriceSpeed([$row]));
+
+        $mo = $this->createMediaObject();
+        $mo->setId(100);
+        $filter = new CheapestPrice();
+        $filter->state = 3;
+        $filter->state_fallback_order = [3, 1, 5];
+        $result = $mo->getCheapestPrices($filter);
+        $this->assertCount(1, $result);
+        $this->assertSame(3, (int)$result[0]->state);
+    }
+
+    public function testStateFallbackToRequestWhenNoBookable(): void
+    {
+        $futureDate = (new DateTime('+30 days'))->format('Y-m-d 00:00:00');
+        $rowRequest = $this->createCheapestPriceSpeedRow(1, 3200, $futureDate, 2, 1);
+        $db = $this->createMock(\Pressmind\DB\Adapter\AdapterInterface::class);
+        $db->method('fetchAll')->willReturnCallback(function ($query) use ($rowRequest) {
+            if (strpos($query, 'cheapest_price_speed') === false) {
+                return [];
+            }
+            if (strpos($query, 'state = 3') !== false) {
+                return [];
+            }
+            if (strpos($query, 'state = 1') !== false) {
+                return [$rowRequest];
+            }
+            return [];
+        });
+        $this->attachDefaultDbMethods($db);
+        Registry::getInstance()->add('db', $db);
+
+        $mo = $this->createMediaObject();
+        $mo->setId(100);
+        $filter = new CheapestPrice();
+        $filter->state = 3;
+        $filter->state_fallback_order = [3, 1, 5];
+        $result = $mo->getCheapestPrices($filter);
+        $this->assertCount(1, $result);
+        $this->assertSame(1, (int)$result[0]->state);
+    }
+
+    public function testStateFallbackReturnsEmptyWhenAllEmpty(): void
+    {
+        $db = $this->createMockDbForCheapestPriceSpeed([]);
+        Registry::getInstance()->add('db', $db);
+
+        $mo = $this->createMediaObject();
+        $mo->setId(100);
+        $filter = new CheapestPrice();
+        $filter->state = 3;
+        $filter->state_fallback_order = [3, 1, 5];
+        $result = $mo->getCheapestPrices($filter);
+        $this->assertIsArray($result);
+        $this->assertCount(0, $result);
+    }
+
+    public function testOccupancyDisableFallback(): void
+    {
+        $futureDate = (new DateTime('+30 days'))->format('Y-m-d 00:00:00');
+        $row = $this->createCheapestPriceSpeedRow(1, 4899, $futureDate, 2, 3);
+        $db = $this->createMock(\Pressmind\DB\Adapter\AdapterInterface::class);
+        $db->method('fetchAll')->willReturnCallback(function ($query) use ($row) {
+            if (strpos($query, 'cheapest_price_speed') !== false) {
+                $this->assertStringNotContainsString('option_occupancy = 2', $query, 'With fallback disabled, no occupancy filter');
+                return [$row];
+            }
+            return [];
+        });
+        $this->attachDefaultDbMethods($db);
+        Registry::getInstance()->add('db', $db);
+
+        $mo = $this->createMediaObject();
+        $mo->setId(100);
+        $filter = new CheapestPrice();
+        $filter->occupancies_disable_fallback = true;
+        $result = $mo->getCheapestPrices($filter);
+        $this->assertCount(1, $result);
+    }
+
+    private function attachDefaultDbMethods($db): void
+    {
+        $db->method('fetchRow')->willReturn(null);
+        $db->method('fetchOne')->willReturn(null);
+        $db->method('getAffectedRows')->willReturn(0);
+        $db->method('getTablePrefix')->willReturn('pmt2core_');
+        $db->method('execute')->willReturn(null);
+        $db->method('insert')->willReturn(null);
+        $db->method('replace')->willReturn(null);
+        $db->method('update')->willReturn(null);
+        $db->method('delete')->willReturn(null);
+        $db->method('truncate')->willReturn(null);
+        $db->method('batchInsert')->willReturn(1);
+        $db->method('beginTransaction')->willReturn(null);
+        $db->method('commit')->willReturn(null);
+        $db->method('rollback')->willReturn(null);
+        $db->method('inTransaction')->willReturn(false);
     }
 }

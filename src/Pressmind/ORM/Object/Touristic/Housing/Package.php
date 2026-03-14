@@ -5,9 +5,10 @@ namespace Pressmind\ORM\Object\Touristic\Housing;
 use DateTime;
 use Exception;
 use Pressmind\ORM\Object\AbstractObject;
-use Pressmind\ORM\Object\CheapestPriceSpeed;
+use Pressmind\ORM\Object\MediaObject;
 use Pressmind\ORM\Object\Touristic\Housing\Package\DescriptionLink;
 use Pressmind\ORM\Object\Touristic\Option;
+use Pressmind\Search\CheapestPrice;
 
 /**
  * Class Package
@@ -222,21 +223,19 @@ class Package extends AbstractObject
     public static $run_time_cache = [];
 
     /**
-     * @return mixed
+     * Returns the cheapest price for this housing package. Delegates to MediaObject::getCheapestPrice()
+     * with id_housing_package filter (occupancy fallback DZ→EZ→all and state fallback applied).
+     *
+     * @return \Pressmind\ORM\Object\CheapestPriceSpeed|null
      * @throws Exception
      */
     public function getCheapestPrice()
     {
-        $now = new DateTime();
-        $where = "id_housing_option = " . $this->getId() . " AND price_total > 0 AND date_departure > '" . $now->format('Y-m-d H:i:s') . "'";
-        $cheapest_price = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 2', ['price_total' => 'ASC']);
-        if(empty($cheapest_price)) {
-            $cheapest_price = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 1', ['price_total' => 'ASC']);
-        }
-        if(empty($cheapest_price)) {
-            $cheapest_price = CheapestPriceSpeed::listAll($where, ['price_total' => 'ASC']);
-        }
-        return $cheapest_price[0];
+        $mediaObject = new MediaObject();
+        $mediaObject->setId($this->id_media_object);
+        $filter = new CheapestPrice();
+        $filter->id_housing_package = $this->getId();
+        return $mediaObject->getCheapestPrice($filter);
     }
 
     /**

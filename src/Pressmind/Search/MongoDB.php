@@ -795,27 +795,60 @@ class MongoDB extends AbstractSearch
                         'input' => '$prices',
                         'initialValue' => [],
                         'in' => [
-                            '$cond' => [
-                                'if' => [
-                                    '$or' => [
-                                        ['$lt' =>
-                                            ['$$this.state', '$$value.state']
-                                        ],
-                                        ['$and' => [
-                                                ['$eq' => ['$$this.state', '$$value.state']],
-                                                ['$lt' => ['$$this.price_total', '$$value.price_total']]
-                                            ]
-                                        ],
-                                        ['$and' => [
-                                                ['$eq' => ['$$this.state', '$$value.state']],
-                                                ['$eq' => ['$$this.price_total', '$$value.price_total']],
-                                                ['$gt' => ['$$this.duration', '$$value.duration']]
-                                            ]
+                            '$let' => [
+                                'vars' => [
+                                    'thisOccRank' => [
+                                        '$switch' => [
+                                            'branches' => [
+                                                ['case' => ['$eq' => ['$$this.occupancy', 2]], 'then' => 0],
+                                                ['case' => ['$eq' => ['$$this.occupancy', 1]], 'then' => 1],
+                                            ],
+                                            'default' => 2
                                         ]
-                                    ]
+                                    ],
+                                    'valueOccRank' => [
+                                        '$switch' => [
+                                            'branches' => [
+                                                ['case' => ['$eq' => ['$$value.occupancy', 2]], 'then' => 0],
+                                                ['case' => ['$eq' => ['$$value.occupancy', 1]], 'then' => 1],
+                                            ],
+                                            'default' => 2
+                                        ]
+                                    ],
                                 ],
-                                'then' => '$$this',
-                                'else' => '$$value',
+                                'in' => [
+                                    '$cond' => [
+                                        'if' => [
+                                            '$or' => [
+                                                ['$eq' => ['$$value', []]],
+                                                ['$lt' => ['$$thisOccRank', '$$valueOccRank']],
+                                                [
+                                                    '$and' => [
+                                                        ['$eq' => ['$$thisOccRank', '$$valueOccRank']],
+                                                        ['$lt' => ['$$this.state', '$$value.state']]
+                                                    ]
+                                                ],
+                                                [
+                                                    '$and' => [
+                                                        ['$eq' => ['$$thisOccRank', '$$valueOccRank']],
+                                                        ['$eq' => ['$$this.state', '$$value.state']],
+                                                        ['$lt' => ['$$this.price_total', '$$value.price_total']]
+                                                    ]
+                                                ],
+                                                [
+                                                    '$and' => [
+                                                        ['$eq' => ['$$thisOccRank', '$$valueOccRank']],
+                                                        ['$eq' => ['$$this.state', '$$value.state']],
+                                                        ['$eq' => ['$$this.price_total', '$$value.price_total']],
+                                                        ['$gt' => ['$$this.duration', '$$value.duration']]
+                                                    ]
+                                                ],
+                                            ]
+                                        ],
+                                        'then' => '$$this',
+                                        'else' => '$$value',
+                                    ]
+                                ]
                             ]
                         ]
                     ],

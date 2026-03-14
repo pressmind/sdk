@@ -815,7 +815,63 @@ class MediaObject extends AbstractObject
                 $cheapest_prices = $this->getCheapestPrices($fallback_filter, $order, $limit);
             }
         }
+        $cheapest_prices = $this->_sortCheapestPricesByStateAndPrice($cheapest_prices);
         return $cheapest_prices;
+    }
+
+    /**
+     * Sort cheapest price list by state priority (bookable > request > stop) then price_total ASC, duration DESC, date_departure ASC.
+     * State order: 3 (bookable), 1 (request), 5 (stop), 0 (other).
+     *
+     * @param CheapestPriceSpeed[] $cheapest_prices
+     * @return CheapestPriceSpeed[]
+     */
+    private function _sortCheapestPricesByStateAndPrice($cheapest_prices)
+    {
+        if (!is_array($cheapest_prices) || count($cheapest_prices) <= 1) {
+            return $cheapest_prices;
+        }
+        $stateOrder = [3 => 0, 1 => 1, 5 => 2, 0 => 3];
+        usort($cheapest_prices, function ($a, $b) use ($stateOrder) {
+            $stateA = isset($stateOrder[$a->state]) ? $stateOrder[$a->state] : 3;
+            $stateB = isset($stateOrder[$b->state]) ? $stateOrder[$b->state] : 3;
+            if ($stateA !== $stateB) {
+                return $stateA - $stateB;
+            }
+            $priceCmp = (float)$a->price_total <=> (float)$b->price_total;
+            if ($priceCmp !== 0) {
+                return $priceCmp;
+            }
+            $durationCmp = (float)$b->duration <=> (float)$a->duration;
+            if ($durationCmp !== 0) {
+                return $durationCmp;
+            }
+            $dateA = $a->date_departure instanceof \DateTime ? $a->date_departure->getTimestamp() : 0;
+            $dateB = $b->date_departure instanceof \DateTime ? $b->date_departure->getTimestamp() : 0;
+            return $dateA <=> $dateB;
+        });
+        return $cheapest_prices;
+    }
+
+    /**
+     * Returns true if the new day's cheapest_price should replace the existing one in calendar merge.
+     * Better state (3 > 1 > 5) wins; same state then lower price_total wins.
+     *
+     * @param object $existingCheapestPrice object with state, price_total
+     * @param object $newCheapestPrice object with state, price_total
+     * @return bool
+     */
+    public static function _calendarMergeShouldReplace($existingCheapestPrice, $newCheapestPrice): bool
+    {
+        $statePriority = [3 => 0, 1 => 1, 5 => 2, 0 => 3];
+        $existingState = (int)$existingCheapestPrice->state;
+        $newState = (int)$newCheapestPrice->state;
+        $existingPrio = isset($statePriority[$existingState]) ? $statePriority[$existingState] : 3;
+        $newPrio = isset($statePriority[$newState]) ? $statePriority[$newState] : 3;
+        $betterStateWins = $newPrio < $existingPrio;
+        $sameStateLowerPriceWins = ($newPrio === $existingPrio)
+            && ((float)$existingCheapestPrice->price_total > (float)$newCheapestPrice->price_total);
+        return $betterStateWins || $sameStateLowerPriceWins;
     }
 
     /**
@@ -1117,7 +1173,7 @@ class MediaObject extends AbstractObject
                         $existing_day = !empty($merged_calendar_object->month[$month_key]->days[$key]) ? $merged_calendar_object->month[$month_key]->days[$key] : null;
                         if(!empty($existing_day->cheapest_price)) {
                             if(!empty($day->cheapest_price)) {
-                                if($existing_day->cheapest_price->price_total > $day->cheapest_price->price_total) {
+                                if (self::_calendarMergeShouldReplace($existing_day->cheapest_price, $day->cheapest_price)) {
                                     $merged_calendar_object->month[$month_key]->days[$key]->cheapest_price = $day->cheapest_price;
                                 }
                             }

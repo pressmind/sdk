@@ -62,4 +62,48 @@ class IndexerTest extends AbstractTestCase
         Indexer::resetIndexCheckCache();
         $this->assertTrue(true, 'No exception');
     }
+
+    /**
+     * Price sort must put "best" first: occupancy (DZ > EZ > other) > state (100 > 200 > 300) > price_total ASC > duration DESC.
+     * Ensures best_price_meta = prices[0] matches getCheapestPrice / MongoDB $reduce logic.
+     */
+    public function testPriceSortPutsBestFirst(): void
+    {
+        $indexer = $this->createIndexerStub();
+        $ref = new \ReflectionClass(Indexer::class);
+        $sortMethod = $ref->getMethod('_priceSort');
+        $sortMethod->setAccessible(true);
+
+        $prices = [
+            (object) ['occupancy' => 1, 'state' => 100, 'price_total' => 500.0, 'duration' => 7],
+            (object) ['occupancy' => 2, 'state' => 100, 'price_total' => 1000.0, 'duration' => 7],
+            (object) ['occupancy' => 2, 'state' => 200, 'price_total' => 800.0, 'duration' => 7],
+            (object) ['occupancy' => 2, 'state' => 100, 'price_total' => 800.0, 'duration' => 14],
+        ];
+        usort($prices, function ($a, $b) use ($indexer, $sortMethod) {
+            return $sortMethod->invoke($indexer, $a, $b);
+        });
+
+        $first = $prices[0];
+        $this->assertSame(2, $first->occupancy, 'Best must be DZ first');
+        $this->assertSame(100, $first->state, 'Best must be bookable');
+        $this->assertSame(800.0, $first->price_total, 'Among DZ bookable, lowest price first');
+        $this->assertEquals(14, $first->duration, 'Among same price, longer duration first');
+    }
+
+    /**
+     * Occupancy rank: DZ=0, EZ=1, other/null=2.
+     */
+    public function testOccupancyRank(): void
+    {
+        $indexer = $this->createIndexerStub();
+        $ref = new \ReflectionClass(Indexer::class);
+        $rankMethod = $ref->getMethod('_occupancyRank');
+        $rankMethod->setAccessible(true);
+
+        $this->assertSame(0, $rankMethod->invoke($indexer, 2));
+        $this->assertSame(1, $rankMethod->invoke($indexer, 1));
+        $this->assertSame(2, $rankMethod->invoke($indexer, 3));
+        $this->assertSame(2, $rankMethod->invoke($indexer, null));
+    }
 }

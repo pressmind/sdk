@@ -1808,12 +1808,50 @@ class Indexer extends AbstractIndex
     }
 
     /**
-     * @param $pricea
-     * @param $priceb
+     * Sort prices so the "best" (by occupancy > state > price > duration) is first.
+     * Used for best_price_meta = prices[0] and consistent with MongoDB $reduce / getCheapestPrice.
+     * Order: occupancy rank (DZ=2 best, EZ=1, else 2) ASC, state (100=bookable best) ASC, price_total ASC, duration DESC.
+     *
+     * @param object $pricea
+     * @param object $priceb
      * @return int
      */
-    private function _priceSort($pricea, $priceb) {
-        return $priceb->price_total <=> $pricea->price_total;
+    private function _priceSort($pricea, $priceb)
+    {
+        $rankA = $this->_occupancyRank($pricea->occupancy ?? null);
+        $rankB = $this->_occupancyRank($priceb->occupancy ?? null);
+        if ($rankA !== $rankB) {
+            return $rankA <=> $rankB;
+        }
+        $stateA = (int) ($pricea->state ?? 300);
+        $stateB = (int) ($priceb->state ?? 300);
+        if ($stateA !== $stateB) {
+            return $stateA <=> $stateB;
+        }
+        $priceCmp = ($pricea->price_total ?? 0) <=> ($priceb->price_total ?? 0);
+        if ($priceCmp !== 0) {
+            return $priceCmp;
+        }
+        $durA = (float) ($pricea->duration ?? 0);
+        $durB = (float) ($priceb->duration ?? 0);
+        return $durB <=> $durA; // longer duration first when price equal
+    }
+
+    /**
+     * Occupancy rank for sort: 0 = best (DZ), 1 = EZ, 2 = other.
+     *
+     * @param int|null $occupancy
+     * @return int
+     */
+    private function _occupancyRank($occupancy)
+    {
+        if ($occupancy === 2) {
+            return 0;
+        }
+        if ($occupancy === 1) {
+            return 1;
+        }
+        return 2;
     }
 
     /**

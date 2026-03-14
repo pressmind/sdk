@@ -70,4 +70,52 @@ class MediaObjectCalendarTest extends AbstractTestCase
             $this->assertNotEmpty($e->getMessage(), 'getCalendar should throw due to invalid MongoDB config');
         }
     }
+
+    /**
+     * Calendar merge: better state (bookable 3) wins over lower price with worse state (stop 5).
+     */
+    public function testCalendarMergeBetterStateWinsOverLowerPrice(): void
+    {
+        $existing = (object)['state' => 5, 'price_total' => 200.0];
+        $new = (object)['state' => 3, 'price_total' => 500.0];
+        $this->assertTrue(
+            MediaObject::_calendarMergeShouldReplace($existing, $new),
+            'New (state 3 bookable, 500) should replace existing (state 5 stop, 200)'
+        );
+    }
+
+    /**
+     * Calendar merge: same state, lower price wins.
+     */
+    public function testCalendarMergeSameStateLowerPriceWins(): void
+    {
+        $existing = (object)['state' => 3, 'price_total' => 500.0];
+        $new = (object)['state' => 3, 'price_total' => 400.0];
+        $this->assertTrue(
+            MediaObject::_calendarMergeShouldReplace($existing, $new)
+        );
+    }
+
+    /**
+     * Calendar merge: same state and same price -> no replace (new is not better).
+     */
+    public function testCalendarMergeSameStateSamePriceNoReplace(): void
+    {
+        $existing = (object)['state' => 3, 'price_total' => 400.0];
+        $new = (object)['state' => 3, 'price_total' => 400.0];
+        $this->assertFalse(MediaObject::_calendarMergeShouldReplace($existing, $new));
+    }
+
+    /**
+     * Calendar merge: new day with no existing day is always inserted (tested via merge logic: worse state should not replace).
+     */
+    public function testCalendarMergeWorseStateDoesNotReplace(): void
+    {
+        $existing = (object)['state' => 3, 'price_total' => 500.0];
+        $new = (object)['state' => 5, 'price_total' => 200.0];
+        $this->assertFalse(
+            MediaObject::_calendarMergeShouldReplace($existing, $new),
+            'New (state 5 stop) must not replace existing (state 3 bookable)'
+        );
+    }
 }

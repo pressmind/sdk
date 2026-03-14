@@ -7,20 +7,15 @@ use Pressmind\Tests\Unit\AbstractTestCase;
 /**
  * Tests for the cheapest-price selection logic used in the MongoDB aggregation pipeline.
  *
- * The MongoDB\Search::buildQuery() method generates a $reduce stage that picks the best
- * price per product. Because the actual $reduce runs inside MongoDB, these tests verify:
- *  1. The pipeline structure contains the expected $reduce operator.
- *  2. A PHP re-implementation of the $reduce comparator produces the correct winner
- *     for various state / price / duration combinations.
- *
- * State codes used in the price documents (lower value = higher priority in $lt comparison):
- *   REQUEST = 1, BOOKABLE = 3, STOP = 5
+ * Selection order: Occupancy (DZ=2 > EZ=1 > rest) > State (lower = better: 100 bookable, 200 request, 300 stop) > Price > Duration.
+ * The pipeline uses $let with $switch for occupancy rank, then $cond with $or for the comparator.
  */
 class CheapestPriceSelectionTest extends AbstractTestCase
 {
-    private const STATE_REQUEST  = 1;
-    private const STATE_BOOKABLE = 3;
-    private const STATE_STOP     = 5;
+    /** MongoDB index state values (lower = better) */
+    private const STATE_BOOKABLE = 100;
+    private const STATE_REQUEST  = 200;
+    private const STATE_STOP      = 300;
 
     // ------------------------------------------------------------------
     // Pipeline structure tests
@@ -41,98 +36,166 @@ class CheapestPriceSelectionTest extends AbstractTestCase
         $this->assertTrue($reduceFound, 'Pipeline must contain a $project stage with a $reduce on prices');
     }
 
-    public function testReduceStageUsesLtForStateComparison(): void
+    public function testReduceStageUsesLetWithOccupancySwitch(): void
     {
         $reduce = $this->extractPriceReduceFromPipeline();
         $this->assertNotNull($reduce, '$reduce definition must exist in the prices projection');
 
-        $condIf = $reduce['in']['$cond']['if']['$or'] ?? [];
+        $this->assertArrayHasKey('$let', $reduce['in'], 'Reduce in must use $let for occupancy rank and comparator');
+        $let = $reduce['in']['$let'];
+        $this->assertArrayHasKey('vars', $let);
+        $this->assertArrayHasKey('thisOccRank', $let['vars']);
+        $this->assertArrayHasKey('valueOccRank', $let['vars']);
+        $this->assertArrayHasKey('$switch', $let['vars']['thisOccRank'], 'Occupancy rank must use $switch');
+    }
 
-        $stateLt = $condIf[0] ?? [];
-        $this->assertArrayHasKey('$lt', $stateLt, 'First $or branch must use $lt for state comparison');
-        $this->assertSame(
-            ['$$this.state', '$$value.state'],
-            $stateLt['$lt'],
-            '$lt operands must compare $$this.state against $$value.state'
-        );
+    public function testReduceStageStateComparisonInCond(): void
+    {
+        $reduce = $this->extractPriceReduceFromPipeline();
+        $letIn = $reduce['in']['$let']['in'] ?? [];
+        $condIf = $letIn['$cond']['if']['$or'] ?? [];
+
+        $stateAndFound = false;
+        foreach ($condIf as $branch) {
+            if (isset($branch['$and'])) {
+                foreach ($branch['$and'] as $expr) {
+                    if (isset($expr['$lt']) && $expr['$lt'] === ['$$this.state', '$$value.state']) {
+                        $stateAndFound = true;
+                        break 2;
+                    }
+                }
+            }
+        }
+        $this->assertTrue($stateAndFound, '$or must contain a branch comparing $$this.state < $$value.state');
     }
 
     public function testReduceStagePrefersSamePriceLongerDuration(): void
     {
         $reduce = $this->extractPriceReduceFromPipeline();
-        $condIf = $reduce['in']['$cond']['if']['$or'] ?? [];
+        $letIn = $reduce['in']['$let']['in'] ?? [];
+        $condIf = $letIn['$cond']['if']['$or'] ?? [];
 
-        $durationBranch = $condIf[2]['$and'] ?? [];
-
-        $this->assertNotEmpty($durationBranch, 'Third $or branch must handle same-state-same-price tiebreak');
-
-        $gtFound = false;
-        foreach ($durationBranch as $expr) {
-            if (isset($expr['$gt']) && $expr['$gt'] === ['$$this.duration', '$$value.duration']) {
-                $gtFound = true;
+        $durationBranch = null;
+        foreach ($condIf as $branch) {
+            if (isset($branch['$and'])) {
+                foreach ($branch['$and'] as $expr) {
+                    if (isset($expr['$gt']) && $expr['$gt'] === ['$$this.duration', '$$value.duration']) {
+                        $durationBranch = $branch;
+                        break 2;
+                    }
+                }
             }
         }
-        $this->assertTrue($gtFound, 'Duration tiebreak must use $gt to prefer longer duration');
+        $this->assertNotEmpty($durationBranch, 'One $or branch must use $gt for duration tiebreak');
     }
 
     // ------------------------------------------------------------------
-    // Behavioural tests (PHP re-implementation of the $reduce comparator)
+    // Behavioural tests (PHP re-implementation: Occupancy > State > Price > Duration)
     // ------------------------------------------------------------------
 
-    public function testStatePriorityLowerStateWins(): void
+    public function testOccupancyDoubleRoomPreferredOverSingle(): void
     {
         $prices = [
-            ['state' => self::STATE_BOOKABLE, 'price_total' => 500, 'duration' => 7],
-            ['state' => self::STATE_REQUEST,  'price_total' => 500, 'duration' => 7],
+            ['occupancy' => 1, 'state' => self::STATE_BOOKABLE, 'price_total' => 3399, 'duration' => 7],
+            ['occupancy' => 2, 'state' => self::STATE_BOOKABLE, 'price_total' => 4899, 'duration' => 7],
         ];
 
         $best = $this->reduceToSingleBestPrice($prices);
 
-        $this->assertSame(self::STATE_REQUEST, $best['state'], 'Lower state value must win (REQUEST < BOOKABLE)');
+        $this->assertSame(2, $best['occupancy'], 'DZ (2) must win over EZ (1) at same state');
+        $this->assertSame(4899.0, (float)$best['price_total']);
+    }
+
+    public function testOccupancySingleRoomPreferredOverTriple(): void
+    {
+        $prices = [
+            ['occupancy' => 3, 'state' => self::STATE_BOOKABLE, 'price_total' => 4000, 'duration' => 7],
+            ['occupancy' => 1, 'state' => self::STATE_BOOKABLE, 'price_total' => 5000, 'duration' => 7],
+        ];
+
+        $best = $this->reduceToSingleBestPrice($prices);
+
+        $this->assertSame(1, $best['occupancy'], 'EZ (1) must win over 3-bed (3)');
+    }
+
+    public function testOccupancyFallbackToSingleWhenNoDouble(): void
+    {
+        $prices = [
+            ['occupancy' => 1, 'state' => self::STATE_BOOKABLE, 'price_total' => 1899, 'duration' => 7],
+            ['occupancy' => 3, 'state' => self::STATE_BOOKABLE, 'price_total' => 1700, 'duration' => 7],
+        ];
+
+        $best = $this->reduceToSingleBestPrice($prices);
+
+        $this->assertSame(1, $best['occupancy']);
+        $this->assertSame(1899.0, (float)$best['price_total']);
+    }
+
+    public function testOccupancySameRoomStatePriorityStillApplies(): void
+    {
+        $prices = [
+            ['occupancy' => 2, 'state' => self::STATE_REQUEST,  'price_total' => 3200, 'duration' => 7],
+            ['occupancy' => 2, 'state' => self::STATE_BOOKABLE, 'price_total' => 4899, 'duration' => 7],
+        ];
+
+        $best = $this->reduceToSingleBestPrice($prices);
+
+        $this->assertSame(self::STATE_BOOKABLE, $best['state'], 'Same occupancy: better state (bookable) must win');
+        $this->assertSame(4899.0, (float)$best['price_total']);
+    }
+
+    public function testOccupancySameRoomSameStateLowerPriceWins(): void
+    {
+        $prices = [
+            ['occupancy' => 2, 'state' => self::STATE_BOOKABLE, 'price_total' => 5200, 'duration' => 7],
+            ['occupancy' => 2, 'state' => self::STATE_BOOKABLE, 'price_total' => 4899, 'duration' => 7],
+        ];
+
+        $best = $this->reduceToSingleBestPrice($prices);
+
+        $this->assertSame(4899.0, (float)$best['price_total']);
+    }
+
+    public function testOccupancySameRoomSamePriceLongerDurationWins(): void
+    {
+        $prices = [
+            ['occupancy' => 2, 'state' => self::STATE_BOOKABLE, 'price_total' => 4899, 'duration' => 5],
+            ['occupancy' => 2, 'state' => self::STATE_BOOKABLE, 'price_total' => 4899, 'duration' => 10],
+        ];
+
+        $best = $this->reduceToSingleBestPrice($prices);
+
+        $this->assertSame(10, $best['duration']);
     }
 
     public function testStatePriorityBookableOverStop(): void
     {
         $prices = [
-            ['state' => self::STATE_STOP,     'price_total' => 300, 'duration' => 7],
-            ['state' => self::STATE_BOOKABLE, 'price_total' => 600, 'duration' => 7],
+            ['occupancy' => 2, 'state' => self::STATE_STOP,     'price_total' => 300, 'duration' => 7],
+            ['occupancy' => 2, 'state' => self::STATE_BOOKABLE, 'price_total' => 600, 'duration' => 7],
         ];
 
         $best = $this->reduceToSingleBestPrice($prices);
 
-        $this->assertSame(self::STATE_BOOKABLE, $best['state'], 'BOOKABLE (3) must beat STOP (5) regardless of price');
+        $this->assertSame(self::STATE_BOOKABLE, $best['state'], 'BOOKABLE must beat STOP regardless of price');
     }
 
     public function testStatePrioritySameStateLowerPriceWins(): void
     {
         $prices = [
-            ['state' => self::STATE_BOOKABLE, 'price_total' => 800, 'duration' => 7],
-            ['state' => self::STATE_BOOKABLE, 'price_total' => 450, 'duration' => 7],
-            ['state' => self::STATE_BOOKABLE, 'price_total' => 600, 'duration' => 7],
+            ['occupancy' => 2, 'state' => self::STATE_BOOKABLE, 'price_total' => 800, 'duration' => 7],
+            ['occupancy' => 2, 'state' => self::STATE_BOOKABLE, 'price_total' => 450, 'duration' => 7],
         ];
 
         $best = $this->reduceToSingleBestPrice($prices);
 
-        $this->assertSame(450.0, (float)$best['price_total'], 'Same state: lowest price_total must win');
-    }
-
-    public function testStatePrioritySamePricePreferLongerDuration(): void
-    {
-        $prices = [
-            ['state' => self::STATE_BOOKABLE, 'price_total' => 500, 'duration' => 5],
-            ['state' => self::STATE_BOOKABLE, 'price_total' => 500, 'duration' => 10],
-            ['state' => self::STATE_BOOKABLE, 'price_total' => 500, 'duration' => 7],
-        ];
-
-        $best = $this->reduceToSingleBestPrice($prices);
-
-        $this->assertSame(10, $best['duration'], 'Same state+price: longest duration must win');
+        $this->assertSame(450.0, (float)$best['price_total']);
     }
 
     public function testSinglePriceReturnsThatPrice(): void
     {
         $prices = [
-            ['state' => self::STATE_STOP, 'price_total' => 999, 'duration' => 3],
+            ['occupancy' => 2, 'state' => self::STATE_STOP, 'price_total' => 999, 'duration' => 3],
         ];
 
         $best = $this->reduceToSingleBestPrice($prices);
@@ -148,21 +211,34 @@ class CheapestPriceSelectionTest extends AbstractTestCase
         $this->assertSame([], $best, 'Empty input must return the initial value (empty array)');
     }
 
-    public function testComplexMixPicksCorrectWinner(): void
+    public function testComplexMixOccupancyStatePrice(): void
     {
         $prices = [
-            ['state' => self::STATE_STOP,     'price_total' => 100, 'duration' => 14],
-            ['state' => self::STATE_BOOKABLE, 'price_total' => 350, 'duration' => 7],
-            ['state' => self::STATE_REQUEST,  'price_total' => 700, 'duration' => 5],
-            ['state' => self::STATE_REQUEST,  'price_total' => 400, 'duration' => 10],
-            ['state' => self::STATE_REQUEST,  'price_total' => 400, 'duration' => 14],
+            ['occupancy' => 1, 'state' => self::STATE_BOOKABLE, 'price_total' => 3399, 'duration' => 7],
+            ['occupancy' => 2, 'state' => self::STATE_REQUEST,  'price_total' => 3200, 'duration' => 7],
+            ['occupancy' => 2, 'state' => self::STATE_BOOKABLE, 'price_total' => 4899, 'duration' => 7],
         ];
 
         $best = $this->reduceToSingleBestPrice($prices);
 
-        $this->assertSame(self::STATE_REQUEST, $best['state'], 'REQUEST (1) must win over BOOKABLE (3) and STOP (5)');
-        $this->assertSame(400, $best['price_total'], 'Among REQUEST prices, 400 is the lowest');
-        $this->assertSame(14, $best['duration'], 'Among REQUEST prices at 400, duration 14 is the longest');
+        $this->assertSame(2, $best['occupancy'], 'DZ preferred over EZ');
+        $this->assertSame(self::STATE_BOOKABLE, $best['state'], 'Among DZ, bookable preferred over request');
+        $this->assertSame(4899.0, (float)$best['price_total']);
+    }
+
+    public function testPipelineContainsLetWithOccupancySwitch(): void
+    {
+        $reduce = $this->extractPriceReduceFromPipeline();
+        $this->assertNotNull($reduce);
+        $vars = $reduce['in']['$let']['vars'] ?? [];
+        $this->assertArrayHasKey('thisOccRank', $vars);
+        $thisOccRank = $vars['thisOccRank'];
+        $this->assertArrayHasKey('$switch', $thisOccRank);
+        $branches = $thisOccRank['$switch']['branches'] ?? [];
+        $occ2 = array_filter($branches, function ($b) {
+            return isset($b['case']['$eq']) && $b['case']['$eq'] === ['$$this.occupancy', 2];
+        });
+        $this->assertCount(1, $occ2, 'Pipeline must have branch for occupancy 2 (double room)');
     }
 
     // ------------------------------------------------------------------
@@ -229,33 +305,46 @@ class CheapestPriceSelectionTest extends AbstractTestCase
         return null;
     }
 
+    private static function occupancyRank(int $occupancy): int
+    {
+        if ($occupancy === 2) {
+            return 0;
+        }
+        if ($occupancy === 1) {
+            return 1;
+        }
+        return 2;
+    }
+
     /**
-     * PHP re-implementation of the MongoDB $reduce comparator from buildQuery().
+     * PHP re-implementation of the MongoDB $reduce comparator: Occupancy > State > Price > Duration.
      *
-     * Rules (evaluated in order):
-     *  1. Lower state value wins           ($lt on state)
-     *  2. Same state → lower price_total   ($lt on price_total)
-     *  3. Same state + price → longer dur. ($gt on duration)
-     *
-     * @param array<int, array{state: int, price_total: int|float, duration: int}> $prices
+     * @param array<int, array{occupancy?: int, state: int, price_total: int|float, duration: int}> $prices
      * @return array The winning price document, or [] if input is empty
      */
     private function reduceToSingleBestPrice(array $prices): array
     {
         $value = [];
         foreach ($prices as $current) {
+            $curOcc = isset($current['occupancy']) ? (int)$current['occupancy'] : 2;
             if (empty($value)) {
                 $value = $current;
                 continue;
             }
+            $valOcc = isset($value['occupancy']) ? (int)$value['occupancy'] : 2;
+            $curRank = self::occupancyRank($curOcc);
+            $valRank = self::occupancyRank($valOcc);
             $replace = false;
-            if ($current['state'] < $value['state']) {
+            if ($curRank < $valRank) {
                 $replace = true;
-            } elseif ($current['state'] === $value['state'] && $current['price_total'] < $value['price_total']) {
+            } elseif ($curRank === $valRank && (int)$current['state'] < (int)$value['state']) {
                 $replace = true;
-            } elseif ($current['state'] === $value['state']
-                && $current['price_total'] === $value['price_total']
-                && $current['duration'] > $value['duration']) {
+            } elseif ($curRank === $valRank && (int)$current['state'] === (int)$value['state']
+                && (float)$current['price_total'] < (float)$value['price_total']) {
+                $replace = true;
+            } elseif ($curRank === $valRank && (int)$current['state'] === (int)$value['state']
+                && (float)$current['price_total'] === (float)$value['price_total']
+                && (int)$current['duration'] > (int)$value['duration']) {
                 $replace = true;
             }
             if ($replace) {

@@ -108,25 +108,49 @@ class MediaObjectCheapestPriceIntegrationTest extends AbstractIntegrationTestCas
 
     /**
      * Insert a minimal CheapestPriceSpeed row with departure in the future (FixtureDateHelper).
+     *
+     * @param int $idMediaObject
+     * @param int $rowId
+     * @param DateTime $departure
+     * @param float $priceTotal
+     * @param int $optionOccupancy 2=double, 1=single
+     * @param int $state 3=bookable, 1=request, 5=stop
+     * @param string|null $idBookingPackage
+     * @param string|null $idHousingPackage
      */
-    private function insertCheapestPriceSpeedRow(int $idMediaObject, int $rowId, DateTime $departure, float $priceTotal = 999.99): void
-    {
+    private function insertCheapestPriceSpeedRow(
+        int $idMediaObject,
+        int $rowId,
+        DateTime $departure,
+        float $priceTotal = 999.99,
+        int $optionOccupancy = 2,
+        int $state = 3,
+        ?string $idBookingPackage = null,
+        ?string $idHousingPackage = null
+    ): void {
         $arrival = (clone $departure)->modify('+7 days');
-        $this->db->insert('pmt2core_cheapest_price_speed', [
+        $row = [
             'id' => $rowId,
             'id_media_object' => $idMediaObject,
             'price_total' => $priceTotal,
             'date_departure' => $departure->format('Y-m-d H:i:s'),
             'date_arrival' => $arrival->format('Y-m-d H:i:s'),
             'duration' => 7,
-            'option_occupancy' => 2,
-            'option_occupancy_min' => 2,
-            'option_occupancy_max' => 2,
-            'state' => 50,
+            'option_occupancy' => $optionOccupancy,
+            'option_occupancy_min' => $optionOccupancy,
+            'option_occupancy_max' => $optionOccupancy,
+            'state' => $state,
             'transport_type' => 'bus',
             'transport_1_airport' => '',
             'transport_1_airport_name' => '',
-        ], false);
+        ];
+        if ($idBookingPackage !== null) {
+            $row['id_booking_package'] = $idBookingPackage;
+        }
+        if ($idHousingPackage !== null) {
+            $row['id_housing_package'] = $idHousingPackage;
+        }
+        $this->db->insert('pmt2core_cheapest_price_speed', $row, false);
     }
 
     public function testGetCheapestPricesReturnsEntriesWithFutureDeparture(): void
@@ -219,5 +243,88 @@ class MediaObjectCheapestPriceIntegrationTest extends AbstractIntegrationTestCas
 
         $countAfter = $this->db->fetchOne('SELECT COUNT(*) FROM pmt2core_cheapest_price_speed WHERE id_media_object = ?', [self::TEST_ID_BASE + 1]);
         $this->assertSame(0, (int) $countAfter, 'insertCheapestPrice with no booking_packages should remove existing rows');
+    }
+
+    public function testOccupancyFallbackWithRealDb(): void
+    {
+        if ($this->db === null) {
+            $this->markTestSkipped('MySQL not available');
+        }
+        $this->insertBrandAndSeason();
+        $mo = $this->createMediaObject(2, 'CP-OCC');
+        $mo->create();
+        $dep = $this->departureInFuture(25);
+        $this->insertCheapestPriceSpeedRow(self::TEST_ID_BASE + 2, self::TEST_ID_BASE + 40, $dep, 4899, 2, 3);
+        $this->insertCheapestPriceSpeedRow(self::TEST_ID_BASE + 2, self::TEST_ID_BASE + 41, $dep, 3399, 1, 3);
+
+        $mo = new MediaObject(self::TEST_ID_BASE + 2, false);
+        $filter = new \Pressmind\Search\CheapestPrice();
+        $prices = $mo->getCheapestPrices($filter);
+        $this->assertNotEmpty($prices);
+        $first = $prices[0];
+        $this->assertSame(2, (int) $first->option_occupancy, 'DZ should be preferred over EZ');
+        $this->assertSame(4899.0, (float) $first->price_total);
+    }
+
+    public function testStateSortingWithRealDb(): void
+    {
+        if ($this->db === null) {
+            $this->markTestSkipped('MySQL not available');
+        }
+        $this->insertBrandAndSeason();
+        $mo = $this->createMediaObject(3, 'CP-STATE');
+        $mo->create();
+        $dep = $this->departureInFuture(22);
+        $this->insertCheapestPriceSpeedRow(self::TEST_ID_BASE + 3, self::TEST_ID_BASE + 50, $dep, 600, 2, 5);
+        $this->insertCheapestPriceSpeedRow(self::TEST_ID_BASE + 3, self::TEST_ID_BASE + 51, $dep, 800, 2, 1);
+        $this->insertCheapestPriceSpeedRow(self::TEST_ID_BASE + 3, self::TEST_ID_BASE + 52, $dep, 700, 2, 3);
+
+        $mo = new MediaObject(self::TEST_ID_BASE + 3, false);
+        $prices = $mo->getCheapestPrices(null);
+        $this->assertNotEmpty($prices);
+        $first = $prices[0];
+        $this->assertSame(3, (int) $first->state, 'Bookable (3) should be first after state sorting');
+        $this->assertSame(700.0, (float) $first->price_total);
+    }
+
+    public function testOccupancyPlusStateCombinationWithRealDb(): void
+    {
+        if ($this->db === null) {
+            $this->markTestSkipped('MySQL not available');
+        }
+        $this->insertBrandAndSeason();
+        $mo = $this->createMediaObject(4, 'CP-OCC-STATE');
+        $mo->create();
+        $dep = $this->departureInFuture(28);
+        $this->insertCheapestPriceSpeedRow(self::TEST_ID_BASE + 4, self::TEST_ID_BASE + 60, $dep, 3200, 2, 1);
+        $this->insertCheapestPriceSpeedRow(self::TEST_ID_BASE + 4, self::TEST_ID_BASE + 61, $dep, 3399, 1, 3);
+
+        $mo = new MediaObject(self::TEST_ID_BASE + 4, false);
+        $filter = new \Pressmind\Search\CheapestPrice();
+        $one = $mo->getCheapestPrice($filter);
+        $this->assertNotNull($one);
+        $this->assertSame(2, (int) $one->option_occupancy, 'Occupancy (DZ) preferred over state (EZ bookable)');
+        $this->assertSame(1, (int) $one->state);
+        $this->assertSame(3200.0, (float) $one->price_total);
+    }
+
+    public function testHousingPackageWrapperWithRealDb(): void
+    {
+        if ($this->db === null) {
+            $this->markTestSkipped('MySQL not available');
+        }
+        $this->insertBrandAndSeason();
+        $mo = $this->createMediaObject(5, 'CP-HP');
+        $mo->create();
+        $dep = $this->departureInFuture(18);
+        $this->insertCheapestPriceSpeedRow(self::TEST_ID_BASE + 5, self::TEST_ID_BASE + 70, $dep, 2100, 2, 3, null, 'hp-int-1');
+
+        $pkg = new \Pressmind\ORM\Object\Touristic\Housing\Package();
+        $pkg->setId('hp-int-1');
+        $pkg->id_media_object = self::TEST_ID_BASE + 5;
+        $result = $pkg->getCheapestPrice();
+        $this->assertNotNull($result);
+        $this->assertSame('hp-int-1', $result->id_housing_package);
+        $this->assertSame(2100.0, (float) $result->price_total);
     }
 }

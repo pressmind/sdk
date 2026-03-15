@@ -523,10 +523,10 @@ class Ibe
                 fp.has_extras_auto_book,
                 fp.has_extras_age_filter,
                 fp.product_type_ibe,
-                MIN(fp.id_media_object) AS id_media_object,
-                MIN(fp.id_booking_package) AS id_booking_package,
-                SUBSTRING_INDEX(GROUP_CONCAT(fp.id_date ORDER BY fp.departure), ',', 1) AS id_date,
-                SUBSTRING_INDEX(GROUP_CONCAT(fp.departure ORDER BY fp.departure), ',', 1) AS departure
+                SUBSTRING_INDEX(GROUP_CONCAT(fp.id_media_object ORDER BY fp.departure, fp.id_date), ',', 1) AS id_media_object,
+                SUBSTRING_INDEX(GROUP_CONCAT(fp.id_booking_package ORDER BY fp.departure, fp.id_date), ',', 1) AS id_booking_package,
+                SUBSTRING_INDEX(GROUP_CONCAT(fp.id_date ORDER BY fp.departure, fp.id_date), ',', 1) AS id_date,
+                SUBSTRING_INDEX(GROUP_CONCAT(fp.departure ORDER BY fp.departure, fp.id_date), ',', 1) AS departure
             FROM (
                 SELECT
                     bp.ibe_type,

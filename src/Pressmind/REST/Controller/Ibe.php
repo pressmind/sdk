@@ -481,5 +481,160 @@ class Ibe
         ];
     }
 
+    /**
+     * Returns Phase-1 booking flow fingerprints for E2E test case generation.
+     * Each fingerprint represents a unique booking flow structure; one representative offer per fingerprint
+     * is returned (id_media_object, id_booking_package, id_date) for Bootstrap/IBE link building.
+     *
+     * @param array $params ['data' => ['booking_horizon' => 'optimal'|'shortterm'|'all', 'limit' => int]]
+     * @return array ['success' => bool, 'data' => ['fingerprints' => [...], 'total' => int]]
+     */
+    public function getBookingFlowFingerprints($params)
+    {
+        $data = isset($params['data']) ? $params['data'] : [];
+        $bookingHorizon = isset($data['booking_horizon']) ? $data['booking_horizon'] : 'optimal';
+        $limit = isset($data['limit']) ? (int)$data['limit'] : 100;
+
+        $db = Registry::getInstance()->get('db');
+
+        $dateCondition = "d.departure >= NOW()";
+        if ($bookingHorizon === 'optimal') {
+            $dateCondition = "d.departure >= DATE_ADD(NOW(), INTERVAL 90 DAY) AND d.departure < DATE_ADD(NOW(), INTERVAL 180 DAY) AND d.state = 1";
+        } elseif ($bookingHorizon === 'shortterm') {
+            $dateCondition = "d.departure >= NOW() AND d.departure < DATE_ADD(NOW(), INTERVAL 30 DAY) AND d.state IN (1, 2)";
+        } else {
+            $dateCondition = "d.departure >= NOW() AND d.state IN (1, 2)";
+        }
+
+        $sql = "
+            SELECT
+                fp.ibe_type,
+                fp.price_mix,
+                fp.housing_mode,
+                fp.transport_types,
+                fp.has_seatplan,
+                fp.has_insurance,
+                fp.has_dual_level_sp,
+                fp.has_transport_selection,
+                fp.has_exit_logic,
+                fp.crs_starting_points,
+                fp.has_extras_grouped_required,
+                fp.has_extras_ungrouped,
+                fp.has_extras_auto_book,
+                fp.has_extras_age_filter,
+                fp.product_type_ibe,
+                MIN(fp.id_media_object) AS id_media_object,
+                MIN(fp.id_booking_package) AS id_booking_package,
+                SUBSTRING_INDEX(GROUP_CONCAT(fp.id_date ORDER BY fp.departure), ',', 1) AS id_date,
+                SUBSTRING_INDEX(GROUP_CONCAT(fp.departure ORDER BY fp.departure), ',', 1) AS departure
+            FROM (
+                SELECT
+                    bp.ibe_type,
+                    bp.price_mix,
+                    bp.id_media_object,
+                    bp.id AS id_booking_package,
+                    bp.product_type_ibe,
+                    IFNULL(bp.id_insurance_group, '') AS id_insurance_group,
+                    CASE
+                        WHEN housing_cnt.hcnt = 0 THEN 'none'
+                        WHEN housing_cnt.hcnt = 1 THEN 'single'
+                        ELSE 'multiple'
+                    END AS housing_mode,
+                    COALESCE(tr.transport_types, '') AS transport_types,
+                    COALESCE(tr.has_seatplan, 0) AS has_seatplan,
+                    (IFNULL(bp.id_insurance_group, '') != '') AS has_insurance,
+                    (IFNULL(d.id_starting_point, '') != '' AND tr.transport_sp_count > 0) AS has_dual_level_sp,
+                    (tr.transport_type_count > 1) AS has_transport_selection,
+                    (bp.ibe_type = 8) AS has_exit_logic,
+                    (bp.ibe_type = 8) AS crs_starting_points,
+                    COALESCE(ex.has_grouped_required, 0) AS has_extras_grouped_required,
+                    COALESCE(ex.has_ungrouped, 0) AS has_extras_ungrouped,
+                    COALESCE(ex.has_auto_book, 0) AS has_extras_auto_book,
+                    COALESCE(ex.has_age_filter, 0) AS has_extras_age_filter,
+                    d.id AS id_date,
+                    d.departure
+                FROM pmt2core_touristic_booking_packages bp
+                INNER JOIN pmt2core_touristic_dates d ON d.id_booking_package = bp.id AND {$dateCondition}
+                LEFT JOIN (
+                    SELECT id_booking_package,
+                        COUNT(DISTINCT CASE WHEN type = 'housing_option' THEN id END) AS hcnt
+                    FROM pmt2core_touristic_options
+                    GROUP BY id_booking_package
+                ) housing_cnt ON housing_cnt.id_booking_package = bp.id
+                LEFT JOIN (
+                    SELECT id_booking_package,
+                        GROUP_CONCAT(DISTINCT type ORDER BY type) AS transport_types,
+                        MAX(seatplan_required) AS has_seatplan,
+                        COUNT(DISTINCT type) AS transport_type_count,
+                        SUM(CASE WHEN id_starting_point IS NOT NULL AND id_starting_point != '' THEN 1 ELSE 0 END) AS transport_sp_count
+                    FROM pmt2core_touristic_transports
+                    GROUP BY id_booking_package
+                ) tr ON tr.id_booking_package = bp.id
+                LEFT JOIN (
+                    SELECT id_booking_package,
+                        MAX(CASE WHEN type IN ('extra','ticket','sightseeing') AND required = 1 AND IFNULL(required_group,'') != '' THEN 1 ELSE 0 END) AS has_grouped_required,
+                        MAX(CASE WHEN type IN ('extra','ticket','sightseeing') AND (required_group IS NULL OR required_group = '') THEN 1 ELSE 0 END) AS has_ungrouped,
+                        MAX(CASE WHEN type IN ('extra','ticket','sightseeing') AND auto_book = 1 THEN 1 ELSE 0 END) AS has_auto_book,
+                        MAX(CASE WHEN type IN ('extra','ticket','sightseeing') AND (age_from > 0 OR (age_to > 0 AND age_to < 120)) THEN 1 ELSE 0 END) AS has_age_filter
+                    FROM pmt2core_touristic_options
+                    GROUP BY id_booking_package
+                ) ex ON ex.id_booking_package = bp.id
+            ) fp
+            GROUP BY
+                fp.ibe_type, fp.price_mix, fp.housing_mode, fp.transport_types,
+                fp.has_seatplan, fp.has_insurance, fp.has_dual_level_sp, fp.has_transport_selection,
+                fp.has_exit_logic, fp.crs_starting_points,
+                fp.has_extras_grouped_required, fp.has_extras_ungrouped, fp.has_extras_auto_book, fp.has_extras_age_filter,
+                fp.product_type_ibe
+            ORDER BY fp.ibe_type, fp.price_mix
+            LIMIT " . max(1, min(500, $limit)) . "
+        ";
+
+        try {
+            $rows = $db->fetchAll($sql);
+        } catch (\Throwable $e) {
+            return [
+                'success' => false,
+                'msg' => 'Fingerprint query failed: ' . $e->getMessage(),
+                'data' => ['fingerprints' => [], 'total' => 0]
+            ];
+        }
+
+        $fingerprints = [];
+        foreach ($rows as $row) {
+            $fingerprints[] = [
+                'ibe_type' => (int)$row->ibe_type,
+                'price_mix' => $row->price_mix,
+                'housing_mode' => $row->housing_mode,
+                'transport_types' => $row->transport_types,
+                'has_seatplan' => (bool)$row->has_seatplan,
+                'has_insurance' => (bool)$row->has_insurance,
+                'has_dual_level_sp' => (bool)$row->has_dual_level_sp,
+                'has_transport_selection' => (bool)$row->has_transport_selection,
+                'has_exit_logic' => (bool)$row->has_exit_logic,
+                'crs_starting_points' => (bool)$row->crs_starting_points,
+                'has_extras_grouped_required' => (bool)$row->has_extras_grouped_required,
+                'has_extras_ungrouped' => (bool)$row->has_extras_ungrouped,
+                'has_extras_auto_book' => (bool)$row->has_extras_auto_book,
+                'has_extras_age_filter' => (bool)$row->has_extras_age_filter,
+                'product_type_ibe' => $row->product_type_ibe,
+                'representative' => [
+                    'id_media_object' => (int)$row->id_media_object,
+                    'id_booking_package' => $row->id_booking_package,
+                    'id_date' => $row->id_date,
+                    'departure' => $row->departure,
+                ],
+            ];
+        }
+
+        return [
+            'success' => true,
+            'data' => [
+                'fingerprints' => $fingerprints,
+                'total' => count($fingerprints),
+            ],
+        ];
+    }
+
 }
 

@@ -273,6 +273,39 @@ class DocumentMediaObject extends Picture
     }
 
     /**
+     * Override hasDerivative to use the correct Derivative class for Itinerary images.
+     * The parent Picture::hasDerivative() falls back to Picture\Derivative which queries the wrong table
+     * (pmt2core_media_object_image_derivatives with id_image instead of
+     * pmt2core_itinerary_step_document_media_object_derivatives with id_document_media_object).
+     * This can return derivatives from completely unrelated images when auto-increment IDs coincide.
+     *
+     * @param string $derivativeName
+     * @param bool $debug
+     * @return Derivative|false
+     */
+    public function hasDerivative($derivativeName, $debug = false)
+    {
+        if (!is_null($this->derivatives) && is_array($this->derivatives)) {
+            foreach ($this->derivatives as $derivative) {
+                if ($derivative->name == $derivativeName) {
+                    return $derivative;
+                }
+            }
+        }
+        if (empty($this->getId())) {
+            return false;
+        }
+        $derivative = Derivative::listOne([
+            'id_document_media_object' => $this->getId(),
+            'name' => $derivativeName
+        ]);
+        if ($derivative) {
+            return $derivative;
+        }
+        return false;
+    }
+
+    /**
      * Override ensureDerivatives to use the correct Derivative class for Itinerary images.
      * The parent Picture::ensureDerivatives() uses Picture\Derivative which writes to the wrong table
      * (pmt2core_media_object_image_derivatives instead of pmt2core_itinerary_step_document_media_object_derivatives).

@@ -493,6 +493,66 @@ class Indexer extends AbstractIndex
     }
 
     /**
+     * Update only state-related fields in MongoDB for a media object (after option state sync).
+     * Does not rebuild description, categories, locations, fulltext, ports, or url.
+     *
+     * @param int $idMediaObject
+     * @return void
+     * @throws \Exception
+     */
+    public function updatePriceAndStateFields($idMediaObject)
+    {
+        $config = Registry::getInstance()->get('config');
+        if (empty($config['data']['search_mongodb']['enabled'])) {
+            return;
+        }
+        $this->_linkedObjectCache = [];
+        $this->mediaObject = new MediaObject($idMediaObject, true, true);
+        if (empty($this->_config['search']['build_for'][$this->mediaObject->id_object_type])) {
+            return;
+        }
+        $now = new \DateTime();
+        $now->setTimezone(new \DateTimeZone('Europe/Berlin'));
+
+        foreach ($this->_config['search']['build_for'][$this->mediaObject->id_object_type] as $build_info) {
+            $origin = $build_info['origin'];
+            $language = $build_info['language'];
+            foreach ($this->_agencies as $agency) {
+                $collection_name = $this->getCollectionName($origin, $language, $agency);
+                $collection = $this->db->selectCollection($collection_name);
+
+                $prices = $this->_aggregatePrices($origin, $agency);
+                $sold_out = $this->_soldOut($origin, $agency);
+                $is_running = $this->_isRunning($origin, $agency);
+                $departure_date_count = $this->_createDepartureDateCount($origin, $agency);
+                $has_guaranteed_departures = $this->_hasGuaranteedDepartures($prices);
+                $has_price = !empty($prices);
+                $best_price_meta = $has_price ? $prices[0] : null;
+                $dates_per_month = !empty($this->_config['search']['five_dates_per_month_list']) ? $this->_createDatesPerMonth($origin, $agency) : null;
+                $possible_durations = !empty($this->_config['search']['possible_duration_list']) ? $this->_createPossibleDurations($origin, $agency) : null;
+
+                $set = [
+                    'prices' => $prices,
+                    'best_price_meta' => $best_price_meta,
+                    'has_price' => $has_price,
+                    'sold_out' => $sold_out,
+                    'is_running' => $is_running,
+                    'departure_date_count' => $departure_date_count,
+                    'has_guaranteed_departures' => $has_guaranteed_departures,
+                    'last_modified_date' => $now->format(DATE_RFC3339_EXTENDED),
+                ];
+                if ($dates_per_month !== null) {
+                    $set['dates_per_month'] = $dates_per_month;
+                }
+                if ($possible_durations !== null) {
+                    $set['possible_durations'] = $possible_durations;
+                }
+                $collection->updateOne(['_id' => $idMediaObject], ['$set' => $set]);
+            }
+        }
+    }
+
+    /**
      * Validates if a MediaObject can be indexed and returns detailed error messages.
      * Used by MediaObject::validate() to show indexing issues.
      * @param int $idMediaObject

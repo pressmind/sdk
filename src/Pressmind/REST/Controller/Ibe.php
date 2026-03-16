@@ -445,6 +445,63 @@ class Ibe
         return ['success' => true, 'CheapestPriceSpeed' => null, 'Options' => null];
     }
 
+    /**
+     * Sync option states from IB3 (Kuschick CRS) to MySQL and MongoDB.
+     * Updates pmt2core_touristic_options.state, recalculates cheapest_price_speed, then updates only state-related MongoDB fields.
+     *
+     * @param array $params ['data' => ['id_media_object' => int, 'changes' => [['id_option' => string, 'code_ibe' => string, 'new_state' => int], ...]]]
+     * @return array ['success' => bool, 'msg' => string|null, 'changed' => bool, 'changes_applied' => int]
+     */
+    public function syncAvailabilityState($params)
+    {
+        $this->parameters = isset($params['data']) ? $params['data'] : [];
+        $id_media_object = isset($this->parameters['id_media_object']) ? (int) $this->parameters['id_media_object'] : null;
+        $changes = isset($this->parameters['changes']) && is_array($this->parameters['changes']) ? $this->parameters['changes'] : null;
+
+        if (empty($id_media_object)) {
+            return ['success' => false, 'msg' => 'id_media_object is required', 'changed' => false, 'changes_applied' => 0];
+        }
+        if ($changes === null) {
+            return ['success' => false, 'msg' => 'changes is required', 'changed' => false, 'changes_applied' => 0];
+        }
+        if (empty($changes)) {
+            return ['success' => true, 'changed' => false, 'changes_applied' => 0];
+        }
+
+        $validStates = [0, 1, 2, 3, 4, 5];
+        $db = Registry::getInstance()->get('db');
+        $changesApplied = 0;
+
+        foreach ($changes as $change) {
+            $id_option = isset($change['id_option']) ? (string) $change['id_option'] : '';
+            $new_state = isset($change['new_state']) ? (int) $change['new_state'] : null;
+            if ($id_option === '' || $new_state === null || !in_array($new_state, $validStates, true)) {
+                continue;
+            }
+            $option = new \Pressmind\ORM\Object\Touristic\Option($id_option);
+            if (!$option->id_media_object || (int) $option->id_media_object !== $id_media_object) {
+                continue;
+            }
+            $option->state = $new_state;
+            $option->save();
+            $changesApplied++;
+        }
+
+        if ($changesApplied === 0) {
+            return ['success' => true, 'changed' => false, 'changes_applied' => 0];
+        }
+
+        $mediaObject = new MediaObject($id_media_object);
+        $mediaObject->insertCheapestPrice();
+
+        $config = Registry::getInstance()->get('config');
+        if (!empty($config['data']['search_mongodb']['enabled'])) {
+            $indexer = new \Pressmind\Search\MongoDB\Indexer();
+            $indexer->updatePriceAndStateFields($id_media_object);
+        }
+
+        return ['success' => true, 'changed' => true, 'changes_applied' => $changesApplied];
+    }
 
     /**
      * @param $transports

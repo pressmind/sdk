@@ -106,4 +106,39 @@ class IndexerTest extends AbstractTestCase
         $this->assertSame(2, $rankMethod->invoke($indexer, 3));
         $this->assertSame(2, $rankMethod->invoke($indexer, null));
     }
+
+    // ---------------------------------------------------------------
+    // updatePriceAndStateFields
+    // ---------------------------------------------------------------
+
+    /**
+     * When MongoDB is not enabled in config, updatePriceAndStateFields returns without error and without touching DB.
+     */
+    public function testUpdatePriceAndStateFieldsSkipsWhenMongoNotConfigured(): void
+    {
+        $config = \Pressmind\Registry::getInstance()->get('config');
+        $config['data'] = array_merge($config['data'] ?? [], ['search_mongodb' => ['enabled' => false]]);
+        \Pressmind\Registry::getInstance()->add('config', $config);
+
+        $indexer = $this->getMockBuilder(Indexer::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods([])
+            ->getMock();
+        $indexer->updatePriceAndStateFields(12345);
+        $this->assertTrue(true, 'No exception when MongoDB not configured');
+    }
+
+    /**
+     * updatePriceAndStateFields exists and is public (contract test).
+     */
+    public function testUpdatePriceAndStateFieldsIsPublic(): void
+    {
+        $ref = new \ReflectionClass(Indexer::class);
+        $this->assertTrue($ref->hasMethod('updatePriceAndStateFields'));
+        $method = $ref->getMethod('updatePriceAndStateFields');
+        $this->assertTrue($method->isPublic());
+        $params = $method->getParameters();
+        $this->assertCount(1, $params);
+        $this->assertSame('idMediaObject', $params[0]->getName());
+    }
 }

@@ -20,11 +20,13 @@ class MediaObject
             $idMediaObject = [(int)$idMediaObject];
         }
         foreach($idMediaObject as $id){
+            $id = (int)$id;
             if($id > 0){
-                $this->_in[] = (int)$id;
-            } else {
+                $this->_in[] = $id;
+            } elseif($id < 0) {
                 $this->_not_in[] = (int)abs($id);
             }
+            // id === 0 is skipped: used for "match no documents" (e.g. empty OpenSearch result)
         }
         $this->_id_media_object = $idMediaObject;
     }
@@ -74,6 +76,14 @@ class MediaObject
                                 '$nin' => $this->_not_in
                             ]
                         ]
+                    ]
+                ];
+            }
+            // empty _in and _not_in: e.g. MediaObject([0]) for "no OpenSearch hits" -> match no documents
+            if(empty($this->_in) && empty($this->_not_in)) {
+                return [
+                    'id_media_object' => [
+                        '$in' => []
                     ]
                 ];
             }

@@ -809,26 +809,28 @@ class IbeTest extends AbstractTestCase
     public function testSyncAvailabilityStateMissingIdMediaObjectReturnsError(): void
     {
         $controller = new Ibe();
-        $result = $controller->syncAvailabilityState(['data' => ['changes' => []]]);
+        $result = $controller->syncAvailabilityState(['data' => ['leistungen' => []]]);
         $this->assertFalse($result['success']);
         $this->assertStringContainsString('id_media_object', $result['msg']);
         $this->assertFalse($result['changed']);
         $this->assertSame(0, $result['changes_applied']);
+        $this->assertEmpty($result['applied_changes']);
     }
 
-    public function testSyncAvailabilityStateMissingChangesReturnsError(): void
+    public function testSyncAvailabilityStateEmptyLeistungenReturnsNoChange(): void
+    {
+        $controller = new Ibe();
+        $result = $controller->syncAvailabilityState(['data' => ['id_media_object' => 12345, 'leistungen' => []]]);
+        $this->assertTrue($result['success']);
+        $this->assertFalse($result['changed']);
+        $this->assertSame(0, $result['changes_applied']);
+        $this->assertEmpty($result['applied_changes']);
+    }
+
+    public function testSyncAvailabilityStateMissingLeistungenReturnsNoChange(): void
     {
         $controller = new Ibe();
         $result = $controller->syncAvailabilityState(['data' => ['id_media_object' => 12345]]);
-        $this->assertFalse($result['success']);
-        $this->assertStringContainsString('changes', $result['msg']);
-        $this->assertSame(0, $result['changes_applied']);
-    }
-
-    public function testSyncAvailabilityStateEmptyChangesArrayReturnsNoChange(): void
-    {
-        $controller = new Ibe();
-        $result = $controller->syncAvailabilityState(['data' => ['id_media_object' => 12345, 'changes' => []]]);
         $this->assertTrue($result['success']);
         $this->assertFalse($result['changed']);
         $this->assertSame(0, $result['changes_applied']);
@@ -836,12 +838,15 @@ class IbeTest extends AbstractTestCase
 
     public function testSyncAvailabilityStateInvalidStateSkipped(): void
     {
+        $db = $this->createCustomMockDb(['fetchAll' => []]);
+        Registry::getInstance()->add('db', $db);
+
         $controller = new Ibe();
         $result = $controller->syncAvailabilityState([
             'data' => [
                 'id_media_object' => 3509653,
-                'changes' => [
-                    ['id_option' => 'opt_invalid', 'code_ibe' => '123', 'new_state' => 99],
+                'leistungen' => [
+                    ['code_ibe' => '123', 'new_state' => 99, 'crs_status' => 'unknown'],
                 ],
             ],
         ]);
@@ -852,34 +857,47 @@ class IbeTest extends AbstractTestCase
     public function testSyncAvailabilityStateResponseStructure(): void
     {
         $controller = new Ibe();
-        $result = $controller->syncAvailabilityState(['data' => ['id_media_object' => 1, 'changes' => []]]);
+        $result = $controller->syncAvailabilityState(['data' => ['id_media_object' => 1, 'leistungen' => []]]);
         $this->assertArrayHasKey('success', $result);
         $this->assertArrayHasKey('changed', $result);
         $this->assertArrayHasKey('changes_applied', $result);
+        $this->assertArrayHasKey('applied_changes', $result);
     }
 
-    public function testSyncAvailabilityStateValidChangesWithMockDb(): void
+    public function testSyncAvailabilityStateUnmatchedCodeIbeSkipped(): void
     {
-        $config = Registry::getInstance()->get('config');
-        $config['data']['search_mongodb']['enabled'] = false;
-        Registry::getInstance()->add('config', $config);
+        $db = $this->createCustomMockDb(['fetchAll' => []]);
+        Registry::getInstance()->add('db', $db);
 
+        $controller = new Ibe();
+        $result = $controller->syncAvailabilityState([
+            'data' => [
+                'id_media_object' => 3509653,
+                'leistungen' => [
+                    ['code_ibe' => '99999', 'new_state' => 0, 'crs_status' => 'ausgebucht'],
+                ],
+            ],
+        ]);
+        $this->assertTrue($result['success']);
+        $this->assertFalse($result['changed']);
+        $this->assertSame(0, $result['changes_applied']);
+    }
+
+    public function testSyncAvailabilityStateSameStateNotUpdated(): void
+    {
         $optionRow = new \stdClass();
         $optionRow->id = 'opt_sync_1';
         $optionRow->id_media_object = 3509653;
         $optionRow->id_booking_package = 'bp_1';
-        $optionRow->state = 0;
-        $optionRow->name = 'Test Option';
+        $optionRow->state = 3;
+        $optionRow->name = 'Doppelzimmer';
         $optionRow->code_ibe = '63095';
 
         $db = $this->createCustomMockDb([
-            'fetchRowCallback' => function ($query) use ($optionRow) {
+            'fetchAllCallback' => function ($query) use ($optionRow) {
                 if (strpos($query, 'pmt2core_touristic_options') !== false) {
-                    return $optionRow;
+                    return [$optionRow];
                 }
-                return null;
-            },
-            'fetchAllCallback' => function () {
                 return [];
             },
         ]);
@@ -889,8 +907,53 @@ class IbeTest extends AbstractTestCase
         $result = $controller->syncAvailabilityState([
             'data' => [
                 'id_media_object' => 3509653,
-                'changes' => [
-                    ['id_option' => 'opt_sync_1', 'code_ibe' => '63095', 'new_state' => 3],
+                'leistungen' => [
+                    ['code_ibe' => '63095', 'new_state' => 3, 'crs_status' => 'buchbar'],
+                ],
+            ],
+        ]);
+        $this->assertTrue($result['success']);
+        $this->assertFalse($result['changed']);
+        $this->assertSame(0, $result['changes_applied']);
+        $this->assertEmpty($result['applied_changes']);
+    }
+
+    public function testSyncAvailabilityStateValidChangeWithMockDb(): void
+    {
+        $config = Registry::getInstance()->get('config');
+        $config['data']['search_mongodb']['enabled'] = false;
+        Registry::getInstance()->add('config', $config);
+
+        $optionRow = new \stdClass();
+        $optionRow->id = 'opt_sync_1';
+        $optionRow->id_media_object = 3509653;
+        $optionRow->id_booking_package = 'bp_1';
+        $optionRow->state = 3;
+        $optionRow->name = 'Doppelzimmer DU/WC';
+        $optionRow->code_ibe = '63095';
+
+        $db = $this->createCustomMockDb([
+            'fetchRowCallback' => function ($query) use ($optionRow) {
+                if (strpos($query, 'pmt2core_touristic_options') !== false) {
+                    return $optionRow;
+                }
+                return null;
+            },
+            'fetchAllCallback' => function ($query) use ($optionRow) {
+                if (strpos($query, 'pmt2core_touristic_options') !== false && strpos($query, 'id_media_object') !== false) {
+                    return [$optionRow];
+                }
+                return [];
+            },
+        ]);
+        Registry::getInstance()->add('db', $db);
+
+        $controller = new Ibe();
+        $result = $controller->syncAvailabilityState([
+            'data' => [
+                'id_media_object' => 3509653,
+                'leistungen' => [
+                    ['code_ibe' => '63095', 'new_state' => 0, 'crs_status' => 'ausgebucht', 'option_name' => 'Doppelzimmer DU/WC'],
                 ],
             ],
         ]);
@@ -898,5 +961,11 @@ class IbeTest extends AbstractTestCase
         $this->assertTrue($result['success']);
         $this->assertTrue($result['changed']);
         $this->assertSame(1, $result['changes_applied']);
+        $this->assertCount(1, $result['applied_changes']);
+        $this->assertSame('opt_sync_1', $result['applied_changes'][0]['id_option']);
+        $this->assertSame('63095', $result['applied_changes'][0]['code_ibe']);
+        $this->assertSame(3, $result['applied_changes'][0]['state_before']);
+        $this->assertSame(0, $result['applied_changes'][0]['new_state']);
+        $this->assertSame('ausgebucht', $result['applied_changes'][0]['crs_status']);
     }
 }

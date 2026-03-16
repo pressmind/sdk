@@ -446,49 +446,82 @@ class Ibe
     }
 
     /**
-     * Sync option states from IB3 (Kuschick CRS) to MySQL and MongoDB.
-     * Updates pmt2core_touristic_options.state, recalculates cheapest_price_speed, then updates only state-related MongoDB fields.
+     * Sync option states from IB3 CRS to MySQL and MongoDB.
+     * Accepts CRS leistungen with code_ibe + new_state, resolves matching options
+     * by code_ibe + id_media_object, compares with current DB state, and only updates
+     * what actually changed. Returns applied_changes for IB3 logging.
      *
-     * @param array $params ['data' => ['id_media_object' => int, 'changes' => [['id_option' => string, 'code_ibe' => string, 'new_state' => int], ...]]]
-     * @return array ['success' => bool, 'msg' => string|null, 'changed' => bool, 'changes_applied' => int]
+     * CRS-agnostic: works for any CRS that provides code_ibe + state mapping.
+     *
+     * @param array $params ['data' => ['id_media_object' => int, 'leistungen' => [['code_ibe' => string, 'new_state' => int, 'crs_status' => string, 'option_name' => string], ...]]]
+     * @return array ['success' => bool, 'changed' => bool, 'changes_applied' => int, 'applied_changes' => array]
      */
     public function syncAvailabilityState($params)
     {
         $this->parameters = isset($params['data']) ? $params['data'] : [];
         $id_media_object = isset($this->parameters['id_media_object']) ? (int) $this->parameters['id_media_object'] : null;
-        $changes = isset($this->parameters['changes']) && is_array($this->parameters['changes']) ? $this->parameters['changes'] : null;
+        $leistungen = isset($this->parameters['leistungen']) && is_array($this->parameters['leistungen']) ? $this->parameters['leistungen'] : null;
 
         if (empty($id_media_object)) {
-            return ['success' => false, 'msg' => 'id_media_object is required', 'changed' => false, 'changes_applied' => 0];
+            return ['success' => false, 'msg' => 'id_media_object is required', 'changed' => false, 'changes_applied' => 0, 'applied_changes' => []];
         }
-        if ($changes === null) {
-            return ['success' => false, 'msg' => 'changes is required', 'changed' => false, 'changes_applied' => 0];
-        }
-        if (empty($changes)) {
-            return ['success' => true, 'changed' => false, 'changes_applied' => 0];
+        if ($leistungen === null || empty($leistungen)) {
+            return ['success' => true, 'changed' => false, 'changes_applied' => 0, 'applied_changes' => []];
         }
 
         $validStates = [0, 1, 2, 3, 4, 5];
         $db = Registry::getInstance()->get('db');
-        $changesApplied = 0;
 
-        foreach ($changes as $change) {
-            $id_option = isset($change['id_option']) ? (string) $change['id_option'] : '';
-            $new_state = isset($change['new_state']) ? (int) $change['new_state'] : null;
-            if ($id_option === '' || $new_state === null || !in_array($new_state, $validStates, true)) {
-                continue;
+        $optionModel = new \Pressmind\ORM\Object\Touristic\Option();
+        $rows = $db->fetchAll(
+            'SELECT id, code_ibe, state, name FROM ' . $optionModel->getDbTableName() . ' WHERE id_media_object = ' . (int) $id_media_object
+        );
+        $optionsByCodeIbe = [];
+        foreach ($rows as $row) {
+            $codeIbe = is_object($row) ? (string) $row->code_ibe : (string) ($row['code_ibe'] ?? '');
+            if ($codeIbe !== '') {
+                $optionsByCodeIbe[$codeIbe] = $row;
             }
-            $option = new \Pressmind\ORM\Object\Touristic\Option($id_option);
-            if (!$option->id_media_object || (int) $option->id_media_object !== $id_media_object) {
-                continue;
-            }
-            $option->state = $new_state;
-            $option->save();
-            $changesApplied++;
         }
 
-        if ($changesApplied === 0) {
-            return ['success' => true, 'changed' => false, 'changes_applied' => 0];
+        $appliedChanges = [];
+        foreach ($leistungen as $leistung) {
+            $code_ibe = isset($leistung['code_ibe']) ? (string) $leistung['code_ibe'] : '';
+            $new_state = isset($leistung['new_state']) ? (int) $leistung['new_state'] : null;
+            $crs_status = isset($leistung['crs_status']) ? (string) $leistung['crs_status'] : '';
+            $option_name = isset($leistung['option_name']) ? (string) $leistung['option_name'] : '';
+
+            if ($code_ibe === '' || $new_state === null || !in_array($new_state, $validStates, true)) {
+                continue;
+            }
+            if (!isset($optionsByCodeIbe[$code_ibe])) {
+                continue;
+            }
+            $row = $optionsByCodeIbe[$code_ibe];
+            $optId = is_object($row) ? (string) $row->id : (string) ($row['id'] ?? '');
+            $current_state = is_object($row) ? (int) $row->state : (int) ($row['state'] ?? 0);
+            $dbName = is_object($row) ? (string) ($row->name ?? '') : (string) ($row['name'] ?? '');
+
+            if ($current_state === $new_state) {
+                continue;
+            }
+
+            $option = new \Pressmind\ORM\Object\Touristic\Option($optId);
+            $option->state = $new_state;
+            $option->save();
+
+            $appliedChanges[] = [
+                'id_option' => $optId,
+                'code_ibe' => $code_ibe,
+                'option_name' => $dbName !== '' ? $dbName : $option_name,
+                'state_before' => $current_state,
+                'new_state' => $new_state,
+                'crs_status' => $crs_status,
+            ];
+        }
+
+        if (empty($appliedChanges)) {
+            return ['success' => true, 'changed' => false, 'changes_applied' => 0, 'applied_changes' => []];
         }
 
         $mediaObject = new MediaObject($id_media_object);
@@ -500,7 +533,7 @@ class Ibe
             $indexer->updatePriceAndStateFields($id_media_object);
         }
 
-        return ['success' => true, 'changed' => true, 'changes_applied' => $changesApplied];
+        return ['success' => true, 'changed' => true, 'changes_applied' => count($appliedChanges), 'applied_changes' => $appliedChanges];
     }
 
     /**

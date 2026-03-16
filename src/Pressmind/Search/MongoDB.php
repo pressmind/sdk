@@ -445,6 +445,9 @@ class MongoDB extends AbstractSearch
                     if(!empty($ids)){
                         $ConditionMediaObject = new Condition\MongoDB\MediaObject($ids);
                         $this->addCondition('MediaObject', $ConditionMediaObject);
+                    } else {
+                        $ConditionMediaObject = new Condition\MongoDB\MediaObject([0]);
+                        $this->addCondition('MediaObject', $ConditionMediaObject);
                     }
                 }catch (\Exception $e) {
                     $this->_addLog('getResult(): OpenSearch error: ' . $e->getMessage());

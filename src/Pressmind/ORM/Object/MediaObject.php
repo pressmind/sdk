@@ -2111,7 +2111,7 @@ class MediaObject extends AbstractObject
      */
     public function createOpenSearchIndex(){
         $config = Registry::getInstance()->get('config');
-        if(!empty($config['data']['search_opensearch']['search_opensearch']['enabled'])) {
+        if(!empty($config['data']['search_opensearch']['enabled'])) {
             $OpenSearchIndexer = new \Pressmind\Search\OpenSearch\Indexer();
             $OpenSearchIndexer->upsertMediaObject($this->getId());
         }

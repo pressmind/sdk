@@ -952,6 +952,7 @@ class IbeTest extends AbstractTestCase
         $result = $controller->syncAvailabilityState([
             'data' => [
                 'id_media_object' => 3509653,
+                'id_booking_package' => 'bp_1',
                 'leistungen' => [
                     ['code_ibe' => '63095', 'new_state' => 0, 'crs_status' => 'ausgebucht', 'option_name' => 'Doppelzimmer DU/WC'],
                 ],
@@ -967,5 +968,182 @@ class IbeTest extends AbstractTestCase
         $this->assertSame(3, $result['applied_changes'][0]['state_before']);
         $this->assertSame(0, $result['applied_changes'][0]['new_state']);
         $this->assertSame('ausgebucht', $result['applied_changes'][0]['crs_status']);
+    }
+
+    public function testSyncAvailabilityStateWithoutBookingPackageScopesGlobally(): void
+    {
+        $config = Registry::getInstance()->get('config');
+        $config['data']['search_mongodb']['enabled'] = false;
+        Registry::getInstance()->add('config', $config);
+
+        $opt1 = new \stdClass();
+        $opt1->id = 'opt_bp1';
+        $opt1->state = 3;
+        $opt1->name = 'DZ';
+        $opt1->code_ibe = '62306';
+
+        $opt2 = new \stdClass();
+        $opt2->id = 'opt_bp2';
+        $opt2->state = 3;
+        $opt2->name = 'DZ';
+        $opt2->code_ibe = '62306';
+
+        $db = $this->createCustomMockDb([
+            'fetchRowCallback' => function ($query) use ($opt1) {
+                if (strpos($query, 'pmt2core_touristic_options') !== false) {
+                    return $opt1;
+                }
+                return null;
+            },
+            'fetchAllCallback' => function ($query) use ($opt1, $opt2) {
+                if (strpos($query, 'pmt2core_touristic_options') !== false) {
+                    return [$opt1, $opt2];
+                }
+                return [];
+            },
+        ]);
+        Registry::getInstance()->add('db', $db);
+
+        $controller = new Ibe();
+        $result = $controller->syncAvailabilityState([
+            'data' => [
+                'id_media_object' => 100,
+                'leistungen' => [
+                    ['code_ibe' => '62306', 'new_state' => 0, 'crs_status' => 'ausgebucht'],
+                ],
+            ],
+        ]);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame(2, $result['changes_applied']);
+    }
+
+    public function testSyncAvailabilityStateGroupedCodeIbeWorstStateWins(): void
+    {
+        $config = Registry::getInstance()->get('config');
+        $config['data']['search_mongodb']['enabled'] = false;
+        Registry::getInstance()->add('config', $config);
+
+        $groupedOpt = new \stdClass();
+        $groupedOpt->id = 'opt_grouped';
+        $groupedOpt->state = 3;
+        $groupedOpt->name = 'Fähre + Hotel Kombi';
+        $groupedOpt->code_ibe = '#62536#62538#62541#';
+
+        $db = $this->createCustomMockDb([
+            'fetchRowCallback' => function ($query) use ($groupedOpt) {
+                if (strpos($query, 'pmt2core_touristic_options') !== false) {
+                    return $groupedOpt;
+                }
+                return null;
+            },
+            'fetchAllCallback' => function ($query) use ($groupedOpt) {
+                if (strpos($query, 'pmt2core_touristic_options') !== false) {
+                    return [$groupedOpt];
+                }
+                return [];
+            },
+        ]);
+        Registry::getInstance()->add('db', $db);
+
+        $controller = new Ibe();
+        $result = $controller->syncAvailabilityState([
+            'data' => [
+                'id_media_object' => 100,
+                'id_booking_package' => 'bp_1',
+                'leistungen' => [
+                    ['code_ibe' => '62536', 'new_state' => 3, 'crs_status' => 'buchbar', 'option_name' => 'Fähre'],
+                    ['code_ibe' => '62538', 'new_state' => 1, 'crs_status' => 'ausgebucht', 'option_name' => 'Hotel A'],
+                    ['code_ibe' => '62541', 'new_state' => 3, 'crs_status' => 'buchbar', 'option_name' => 'Hotel B'],
+                ],
+            ],
+        ]);
+
+        $this->assertTrue($result['success']);
+        $this->assertTrue($result['changed']);
+        $this->assertSame(1, $result['changes_applied']);
+        $this->assertSame('opt_grouped', $result['applied_changes'][0]['id_option']);
+        $this->assertSame('#62536#62538#62541#', $result['applied_changes'][0]['code_ibe']);
+        $this->assertSame(3, $result['applied_changes'][0]['state_before']);
+        $this->assertSame(1, $result['applied_changes'][0]['new_state']);
+    }
+
+    public function testSyncAvailabilityStateGroupedAllBuchbarNoChange(): void
+    {
+        $groupedOpt = new \stdClass();
+        $groupedOpt->id = 'opt_grouped2';
+        $groupedOpt->state = 3;
+        $groupedOpt->name = 'Kombi';
+        $groupedOpt->code_ibe = '#100#200#';
+
+        $db = $this->createCustomMockDb([
+            'fetchAllCallback' => function ($query) use ($groupedOpt) {
+                if (strpos($query, 'pmt2core_touristic_options') !== false) {
+                    return [$groupedOpt];
+                }
+                return [];
+            },
+        ]);
+        Registry::getInstance()->add('db', $db);
+
+        $controller = new Ibe();
+        $result = $controller->syncAvailabilityState([
+            'data' => [
+                'id_media_object' => 100,
+                'leistungen' => [
+                    ['code_ibe' => '100', 'new_state' => 3, 'crs_status' => 'buchbar'],
+                    ['code_ibe' => '200', 'new_state' => 3, 'crs_status' => 'buchbar'],
+                ],
+            ],
+        ]);
+
+        $this->assertTrue($result['success']);
+        $this->assertFalse($result['changed']);
+        $this->assertSame(0, $result['changes_applied']);
+    }
+
+    public function testSyncAvailabilityStateGroupedStoppOverridesAll(): void
+    {
+        $config = Registry::getInstance()->get('config');
+        $config['data']['search_mongodb']['enabled'] = false;
+        Registry::getInstance()->add('config', $config);
+
+        $groupedOpt = new \stdClass();
+        $groupedOpt->id = 'opt_stopp';
+        $groupedOpt->state = 3;
+        $groupedOpt->name = 'Kombi';
+        $groupedOpt->code_ibe = '#300#400#';
+
+        $db = $this->createCustomMockDb([
+            'fetchRowCallback' => function ($query) use ($groupedOpt) {
+                if (strpos($query, 'pmt2core_touristic_options') !== false) {
+                    return $groupedOpt;
+                }
+                return null;
+            },
+            'fetchAllCallback' => function ($query) use ($groupedOpt) {
+                if (strpos($query, 'pmt2core_touristic_options') !== false) {
+                    return [$groupedOpt];
+                }
+                return [];
+            },
+        ]);
+        Registry::getInstance()->add('db', $db);
+
+        $controller = new Ibe();
+        $result = $controller->syncAvailabilityState([
+            'data' => [
+                'id_media_object' => 100,
+                'leistungen' => [
+                    ['code_ibe' => '300', 'new_state' => 3, 'crs_status' => 'buchbar'],
+                    ['code_ibe' => '400', 'new_state' => 4, 'crs_status' => 'stopp'],
+                ],
+            ],
+        ]);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame(1, $result['changes_applied']);
+        $this->assertSame(4, $result['applied_changes'][0]['new_state']);
+        $this->assertSame('stopp', $result['applied_changes'][0]['crs_status']);
     }
 }

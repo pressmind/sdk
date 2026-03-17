@@ -453,13 +453,14 @@ class Ibe
      *
      * CRS-agnostic: works for any CRS that provides code_ibe + state mapping.
      *
-     * @param array $params ['data' => ['id_media_object' => int, 'leistungen' => [['code_ibe' => string, 'new_state' => int, 'crs_status' => string, 'option_name' => string], ...]]]
+     * @param array $params ['data' => ['id_media_object' => int, 'id_booking_package' => string (optional), 'leistungen' => [...]]]
      * @return array ['success' => bool, 'changed' => bool, 'changes_applied' => int, 'applied_changes' => array]
      */
     public function syncAvailabilityState($params)
     {
         $this->parameters = isset($params['data']) ? $params['data'] : [];
         $id_media_object = isset($this->parameters['id_media_object']) ? (int) $this->parameters['id_media_object'] : null;
+        $id_booking_package = isset($this->parameters['id_booking_package']) ? (string) $this->parameters['id_booking_package'] : null;
         $leistungen = isset($this->parameters['leistungen']) && is_array($this->parameters['leistungen']) ? $this->parameters['leistungen'] : null;
 
         if (empty($id_media_object)) {
@@ -473,50 +474,90 @@ class Ibe
         $db = Registry::getInstance()->get('db');
 
         $optionModel = new \Pressmind\ORM\Object\Touristic\Option();
-        $rows = $db->fetchAll(
-            'SELECT id, code_ibe, state, name FROM ' . $optionModel->getDbTableName() . ' WHERE id_media_object = ' . (int) $id_media_object
-        );
-        $optionsByCodeIbe = [];
-        foreach ($rows as $row) {
-            $codeIbe = is_object($row) ? (string) $row->code_ibe : (string) ($row['code_ibe'] ?? '');
-            if ($codeIbe !== '') {
-                $optionsByCodeIbe[$codeIbe] = $row;
+        $query = 'SELECT id, code_ibe, state, name FROM ' . $optionModel->getDbTableName()
+            . ' WHERE id_media_object = ' . (int) $id_media_object;
+        $queryParams = [];
+        if ($id_booking_package !== null && $id_booking_package !== '') {
+            $query .= ' AND id_booking_package = ?';
+            $queryParams[] = $id_booking_package;
+        }
+        $rows = $db->fetchAll($query, !empty($queryParams) ? $queryParams : null);
+
+        $leistungStates = [];
+        foreach ($leistungen as $leistung) {
+            $code = isset($leistung['code_ibe']) ? (string) $leistung['code_ibe'] : '';
+            $newState = isset($leistung['new_state']) ? (int) $leistung['new_state'] : null;
+            if ($code === '' || $newState === null || !in_array($newState, $validStates, true)) {
+                continue;
             }
+            $leistungStates[$code] = [
+                'new_state' => $newState,
+                'crs_status' => isset($leistung['crs_status']) ? (string) $leistung['crs_status'] : '',
+                'option_name' => isset($leistung['option_name']) ? (string) $leistung['option_name'] : '',
+            ];
+        }
+        if (empty($leistungStates)) {
+            return ['success' => true, 'changed' => false, 'changes_applied' => 0, 'applied_changes' => []];
         }
 
-        $appliedChanges = [];
-        foreach ($leistungen as $leistung) {
-            $code_ibe = isset($leistung['code_ibe']) ? (string) $leistung['code_ibe'] : '';
-            $new_state = isset($leistung['new_state']) ? (int) $leistung['new_state'] : null;
-            $crs_status = isset($leistung['crs_status']) ? (string) $leistung['crs_status'] : '';
-            $option_name = isset($leistung['option_name']) ? (string) $leistung['option_name'] : '';
+        // Booking priority: lower = worse (gesperrt worst, buchbar best)
+        $bookingPriority = [5 => 0, 4 => 1, 0 => 2, 1 => 3, 2 => 4, 3 => 5];
 
-            if ($code_ibe === '' || $new_state === null || !in_array($new_state, $validStates, true)) {
-                continue;
-            }
-            if (!isset($optionsByCodeIbe[$code_ibe])) {
-                continue;
-            }
-            $row = $optionsByCodeIbe[$code_ibe];
+        $appliedChanges = [];
+        foreach ($rows as $row) {
             $optId = is_object($row) ? (string) $row->id : (string) ($row['id'] ?? '');
-            $current_state = is_object($row) ? (int) $row->state : (int) ($row['state'] ?? 0);
+            $codeIbe = is_object($row) ? (string) $row->code_ibe : (string) ($row['code_ibe'] ?? '');
+            $currentState = is_object($row) ? (int) $row->state : (int) ($row['state'] ?? 0);
             $dbName = is_object($row) ? (string) ($row->name ?? '') : (string) ($row['name'] ?? '');
 
-            if ($current_state === $new_state) {
+            if ($codeIbe === '') {
+                continue;
+            }
+
+            $effectiveState = null;
+            $effectiveCrsStatus = '';
+            $effectiveOptionName = '';
+
+            if (strpos($codeIbe, '#') !== false) {
+                $codes = array_filter(explode('#', $codeIbe));
+                $worstPrio = PHP_INT_MAX;
+                foreach ($codes as $code) {
+                    if (!isset($leistungStates[$code])) {
+                        continue;
+                    }
+                    $entry = $leistungStates[$code];
+                    $prio = isset($bookingPriority[$entry['new_state']]) ? $bookingPriority[$entry['new_state']] : 99;
+                    if ($prio < $worstPrio) {
+                        $worstPrio = $prio;
+                        $effectiveState = $entry['new_state'];
+                        $effectiveCrsStatus = $entry['crs_status'];
+                        $effectiveOptionName = $entry['option_name'];
+                    }
+                }
+            } else {
+                if (isset($leistungStates[$codeIbe])) {
+                    $entry = $leistungStates[$codeIbe];
+                    $effectiveState = $entry['new_state'];
+                    $effectiveCrsStatus = $entry['crs_status'];
+                    $effectiveOptionName = $entry['option_name'];
+                }
+            }
+
+            if ($effectiveState === null || $currentState === $effectiveState) {
                 continue;
             }
 
             $option = new \Pressmind\ORM\Object\Touristic\Option($optId);
-            $option->state = $new_state;
+            $option->state = $effectiveState;
             $option->save();
 
             $appliedChanges[] = [
                 'id_option' => $optId,
-                'code_ibe' => $code_ibe,
-                'option_name' => $dbName !== '' ? $dbName : $option_name,
-                'state_before' => $current_state,
-                'new_state' => $new_state,
-                'crs_status' => $crs_status,
+                'code_ibe' => $codeIbe,
+                'option_name' => $dbName !== '' ? $dbName : $effectiveOptionName,
+                'state_before' => $currentState,
+                'new_state' => $effectiveState,
+                'crs_status' => $effectiveCrsStatus,
             ];
         }
 

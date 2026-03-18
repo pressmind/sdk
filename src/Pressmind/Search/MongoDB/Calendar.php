@@ -110,6 +110,9 @@ class Calendar extends AbstractIndex
    */
   public function deleteMediaObject($id_media_objects)
   {
+    if(empty($id_media_objects)){
+      return;
+    }
     if(!is_array($id_media_objects)){
       $id_media_objects = array_map('intval', explode(',', $id_media_objects));
     }

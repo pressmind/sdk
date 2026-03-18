@@ -50,7 +50,7 @@ Welcome to the pressmind SDK documentation. This documentation covers the comple
 | [Option Discount](Touristic/Option/Discount.md) | Age/occupancy-based discount groups |
 | [Discount Scale](Touristic/Option/Discount/Scale.md) | Individual discount rules (percentage, fixed, replacement) |
 | [Option Description](Touristic/Option/Description.md) | Supplementary descriptions for extras/tickets/sightseeings |
-| [Insurance](Touristic/Insurance.md) | Insurance groups, insurances, alternate insurances, price tables, attributes |
+| [Insurance](Touristic/Insurance.md) | Insurance groups, insurances, alternate insurances, price tables, attributes, surcharges |
 
 ### Search & Indexing
 
@@ -133,6 +133,7 @@ MediaObject
       │    └── insurances (Insurance[])
       │         ├── price_tables
       │         ├── attributes
+      │         ├── surcharges
       │         ├── additional_insurances
       │         └── alternate_insurances
       ├── extras (Option[])             → additional services

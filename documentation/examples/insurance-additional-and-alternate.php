@@ -1,6 +1,6 @@
 <?php
 /**
- * Example: Load an insurance with its group, price tables, attributes, additional and alternate insurances.
+ * Example: Load an insurance with its group, price tables, attributes, surcharges, additional and alternate insurances.
  * Requires SDK bootstrap (database connection, autoload).
  *
  * Usage: run from CLI or include in a bootstrapped application.
@@ -9,6 +9,7 @@
 use Pressmind\ORM\Object\Touristic\Insurance;
 use Pressmind\ORM\Object\Touristic\Insurance\Group;
 use Pressmind\ORM\Object\Touristic\Insurance\InsuranceToGroup;
+use Pressmind\ORM\Object\Touristic\Insurance\Surcharge;
 
 $insurance = new Insurance(15127);
 
@@ -36,10 +37,19 @@ foreach ($insurance->price_tables as $pt) {
 }
 echo "\n";
 
-// Attributes / Zuschläge
-echo "=== Attributes / Zuschläge ===\n";
+// Attributes (coverage items, e.g. Reiseabbruch, Gepäck)
+echo "=== Attributes ===\n";
 foreach ($insurance->attributes as $attribute) {
     print_r($attribute->toStdClass());
+}
+echo "\n";
+
+// Surcharges (duration-based price surcharges)
+echo "=== Surcharges ===\n";
+foreach ($insurance->surcharges as $surcharge) {
+    echo "Code: " . $surcharge->code . "\n";
+    echo "Duration: " . $surcharge->duration_min . " - " . $surcharge->duration_max . "\n";
+    echo "Value: " . $surcharge->value . " (" . $surcharge->unit . ")\n\n";
 }
 echo "\n";
 
@@ -53,6 +63,9 @@ foreach ($insurance->additional_insurances as $additional) {
     foreach ($additional->attributes as $attribute) {
         print_r($attribute->toStdClass());
     }
+    foreach ($additional->surcharges as $surcharge) {
+        print_r($surcharge->toStdClass());
+    }
 }
 echo "\n";
 
@@ -65,5 +78,8 @@ foreach ($insurance->alternate_insurances as $alternate) {
     }
     foreach ($alternate->attributes as $attribute) {
         print_r($attribute->toStdClass());
+    }
+    foreach ($alternate->surcharges as $surcharge) {
+        print_r($surcharge->toStdClass());
     }
 }

@@ -8,7 +8,7 @@
 
 ## Description
 
-Insurance data is imported from the pressmind PIM and stored per **Insurance Group**. A Media Object or Booking Package can reference one insurance group (`id_insurance_group`). Each group contains one or more **Insurances** (main products), which can have **price tables**, **attributes** (coverage items, see [Insurance Attribute](#insurance-attribute)), **additional insurances**, and **alternate insurances** (alternative products to choose from).
+Insurance data is imported from the pressmind PIM and stored per **Insurance Group**. A Media Object or Booking Package can reference one insurance group (`id_insurance_group`). Each group contains one or more **Insurances** (main products), which can have **price tables**, **attributes** (coverage items, see [Insurance Attribute](#insurance-attribute)), **surcharges** (duration-based price surcharges, see [Insurance Surcharge](#insurance-surcharge)), **additional insurances**, and **alternate insurances** (alternative products to choose from).
 
 ---
 
@@ -20,6 +20,7 @@ Insurance Group (pmt2core_touristic_insurance_groups)
       └── Insurance (pmt2core_touristic_insurances)
            ├── price_tables (n:n via pmt2core_touristic_insurance_to_price_table)
            ├── attributes (n:n via pmt2core_touristic_insurance_to_attributes) → Insurance Attribute
+           ├── surcharges (1:n) → Insurance Surcharge
            ├── additional_insurances (n:n via pmt2core_touristic_insurance_to_insurance) — additional insurances
            └── alternate_insurances (n:n via pmt2core_touristic_insurance_to_alternate) — alternate products (with order)
 
@@ -79,6 +80,7 @@ Insurance Attribute (pmt2core_touristic_insurance_attributes)
 |----------|------|-------|-------------|
 | `price_tables` | PriceTable[] | pmt2core_touristic_insurance_to_price_table | Price tables (age/date/price ranges) |
 | `attributes` | Attribute[] | pmt2core_touristic_insurance_to_attributes | Insurance attributes (coverage details) |
+| `surcharges` | Surcharge[] | — (hasMany, no mapping table) | Duration-based price surcharges |
 | `additional_insurances` | Insurance[] | pmt2core_touristic_insurance_to_insurance | Additional insurances (e.g. top-up) |
 | `alternate_insurances` | Insurance[] | pmt2core_touristic_insurance_to_alternate | Alternate products (with order) |
 
@@ -136,6 +138,25 @@ Attributes are reusable coverage items (e.g. “Reiseabbruch”, “Gepäck”, 
 | `order` | integer | Sort order when displaying the attribute list |
 
 An insurance is linked to attributes via the mapping table `pmt2core_touristic_insurance_to_attributes`. Only attributes that are linked to an insurance are shown for that product; the Attribute’s `order` is typically used to sort the list (e.g. in checklists or comparison views). Orphaned attributes (not referenced by any insurance) are removed during import by `_removeInsuranceOrphans()`.
+
+---
+
+## Insurance Surcharge
+
+**Table:** `pmt2core_touristic_insurance_surcharges`  
+**Class:** `Pressmind\ORM\Object\Touristic\Insurance\Surcharge`
+
+Surcharges are a separate entity from attributes. They represent duration-based price surcharges (e.g. extra cost per person for trips longer than a certain number of days). Each surcharge belongs to one insurance via `id_insurance` (hasMany relation; no mapping table).
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | string(36) | Primary key |
+| `id_insurance` | string(36) | Insurance ID (foreign key) |
+| `code` | string(255) | Internal code for the surcharge |
+| `duration_min` | integer | Minimum travel duration (e.g. nights) for this surcharge to apply |
+| `duration_max` | integer | Maximum travel duration for this surcharge to apply |
+| `unit` | string(255) | Unit of the value (e.g. per person, per night) |
+| `value` | float | Surcharge amount or factor |
 
 ---
 
@@ -215,6 +236,7 @@ The insurance model represents pressmind PIM data for travel insurances. The cen
 
 - **`price_tables`** – Price tables (ManyToMany via `pmt2core_touristic_insurance_to_price_table`). Determine the valid price by age, travel date, duration, price, booking date, and pax.
 - **`attributes`** – Insurance attributes (ManyToMany via `pmt2core_touristic_insurance_to_attributes`), e.g. coverage (included/excluded).
+- **`surcharges`** – Duration-based price surcharges (hasMany). Separate entity from attributes; use for extra costs by duration range.
 - **`additional_insurances`** – Additional insurances (ManyToMany via `pmt2core_touristic_insurance_to_insurance`). Populated only for main insurances; order is defined by `order` in the mapping table.
 - **`alternate_insurances`** – Alternate insurances (ManyToMany via `pmt2core_touristic_insurance_to_alternate`). Alternative products to choose from; order via `order`.
 
@@ -368,7 +390,7 @@ Legacy: If the API still sends **`touristic_additional_insurances`** (single ite
 
 ### Example: load insurance and read additional/alternate insurances
 
-See [examples/insurance-additional-and-alternate.php](../examples/insurance-additional-and-alternate.php): loads an insurance by ID, outputs `is_recommendation` and `priority`, and iterates over `additional_insurances` and `alternate_insurances` including their attributes.
+See [examples/insurance-additional-and-alternate.php](../examples/insurance-additional-and-alternate.php): loads an insurance by ID, outputs `is_recommendation` and `priority`, and iterates over `attributes`, `surcharges`, `additional_insurances`, and `alternate_insurances` (including their attributes and surcharges).
 
 ```php
 $insurance = new \Pressmind\ORM\Object\Touristic\Insurance(15127);
@@ -376,18 +398,34 @@ echo "Insurance: " . $insurance->name . "\n";
 echo "is_recommendation: " . ($insurance->is_recommendation ? 'yes' : 'no') . "\n";
 echo "priority: " . $insurance->priority . "\n\n";
 
+// Attributes (coverage items) and surcharges (duration-based price surcharges) are separate entities
+foreach ($insurance->attributes as $attribute) {
+    print_r($attribute->toStdClass());
+}
+foreach ($insurance->surcharges as $surcharge) {
+    echo $surcharge->code . ": " . $surcharge->value . " (" . $surcharge->unit . ") for duration " . $surcharge->duration_min . "-" . $surcharge->duration_max . "\n";
+}
+
 foreach ($insurance->additional_insurances as $additional_insurance) {
     $data = $additional_insurance->toStdClass();
     print_r($data);
     foreach ($additional_insurance->attributes as $attribute) {
         print_r($attribute->toStdClass());
     }
+    foreach ($additional_insurance->surcharges as $surcharge) {
+        print_r($surcharge->toStdClass());
+    }
 }
 
 foreach ($insurance->alternate_insurances as $alternate_insurance) {
     $data = $alternate_insurance->toStdClass();
     print_r($data);
-    // ...
+    foreach ($alternate_insurance->attributes as $attribute) {
+        print_r($attribute->toStdClass());
+    }
+    foreach ($alternate_insurance->surcharges as $surcharge) {
+        print_r($surcharge->toStdClass());
+    }
 }
 ```
 

@@ -96,6 +96,7 @@ class Info
         '\Itinerary\Step\Section\Content',
         '\Itinerary\Step\TextMediaObject',
         '\Import\Queue',
+        '\ImportHash',
         '\ProcessList'
     ];
 

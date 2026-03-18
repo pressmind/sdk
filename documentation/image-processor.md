@@ -480,7 +480,9 @@ In templates, images are accessed via: `$picture->getUri('teaser')` which return
 
 ## Image Verification
 
-After processing and MongoDB index updates, the CLI runs an **image verification** step. It checks that all derivatives for entities with `download_successful=1` actually exist on storage and prints a report (summary, per-type counts, derivative summary, missing list, total size). Images that are reported as missing get `download_successful=0` so they are reprocessed on the next run.
+The image processor can run an **image verification** step that checks whether all derivatives for entities with `download_successful=1` actually exist on storage and prints a detailed report (summary, per-type counts, derivative summary, missing list, total size). Images that are reported as missing get `download_successful=0` so they are reprocessed on the next run.
+
+> **Important:** Verification is **off by default** because it is very expensive on large installations (high memory and CPU usage). To enable it, pass `--report` when running the image processor. When the image processor is spawned automatically after an import (`postImport()`), verification does not run.
 
 ### Large buckets (S3, 1M+ files)
 
@@ -571,14 +573,15 @@ $cmd = 'nohup php /cli/image_processor.php mediaobject 123,456 > /dev/null 2>&1 
 exec($cmd);
 ```
 
-This ensures the import pipeline doesn't block waiting for image processing.
+This ensures the import pipeline doesn't block waiting for image processing. Because `--report` is not passed, the expensive verification step is skipped during post-import, keeping memory usage low and the pipeline fast.
 
 **2. On-Demand / Manual**
 
 The image processor can be run manually:
 
 ```bash
-php cli/image_processor.php                    # Process all pending images
+php cli/image_processor.php                    # Process all pending images (no verification)
+php cli/image_processor.php --report           # Process pending images + run verification report
 php cli/image_processor.php mediaobject 123    # Process images for specific object
 ```
 
@@ -590,15 +593,15 @@ The processor checks if each derivative already exists before generating it, so 
 
 | Argument / Option | Description |
 |-------------------|-------------|
-| `skip-verification` | Skip the verification step (no storage scan, no verification report). Use when you only want to process pending images and not wait for verification on very large buckets. |
-| `--skip-verification` | Same as the `skip-verification` argument. |
+| `--report` | Generate the verification report after processing (storage scan, derivative statistics, missing-image reset). **Off by default** because it is expensive on large buckets. |
+| `--skip-verification` | *(deprecated)* Verification is now off by default; this option is accepted but has no effect. |
 
 **Examples:**
 
 ```bash
-php cli/image_processor.php skip-verification
-php cli/image_processor.php --skip-verification
-php cli/image_processor.php mediaobject 123 skip-verification
+php cli/image_processor.php                          # Process images, no verification
+php cli/image_processor.php --report                 # Process images + verification report
+php cli/image_processor.php mediaobject 123 --report # Specific objects + report
 ```
 
 See [CLI Reference](cli-reference.md#image-processor) for all image processor arguments (`unlock`, `reset-missing`, `mediaobject`, etc.).

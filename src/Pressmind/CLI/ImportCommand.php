@@ -150,6 +150,8 @@ class ImportCommand extends AbstractCommand
         switch ($subcommand) {
             case 'fullimport':
                 return $this->subFullimport($logPath);
+            case 'sync':
+                return $this->subSync($logPath);
             case 'resume':
                 return $this->subResume($logPath);
             case 'mediaobject':
@@ -236,6 +238,40 @@ class ImportCommand extends AbstractCommand
             $this->invokeAfterImportCallback($ids);
             $this->output->writeln(implode(', ', $ids), null);
         }
+        if ($this->hasOption('validate')) {
+            foreach ($ids as $id) {
+                $this->output->writeln('===== Validation =====', null);
+                $mediaObject = new MediaObject($id);
+                $this->output->writeln(implode("\n", $mediaObject->validate()), null);
+            }
+        }
+        return 0;
+    }
+
+    private function subSync(string $logPath): int
+    {
+        $importer = new Import('sync');
+        Writer::write('Syncing all media objects (hash-based delta)', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        try {
+            $importer->import();
+            $this->reportErrors($importer, $logPath);
+            Writer::write('Sync done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        } catch (Exception $e) {
+            $this->logImportException($e, $logPath);
+            return 1;
+        } finally {
+            $importer->postImport();
+            $ids = $importer->getImportedIds();
+            $this->invokeAfterImportCallback($ids);
+            $this->output->writeln(implode(', ', $ids), null);
+        }
+        if ($this->hasOption('validate')) {
+            foreach ($ids as $id) {
+                $this->output->writeln('===== Validation =====', null);
+                $mediaObject = new MediaObject($id);
+                $this->output->writeln(implode("\n", $mediaObject->validate()), null);
+            }
+        }
         return 0;
     }
 
@@ -267,10 +303,11 @@ class ImportCommand extends AbstractCommand
             $this->output->writeln('Missing mediaobject id(s)', null);
             return 1;
         }
+        $force = $this->hasOption('force');
         $importer = new Import('mediaobject');
-        Writer::write('Importing mediaobject ID(s): ' . implode(',', $ids), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        Writer::write('Importing mediaobject ID(s): ' . implode(',', $ids) . ($force ? ' (--force)' : ''), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         try {
-            $importer->importMediaObjectsFromArray($ids);
+            $importer->importMediaObjectsFromArray($ids, true, $force);
             Writer::write('Import done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             $importer->postImport($ids);
             $this->reportErrors($importer, $logPath);
@@ -280,12 +317,21 @@ class ImportCommand extends AbstractCommand
         }
         $importedIds = $importer->getImportedIds();
         $this->invokeAfterImportCallback($importedIds);
-        foreach ($importedIds as $id) {
-            $this->output->writeln('===== Validation =====', null);
-            $mediaObject = new MediaObject($id);
-            $r = $mediaObject->validate();
-            $this->output->writeln(implode("\n", $r), null);
+        if (!$this->hasOption('no-validate')) {
+            foreach ($importedIds as $id) {
+                $this->output->writeln('===== Validation =====', null);
+                $mediaObject = new MediaObject($id);
+                $r = $mediaObject->validate();
+                $this->output->writeln(implode("\n", $r), null);
+            }
         }
+        Writer::write(
+            'Hints: Use --force to bypass hash comparison and force a full re-import. '
+            . 'Use "php image_processor.php --report" to generate the image verification report (skipped by default).',
+            Writer::OUTPUT_SCREEN,
+            'import',
+            Writer::TYPE_INFO
+        );
         return 0;
     }
 
@@ -535,11 +581,13 @@ class ImportCommand extends AbstractCommand
         }
         $importedIds = $importer->getImportedIds();
         $this->invokeAfterImportCallback($importedIds);
-        foreach ($importedIds as $id) {
-            $mediaObject = new MediaObject($id);
-            $r = $mediaObject->validate();
-            $this->output->writeln('===== Validation =====', null);
-            $this->output->writeln(implode("\n", $r), null);
+        if (!$this->hasOption('no-validate')) {
+            foreach ($importedIds as $id) {
+                $this->output->writeln('===== Validation =====', null);
+                $mediaObject = new MediaObject($id);
+                $r = $mediaObject->validate();
+                $this->output->writeln(implode("\n", $r), null);
+            }
         }
         return 0;
     }
@@ -597,6 +645,7 @@ class ImportCommand extends AbstractCommand
         $helptext .= "php import.php create_translations      <creates gettext *.mo translation files> \n";
         $helptext .= "php import.php reset_insurances         <creates truncates all insurance related tables> \n";
         $helptext .= "php import.php powerfilter              <import powerfilters> \n";
+        $helptext .= "Options: --validate (run validation after fullimport/sync; off by default). --no-validate (skip validation after mediaobject/touristic). --force (ignore hash for single mediaobject import). \n";
         $this->output->write($helptext, null);
     }
 }

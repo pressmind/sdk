@@ -28,6 +28,8 @@ use Pressmind\Storage\File;
  *   unlock                  Remove the process lock
  *   reset-missing           Set download_successful=0 for all images that are missing (no derivatives on disk), so they are reprocessed on next run
  *   mediaobject <ids>       Process only specific media objects (comma-separated)
+ *   --report                Generate verification report (expensive; off by default)
+ *   --skip-verification     (deprecated, verification is now off by default)
  */
 class ImageProcessorCommand extends AbstractCommand
 {
@@ -79,11 +81,11 @@ class ImageProcessorCommand extends AbstractCommand
             // Update MongoDB index if needed
             $this->updateMongoDbIndex();
 
-            // Verify downloaded images (unless skipped)
-            if ($this->shouldSkipVerification()) {
-                Writer::write('Verification skipped', Writer::OUTPUT_SCREEN, self::PROCESS_NAME, Writer::TYPE_INFO);
-            } else {
+            // Verification report only when --report is passed (expensive; skipped by default e.g. after fullimport)
+            if ($this->hasOption('report')) {
                 $this->verifyImages();
+            } else {
+                Writer::write('Verification skipped (use --report to enable)', Writer::OUTPUT_SCREEN, self::PROCESS_NAME, Writer::TYPE_INFO);
             }
 
         } finally {
@@ -439,16 +441,6 @@ class ImageProcessorCommand extends AbstractCommand
         $indexer = new Indexer();
         $indexer->upsertMediaObject($this->idMediaObjects);
         Writer::write('updated', Writer::OUTPUT_SCREEN, self::PROCESS_NAME, Writer::TYPE_INFO);
-    }
-
-    /**
-     * Whether verification should be skipped (--skip-verification or argument skip-verification).
-     */
-    private function shouldSkipVerification(): bool
-    {
-        return $this->hasOption('skip-verification')
-            || $this->getArgument(0) === 'skip-verification'
-            || $this->getArgument(1) === 'skip-verification';
     }
 
     /**

@@ -315,7 +315,7 @@ This executes:
    nohup php /cli/file_downloader.php &
    ```
 
-The image processor downloads original images from the pressmind CDN and generates all configured derivatives (thumbnails, teasers, etc.). See [Image Processor Documentation](image-processor.md) for details.
+The image processor downloads original images from the pressmind CDN and generates all configured derivatives (thumbnails, teasers, etc.). The **verification report** (storage scan, derivative statistics) is **not** generated during post-import because it is expensive on large installations. To run verification explicitly, use `php cli/image_processor.php --report`. See [Image Processor Documentation](image-processor.md) for details.
 
 ---
 

@@ -135,19 +135,17 @@ class MediaObjectData extends AbstractImport implements ImportInterface
                             $value = $data_field->value->$section_id;
                         }
                         $import_linked_objects = true;
-                        if(!empty($conf['data']['disable_recursive_import'][$this->_data->id_media_objects_data_type]) && is_array($conf['data']['disable_recursive_import'][$this->_data->id_media_objects_data_type]) && in_array($column_name, $conf['data']['disable_recursive_import'][$this->_data->id_media_objects_data_type])){
-                            $this->_log[] = Writer::write('                               MediaObjectData::import(' . $this->_id_media_object . '): object_link import is disabled for field "'.$column_name.'". See config (data.disable_recursive_import). This is not an error, just a msg.', Writer::OUTPUT_SCREEN, 'import', Writer::TYPE_INFO);
+                        if (!empty($conf['data']['disable_recursive_import'][$this->_data->id_media_objects_data_type]) && is_array($conf['data']['disable_recursive_import'][$this->_data->id_media_objects_data_type]) && in_array($column_name, $conf['data']['disable_recursive_import'][$this->_data->id_media_objects_data_type])) {
+                            $this->_log[] = Writer::write('                               MediaObjectData::import(' . $this->_id_media_object . '): object_link "lazy" for field "' . $column_name . '" (data.disable_recursive_import). Linked IDs are still collected; import runs only when response hash changed.', Writer::OUTPUT_SCREEN, 'import', Writer::TYPE_INFO);
                             $import_linked_objects = false;
                         }
-                        if($data_field->type == 'objectlink' && !is_null($value) && is_a($value,'stdClass') &&
+                        if ($data_field->type == 'objectlink' && !is_null($value) && is_a($value, 'stdClass') &&
                             isset($value->objects) && is_array($value->objects) && $this->_import_linked_objects == true) {
-                            if(in_array($data_field->id_object_type, $allowed_media_objects)) {
-                                if($import_linked_objects == true){
-                                    foreach ($value->objects as $linked_media_object_id) {
-                                        $linked_media_object_ids[] = $linked_media_object_id;
-                                    }
+                            if (in_array($data_field->id_object_type, $allowed_media_objects)) {
+                                foreach ($value->objects as $linked_media_object_id) {
+                                    $linked_media_object_ids[] = $linked_media_object_id;
                                 }
-                            }else{
+                            } else {
                                 $this->_log[] = Writer::write('                               MediaObjectData::import(' . $this->_id_media_object . '): object_link/s ('.$data_field->var_name.') found, but object_type ('.$data_field->id_object_type.') is not allowed or missing. See config (data.media_types). This is not an error, just a msg.', Writer::OUTPUT_SCREEN, 'import', Writer::TYPE_INFO);
                             }
                         }

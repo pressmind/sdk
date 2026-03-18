@@ -18,6 +18,7 @@ use Pressmind\Import\MyContent;
 use Pressmind\Import\Port;
 use Pressmind\Import\Season;
 use Pressmind\Import\StartingPointOptions;
+use Pressmind\ORM\Object\ImportHash;
 use Pressmind\ORM\Object\Import\Queue;
 use Pressmind\Import\TouristicData;
 use Pressmind\Log\Writer;
@@ -68,6 +69,11 @@ class Import
      * @var array
      */
     private $_imported_ids = [];
+
+    /**
+     * @var array Category tree IDs imported in this run (for hash cleanup)
+     */
+    private $_imported_category_tree_ids = [];
 
     /**
      * @var array Cached config for performance
@@ -190,6 +196,47 @@ class Import
         }
         $this->importMediaObjectsFromFolder();
         $this->removeOrphans();
+        $valid_tree_ids = array_unique(array_map('strval', $this->_imported_category_tree_ids));
+        if (!empty($valid_tree_ids)) {
+            ImportHash::deleteOrphans('category_tree', $valid_tree_ids);
+        }
+        if ($this->_import_type === 'fullimport' || $this->_import_type === 'sync') {
+            ImportHash::store('indexing', 'config', $this->_getIndexingConfigHash());
+        }
+    }
+
+    /**
+     * Run MongoDB, Calendar, and OpenSearch indexers immediately for one media object.
+     * When $id_object_type is set, skips all indexers if that type is not in search_mongodb.search.build_for.
+     *
+     * @param int|string $id_media_object
+     * @param int|string|null $id_object_type
+     */
+    private function _indexMediaObject($id_media_object, $id_object_type = null)
+    {
+        $config = $this->_config;
+        $build_for = $config['data']['search_mongodb']['search']['build_for'] ?? [];
+        if ($id_object_type !== null && $id_object_type !== '' && !isset($build_for[$id_object_type])) {
+            return;
+        }
+        if (isset($config['data']['search_mongodb']['enabled']) && $config['data']['search_mongodb']['enabled'] === true) {
+            try {
+                $indexer = new \Pressmind\Search\MongoDB\Indexer($config['data']['search_mongodb']);
+                $indexer->upsertMediaObject($id_media_object);
+                $calendar = new \Pressmind\Search\MongoDB\Calendar($config['data']['search_mongodb']);
+                $calendar->upsertMediaObject($id_media_object);
+            } catch (Exception $e) {
+                $this->_errors[] = '[MongoDB] ' . $e->getMessage();
+            }
+        }
+        if (isset($config['data']['search_opensearch']['enabled']) && $config['data']['search_opensearch']['enabled'] === true) {
+            try {
+                $indexer = new \Pressmind\Search\OpenSearch\Indexer($config['data']['search_opensearch']);
+                $indexer->upsertMediaObject($id_media_object);
+            } catch (Exception $e) {
+                $this->_errors[] = '[OpenSearch] ' . $e->getMessage();
+            }
+        }
     }
 
     /**
@@ -286,14 +333,15 @@ class Import
     }
 
     /**
-     * @param $media_object_ids
-     * @param $import_linked_objects
+     * @param array $media_object_ids
+     * @param bool $import_linked_objects
+     * @param bool $force ignore hash, full import
      * @throws Exception
      */
-    public function importMediaObjectsFromArray($media_object_ids, $import_linked_objects = true)
+    public function importMediaObjectsFromArray($media_object_ids, $import_linked_objects = true, $force = false)
     {
         foreach ($media_object_ids as $media_object_id) {
-            $this->importMediaObject($media_object_id, $import_linked_objects);
+            $this->importMediaObject($media_object_id, $import_linked_objects, $force);
             $this->_imported_ids[] = $media_object_id;
         }
     }
@@ -486,7 +534,7 @@ class Import
      * @return bool
      * @throws Exception
      */
-    public function importMediaObject($id_media_object, $import_linked_objects = true)
+    public function importMediaObject($id_media_object, $import_linked_objects = true, $force = false)
     {
         global $_RUNTIME_IMPORTED_IDS;
         $id_media_object = intval($id_media_object);
@@ -516,6 +564,86 @@ class Import
         $import_error = false;
 
         if (is_array($response) && count($response) > 0) {
+            $newHash = hash('sha256', json_encode($response));
+            $forceImport = ($this->_import_type === 'fullimport' || $force);
+            if (!$forceImport && !ImportHash::hasChanged((string) $id_media_object, 'media_object', $newHash)) {
+                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): hash unchanged, skipping full import', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+                $linked_ids = $this->extractLinkedObjectIds($response);
+                if (!empty($linked_ids)) {
+                    $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): checking linked objects', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+                    $this->importMediaObjectsFromArray($linked_ids);
+                }
+                $disable_touristic_data_import = (isset($config['data']['touristic']['disable_touristic_data_import']) && in_array($response[0]->id_media_objects_data_type, $config['data']['touristic']['disable_touristic_data_import']));
+                $has_my_content = (false == $disable_touristic_data_import && isset($config['data']['touristic']['my_content_class_map']) && isset($response[0]->my_contents_to_media_object) && is_array($response[0]->my_contents_to_media_object));
+                $has_media_type_hooks = (isset($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type]) && is_array($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type]));
+                $has_custom_hooks = $has_my_content || $has_media_type_hooks;
+                if ($has_custom_hooks) {
+                    $this->_db->beginTransaction();
+                    try {
+                        if ($has_my_content) {
+                            foreach ($response[0]->my_contents_to_media_object as $my_content) {
+                                if (isset($config['data']['touristic']['my_content_class_map'][$my_content->id_my_content])) {
+                                    $touristic_class_name = $config['data']['touristic']['my_content_class_map'][$my_content->id_my_content];
+                                    $custom_importer = new $touristic_class_name($my_content, $id_media_object);
+                                    $custom_importer->import();
+                                    foreach ($custom_importer->getLog() as $log) {
+                                        Writer::write($log, Writer::OUTPUT_FILE, 'my_content_class_map', Writer::TYPE_INFO);
+                                    }
+                                    foreach ($custom_importer->getErrors() as $error) {
+                                        Writer::write($error, Writer::OUTPUT_FILE, 'my_content_class_map', Writer::TYPE_ERROR);
+                                        $this->_errors[] = '[MyContent] ' . $error;
+                                    }
+                                }
+                            }
+                        }
+                        if ($has_media_type_hooks) {
+                            foreach ($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type] as $custom_import_class_name) {
+                                $custom_import_class = new $custom_import_class_name($id_media_object);
+                                $custom_import_class->import();
+                                foreach ($custom_import_class->getLog() as $log) {
+                                    Writer::write($log, Writer::OUTPUT_FILE, 'custom_import_hook', Writer::TYPE_INFO);
+                                }
+                                foreach ($custom_import_class->getErrors() as $error) {
+                                    Writer::write($error, Writer::OUTPUT_BOTH, 'custom_import_hook', Writer::TYPE_ERROR);
+                                    $this->_errors[] = '[CustomImportHook] ' . $error;
+                                }
+                                if (method_exists($custom_import_class, 'getWarnings')) {
+                                    foreach ($custom_import_class->getWarnings() as $warning) {
+                                        Writer::write($warning, Writer::OUTPUT_BOTH, 'custom_import_hook', Writer::TYPE_WARNING);
+                                        $this->_errors[] = '[CustomImportHook] ' . $warning;
+                                    }
+                                }
+                            }
+                        }
+                        $media_object = new MediaObject($id_media_object);
+                        $media_object->insertCheapestPrice();
+                        $this->_db->commit();
+                    } catch (Exception $e) {
+                        $this->_db->rollback();
+                        $this->_log[] = Writer::write('TRANSACTION ROLLBACK (hash-skip hooks): ' . $e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
+                        $this->_errors[] = '[TransactionRollback] ' . $e->getMessage();
+                        return false;
+                    }
+                    $media_object = new MediaObject($id_media_object);
+                    if ($config['cache']['enabled'] == true && in_array('OBJECT', $config['cache']['types'])) {
+                        $media_object->updateCache($id_media_object);
+                    }
+                    $media_object->createSearchIndex();
+                    $this->_indexMediaObject($id_media_object, $media_object->id_object_type);
+                } else {
+                    // No custom hooks, but time-dependent data (cheapest prices, early-bird expiry,
+                    // is_running) must be recalculated on every import run.
+                    $media_object = new MediaObject($id_media_object);
+                    $media_object->insertCheapestPrice();
+                    if ($config['cache']['enabled'] == true && in_array('OBJECT', $config['cache']['types'])) {
+                        $media_object->updateCache($id_media_object);
+                    }
+                    $media_object->createSearchIndex();
+                    $this->_indexMediaObject($id_media_object, $media_object->id_object_type);
+                }
+                return true;
+            }
+
             $this->_start_time = microtime(true);
             $this->_db->beginTransaction();
             try {
@@ -707,8 +835,9 @@ class Import
                 $imported_languages = $media_object_data_importer_result['languages'];
 
                 if(is_array($category_tree_ids) && count($category_tree_ids) > 0) {
+                    $this->_imported_category_tree_ids = array_merge($this->_imported_category_tree_ids, $category_tree_ids);
                     $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::_importMediaObjectData(' . $id_media_object . '): Importing Category Trees', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
-                    $category_tree_importer = new CategoryTree($category_tree_ids);
+                    $category_tree_importer = new CategoryTree($category_tree_ids, $this->_import_type === 'fullimport');
                     $category_tree_importer_result = $category_tree_importer->import();
                     if(isset($category_tree_importer_result['linked_media_object_ids'])){
                         $linked_media_object_ids = array_merge($linked_media_object_ids, $category_tree_importer_result['linked_media_object_ids']);
@@ -798,6 +927,7 @@ class Import
                 $media_object->insertCheapestPrice();
             }
 
+            ImportHash::store((string) $id_media_object, 'media_object', $newHash);
             $this->_db->commit();
             } catch (Exception $e) {
                 $this->_db->rollback();
@@ -819,38 +949,9 @@ class Import
                 $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '):  Cache has been updated', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             }
 
-            /**@TODO make creating search index more effective, complete reload of the media object is absolutely unnecessary**/
-            $media_object->setReadRelations(true);
-            $media_object->readRelations();
+            // Lazy-loading via __get is sufficient for createSearchIndex(); no need to load all relations.
             $media_object->createSearchIndex();
-            if(isset($config['data']['search_mongodb']['enabled']) && $config['data']['search_mongodb']['enabled'] === true) {
-                try {
-                    $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): createMongoDBIndex', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
-                    $media_object->createMongoDBIndex();
-                } catch (Exception $e) {
-                    $this->_log[] = 'Error during creating MongoDBIndex: ' . $e->getMessage();
-                    $this->_errors[] = '[MongoDB] Error during creating MongoDBIndex: ' . $e->getMessage();
-                }
-                try {
-                    $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): createMongoDBCalendar', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
-                    $media_object->createMongoDBCalendar();
-                } catch (Exception $e) {
-                    $this->_log[] = 'Error during creating createMongoDBCalendar: ' . $e->getMessage();
-
-                    echo $e->getTraceAsString();
-                    $this->_errors[] = '[MongoDB] Error during creating createMongoDBCalendar: ' . $e->getMessage();
-                }
-            }
-
-            if(isset($config['data']['search_opensearch']['enabled']) && $config['data']['search_opensearch']['enabled'] === true) {
-                try {
-                    $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): createOpenSearchIndex', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
-                    $media_object->createOpenSearchIndex();
-                } catch (Exception $e) {
-                    $this->_log[] = 'Error during creating OpenSearch: ' . $e->getMessage();
-                    $this->_errors[] = '[OpenSearch] Error during creating OpenSearch: ' . $e->getMessage();
-                }
-            }
+            $this->_indexMediaObject($id_media_object, $media_object->id_object_type);
 
             unset($response);
             unset($media_object);
@@ -986,6 +1087,7 @@ class Import
             try {
                 // MediaObject::delete() handles MongoDB index/calendar and MySQL
                 $media_object_to_remove->delete(true);
+                ImportHash::deleteHash((string) $media_object->id, 'media_object');
                 $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Orphan: ' . $media_object->id . ' deleted', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             } catch (Exception $e) {
                 $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Deletion of Orphan ' . $media_object->id . ' failed: ' . $e->getMessage(), Writer::OUTPUT_FILE, 'import', Writer::TYPE_ERROR);
@@ -996,6 +1098,59 @@ class Import
 
         // Remove orphan attachments (attachments without any MediaObject reference)
         $this->_removeOrphanAttachments();
+    }
+
+    /**
+     * Build a hash of config sections that affect indexing (MongoDB, OpenSearch, fulltext, calendar).
+     * When this hash changes, re-indexing is forced even if data hash is unchanged.
+     *
+     * @return string SHA256 hash
+     */
+    private function _getIndexingConfigHash(): string
+    {
+        $config = $this->_config;
+        $sections = [
+            'build_for' => $config['data']['search_mongodb']['search']['build_for'] ?? null,
+            'categories' => $config['data']['search_mongodb']['search']['categories'] ?? null,
+            'custom_order' => $config['data']['search_mongodb']['search']['custom_order'] ?? null,
+            'media_types_fulltext_index_fields' => $config['data']['media_types_fulltext_index_fields'] ?? null,
+            'search_opensearch' => $config['data']['search_opensearch'] ?? null,
+            'occupancies' => $config['data']['touristic']['occupancies'] ?? null,
+        ];
+        return hash('sha256', json_encode($sections));
+    }
+
+    /**
+     * Extract linked media object IDs from API response data (objectlink fields only).
+     * Used when parent import is skipped due to hash match so linked objects still get hash-checked.
+     *
+     * @param array $response API response array with [0] = stdClass (single media object)
+     * @return array list of linked media object IDs
+     */
+    private function extractLinkedObjectIds(array $response): array
+    {
+        $ids = [];
+        if (empty($response[0]->data) || !is_array($response[0]->data)) {
+            return $ids;
+        }
+        $config = $this->_config;
+        $allowed_media_objects = array_keys($config['data']['media_types'] ?? []);
+        foreach ($response[0]->data as $data_field) {
+            if (!isset($data_field->type) || $data_field->type !== 'objectlink') {
+                continue;
+            }
+            if (empty($data_field->value) || !is_object($data_field->value) || empty($data_field->value->objects) || !is_array($data_field->value->objects)) {
+                continue;
+            }
+            $id_object_type = $data_field->id_object_type ?? null;
+            if ($id_object_type !== null && !in_array($id_object_type, $allowed_media_objects)) {
+                continue;
+            }
+            foreach ($data_field->value->objects as $linked_id) {
+                $ids[] = $linked_id;
+            }
+        }
+        return array_values(array_unique($ids));
     }
 
     /**
@@ -1061,17 +1216,26 @@ class Import
                 }
                 foreach ($hooks as $custom_import_class_name) {
                     $custom_import_class = new $custom_import_class_name($id_media_object);
+                    $hook_start = microtime(true);
                     $custom_import_class->import($id_media_object);
+                    $hook_duration = round(microtime(true) - $hook_start, 4);
+                    $count = is_array($id_media_object) ? count($id_media_object) : 1;
+                    Writer::write(
+                        $this->_getElapsedTimeAndHeap() . ' Importer::postImport(): CustomPostImportHook ' . $custom_import_class_name . ' took ' . $hook_duration . 's for ' . $count . ' object(s)',
+                        Writer::OUTPUT_BOTH,
+                        'custom_post_import_hook',
+                        Writer::TYPE_INFO
+                    );
                     foreach ($custom_import_class->getLog() as $log) {
-                        Writer::write($log, WRITER::OUTPUT_FILE, 'custom_post_import_hook', WRITER::TYPE_INFO);
+                        Writer::write($log, Writer::OUTPUT_FILE, 'custom_post_import_hook', Writer::TYPE_INFO);
                     }
                     foreach ($custom_import_class->getErrors() as $error) {
-                        Writer::write($error, WRITER::OUTPUT_FILE, 'custom_post_import_hook', WRITER::TYPE_ERROR);
+                        Writer::write($error, Writer::OUTPUT_FILE, 'custom_post_import_hook', Writer::TYPE_ERROR);
                         $this->_errors[] = '[CustomPostImportHook] ' . $error;
                     }
-                    if(method_exists($custom_import_class, 'getWarnings')){
+                    if (method_exists($custom_import_class, 'getWarnings')) {
                         foreach ($custom_import_class->getWarnings() as $warning) {
-                            Writer::write($warning, WRITER::OUTPUT_FILE, 'custom_post_import_hook', WRITER::TYPE_WARNING);
+                            Writer::write($warning, Writer::OUTPUT_FILE, 'custom_post_import_hook', Writer::TYPE_WARNING);
                             $this->_errors[] = '[CustomPostImportHook] ' . $warning;
                         }
                     }
@@ -1103,7 +1267,6 @@ class Import
             $cmd = 'bash -c "exec nohup ' . $php_binary . ' ' . $file_downloader_path . ' > /dev/null 2>&1 &"';
             exec($cmd);
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): '.$cmd, Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
-
         }
     }
 

@@ -20,7 +20,7 @@ use Pressmind\System\Info;
  *   php bin/database-integrity-check [--non-interactive] [-n]
  *
  * Options:
- *   --non-interactive  No interactive prompts, output only
+ *   --non-interactive  No interactive prompts; auto-applies all schema fixes (static models, custom media types, PHP scaffolds)
  *   -n                 Short form for --non-interactive
  *
  * Interactive prompts: y = yes, n = no, a = all (apply to this and all remaining)
@@ -110,7 +110,7 @@ class DatabaseIntegrityCheckCommand extends AbstractCommand
                         if ($this->applyAllSchema) {
                             $userWantsApply = true;
                         } elseif ($this->isNonInteractive()) {
-                            $userWantsApply = false;
+                            $userWantsApply = true;
                         } else {
                             $answer = $this->output->promptWithAll('Apply changes?', false);
                             if ($answer === 'a') {
@@ -259,7 +259,7 @@ class DatabaseIntegrityCheckCommand extends AbstractCommand
                             if ($this->applyAllSchema) {
                                 $userWantsApply = true;
                             } elseif ($this->isNonInteractive()) {
-                                $userWantsApply = false;
+                                $userWantsApply = true;
                             } else {
                                 $answer = $this->output->promptWithAll('Apply changes?', false);
                                 if ($answer === 'a') {
@@ -299,6 +299,8 @@ class DatabaseIntegrityCheckCommand extends AbstractCommand
                         } else {
                             $doPhpFile = ($answer === 'y');
                         }
+                    } elseif (!$doPhpFile && $this->isNonInteractive()) {
+                        $doPhpFile = true;
                     }
                     if ($doPhpFile) {
                         $scaffolder = new ObjectTypeScaffolder($media_type_definition, $media_type_definition->id);

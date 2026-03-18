@@ -88,7 +88,6 @@ class Mysql
                         $return = 'enum(\'' . implode("','", $validator['params']) . '\')';
                     }
                     if($validator['name'] == 'precision') {
-                        echo 'here';
                         $return .= '(' . implode(",", $validator['params']) . ')';
                     }
                 }

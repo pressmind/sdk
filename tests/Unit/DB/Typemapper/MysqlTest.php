@@ -185,7 +185,6 @@ class MysqlTest extends AbstractTestCase
 
     public function testMapTypeFromORMToMysqlWithPropertyDefinitionPrecisionValidator(): void
     {
-        $this->expectOutputString('here');
         $prop = [
             'type' => 'decimal',
             'name' => 'price',

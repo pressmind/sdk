@@ -116,6 +116,7 @@ The first positional argument is the **subcommand**. Many subcommands accept an 
 | `categories` | `[<id>[,<id>...]]` | Imports **category trees**. Optional second argument: category tree ID(s). |
 | `create_translations` | — | Creates **gettext** `.mo` translation files from category/code data. |
 | `reset_insurances` | — | **Truncates** insurance-related tables (reset insurances). |
+| `dedupe_insurance_relations` | — | Removes **duplicate** rows in `pmt2core_touristic_insurance_to_insurance` and `pmt2core_touristic_insurance_to_alternate` (keeps one row per composite key). Run **before** `database-integrity-check` when migrating from legacy auto-increment `id` to composite PK. No-op if `id` column is already gone. |
 | `unlock` | — | Removes the import **lock** without running any import. Use with care if a previous run crashed. |
 | `help`, `--help`, `-h` | — | Prints usage and subcommand list, then exits. |
 | *(default)* | — | If the first argument is missing or unknown, help is printed. |
@@ -171,6 +172,7 @@ php bin/import categories 123,124
 # Utilities
 php bin/import create_translations
 php bin/import reset_insurances
+php bin/import dedupe_insurance_relations
 php bin/import unlock
 php bin/import help
 ```
@@ -201,6 +203,7 @@ php cli/import.php postimport
 php cli/import.php categories 123,124
 php cli/import.php create_translations
 php cli/import.php reset_insurances
+php cli/import.php dedupe_insurance_relations
 php cli/import.php unlock
 php cli/import.php help
 ```

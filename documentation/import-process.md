@@ -317,6 +317,8 @@ This executes:
 
 The image processor downloads original images from the pressmind CDN and generates all configured derivatives (thumbnails, teasers, etc.). The **verification report** (storage scan, derivative statistics) is **not** generated during post-import because it is expensive on large installations. To run verification explicitly, use `php cli/image_processor.php --report`. See [Image Processor Documentation](image-processor.md) for details.
 
+**Insurance mapping tables (upgrade path):** If upgrading to SDK versions that use composite primary keys on `pmt2core_touristic_insurance_to_insurance` / `pmt2core_touristic_insurance_to_alternate`, run **`php import.php dedupe_insurance_relations`** once on each environment **before** `database-integrity-check`, then run the integrity check so the schema can be aligned. OpenSearch indexing loads only the media object base row and the `data` relation for each language (not the full touristic/insurance graph).
+
 ---
 
 ## Import Sub-Modules

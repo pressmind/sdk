@@ -516,6 +516,44 @@ class Insurance extends AbstractObject
     }
 
     /**
+     * Removes duplicate rows in insurance mapping tables (same composite key, multiple numeric id rows).
+     * Run once before database-integrity-check when migrating InsuranceToInsurance / InsuranceToAlternate
+     * to composite primary keys. No-op if the `id` column no longer exists.
+     *
+     * @return string[] Human-readable lines for logging
+     * @throws \Exception
+     */
+    public static function dedupeDuplicateInsuranceRelationRows(): array
+    {
+        /** @var \Pressmind\DB\Adapter\Pdo $db */
+        $db = Registry::getInstance()->get('db');
+        $lines = [];
+        $tables = [
+            ['pmt2core_touristic_insurance_to_insurance', 'id_insurance', 'id_additional_insurance'],
+            ['pmt2core_touristic_insurance_to_alternate', 'id_insurance', 'id_alternate_insurance'],
+        ];
+        foreach ($tables as [$table, $c1, $c2]) {
+            $hasNumericId = $db->fetchRow(
+                'SELECT 1 AS x FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? '
+                . "AND COLUMN_NAME = 'id' AND DATA_TYPE IN ('int','bigint','smallint','mediumint')",
+                [$table]
+            );
+            if (empty($hasNumericId)) {
+                $lines[] = "{$table}: skipped (no numeric id column)";
+                continue;
+            }
+            $before = (int) $db->fetchRow("SELECT COUNT(*) AS c FROM `{$table}`")->c;
+            $sql = "DELETE t1 FROM `{$table}` t1 INNER JOIN (
+                SELECT `{$c1}`, `{$c2}`, MIN(`id`) AS keep_id FROM `{$table}` GROUP BY `{$c1}`, `{$c2}`
+            ) k ON t1.`{$c1}` = k.`{$c1}` AND t1.`{$c2}` = k.`{$c2}` AND t1.`id` <> k.keep_id";
+            $db->execute($sql);
+            $after = (int) $db->fetchRow("SELECT COUNT(*) AS c FROM `{$table}`")->c;
+            $lines[] = "{$table}: {$before} -> {$after} rows";
+        }
+        return $lines;
+    }
+
+    /**
      * Resets all insurance-related tables.
      * Uses DELETE instead of TRUNCATE to maintain transaction safety
      * (TRUNCATE causes implicit COMMIT in MySQL, breaking active transactions).

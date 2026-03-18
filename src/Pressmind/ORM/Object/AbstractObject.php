@@ -1419,9 +1419,11 @@ abstract class AbstractObject
                 ON " . $join_table . "." . $target_id . " = " . $table . "." . $primary_key . " 
                 AND " . $join_table . "." . $related_id . " = ?";
             $result = $this->_db->fetchAll($sql, [$this->getId()]);
+            $isSelfReferencingManyToMany = ($object_name === get_class($this));
             foreach ($result as $row) {
                 /**@var AbstractObject $new_object * */
-                $new_object = new $object_name(null, $this->_read_relations);
+                $readRelationsForChild = $isSelfReferencingManyToMany ? false : $this->_read_relations;
+                $new_object = new $object_name(null, $readRelationsForChild);
                 $new_object->fromStdClass($row);
                 $objects[] = $new_object;
             }

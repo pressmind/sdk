@@ -100,6 +100,7 @@ class TouristicData extends AbstractImport
                         $insuranceToinsurance->id_additional_insurance = $touristic_object->id;
                         $insuranceToinsurance->delete();
                         $insuranceToinsurance->create();
+                        continue;
                     }
                     if($touristic_object_name == 'touristic_option_discounts') {
                         unset($touristic_object->import_code);

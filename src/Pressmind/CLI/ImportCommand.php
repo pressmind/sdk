@@ -184,6 +184,8 @@ class ImportCommand extends AbstractCommand
                 return $this->subCreateTranslations($logPath);
             case 'reset_insurances':
                 return $this->subResetInsurances($logPath);
+            case 'dedupe_insurance_relations':
+                return $this->subDedupeInsuranceRelations($logPath);
             case 'touristic':
                 return $this->subTouristic($ids, $logPath);
             case 'fullimport_touristic':
@@ -562,6 +564,20 @@ class ImportCommand extends AbstractCommand
         return 0;
     }
 
+    private function subDedupeInsuranceRelations(string $logPath): int
+    {
+        try {
+            foreach (Insurance::dedupeDuplicateInsuranceRelationRows() as $line) {
+                Writer::write($line, Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+                $this->output->writeln($line, null);
+            }
+        } catch (Exception $e) {
+            $this->logImportException($e, $logPath, 'dedupe_insurance_relations failed');
+            return 1;
+        }
+        return 0;
+    }
+
     private function subTouristic(array $ids, string $logPath): int
     {
         if (empty($ids)) {
@@ -643,7 +659,8 @@ class ImportCommand extends AbstractCommand
         $helptext .= "php import.php categories 123,124       <single/multiple ids allowed / imports all category trees> \n";
         $helptext .= "php import.php unlock                   <removes the lock file - be carefull!> \n";
         $helptext .= "php import.php create_translations      <creates gettext *.mo translation files> \n";
-        $helptext .= "php import.php reset_insurances         <creates truncates all insurance related tables> \n";
+        $helptext .= "php import.php reset_insurances         <truncates all insurance related tables> \n";
+        $helptext .= "php import.php dedupe_insurance_relations <removes duplicate rows in insurance_to_insurance / insurance_to_alternate before integrity-check> \n";
         $helptext .= "php import.php powerfilter              <import powerfilters> \n";
         $helptext .= "Options: --validate (run validation after fullimport/sync; off by default). --no-validate (skip validation after mediaobject/touristic). --force (ignore hash for single mediaobject import). \n";
         $this->output->write($helptext, null);

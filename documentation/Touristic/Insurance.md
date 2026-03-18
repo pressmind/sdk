@@ -104,7 +104,8 @@ Fields: `id_insurance`, `id_price_table`.
 
 **Table:** `pmt2core_touristic_insurance_to_insurance`  
 Links a main insurance to its additional insurances.  
-Fields: `id`, `id_insurance`, `id_additional_insurance`, `order`.
+**Composite primary key:** `(id_insurance, id_additional_insurance)`. Rows are upserted via `REPLACE INTO` on import (same pattern as `InsuranceToGroup`).  
+If legacy databases still have duplicate rows and a numeric `id` column, run **`php import.php dedupe_insurance_relations`** once before `database-integrity-check`, then apply the schema update.
 
 ### InsuranceToAttribute
 
@@ -298,9 +299,8 @@ Links a **main insurance** (`id_insurance`) to an **additional insurance** (`id_
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `id` | integer | Primary key (auto-increment) |
-| `id_insurance` | string(32) | Main insurance ID |
-| `id_additional_insurance` | string(32) | Additional insurance ID |
+| `id_insurance` | string(32) | Main insurance ID (PK part) |
+| `id_additional_insurance` | string(32) | Additional insurance ID (PK part) |
 | `order` | integer | Display/sort order |
 
 ---
@@ -310,13 +310,12 @@ Links a **main insurance** (`id_insurance`) to an **additional insurance** (`id_
 **Class:** `Pressmind\ORM\Object\Touristic\Insurance\InsuranceToAlternate`  
 **Table:** `pmt2core_touristic_insurance_to_alternate`
 
-Links a main insurance to alternate insurance products (e.g. with/without deductible). **`order`** controls the display order.
+Links a main insurance to alternate insurance products (e.g. with/without deductible). **`order`** controls the display order. **Composite primary key:** `(id_insurance, id_alternate_insurance)`; upsert on import.
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `id` | integer | Primary key (auto-increment) |
-| `id_insurance` | string(32) | Main insurance ID |
-| `id_alternate_insurance` | string(32) | Alternate insurance ID |
+| `id_insurance` | string(32) | Main insurance ID (PK part) |
+| `id_alternate_insurance` | string(32) | Alternate insurance ID (PK part) |
 | `order` | integer | Sort order |
 
 ---

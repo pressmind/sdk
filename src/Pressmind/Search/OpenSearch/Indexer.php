@@ -171,7 +171,8 @@ class Indexer extends AbstractIndex
 
     public function createIndex($idMediaObject, $language)
     {
-        $mediaObject = new MediaObject($idMediaObject, true, true);
+        // Base row only; `data` is loaded lazily via getDataForLanguage (avoids insurance_group / full ORM graph).
+        $mediaObject = new MediaObject($idMediaObject, false, true);
         $mediaObjectData = $mediaObject->getDataForLanguage($language);
         $searchObject = new \stdClass();
         $searchObject->id_object_type = $mediaObject->id_object_type;

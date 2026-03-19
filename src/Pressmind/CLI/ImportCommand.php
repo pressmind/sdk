@@ -25,7 +25,7 @@ class ImportCommand extends AbstractCommand
 {
     private ?string $scriptPath = null;
 
-    /** @var callable|null callback(array $importedIds): void */
+    /** @var callable|null callback(array $importedIds, ?Import $importer): void */
     private $onAfterImportCallback = null;
 
     public function setOnAfterImportCallback(callable $callback): void
@@ -196,10 +196,10 @@ class ImportCommand extends AbstractCommand
         }
     }
 
-    private function invokeAfterImportCallback(array $ids): void
+    private function invokeAfterImportCallback(array $ids, ?Import $importer = null): void
     {
         if ($this->onAfterImportCallback !== null && !empty($ids)) {
-            ($this->onAfterImportCallback)($ids);
+            ($this->onAfterImportCallback)($ids, $importer);
         }
     }
 
@@ -237,7 +237,7 @@ class ImportCommand extends AbstractCommand
         } finally {
             $importer->postImport();
             $ids = $importer->getImportedIds();
-            $this->invokeAfterImportCallback($ids);
+            $this->invokeAfterImportCallback($ids, $importer);
             $this->output->writeln(implode(', ', $ids), null);
         }
         if ($this->hasOption('validate')) {
@@ -264,7 +264,7 @@ class ImportCommand extends AbstractCommand
         } finally {
             $importer->postImport();
             $ids = $importer->getImportedIds();
-            $this->invokeAfterImportCallback($ids);
+            $this->invokeAfterImportCallback($ids, $importer);
             $this->output->writeln(implode(', ', $ids), null);
         }
         if ($this->hasOption('validate')) {
@@ -293,7 +293,7 @@ class ImportCommand extends AbstractCommand
         } finally {
             $importer->postImport();
             $ids = $importer->getImportedIds();
-            $this->invokeAfterImportCallback($ids);
+            $this->invokeAfterImportCallback($ids, $importer);
             $this->output->writeln(implode(', ', $ids), null);
         }
         return 0;
@@ -318,7 +318,7 @@ class ImportCommand extends AbstractCommand
             return 1;
         }
         $importedIds = $importer->getImportedIds();
-        $this->invokeAfterImportCallback($importedIds);
+        $this->invokeAfterImportCallback($importedIds, $importer);
         if (!$this->hasOption('no-validate')) {
             foreach ($importedIds as $id) {
                 $this->output->writeln('===== Validation =====', null);
@@ -596,7 +596,7 @@ class ImportCommand extends AbstractCommand
             return 1;
         }
         $importedIds = $importer->getImportedIds();
-        $this->invokeAfterImportCallback($importedIds);
+        $this->invokeAfterImportCallback($importedIds, $importer);
         if (!$this->hasOption('no-validate')) {
             foreach ($importedIds as $id) {
                 $this->output->writeln('===== Validation =====', null);
@@ -632,7 +632,7 @@ class ImportCommand extends AbstractCommand
         } finally {
             $importer->postImport();
             $importedIds = $importer->getImportedIds();
-            $this->invokeAfterImportCallback($importedIds);
+            $this->invokeAfterImportCallback($importedIds, $importer);
             $this->output->writeln(implode(', ', $importedIds), null);
         }
         return 0;

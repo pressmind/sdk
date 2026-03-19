@@ -112,6 +112,9 @@ class Objectlink extends AbstractObject
                 'required' => true,
                 'filters' => null,
                 'validators' => null,
+                'index' => [
+                    'id_media_object_link' => 'index'
+                ]
             ],
             'id_object_type' => [
                 'title' => 'id_object_type',

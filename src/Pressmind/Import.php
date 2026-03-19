@@ -71,6 +71,13 @@ class Import
     private $_imported_ids = [];
 
     /**
+     * IDs that were actually changed (hash differed from previous import).
+     * Unlike _imported_ids this excludes hash-skipped objects.
+     * @var array
+     */
+    private $_changed_ids = [];
+
+    /**
      * @var array Category tree IDs imported in this run (for hash cleanup)
      */
     private $_imported_category_tree_ids = [];
@@ -175,6 +182,83 @@ class Import
      */
     public function getImportedIds(){
         return $this->_imported_ids;
+    }
+
+    /**
+     * Returns only IDs that were actually changed during this import run
+     * (i.e. hash differed from previous import, so a full re-import was performed).
+     * @return array
+     */
+    public function getChangedIds(){
+        return $this->_changed_ids;
+    }
+
+    /**
+     * Transitively resolves primary media object IDs affected by changed non-primary objects.
+     * Walks up the ObjectLink chain (child -> parent) until all reachable primary types are found.
+     * Example: Cabin(2193) changed -> Ship(2194) -> Cruise(2445, primary) => returns [cruise_id].
+     *
+     * @param int $maxDepth Safety limit for traversal depth (default 10)
+     * @return int[] Deduplicated primary media object IDs
+     */
+    public function getAffectedPrimaryIds(int $maxDepth = 10): array
+    {
+        $config = $this->_config;
+        $primaryTypeIds = $config['data']['primary_media_type_ids'] ?? [];
+        if (empty($primaryTypeIds) || empty($this->_changed_ids)) {
+            return [];
+        }
+
+        $changedNonPrimary = [];
+        if (!empty($this->_changed_ids)) {
+            $placeholders = implode(',', array_map('intval', $this->_changed_ids));
+            $rows = $this->_db->fetchAll(
+                'SELECT id, id_object_type FROM pmt2core_media_objects WHERE id IN (' . $placeholders . ')'
+            );
+            foreach ($rows as $row) {
+                if (!in_array((int) $row->id_object_type, $primaryTypeIds, true)) {
+                    $changedNonPrimary[] = (int) $row->id;
+                }
+            }
+        }
+
+        if (empty($changedNonPrimary)) {
+            return [];
+        }
+
+        $seeds = $changedNonPrimary;
+        $visited = [];
+        $primaryHits = [];
+
+        for ($depth = 0; $depth < $maxDepth && !empty($seeds); $depth++) {
+            $seedPlaceholders = implode(',', $seeds);
+            $parentRows = $this->_db->fetchAll(
+                'SELECT DISTINCT ol.id_media_object, mo.id_object_type '
+                . 'FROM pmt2core_media_object_object_links ol '
+                . 'JOIN pmt2core_media_objects mo ON mo.id = ol.id_media_object '
+                . 'WHERE ol.id_media_object_link IN (' . $seedPlaceholders . ')'
+            );
+
+            $nextSeeds = [];
+            foreach ($parentRows as $row) {
+                $parentId = (int) $row->id_media_object;
+                $parentType = (int) $row->id_object_type;
+
+                if (isset($visited[$parentId])) {
+                    continue;
+                }
+                $visited[$parentId] = true;
+
+                if (in_array($parentType, $primaryTypeIds, true)) {
+                    $primaryHits[$parentId] = true;
+                } else {
+                    $nextSeeds[] = $parentId;
+                }
+            }
+            $seeds = $nextSeeds;
+        }
+
+        return array_keys($primaryHits);
     }
 
     /**
@@ -928,6 +1012,7 @@ class Import
             }
 
             ImportHash::store((string) $id_media_object, 'media_object', $newHash);
+            $this->_changed_ids[] = $id_media_object;
             $this->_db->commit();
             } catch (Exception $e) {
                 $this->_db->rollback();

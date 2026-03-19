@@ -719,8 +719,12 @@ class MediaObject extends AbstractObject
      */
     public function getCheapestPrices($filters = null, $order = ['price_total' => 'ASC', 'date_departure' => 'ASC'], $limit = null)
     {
+        $id = $this->getId();
+        if ($id === null || $id === '' || $id === false) {
+            return [];
+        }
         $now = new DateTime();
-        $where = "id_media_object = " . $this->getId()." AND price_total > 0";
+        $where = "id_media_object = " . $id . " AND price_total > 0";
         $occupancy_filter_is_set = false;
         $state_filter_is_set = false;
         if(!is_null($filters)) {

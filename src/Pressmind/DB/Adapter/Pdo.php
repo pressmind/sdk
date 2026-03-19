@@ -3,6 +3,7 @@
 namespace Pressmind\DB\Adapter;
 
 use \Exception;
+use \PDOException;
 use \PDOStatement;
 use Pressmind\HelperFunctions;
 use Pressmind\Registry;
@@ -36,13 +37,69 @@ class Pdo implements AdapterInterface
     private $transactionLevel = 0;
 
     /**
+     * Stored config for reconnect on "MySQL server has gone away".
+     * @var \Pressmind\DB\Config\Pdo|null
+     */
+    private $config = null;
+
+    /**
      * Pdo constructor.
      * @param \Pressmind\DB\Config\Pdo $config
      */
     public function __construct($config)
     {
+        $this->config = $config;
         $this->databaseConnection = new \PDO('mysql:host=' . $config->host . ';port=' . $config->port . ';dbname=' . $config->dbname . ';charset=utf8', $config->username, $config->password);
         $this->table_prefix = $config->table_prefix;
+    }
+
+    /**
+     * Reconnect after "MySQL server has gone away" (e.g. long idle or server restart).
+     * Resets statement and creates a new PDO connection. Not safe during an open transaction.
+     */
+    public function reconnect(): void
+    {
+        if ($this->config === null) {
+            return;
+        }
+        $this->statement = null;
+        $this->databaseConnection = new \PDO(
+            'mysql:host=' . $this->config->host . ';port=' . $this->config->port . ';dbname=' . $this->config->dbname . ';charset=utf8',
+            $this->config->username,
+            $this->config->password
+        );
+    }
+
+    /**
+     * Returns true if the last error indicates "MySQL server has gone away" (2006).
+     * @param \Throwable $e
+     * @return bool
+     */
+    private function isGoneAway(\Throwable $e): bool
+    {
+        if (!$e instanceof PDOException) {
+            return false;
+        }
+        $code = $e->getCode();
+        $msg = $e->getMessage();
+        return $code === 2006 || (strpos($msg, '2006') !== false) || (stripos($msg, 'gone away') !== false);
+    }
+
+    /**
+     * Ensures the connection is alive (e.g. after long idle). Runs SELECT 1 and reconnects on failure.
+     * Call before DB access after long-running phases (e.g. post-import) to avoid "MySQL server has gone away".
+     */
+    public function ensureConnected(): void
+    {
+        try {
+            $this->databaseConnection->query('SELECT 1');
+        } catch (\Throwable $e) {
+            if ($this->isGoneAway($e)) {
+                $this->reconnect();
+            } else {
+                throw $e;
+            }
+        }
     }
 
     /**
@@ -62,10 +119,23 @@ class Pdo implements AdapterInterface
      */
     public function execute($query, $parameters = null)
     {
-        $this->prepare($query);
-        if (!$this->statement->execute($parameters)) {
-            $error = $this->statement->errorInfo();
-            throw new Exception('PDO Database Error: ' . $error[0] . ', ' . $error[1] . ', ' . $error[2] . ' Query: ' .  $this->statement->queryString . print_r($parameters, true));
+        try {
+            $this->prepare($query);
+            if (!$this->statement->execute($parameters)) {
+                $error = $this->statement->errorInfo();
+                throw new Exception('PDO Database Error: ' . $error[0] . ', ' . $error[1] . ', ' . $error[2] . ' Query: ' .  $this->statement->queryString . print_r($parameters, true));
+            }
+        } catch (\Throwable $e) {
+            if ($this->isGoneAway($e)) {
+                $this->reconnect();
+                $this->prepare($query);
+                if (!$this->statement->execute($parameters)) {
+                    $error = $this->statement->errorInfo();
+                    throw new Exception('PDO Database Error: ' . $error[0] . ', ' . $error[1] . ', ' . $error[2] . ' Query: ' .  $this->statement->queryString . print_r($parameters, true));
+                }
+            } else {
+                throw $e;
+            }
         }
     }
 
@@ -91,8 +161,18 @@ class Pdo implements AdapterInterface
             $debug_start_time = microtime(true);
         }
         if (!is_null($query)) {
-            $this->statement = $this->databaseConnection->prepare($query);
-            $this->statement->execute($parameters);
+            try {
+                $this->statement = $this->databaseConnection->prepare($query);
+                $this->statement->execute($parameters);
+            } catch (\Throwable $e) {
+                if ($this->isGoneAway($e)) {
+                    $this->reconnect();
+                    $this->statement = $this->databaseConnection->prepare($query);
+                    $this->statement->execute($parameters);
+                } else {
+                    throw $e;
+                }
+            }
         }
         if(!is_null($class_name)) {
             $result = $this->statement->fetchAll(\PDO::FETCH_CLASS, $class_name);

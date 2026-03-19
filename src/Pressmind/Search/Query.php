@@ -520,6 +520,7 @@ class Query
      *  - pm-ot    int     object type id/s separated by comma
      *  - pm-t     string  searchterm
      *  - pm-co    string  code/s separated by comma
+     *  - pm-cw    string  code/s wildcard separated by comma (e.g. pm-cw=ASA,ASR) finds ASA* or ASR*
      *  - pm-c     string  category id's separated by comma (search with "or") or plus (search with "and"), e.g. pm-c[land_default]=xxx,yyyy = OR-search, + AND-search
      *  - pm-pr    string  price range 123-1234
      *  - pm-dr    string  departure date range '20200101-20200202', schema: (YYYYMMDD-YYYYMMDD = departure date range, YYYYMMDD = exact departure day, ([0-9]+)-([0-9]+) = relative offset in days from today)
@@ -604,6 +605,14 @@ class Query
             $codes = explode(',', $request[$prefix.'-co']);
             $conditions[] = new \Pressmind\Search\Condition\MongoDB\Code($codes);
             $validated_search_parameters[$prefix.'-co'] = $request[$prefix.'-co'];
+        }
+        if (empty($request[$prefix.'-cw']) === false && preg_match('/^([0-9\-_A-Za-z\,]+)$/', $request[$prefix.'-cw']) > 0){
+            $codes = explode(',', $request[$prefix.'-cw']);
+            $codes = array_map(function ($code) {
+                return '(?i)^' . $code;
+            }, $codes);
+            $conditions[] = new \Pressmind\Search\Condition\MongoDB\Code($codes, 'OR', true);
+            $validated_search_parameters[$prefix.'-cw'] = $request[$prefix.'-cw'];
         }
         if (isset($request[$prefix.'-pr']) === true && preg_match('/^([0-9]+)\-([0-9]+)$/', $request[$prefix.'-pr']) > 0) {
             list($price_range_from, $price_range_to) = explode('-', $request[$prefix.'-pr']);

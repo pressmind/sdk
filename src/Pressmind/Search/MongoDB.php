@@ -465,7 +465,7 @@ class MongoDB extends AbstractSearch
         $prepare = $this->prepareQuery();
         $query = $this->buildQuery($output, $preview_date, $allowed_visibilities);
         try{
-            $result = $collection->aggregate($query, ['allowDiskUse' => true])->toArray()[0];
+            $result = $collection->aggregate($query, ['allowDiskUse' => true, 'collation' => ['locale' => 'de']])->toArray()[0];
             if(!isset($result->documents)){
                 $result->documents = [];
             }

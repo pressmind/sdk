@@ -121,7 +121,7 @@ The first positional argument is the **subcommand**. Many subcommands accept an 
 | `help`, `--help`, `-h` | — | Prints usage and subcommand list, then exits. |
 | *(default)* | — | If the first argument is missing or unknown, help is printed. |
 
-**Post-import callback:** When the command is run from the Travelshop wrapper with `PM_REDIS_ACTIVATE` set, the wrapper can register a callback (e.g. `RedisPageCache::del_by_id_media_object` and `prime_by_id_media_object`). The SDK command invokes this callback after the relevant subcommands (fullimport, resume, mediaobject, mediaobject_cache_update, touristic, fullimport_touristic) so that Redis cache stays in sync without the SDK depending on Redis or WordPress.
+**Post-import callback:** When the command is run from the Travelshop wrapper with `PM_REDIS_ACTIVATE` set, the wrapper can register a callback (e.g. `Pressmind\WordPress\PageCache::del_by_id_media_object` and `prime_by_id_media_object`; the global alias `RedisPageCache` remains available for backward compatibility). The SDK command invokes this callback after the relevant subcommands (fullimport, resume, mediaobject, mediaobject_cache_update, touristic, fullimport_touristic) so that Redis full-page cache stays in sync without the SDK depending on Redis or WordPress.
 
 ---
 

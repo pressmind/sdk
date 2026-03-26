@@ -88,15 +88,15 @@ class MediaObjectStaticQueryTest extends AbstractTestCase
         MediaObject::deleteTouristic(42);
 
         $expectedTables = [
-            'pmt2core_touristic_booking_packages',
-            'pmt2core_touristic_dates',
+            'pmt2core_cheapest_price_speed',
             'pmt2core_touristic_date_attributes',
             'pmt2core_touristic_transports',
-            'pmt2core_touristic_housing_packages',
-            'pmt2core_touristic_housing_package_description_links',
-            'pmt2core_touristic_option_descriptions',
+            'pmt2core_touristic_dates',
             'pmt2core_touristic_options',
-            'pmt2core_cheapest_price_speed',
+            'pmt2core_touristic_housing_package_description_links',
+            'pmt2core_touristic_housing_packages',
+            'pmt2core_touristic_seasonal_periods',
+            'pmt2core_touristic_booking_packages',
         ];
         $this->assertSame($expectedTables, $deletedTables);
     }

@@ -39,6 +39,22 @@ class Import
 {
 
     /**
+     * MediaObject relation names to skip in readRelations() before insertCheapestPrice(); only booking_packages are required.
+     */
+    private const READ_RELATIONS_EXCLUDE_FOR_CHEAPEST_PRICE = [
+        'routes',
+        'data',
+        'my_contents',
+        'touristic_base',
+        'season',
+        'brand',
+        'insurance_group',
+        'agencies',
+        'manual_cheapest_prices',
+        'manual_discounts',
+    ];
+
+    /**
      * @var Client
      */
     private $_client;
@@ -98,6 +114,12 @@ class Import
      * @var bool
      */
     private $_api_import_successful = false;
+
+    /**
+     * True when the current run is resuming from a previously crashed import.
+     * @var bool
+     */
+    private $_is_resuming = false;
 
     /**
      * Static flags to track which global imports have been executed in current session.
@@ -194,6 +216,14 @@ class Import
     }
 
     /**
+     * @return bool true when the current run is resuming from a previously crashed import
+     */
+    public function isResuming(): bool
+    {
+        return $this->_is_resuming;
+    }
+
+    /**
      * Transitively resolves primary media object IDs affected by changed non-primary objects.
      * Walks up the ObjectLink chain (child -> parent) until all reachable primary types are found.
      * Example: Cabin(2193) changed -> Ship(2194) -> Cruise(2445, primary) => returns [cruise_id].
@@ -271,13 +301,28 @@ class Import
     {
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::import()', Writer::OUTPUT_FILE, 'import', Writer::TYPE_INFO);
         $this->_api_import_successful = false;
-        try {
-            $this->getIDsToImport($id_pool, $allowed_object_types, $allowed_visibilities);
-            $this->_api_import_successful = true;
-        } catch (Exception $e) {
-            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::import(): API ID retrieval failed: ' . $e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
-            $this->_errors[] = '[API] Importer::import(): API ID retrieval failed: ' . $e->getMessage();
+
+        $pendingCount = Queue::count();
+        if ($pendingCount > 0) {
+            $originalSource = Queue::getSource();
+            $this->_is_resuming = true;
+            if ($originalSource !== null && $originalSource !== $this->_import_type) {
+                $this->_import_type = $originalSource;
+            }
+            $this->_log[] = Writer::write(
+                $this->_getElapsedTimeAndHeap() . ' Importer::import(): Resuming previous ' . $this->_import_type . ' (' . $pendingCount . ' pending objects in queue)',
+                Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO
+            );
+        } else {
+            try {
+                $this->getIDsToImport($id_pool, $allowed_object_types, $allowed_visibilities);
+                $this->_api_import_successful = true;
+            } catch (Exception $e) {
+                $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::import(): API ID retrieval failed: ' . $e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
+                $this->_errors[] = '[API] Importer::import(): API ID retrieval failed: ' . $e->getMessage();
+            }
         }
+
         $this->importMediaObjectsFromFolder();
         $this->removeOrphans();
         $valid_tree_ids = array_unique(array_map('strval', $this->_imported_category_tree_ids));
@@ -530,10 +575,8 @@ class Import
         $id_object_type = $media_object->id_object_type;
         $this->_db->beginTransaction();
         try {
-        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . '): deleting old booking packages', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
-        foreach ($media_object->booking_packages as $booking_package) {
-            $booking_package->delete(true);
-        }
+        $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . '): deleting old touristic data (bulk)', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        MediaObject::deleteTouristic($id_media_object);
         $this->_db->delete('pmt2core_cheapest_price_speed', ['id_media_object = ?', $id_media_object]);
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . '): executing custom import hooks', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         if (isset($config['data']['media_type_custom_import_hooks'][$id_object_type]) &&
@@ -559,7 +602,7 @@ class Import
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . '): recalculating cheapest price', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         $media_object = new MediaObject($id_media_object);
         $media_object->setReadRelations(true);
-        $media_object->readRelations();
+        $media_object->readRelations(self::READ_RELATIONS_EXCLUDE_FOR_CHEAPEST_PRICE);
         $media_object->insertCheapestPrice();
         $this->_db->commit();
         } catch (Exception $e) {
@@ -640,6 +683,7 @@ class Import
             $touristicOrigins = isset($config['data']['touristic']['origins']) && !empty($config['data']['touristic']['origins']) ? $config['data']['touristic']['origins'] : [0];
             $response = $this->_client->sendRequest('Text', 'getById', ['ids' => $id_media_object, 'withTouristicData' => 1, 'withDynamicData' => 1, 'byTouristicOrigin' => implode(',', $touristicOrigins)]);
         } catch (Exception $e) {
+            $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '): REST Request failed: ' . $e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
             $response = null;
         }
 
@@ -725,6 +769,11 @@ class Import
                     $media_object->createSearchIndex();
                     $this->_indexMediaObject($id_media_object, $media_object->id_object_type);
                 }
+                // Throttle: hash-only cycles complete in ~35ms, causing ~30 req/s bursts
+                // over a single HTTP/2 connection which can saturate NAT/conntrack limits.
+                if ($this->_import_type === 'sync') {
+                    usleep(50000);
+                }
                 return true;
             }
 
@@ -734,9 +783,7 @@ class Import
             $current_object = new ORM\Object\MediaObject($id_media_object, false, true);
             $disable_touristic_data_import = (isset($config['data']['touristic']['disable_touristic_data_import']) && in_array($response[0]->id_media_objects_data_type, $config['data']['touristic']['disable_touristic_data_import']));
             if (false == $disable_touristic_data_import) {
-                foreach ($current_object->booking_packages as $booking_package) {
-                    $booking_package->delete(true);
-                }
+                MediaObject::deleteTouristic($id_media_object);
             }
             $current_object->delete(true);
 
@@ -901,7 +948,7 @@ class Import
                 $discount_importer = new MediaObjectDiscount();
                 $discount_importer->import($response[0]->discounts, $id_media_object, $this->_import_type);
                 MediaObject\ManualDiscount::convertManualDiscountsToEarlyBird($id_media_object);
-                $media_object->readRelations();
+                $media_object->readRelations(self::READ_RELATIONS_EXCLUDE_FOR_CHEAPEST_PRICE);
                 try {
                     $media_object->insertCheapestPrice();
                 } catch (Exception $e) {

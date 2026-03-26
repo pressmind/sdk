@@ -34,7 +34,15 @@ class S3 implements ProviderInterface, PrefixListableInterface, FullScanInterfac
         $clientSetup = [
             'version' => $storage['version'],
             'region' => $storage['region'],
-            'credentials' => $storage['credentials']
+            'credentials' => $storage['credentials'],
+            'http' => [
+                'timeout' => $storage['http_timeout'] ?? 30,
+                'connect_timeout' => $storage['http_connect_timeout'] ?? 10,
+            ],
+            'retries' => [
+                'mode' => 'standard',
+                'max_attempts' => $storage['max_retry_attempts'] ?? 3,
+            ],
         ];
         if (!empty($storage['endpoint'])) {
             $clientSetup['endpoint'] = $storage['endpoint'];

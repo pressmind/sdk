@@ -77,6 +77,7 @@ Welcome to the pressmind SDK documentation. This documentation covers the comple
 |---|---|
 | [CLI Reference](cli-reference.md) | Complete CLI command reference: Import (primary), Index Mongo, and all other commands with parameter documentation |
 | [CLI WordPress Tools](cli-wordpress-tools.md) | WordPress helpers and WordPress-dependent CLI commands; CMS independence and when to use |
+| [WordPress Full-Page Cache (PageCache)](wordpress-page-cache.md) | Redis-backed full-page cache drop-in: installation, configuration, invalidation, priming, debug headers |
 
 ### Management Backend
 
@@ -177,5 +178,6 @@ pressmind PIM
 - **Building templates?** See [Template Interface](template-interface.md) → [Real-World Examples](real-world-examples.md)
 - **Understanding prices?** See [CheapestPrice Aggregation](cheapest-price-aggregation.md) and [Price Selection Logic](price-selection-logic.md)
 - **CLI commands (import, index-mongo, etc.)?** See [CLI Reference](cli-reference.md); for WordPress helpers see [CLI WordPress Tools](cli-wordpress-tools.md)
+- **Full-page cache setup?** See [WordPress Full-Page Cache](wordpress-page-cache.md)
 - **Web backend (config, commands, logs, validation)?** See [Management Backend](backend.md)
 - **Running or writing tests?** See [Testing Guide](testing.md) → [Makefile Reference](makefile.md); for coverage metrics see [Code Coverage Summary](code-coverage-summary.md)

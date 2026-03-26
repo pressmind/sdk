@@ -92,22 +92,38 @@ class Tools
     }
 
     /**
-     * Deletes all WordPress transients from the options table.
+     * Deletes all WordPress transients from both MySQL and external object cache (Redis/Memcached).
      * Automatically boots WordPress with admin if not already booted.
      *
-     * @return array{transients: int, site_transients: int} Number of deleted transients
+     * When an external object cache is active, wp_cache_flush_group() is attempted first.
+     * If the drop-in does not support it (returns false), wp_cache_flush() is used as fallback.
+     *
+     * @return array{transients: int, site_transients: int, ext_cache_flushed: bool}
      */
     public static function deleteTransients(): array
     {
         self::boot(true);
 
         global $wpdb;
-        $transientCount = $wpdb->query("DELETE FROM `wp_options` WHERE `option_name` LIKE ('_transient_%');");
-        $siteTransientCount = $wpdb->query("DELETE FROM `wp_options` WHERE `option_name` LIKE ('_site_transient_%')");
+        $transientCount = (int) $wpdb->query("DELETE FROM `wp_options` WHERE `option_name` LIKE '_transient_%'");
+        $siteTransientCount = (int) $wpdb->query("DELETE FROM `wp_options` WHERE `option_name` LIKE '_site_transient_%'");
+
+        $extCacheFlushed = false;
+        if (function_exists('wp_using_ext_object_cache') && wp_using_ext_object_cache()) {
+            $groupFlushed = false;
+            if (function_exists('wp_cache_flush_group')) {
+                $groupFlushed = wp_cache_flush_group('transients') && wp_cache_flush_group('site-transients');
+            }
+            if (!$groupFlushed) {
+                wp_cache_flush();
+            }
+            $extCacheFlushed = true;
+        }
 
         return [
-            'transients' => (int) $transientCount,
-            'site_transients' => (int) $siteTransientCount,
+            'transients' => $transientCount,
+            'site_transients' => $siteTransientCount,
+            'ext_cache_flushed' => $extCacheFlushed,
         ];
     }
 

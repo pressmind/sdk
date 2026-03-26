@@ -10,6 +10,7 @@ use Pressmind\ORM\Object\MediaObject\ManualCheapestPrice;
 use Pressmind\ORM\Object\MediaObject\ManualDiscount;
 use Pressmind\ORM\Object\MediaType\AbstractMediaType;
 use Pressmind\ORM\Object\MediaType\Factory;
+use Pressmind\DB\Adapter\AdapterInterface;
 use Pressmind\DB\Adapter\Pdo;
 use Pressmind\HelperFunctions;
 use Pressmind\MVC\View;
@@ -2324,26 +2325,144 @@ class MediaObject extends AbstractObject
     }
 
     /**
-     * @param $id_media_object
+     * Bulk-delete all touristic rows for a media object (replaces recursive ORM deletes on booking packages).
+     * Matches the scope of Booking\Package::delete(true): only hasMany/belongsTo cascades from AbstractObject;
+     * hasOne-linked shared entities (early bird groups, insurance groups, starting points, option discounts) are not removed.
+     *
+     * @param int|string $id_media_object
      * @return void
      * @throws Exception
      */
-    public static function deleteTouristic($id_media_object){
-        /** @var \Pressmind\DB\Adapter\Pdo $db */
+    public static function deleteTouristic($id_media_object)
+    {
+        /** @var AdapterInterface $db */
         $db = Registry::getInstance()->get('db');
-        $tables = [
-            'pmt2core_touristic_booking_packages',
-            'pmt2core_touristic_dates',
-            'pmt2core_touristic_date_attributes',
-            'pmt2core_touristic_transports',
-            'pmt2core_touristic_housing_packages',
-            'pmt2core_touristic_housing_package_description_links',
-            'pmt2core_touristic_option_descriptions',
-            'pmt2core_touristic_options',
-            'pmt2core_cheapest_price_speed',
-        ];
-        foreach ($tables as $table) {
-            $db->delete($table, ['id_media_object = ?', $id_media_object]);
+        $id = (int) $id_media_object;
+
+        $db->delete('pmt2core_cheapest_price_speed', ['id_media_object = ?', $id]);
+
+        self::_deleteItineraryDataForMediaObject($db, $id);
+
+        $db->delete('pmt2core_touristic_date_attributes', ['id_media_object = ?', $id]);
+        $db->delete('pmt2core_touristic_transports', ['id_media_object = ?', $id]);
+        $db->delete('pmt2core_touristic_dates', ['id_media_object = ?', $id]);
+
+        $db->delete('pmt2core_touristic_options', ['id_media_object = ?', $id]);
+
+        $db->delete('pmt2core_touristic_housing_package_description_links', ['id_media_object = ?', $id]);
+        $db->delete('pmt2core_touristic_housing_packages', ['id_media_object = ?', $id]);
+
+        $db->delete('pmt2core_touristic_seasonal_periods', ['id_media_object = ?', $id]);
+
+        $db->delete('pmt2core_touristic_booking_packages', ['id_media_object = ?', $id]);
+    }
+
+    /**
+     * Remove itinerary steps and variants owned by this media object (including variant-linked package rows).
+     *
+     * @param AdapterInterface $db
+     * @param int $id_media_object
+     * @return void
+     * @throws Exception
+     */
+    private static function _deleteItineraryDataForMediaObject(AdapterInterface $db, int $id_media_object)
+    {
+        $stepRows = $db->fetchAll(
+            'SELECT s.id FROM pmt2core_itinerary_steps s
+            LEFT JOIN pmt2core_itinerary_variants v ON s.id_variant = v.id
+            WHERE s.id_media_object = ?
+               OR v.id_media_object = ?
+               OR v.id_booking_package IN (SELECT id FROM pmt2core_touristic_booking_packages WHERE id_media_object = ?)',
+            [$id_media_object, $id_media_object, $id_media_object]
+        );
+        $stepIds = [];
+        foreach ($stepRows as $row) {
+            $stepIds[] = (int) $row->id;
+        }
+        $stepIds = array_values(array_unique($stepIds));
+
+        if (count($stepIds) > 0) {
+            $placeholders = implode(',', array_fill(0, count($stepIds), '?'));
+            $docRows = $db->fetchAll(
+                'SELECT id FROM pmt2core_itinerary_step_document_media_objects WHERE id_step IN (' . $placeholders . ')',
+                $stepIds
+            );
+            $docIds = [];
+            foreach ($docRows as $row) {
+                $docIds[] = (int) $row->id;
+            }
+            $docIds = array_values(array_unique($docIds));
+            if (count($docIds) > 0) {
+                $docPh = implode(',', array_fill(0, count($docIds), '?'));
+                $db->execute(
+                    'DELETE FROM pmt2core_itinerary_step_document_media_object_derivatives WHERE id_document_media_object IN (' . $docPh . ')',
+                    $docIds
+                );
+                $db->execute(
+                    'DELETE FROM pmt2core_itinerary_step_document_media_objects WHERE id IN (' . $docPh . ')',
+                    $docIds
+                );
+            }
+
+            $sectionRows = $db->fetchAll(
+                'SELECT id FROM pmt2core_itinerary_step_sections WHERE id_step IN (' . $placeholders . ')',
+                $stepIds
+            );
+            $sectionIds = [];
+            foreach ($sectionRows as $row) {
+                $sectionIds[] = (int) $row->id;
+            }
+            $sectionIds = array_values(array_unique($sectionIds));
+            if (count($sectionIds) > 0) {
+                $secPh = implode(',', array_fill(0, count($sectionIds), '?'));
+                $db->execute(
+                    'DELETE FROM pmt2core_itinerary_step_section_contents WHERE id_section IN (' . $secPh . ')',
+                    $sectionIds
+                );
+                $db->execute(
+                    'DELETE FROM pmt2core_itinerary_step_sections WHERE id IN (' . $secPh . ')',
+                    $sectionIds
+                );
+            }
+
+            $db->execute(
+                'DELETE FROM pmt2core_itinerary_step_boards WHERE id_step IN (' . $placeholders . ')',
+                $stepIds
+            );
+            $db->execute(
+                'DELETE FROM pmt2core_itinerary_step_geopoints WHERE id_step IN (' . $placeholders . ')',
+                $stepIds
+            );
+            $db->execute(
+                'DELETE FROM pmt2core_itinerary_step_ports WHERE id_step IN (' . $placeholders . ')',
+                $stepIds
+            );
+            $db->execute(
+                'DELETE FROM pmt2core_itinerary_step_text_media_objects WHERE id_step IN (' . $placeholders . ')',
+                $stepIds
+            );
+            $db->execute(
+                'DELETE FROM pmt2core_itinerary_steps WHERE id IN (' . $placeholders . ')',
+                $stepIds
+            );
+        }
+
+        $variantRows = $db->fetchAll(
+            'SELECT id FROM pmt2core_itinerary_variants WHERE id_media_object = ?
+            OR id_booking_package IN (SELECT id FROM pmt2core_touristic_booking_packages WHERE id_media_object = ?)',
+            [$id_media_object, $id_media_object]
+        );
+        $variantIds = [];
+        foreach ($variantRows as $row) {
+            $variantIds[] = (int) $row->id;
+        }
+        $variantIds = array_values(array_unique($variantIds));
+        if (count($variantIds) > 0) {
+            $varPh = implode(',', array_fill(0, count($variantIds), '?'));
+            $db->execute(
+                'DELETE FROM pmt2core_itinerary_variants WHERE id IN (' . $varPh . ')',
+                $variantIds
+            );
         }
     }
 

@@ -827,6 +827,17 @@ class Picture extends AbstractObject
         }
         $is_section = ($this instanceof Section);
         $id_field = $is_section ? 'id_image_section' : 'id_image';
+        $derivativeNameKeys = array_keys($config['image_handling']['processor']['derivatives']);
+        $existingByName = [];
+        if (count($derivativeNameKeys) > 0) {
+            $existingList = Derivative::listAll([
+                $id_field => $this->getId(),
+                'name' => ['in', implode(',', $derivativeNameKeys)],
+            ]);
+            foreach ($existingList as $row) {
+                $existingByName[$row->name] = $row;
+            }
+        }
         foreach ($config['image_handling']['processor']['derivatives'] as $derivative_name => $derivative_config) {
             $extensions = ['jpg'];
             if(!empty($derivative_config['webp_create'])){
@@ -834,10 +845,7 @@ class Picture extends AbstractObject
             }
             foreach($extensions as $extension) {
                 $derivative_file_name = pathinfo($this->file_name, PATHINFO_FILENAME) . '_' . $derivative_name . '.' . $extension;
-                $existing_derivative = Derivative::listOne([
-                    $id_field => $this->getId(),
-                    'name' => $derivative_name
-                ]);
+                $existing_derivative = $existingByName[$derivative_name] ?? null;
                 if($existing_derivative) {
                     $File = new File(new Bucket($config['image_handling']['storage']));
                     $File->name = $derivative_file_name;

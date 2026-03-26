@@ -226,9 +226,13 @@ class ImportCommand extends AbstractCommand
     private function subFullimport(string $logPath): int
     {
         $importer = new Import('fullimport');
-        Writer::write('Importing all media objects', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         try {
             $importer->import();
+            if ($importer->isResuming()) {
+                Writer::write('Resumed previous fullimport', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+            } else {
+                Writer::write('Importing all media objects', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+            }
             $this->reportErrors($importer, $logPath);
             Writer::write('Import done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         } catch (Exception $e) {
@@ -253,9 +257,13 @@ class ImportCommand extends AbstractCommand
     private function subSync(string $logPath): int
     {
         $importer = new Import('sync');
-        Writer::write('Syncing all media objects (hash-based delta)', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         try {
             $importer->import();
+            if ($importer->isResuming()) {
+                Writer::write('Resumed previous sync', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+            } else {
+                Writer::write('Syncing all media objects (hash-based delta)', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+            }
             $this->reportErrors($importer, $logPath);
             Writer::write('Sync done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         } catch (Exception $e) {

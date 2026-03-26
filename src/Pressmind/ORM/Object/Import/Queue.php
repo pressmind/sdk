@@ -204,6 +204,21 @@ class Queue extends AbstractObject
     }
 
     /**
+     * Returns the original source (e.g. 'sync', 'fullimport') from the first pending queue entry.
+     * @return string|null null when queue is empty
+     * @throws Exception
+     */
+    public static function getSource()
+    {
+        $queue = new self();
+        $entries = $queue->loadAll(null, ['id' => 'ASC'], [0, 1]);
+        if (empty($entries)) {
+            return null;
+        }
+        return $entries[0]->source;
+    }
+
+    /**
      * @return int
      * @throws Exception
      */

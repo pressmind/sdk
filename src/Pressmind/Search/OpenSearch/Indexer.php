@@ -127,6 +127,7 @@ class Indexer extends AbstractIndex
         }
         $mediaObjects = MediaObject::listAll(['id' => ['in', implode(',', $id_media_objects)]]);
         $ids = [];
+        $maxRetries = (int)($this->_config['max_retries'] ?? 2);
         foreach ($mediaObjects as $mediaObject) {
             echo "Processing media object ID {$mediaObject->id}...\n";
             foreach ($this->_languages as $language) {
@@ -139,7 +140,10 @@ class Indexer extends AbstractIndex
                     'id' => $mediaObject->id,
                     'body' => $document
                 ];
-                $response = $this->client->index($params);
+                $response = $this->indexWithRetry($params, $mediaObject->id, $language, $maxRetries);
+                if ($response === null) {
+                    continue;
+                }
                 if (isset($response['result']) && $response['result'] === 'created') {
                     echo "Index for media object ID {$mediaObject->id} created successfully in language {$language}.\n";
                 } elseif (isset($response['result']) && $response['result'] === 'updated') {
@@ -166,6 +170,27 @@ class Indexer extends AbstractIndex
             }
         }
 
+    }
+
+    private function indexWithRetry(array $params, int $id, ?string $language, int $maxRetries): ?array
+    {
+        for ($attempt = 0; $attempt <= $maxRetries; $attempt++) {
+            try {
+                if ($attempt > 0) {
+                    echo "Retrying OpenSearch index for media object ID {$id} (attempt " . ($attempt + 1) . ")...\n";
+                    $this->reconnectOpenSearchClient();
+                    usleep(500000);
+                }
+                return $this->client->index($params);
+            } catch (\Exception $e) {
+                echo "OpenSearch error for media object ID {$id} in language {$language}: " . $e->getMessage() . "\n";
+                if ($attempt >= $maxRetries) {
+                    echo "Skipping media object ID {$id} after " . ($maxRetries + 1) . " attempts.\n";
+                    return null;
+                }
+            }
+        }
+        return null;
     }
 
 

@@ -64,17 +64,32 @@ class AbstractIndex
     {
         $this->_config = Registry::getInstance()->get('config')['data']['search_opensearch'];
         $this->_allowed_visibilities = Registry::getInstance()->get('config')['data']['media_types_allowed_visibilities'];
+        $this->client = $this->createOpenSearchClient();
+        $this->_number_of_shards = isset($this->_config['number_of_shards']) ? $this->_config['number_of_shards'] : 1;
+        $this->_number_of_replicas = isset($this->_config['number_of_replicas']) ? $this->_config['number_of_replicas'] : 0;
+        $this->_languages = $this->getLanguages();
+    }
+
+    protected function createOpenSearchClient(): \OpenSearch\Client
+    {
         $options = [
             'base_uri' => $this->_config['uri'],
             'verify_peer' => false,
+            'timeout' => $this->_config['timeout'] ?? 30,
         ];
         if (!empty($this->_config['username']) && !empty($this->_config['password'])) {
             $options['auth_basic'] = [$this->_config['username'], $this->_config['password']];
         }
-        $this->client = (new SymfonyClientFactory())->create($options);
-        $this->_number_of_shards = isset($this->_config['number_of_shards']) ? $this->_config['number_of_shards'] : 1;
-        $this->_number_of_replicas = isset($this->_config['number_of_replicas']) ? $this->_config['number_of_replicas'] : 0;
-        $this->_languages = $this->getLanguages();
+        $maxRetries = (int)($this->_config['max_retries'] ?? 2);
+        return (new SymfonyClientFactory($maxRetries))->create($options);
+    }
+
+    /**
+     * Recreate the OpenSearch client with a fresh connection.
+     */
+    protected function reconnectOpenSearchClient(): void
+    {
+        $this->client = $this->createOpenSearchClient();
     }
 
     /**

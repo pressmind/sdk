@@ -1256,7 +1256,17 @@ class MongoDB extends AbstractSearch
                         ]
                 ];
             }else{
-                $addFieldsForDepartureSort = ['$addFields' => ['fst_date_departure' => ['$first' => '$prices.date_departures']]];
+                // If date_departures is empty, $first yields null; null sorts before real dates in ascending order.
+                // Use a far-future sentinel so such documents sort last when ascending.
+                $sentinelMs = (new \DateTimeImmutable('2099-12-31T00:00:00.000+00:00'))->getTimestamp() * 1000;
+                $addFieldsForDepartureSort = ['$addFields' => [
+                    'fst_date_departure' => [
+                        '$ifNull' => [
+                            ['$first' => '$prices.date_departures'],
+                            new \MongoDB\BSON\UTCDateTime($sentinelMs),
+                        ],
+                    ],
+                ]];
                 $stages[] = $addFieldsForDepartureSort;
                 $sort = ['$sort' => [
                                 'fst_date_departure' => strtolower($this->_sort[array_key_first($this->_sort)]) == 'asc' ? 1 : -1,

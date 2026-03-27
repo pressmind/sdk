@@ -1603,6 +1603,11 @@ class MediaObject extends AbstractObject
                             }
                         }
                     }
+                    foreach ($option_list as $option) {
+                        if (!empty($option->required) && empty($option->required_group) && in_array($option->state, [1, 2, 3])) {
+                            $cheapest_options['standalone-' . $option->getId()] = $option;
+                        }
+                    }
                     /**
                      * @var Option[] $cheapest_options
                      */

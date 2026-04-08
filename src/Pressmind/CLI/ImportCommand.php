@@ -689,9 +689,10 @@ class ImportCommand extends AbstractCommand
 
     private function printHelp(): void
     {
-        $helptext = "usage: import.php [fullimport | fullimport_touristic | mediaobject | touristic | itinerary | objecttypes | remove_orphans | destroy | depublish | update_tags | offer | calendar | remove_orphans | update_tags | postimport | categories | unlock | create_translations | filestorage] [<single id or commaseparated list of ids>] [debug]\n";
+        $helptext = "usage: import.php [fullimport | sync | fullimport_touristic | mediaobject | touristic | itinerary | objecttypes | remove_orphans | destroy | depublish | update_tags | offer | calendar | remove_orphans | update_tags | postimport | categories | unlock | create_translations | filestorage] [<single id or commaseparated list of ids>] [debug]\n";
         $helptext .= "Example usages:\n";
         $helptext .= "php import.php fullimport\n";
+        $helptext .= "php import.php sync                    <hash-based delta import; only re-imports changed objects, recommended for cron>\n";
         $helptext .= "php import.php fullimport -c=pm-config-example.php <loads the defined config>\n";
         $helptext .= "php import.php fullimport_touristic     <imports only touristic data for all media objects without reimporting the media objects themselves>\n";
         $helptext .= "php import.php mediaobject 12345,12346  <single/multiple ids allowed  / imports one or more media objects>\n";

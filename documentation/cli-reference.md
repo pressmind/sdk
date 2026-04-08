@@ -99,7 +99,8 @@ The first positional argument is the **subcommand**. Many subcommands accept an 
 | Subcommand | Second argument | Description |
 |------------|-----------------|-------------|
 | `fullimport` | — | Imports **all** media objects from the PIM (ID discovery via API, then full import for each). Runs post-import (images, hooks) and optionally the post-import callback (e.g. Redis). |
-| `resume` | — | Processes the **import queue** (e.g. after an interrupted full import). Runs post-import and optional callback for the processed IDs. |
+| `sync` | — | **Hash-based delta import.** Discovers all IDs from the API (like `fullimport`) but only performs a full re-import for objects whose API response hash has changed. Unchanged objects still get time-dependent recalculations (cheapest prices, early-bird expiry, `is_running`) and index updates. Includes orphan removal and post-import. **Recommended for regular cron use** as it is significantly faster than `fullimport` when most objects are unchanged. |
+| `resume` | — | Processes the **import queue** (e.g. after an interrupted full import or sync). Runs post-import and optional callback for the processed IDs. |
 | `mediaobject` | `<id>[,<id>...]` | Imports one or more media objects by ID. Runs post-import for these IDs, optional callback, and prints validation output per object. |
 | `mediaobject_cache_update` | `<id>[,<id>...]` | Does **not** import; only triggers the post-import callback (e.g. Redis cache invalidation/priming) for the given IDs. |
 | `itinerary` | `<id>[,<id>...]` | Imports itineraries for the given media object ID(s). |
@@ -122,7 +123,7 @@ The first positional argument is the **subcommand**. Many subcommands accept an 
 | `help`, `--help`, `-h` | — | Prints usage and subcommand list, then exits. |
 | *(default)* | — | If the first argument is missing or unknown, help is printed. |
 
-**Post-import callback:** When the command is run from the Travelshop wrapper with `PM_REDIS_ACTIVATE` set, the wrapper can register a callback (e.g. `Pressmind\WordPress\PageCache::del_by_id_media_object` and `prime_by_id_media_object`; the global alias `RedisPageCache` remains available for backward compatibility). The SDK command invokes this callback after the relevant subcommands (fullimport, resume, mediaobject, mediaobject_cache_update, touristic, fullimport_touristic) so that Redis full-page cache stays in sync without the SDK depending on Redis or WordPress.
+**Post-import callback:** When the command is run from the Travelshop wrapper with `PM_REDIS_ACTIVATE` set, the wrapper can register a callback (e.g. `Pressmind\WordPress\PageCache::del_by_id_media_object` and `prime_by_id_media_object`; the global alias `RedisPageCache` remains available for backward compatibility). The SDK command invokes this callback after the relevant subcommands (fullimport, sync, resume, mediaobject, mediaobject_cache_update, touristic, fullimport_touristic) so that Redis full-page cache stays in sync without the SDK depending on Redis or WordPress.
 
 ---
 
@@ -135,6 +136,9 @@ Examples are shown **first for the SDK CLI** (recommended), **then for the Trave
 ```bash
 # Full import (all products from PIM)
 php bin/import fullimport
+
+# Hash-based delta sync (recommended for cron)
+php bin/import sync
 
 # Full import with custom config and debug
 php bin/import -c=pm-config-staging.php fullimport debug
@@ -187,6 +191,7 @@ cd /path/to/wp-content/themes/travelshop
 
 # Same subcommands as above, via legacy wrapper
 php cli/import.php fullimport
+php cli/import.php sync
 php cli/import.php -c=pm-config-staging.php fullimport debug
 php cli/import.php mediaobject 12345,12346,12347
 php cli/import.php touristic 12345,12346

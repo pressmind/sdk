@@ -33,6 +33,15 @@ Changes are categorized as:
 
 ## April 2026
 
+### FEATURE: Import `sync` subcommand – hash-based delta import
+
+New CLI subcommand `php bin/import sync` that performs a **hash-based delta import**. Like `fullimport`, it discovers all media object IDs from the API and processes them through the import queue. The key difference: for each object, a SHA-256 hash of the API response is compared against the stored hash from the previous run. Only objects with changed data are fully re-imported (DELETE + INSERT). Unchanged objects still receive time-dependent recalculations (cheapest prices, early-bird expiry, `is_running` flag) and search index updates (MongoDB, OpenSearch, fulltext). Includes orphan removal, post-import hooks, and resume support. A 50ms throttle between hash-only cycles prevents API/NAT saturation. **Recommended for regular cron use** as it is significantly faster than `fullimport` when most objects are unchanged.
+
+- **CLI:** `php bin/import sync` (or legacy wrapper `php cli/import.php sync`)
+- **Behaviour:** Same pipeline as `fullimport` but with `$forceImport = false` — hash comparison via `ImportHash` determines whether a full re-import is needed.
+- **Queue:** Uses the same `pmt2core_import_queue` mechanism. Interrupted runs are automatically resumed.
+- **Post-import callback:** Supported (Redis cache, custom hooks) — same as `fullimport`.
+
 ### FEATURE: Pressmind File Storage – full library sync
 
 Optional synchronization of the entire pressmind **File Storage** tree into local attachment metadata (not only files referenced from media object / WYSIWYG content).

@@ -1,0 +1,18 @@
+{
+  "error": false,
+  "result": {
+    "totalFiles": 1,
+    "totalFolders": 1,
+    "usedStorage": 3749694988,
+    "storageLimit": 107374182400,
+    "favoriteCount": 0,
+    "fileTypes": {
+      "images": 0,
+      "documents": 1,
+      "videos": 0,
+      "audio": 0,
+      "archives": 0,
+      "other": 0
+    }
+  }
+}

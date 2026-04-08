@@ -67,6 +67,7 @@ Replacement is handled by `HelperFunctions::replaceConstantsFromConfig()`.
     "view_scripts": { ... },
     "scaffolder_templates": { ... },
     "file_handling": { ... },
+    "file_storage": { ... },
     "image_handling": { ... }
   },
   "testing": [],
@@ -89,6 +90,7 @@ Each section is documented in detail in its own file:
 | Search (MongoDB, OpenSearch, Hooks) | [config-search.md](config-search.md) | MongoDB indexing, OpenSearch, search hooks |
 | Cache | [config-cache.md](config-cache.md) | Redis cache, cache types, TTL, parameters |
 | Image & File Handling | [config-image-file-handling.md](config-image-file-handling.md) | Derivatives, filters, storage (filesystem/S3), WebP |
+| Pressmind File Storage (full import) | [file-storage-import.md](file-storage-import.md) | Optional full sync of pressmind File Storage into attachments (`file_storage.import_enabled`) |
 | URL Strategies | [config-url-strategies.md](config-url-strategies.md) | Pretty URLs: channel, unique, count-up; config, field types, errors |
 | Sections, Languages & Misc | [config-sections-languages-misc.md](config-sections-languages-misc.md) | Sections, languages, price format, views, scaffolder |
 
@@ -135,6 +137,7 @@ Each section is documented in detail in its own file:
 | `price_format.*` | various | – | [Misc](config-sections-languages-misc.md) |
 | `image_handling.*` | various | – | [Image](config-image-file-handling.md) |
 | `file_handling.*` | various | – | [File](config-image-file-handling.md) |
+| `file_storage.import_enabled` | boolean | `false` | [File Storage](file-storage-import.md) |
 | `view_scripts.*` | various | – | [Misc](config-sections-languages-misc.md) |
 | `scaffolder_templates.*` | various | – | [Misc](config-sections-languages-misc.md) |
 

@@ -7,6 +7,7 @@ use Pressmind\Import\Agency;
 use Pressmind\Import\Brand;
 use Pressmind\Import\CategoryTree;
 use Pressmind\Import\EarlyBird;
+use Pressmind\Import\FileStorage as FileStorageImporter;
 use Pressmind\Import\ImportInterface;
 use Pressmind\Import\Itinerary;
 use Pressmind\Import\ManualCheapestPrice;
@@ -324,6 +325,7 @@ class Import
         }
 
         $this->importMediaObjectsFromFolder();
+        $this->importFileStorageIfEnabled();
         $this->removeOrphans();
         $valid_tree_ids = array_unique(array_map('strval', $this->_imported_category_tree_ids));
         if (!empty($valid_tree_ids)) {
@@ -331,6 +333,40 @@ class Import
         }
         if ($this->_import_type === 'fullimport' || $this->_import_type === 'sync') {
             ImportHash::store('indexing', 'config', $this->_getIndexingConfigHash());
+        }
+    }
+
+    /**
+     * Full import only: sync Pressmind FileStorage metadata into pmt2core_attachments when enabled.
+     */
+    private function importFileStorageIfEnabled(): void
+    {
+        if ($this->_import_type !== 'fullimport') {
+            return;
+        }
+        $config = $this->_config ?? Registry::getInstance()->get('config');
+        if (empty($config['file_storage']['import_enabled'])) {
+            return;
+        }
+        try {
+            $fileStorageImporter = new FileStorageImporter(false, null, true);
+            $fileStorageImporter->import();
+            foreach ($fileStorageImporter->getLog() as $line) {
+                if ($line !== null && $line !== '') {
+                    $this->_log[] = $line;
+                }
+            }
+            foreach ($fileStorageImporter->getErrors() as $err) {
+                $this->_errors[] = $err;
+            }
+        } catch (Exception $e) {
+            $this->_errors[] = '[FileStorage] ' . $e->getMessage();
+            $this->_log[] = Writer::write(
+                $this->_getElapsedTimeAndHeap() . ' Importer::importFileStorageIfEnabled() failed: ' . $e->getMessage(),
+                Writer::OUTPUT_BOTH,
+                'import',
+                Writer::TYPE_ERROR
+            );
         }
     }
 
@@ -1299,7 +1335,8 @@ class Import
         // Find attachments without any reference in AttachmentToMediaObject
         $query = "SELECT a.* FROM pmt2core_attachments a
                   LEFT JOIN pmt2core_attachment_to_media_object rel ON a.id = rel.id_attachment
-                  WHERE rel.id IS NULL";
+                  WHERE rel.id IS NULL
+                  AND (a.synced_from_file_storage IS NULL OR a.synced_from_file_storage = 0)";
 
         try {
             $orphanAttachments = $this->_db->fetchAll($query);
@@ -1399,6 +1436,30 @@ class Import
             $cmd = 'bash -c "exec nohup ' . $php_binary . ' ' . $file_downloader_path . ' > /dev/null 2>&1 &"';
             exec($cmd);
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): '.$cmd, Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        }
+
+        if (!empty($config['file_storage']['import_enabled']) && php_sapi_name() === 'cli') {
+            $attachment_cli = null;
+            $candidates = [
+                APPLICATION_PATH . '/cli/file_storage_downloader.php',
+                APPLICATION_PATH . '/cli/attachment_downloader.php',
+            ];
+            foreach ($candidates as $candidate) {
+                if (is_file($candidate)) {
+                    $attachment_cli = $candidate;
+                    break;
+                }
+            }
+            if ($attachment_cli !== null && !$this->checkRunFile($attachment_cli)) {
+                $cmd = 'bash -c "exec nohup ' . $php_binary . ' ' . $attachment_cli . ' > /dev/null 2>&1 &"';
+                exec($cmd);
+                $this->_log[] = Writer::write(
+                    $this->_getElapsedTimeAndHeap() . ' Importer::postImport(): ' . $cmd,
+                    Writer::OUTPUT_BOTH,
+                    'import',
+                    Writer::TYPE_INFO
+                );
+            }
         }
     }
 

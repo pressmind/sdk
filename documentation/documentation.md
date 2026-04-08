@@ -66,6 +66,7 @@ Welcome to the pressmind SDK documentation. This documentation covers the comple
 | Document | Description |
 |---|---|
 | [Import Process](import-process.md) | Complete import pipeline from pressmind PIM to local database |
+| [Pressmind File Storage (full import)](file-storage-import.md) | `file_storage.import_enabled`, CLI (`filestorage`, `file-storage-import`), post-import downloads, orphan handling |
 | [Import Safety](import-safety.md) | Orphan removal thresholds and transaction safety |
 | [Schema Migration](schema-migration.md) | Automatic schema migration for new PIM fields |
 | [Image Processor](image-processor.md) | Image derivatives, filters, watermarks, storage providers |

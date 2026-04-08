@@ -261,6 +261,7 @@ class MediaObjectData extends AbstractImport implements ImportInterface
                     $attachment->description = isset($attachmentData->description) ? $attachmentData->description : null;
                     $attachment->tmp_url = $attachment->drive_url;
                     $attachment->download_successful = false;
+                    $attachment->synced_from_file_storage = false;
                     $attachment->create();
                     $needsDownload = true;
                     $this->_log[] = Writer::write(
@@ -281,6 +282,7 @@ class MediaObjectData extends AbstractImport implements ImportInterface
                     $attachment->description = isset($attachmentData->description) ? $attachmentData->description : $attachment->description;
                     $attachment->tmp_url = $attachment->drive_url;
                     $attachment->download_successful = false;
+                    $attachment->synced_from_file_storage = false;
                     $attachment->update();
                     $needsDownload = true;
                     $this->_log[] = Writer::write(

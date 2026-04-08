@@ -190,6 +190,8 @@ class ImportCommand extends AbstractCommand
                 return $this->subTouristic($ids, $logPath);
             case 'fullimport_touristic':
                 return $this->subFullimportTouristic($logPath);
+            case 'filestorage':
+                return $this->subFilestorage($logPath);
             default:
                 $this->printHelp();
                 return 0;
@@ -221,6 +223,45 @@ class ImportCommand extends AbstractCommand
     {
         Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
         $this->output->error("WARNING: {$context}:\n" . $e->getMessage() . "\nSEE " . $logPath . " for details");
+    }
+
+    private function subFilestorage(string $logPath): int
+    {
+        $force = $this->hasOption('force');
+        $folderOpt = $this->getOption('folder');
+        $rootFolder = ($folderOpt !== null && $folderOpt !== true && $folderOpt !== '') ? (string) $folderOpt : null;
+        $removeOrphans = $rootFolder === null;
+        $noDownload = $this->hasOption('no-download');
+
+        $importer = null;
+        try {
+            $importer = new \Pressmind\Import\FileStorage($force, $rootFolder, $removeOrphans);
+            $importer->import();
+        } catch (Exception $e) {
+            $this->logImportException($e, $logPath, 'FileStorage import failed');
+            return 1;
+        }
+        if ($importer !== null) {
+            $this->reportFileStorageSideErrors($importer, $logPath);
+        }
+
+        if (!$noDownload) {
+            $dl = new AttachmentDownloaderCommand();
+            $dl->run(['import.php', 'filestorage']);
+        }
+
+        return 0;
+    }
+
+    private function reportFileStorageSideErrors(\Pressmind\Import\FileStorage $importer, string $logPath): void
+    {
+        if (count($importer->getErrors()) === 0) {
+            return;
+        }
+        foreach ($importer->getErrors() as $err) {
+            Writer::write((string) $err, Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
+        }
+        $this->output->writeln('FileStorage reported errors; see ' . $logPath, null);
     }
 
     private function subFullimport(string $logPath): int
@@ -648,7 +689,7 @@ class ImportCommand extends AbstractCommand
 
     private function printHelp(): void
     {
-        $helptext = "usage: import.php [fullimport | fullimport_touristic | mediaobject | touristic | itinerary | objecttypes | remove_orphans | destroy | depublish | update_tags | offer | calendar | remove_orphans | update_tags | postimport | categories | unlock | create_translations] [<single id or commaseparated list of ids>] [debug]\n";
+        $helptext = "usage: import.php [fullimport | fullimport_touristic | mediaobject | touristic | itinerary | objecttypes | remove_orphans | destroy | depublish | update_tags | offer | calendar | remove_orphans | update_tags | postimport | categories | unlock | create_translations | filestorage] [<single id or commaseparated list of ids>] [debug]\n";
         $helptext .= "Example usages:\n";
         $helptext .= "php import.php fullimport\n";
         $helptext .= "php import.php fullimport -c=pm-config-example.php <loads the defined config>\n";
@@ -670,6 +711,7 @@ class ImportCommand extends AbstractCommand
         $helptext .= "php import.php reset_insurances         <truncates all insurance related tables> \n";
         $helptext .= "php import.php dedupe_insurance_relations <removes duplicate rows in insurance_to_insurance / insurance_to_alternate before integrity-check> \n";
         $helptext .= "php import.php powerfilter              <import powerfilters> \n";
+        $helptext .= "php import.php filestorage              <imports FileStorage metadata into attachments; optional: --force --folder=<id> --no-download> \n";
         $helptext .= "Options: --validate (run validation after fullimport/sync; off by default). --no-validate (skip validation after mediaobject/touristic). --force (ignore hash for single mediaobject import). \n";
         $this->output->write($helptext, null);
     }

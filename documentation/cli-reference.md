@@ -18,6 +18,7 @@
 - [Other CLI Commands](#other-cli-commands)
   - [Cache Primer](#cache-primer)
   - [File Downloader](#file-downloader)
+  - [Pressmind File Storage & attachment downloads](#pressmind-file-storage--attachment-downloads)
   - [Fulltext Indexer](#fulltext-indexer)
   - [Index OpenSearch](#index-opensearch)
   - [Image Processor](#image-processor)
@@ -317,6 +318,22 @@ No options or arguments.
 php cli/file_downloader.php
 php bin/file-downloader
 ```
+
+---
+
+### Pressmind File Storage & attachment downloads
+
+For synchronizing **all** pressmind File Storage files into `pmt2core_attachments` (not only files linked from WYSIWYG/media objects), configuration and CLI are documented on a dedicated page: [Pressmind File Storage (full import)](file-storage-import.md).
+
+**Related commands:**
+
+```bash
+php bin/file-storage-import
+php bin/import filestorage
+php bin/attachment-downloader
+```
+
+Theme equivalents: `cli/file_storage_import.php`, `cli/file_storage_downloader.php` / `cli/attachment_downloader.php`.
 
 ---
 

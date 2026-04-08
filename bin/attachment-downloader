@@ -1,0 +1,33 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Pressmind SDK Attachment Downloader
+ *
+ * Retries downloads for rows in pmt2core_attachments with download_successful = 0.
+ * Requires application bootstrap (Registry config + db).
+ *
+ * Usage:
+ *   php bin/attachment-downloader
+ */
+
+$autoloadPaths = [
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../../autoload.php',
+];
+
+$autoloaderFound = false;
+foreach ($autoloadPaths as $autoloadPath) {
+    if (file_exists($autoloadPath)) {
+        require_once $autoloadPath;
+        $autoloaderFound = true;
+        break;
+    }
+}
+
+if (!$autoloaderFound) {
+    fwrite(STDERR, "Autoloader not found. Please run 'composer install'.\n");
+    exit(1);
+}
+
+$command = new \Pressmind\CLI\AttachmentDownloaderCommand();
+exit($command->run($argv));

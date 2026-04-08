@@ -72,7 +72,7 @@ class ImportCommandTest extends TestCase
             'itinerary', 'objecttypes', 'destroy', 'depublish', 'offer',
             'calendar', 'remove_orphans', 'update_tags', 'postimport',
             'categories', 'unlock', 'create_translations', 'reset_insurances',
-            'powerfilter',
+            'powerfilter', 'filestorage',
         ];
 
         foreach ($expected as $sub) {

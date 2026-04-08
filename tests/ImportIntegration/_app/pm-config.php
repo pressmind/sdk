@@ -592,6 +592,9 @@ $config = [
             ],
             'http_src' => 'WEBSERVER_HTTP/assets/files',
         ],
+        'file_storage' => [
+            'import_enabled' => false,
+        ],
         'image_handling' => [
             'processor' => [
                 'adapter' => 'ImageMagick',

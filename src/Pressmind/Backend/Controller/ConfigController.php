@@ -21,6 +21,7 @@ class ConfigController extends AbstractController
         'cache' => 'Cache',
         'image_handling' => 'Image Handling',
         'file_handling' => 'File Handling',
+        'file_storage' => 'Pressmind File Storage (full import)',
     ];
 
     public function indexAction(): void

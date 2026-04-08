@@ -1,0 +1,23 @@
+{
+  "error": false,
+  "result": [
+    {
+      "_id": "fixture-file-001",
+      "name": "Sample Document.pdf",
+      "extension": "pdf",
+      "mimeType": "application/pdf",
+      "fileSize": 1758968,
+      "drive_url": "https://example.test/drive/files/fixture-folder-001/sample-document.pdf",
+      "description": null,
+      "tags": [],
+      "path": "/pdf/",
+      "hash": "c598b5eb86ceea54a5c97aab29111198",
+      "folder": {
+        "_id": "fixture-folder-001",
+        "name": "pdf",
+        "parentId": null,
+        "path": "/pdf/"
+      }
+    }
+  ]
+}

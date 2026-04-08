@@ -25,6 +25,7 @@ use Pressmind\Storage\Bucket;
  * @property string $description
  * @property string $tmp_url
  * @property boolean $download_successful
+ * @property boolean $synced_from_file_storage When true, row is managed by FileStorage full import (excluded from attachment orphan cleanup).
  */
 class Attachment extends AbstractObject
 {
@@ -158,7 +159,16 @@ class Attachment extends AbstractObject
                 'filters' => null,
                 'validators' => null,
                 'default_value' => false
-            ]
+            ],
+            'synced_from_file_storage' => [
+                'title' => 'synced_from_file_storage',
+                'name' => 'synced_from_file_storage',
+                'type' => 'boolean',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+                'default_value' => false,
+            ],
         ]
     ];
 

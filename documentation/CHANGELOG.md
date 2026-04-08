@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the pressmind SDK from February 2025 to February 2026.
+All notable changes to the pressmind SDK from February 2025 to April 2026.
 
 Changes are categorized as:
 - **FEATURE** – New functionality
@@ -12,6 +12,7 @@ Changes are categorized as:
 
 ## Table of Contents
 
+- [April 2026](#april-2026)
 - [March 2026](#march-2026)
 - [February 2026](#february-2026)
 - [January 2026](#january-2026)
@@ -27,6 +28,25 @@ Changes are categorized as:
 - [March 2025](#march-2025)
 - [February 2025](#february-2025)
 - [Summary of Breaking Changes](#summary-of-breaking-changes)
+
+---
+
+## April 2026
+
+### FEATURE: Pressmind File Storage – full library sync
+
+Optional synchronization of the entire pressmind **File Storage** tree into local attachment metadata (not only files referenced from media object / WYSIWYG content).
+
+- **Configuration:** `file_storage.import_enabled` (default `false`); when `true`, **`fullimport`** runs `Pressmind\Import\FileStorage` after media objects (metadata only; binaries fetched separately).
+- **CLI:** `FileStorageImportCommand` — `php bin/file-storage-import` with `--force`, `--folder=<id>`, `--no-download`; `php bin/import filestorage` (same options); `php bin/attachment-downloader` for pending downloads. Travelshop themes may ship `cli/file_storage_import.php`, `cli/file_storage_downloader.php`, and `cli/attachment_downloader.php` wrappers.
+- **ORM:** `Attachment::$synced_from_file_storage` distinguishes API-synced rows from WYSIWYG-created rows.
+- **Orphans:** `_removeOrphanAttachments()` skips `synced_from_file_storage = 1`; full File Storage runs remove stale synced rows missing from the API (partial `--folder` imports do not run global stale removal).
+- **Post-import (CLI):** After `image_processor` and `file_downloader`, spawns `file_storage_downloader.php` or `attachment_downloader.php` when `import_enabled` is `true` (same `AttachmentDownloaderCommand` implementation).
+
+### DOCUMENTATION: File Storage full import (`file-storage-import.md`)
+
+- New reference: [file-storage-import.md](file-storage-import.md) — background (File Storage vs MO-linked files), configuration, CLI entry points, fullimport integration, post-import downloads, orphan semantics.
+- Cross-links added from [documentation.md](documentation.md), [configuration.md](configuration.md), [import-process.md](import-process.md) (orphan removal), and [cli-reference.md](cli-reference.md).
 
 ---
 

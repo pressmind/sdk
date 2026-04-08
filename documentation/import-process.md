@@ -401,7 +401,9 @@ After a full import, the SDK compares all imported IDs against the existing data
 
 Orphan removal also deletes:
 - MongoDB index documents
-- Orphan attachments (files without media object reference)
+- Orphan attachments (files without media object reference in `pmt2core_attachment_to_media_object`)
+
+Attachments imported from **pressmind File Storage** full sync (`synced_from_file_storage = 1`) are **excluded** from this pass so they are not treated as orphans. Stale File Storage files are removed separately when the File Storage importer reconciles with the API. See [Pressmind File Storage (full import)](file-storage-import.md).
 
 ---
 

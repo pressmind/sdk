@@ -3,6 +3,7 @@
 namespace Pressmind\CLI;
 
 use Exception;
+use Pressmind\System\SchemaMigratedException;
 use Pressmind\Import;
 use Pressmind\Import\CategoryTree;
 use Pressmind\Registry;
@@ -276,6 +277,12 @@ class ImportCommand extends AbstractCommand
             }
             $this->reportErrors($importer, $logPath);
             Writer::write('Import done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        } catch (SchemaMigratedException $e) {
+            $this->output->writeln('', null);
+            $this->output->writeln('SCHEMA MIGRATION: ' . $e->getMessage(), null);
+            $this->output->writeln('The import has been stopped. Please re-run the same import command.', null);
+            $this->output->writeln('', null);
+            return 2;
         } catch (Exception $e) {
             $this->logImportException($e, $logPath);
             return 1;
@@ -307,6 +314,12 @@ class ImportCommand extends AbstractCommand
             }
             $this->reportErrors($importer, $logPath);
             Writer::write('Sync done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        } catch (SchemaMigratedException $e) {
+            $this->output->writeln('', null);
+            $this->output->writeln('SCHEMA MIGRATION: ' . $e->getMessage(), null);
+            $this->output->writeln('The import has been stopped. Please re-run the same import command.', null);
+            $this->output->writeln('', null);
+            return 2;
         } catch (Exception $e) {
             $this->logImportException($e, $logPath);
             return 1;
@@ -336,6 +349,12 @@ class ImportCommand extends AbstractCommand
             }
             $this->reportErrors($importer, $logPath);
             Writer::write('Import done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
+        } catch (SchemaMigratedException $e) {
+            $this->output->writeln('', null);
+            $this->output->writeln('SCHEMA MIGRATION: ' . $e->getMessage(), null);
+            $this->output->writeln('The import has been stopped. Please re-run the same import command.', null);
+            $this->output->writeln('', null);
+            return 2;
         } catch (Exception $e) {
             $this->logImportException($e, $logPath);
             return 1;
@@ -362,6 +381,12 @@ class ImportCommand extends AbstractCommand
             Writer::write('Import done.', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             $importer->postImport($ids);
             $this->reportErrors($importer, $logPath);
+        } catch (SchemaMigratedException $e) {
+            $this->output->writeln('', null);
+            $this->output->writeln('SCHEMA MIGRATION: ' . $e->getMessage(), null);
+            $this->output->writeln('The import has been stopped. Please re-run the same import command.', null);
+            $this->output->writeln('', null);
+            return 2;
         } catch (Exception $e) {
             $this->logImportException($e, $logPath);
             return 1;

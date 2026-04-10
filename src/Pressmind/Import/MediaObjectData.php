@@ -88,6 +88,10 @@ class MediaObjectData extends AbstractImport implements ImportInterface
                 if ($migrationResult['migrated']) {
                     $this->_log[] = $this->_getElapsedTimeAndHeap() . ' MediaObjectData::import(' . $this->_id_media_object . '): Schema migrated, added fields: ' .
                         implode(', ', array_keys($migrationResult['fields']));
+                    throw new SchemaMigratedException(
+                        (int)$this->_data->id_media_objects_data_type,
+                        $migrationResult['fields']
+                    );
                 }
 
                 if (!empty($migrationResult['obsolete_fields'])) {

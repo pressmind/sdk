@@ -31,6 +31,7 @@ use Pressmind\REST\Client;
 use \Exception;
 use Pressmind\Search\MongoDB\Indexer;
 use Pressmind\System\EnvironmentValidation;
+use Pressmind\System\SchemaMigratedException;
 
 /**
  * Class Importer
@@ -563,6 +564,9 @@ class Import
                         $this->importMediaObject($id);
                         break;
                 }
+            } catch (SchemaMigratedException $e) {
+                Queue::remove($id);
+                throw $e;
             } catch (Exception $e) {
                 $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Import failed for ' . $id . ': ' . $e->getMessage(), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR);
                 $this->_errors[] = '[Import] Import failed for ' . $id . ': ' . $e->getMessage();
@@ -1097,6 +1101,15 @@ class Import
             ImportHash::store((string) $id_media_object, 'media_object', $newHash);
             $this->_changed_ids[] = $id_media_object;
             $this->_db->commit();
+            } catch (SchemaMigratedException $e) {
+                try { $this->_db->rollback(); } catch (Exception $ignore) {}
+                $this->_log[] = Writer::write(
+                    'Schema migration completed for MediaObject ' . $id_media_object . ': ' . $e->getMessage(),
+                    Writer::OUTPUT_BOTH,
+                    'import',
+                    Writer::TYPE_INFO
+                );
+                throw $e;
             } catch (Exception $e) {
                 $this->_db->rollback();
                 $this->_log[] = Writer::write(

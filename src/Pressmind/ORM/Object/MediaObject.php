@@ -695,7 +695,7 @@ class MediaObject extends AbstractObject
     public static function getByCode($code)
     {
         $object = new self();
-        return $object->loadAll('code = "' . $code.'"');
+        return $object->loadAll(['code' => $code]);
     }
 
     /**
@@ -2196,14 +2196,20 @@ class MediaObject extends AbstractObject
                     if(!empty($data->$name)) {
                         $add_to_complete_fulltext = in_array($name, $config['data']['media_types_fulltext_index_fields'][$this->id_object_type]);
                         if ($definition['type'] == 'string') {
+                            $raw = $data->$name;
+                            if (! is_string($raw)) {
+                                continue;
+                            }
+                            $stripped = trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('>', '> ', $raw))));
+                            $normalized = FulltextSearch::replaceChars($stripped);
                             $fulltext[] = [
                                 'var_name' => $name,
                                 'language' => $language,
                                 'id_media_object' => $this->getId(),
-                                'fulltext_values' => trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('>', '> ', $data->$name))))
+                                'fulltext_values' => $normalized,
                             ];
                             if ($add_to_complete_fulltext) {
-                                $complete_fulltext[$language][] = trim(preg_replace('/\s+/', ' ', strip_tags(str_replace('>', '> ', $data->$name))));
+                                $complete_fulltext[$language][] = $normalized;
                             }
                         }
                         if ($definition['type'] == 'relation') {
@@ -2859,7 +2865,12 @@ class MediaObject extends AbstractObject
             $p[] = 'url='.base64_encode($url);
         }
         $config = Registry::getInstance()->get('config');
-        $base_url = !empty($config['ib3']['endpoint']) ? trim($config['ib3']['endpoint'],'/') : '';
+        $base_url = '';
+        if (!empty($config['ib3']['endpoint'])) {
+            $base_url = trim($config['ib3']['endpoint'], '/');
+        } elseif (!empty($config['ib3']['api_endpoint'])) {
+            $base_url = trim($config['ib3']['api_endpoint'], '/');
+        }
         return $base_url.'/?'.implode('&', $p);
     }
 }

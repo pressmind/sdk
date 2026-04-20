@@ -33,19 +33,39 @@ Changes are categorized as:
 
 ## April 2026
 
-### SECURITY: Security hardening (12 fixes)
+### SECURITY: Security hardening (12+ fixes)
 
-Comprehensive security hardening addressing 12 reported vulnerabilities (GHSA advisories).
+Comprehensive security hardening addressing 12 reported vulnerabilities (GHSA advisories) plus ongoing work on 176 findings from an independent security audit.
 
 **BREAKING: REST API authentication fail-close (GHSA-97p4-c5px-x3pj)**
 
 `REST\Server::_checkAuthentication()` now returns `false` (deny) when no API credentials are configured. Previously it returned `true` (allow-all), making unconfigured installations fully open. **Action required:** Ensure `rest.server.api_key` or `rest.server.api_user` + `rest.server.api_password` are set in your `config.json` before upgrading. Installations that already have credentials configured are not affected.
 
-**SQL injection fixes (GHSA-pcj9, GHSA-7578, GHSA-pvg8, GHSA-mfjm)**
+**SQL injection fixes (GHSA-pcj9, GHSA-7578, GHSA-pvg8, GHSA-mfjm, GHSA-3grc)**
 
 - `Touristic\Startingpoint::getOptions()`, `getCheapestOption()`, `getOptionByIdPlus()`: Migrated from string concatenation to prepared statements with parameterized queries. All user-supplied values (IDs, ibe_client, start, limit) now use PDO placeholders or integer casts.
 - `Search::_buildQuery()`: ORDER BY property names are validated against `[a-zA-Z0-9_.` + backtick]`, direction restricted to ASC/DESC, LIMIT values cast to integer.
 - `ORM\Object\AbstractObject::loadAll()`: Order column names validated (alphanumeric + underscore), direction restricted to ASC/DESC, limit values cast to integer.
+- `ORM\Object\AbstractObject::loadAll()`: **WHERE clause column names** are now validated against the model's property definitions. Invalid column names throw `\InvalidArgumentException`. Column names are backtick-escaped in generated SQL.
+- `ORM\Object\AbstractObject::loadAll()`: **SQL operators** are validated against an allowlist (`=`, `!=`, `<>`, `<`, `>`, `<=`, `>=`, `LIKE`, `NOT LIKE`, `IN`, `NOT IN`, `IS NULL`, `IS NOT NULL`, `BETWEEN`). Invalid operators throw `\InvalidArgumentException`.
+- `ORM\Object\MediaObject::getByCode()`: Migrated from raw string concatenation to array-based WHERE syntax.
+- `ORM\Object\ProcessList::getLock()`: Migrated from raw string concatenation to array-based WHERE syntax.
+- `Backend\Controller\DashboardController::getLastErrors()`: Migrated from string WHERE to array-based IN syntax.
+- `REST\Controller\AbstractController::listAll()`: Limit values cast to integer, order parameter extraction hardened.
+
+**DEPRECATED: Raw SQL string in loadAll() $where parameter**
+
+Passing a raw SQL string as the `$where` parameter to `loadAll()` now triggers `E_USER_DEPRECATED`. Use array syntax instead:
+
+```php
+// Before (deprecated):
+$obj->loadAll('code = "' . $code . '"');
+$obj->loadAll('type IN ("ERROR","FATAL")');
+
+// After:
+$obj->loadAll(['code' => $code]);
+$obj->loadAll(['type' => ['IN', 'ERROR,FATAL']]);
+```
 
 **NoSQL injection fix (GHSA-g4w3)**
 
@@ -73,6 +93,15 @@ Comprehensive security hardening addressing 12 reported vulnerabilities (GHSA ad
 **Log injection fix (GHSA-vgxw)**
 
 `Log\Writer::write()`: Newline characters (CR, LF, CRLF) are replaced with spaces in log output to prevent log forging. The `$filename` parameter is sanitized with `basename()` to prevent path traversal.
+
+### CHANGE: Integrity check now includes security configuration validation
+
+`bin/integrity-check` now runs a security configuration check via `EnvironmentValidation::validateSecurityConfig()`:
+
+- **Critical** warning if backend admin password is a default value (`change-me-in-production`, empty, etc.)
+- **Critical** warning if REST API key is empty (API may be unauthenticated)
+- **Warning** if REST API password or database password is empty
+- **Info** notice if no `.env` file is found (recommending credential migration)
 
 ### FEATURE: OpenSearch k-NN vector search (optional)
 
@@ -663,6 +692,9 @@ General SDK stability fix.
 | **Jun 2025** | Removed `scheduled_tasks` config section | Implement own cron scheduling |
 | **Mar 2025** | REST API version upgraded from v2-18 to v2-21 | Ensure compatible Webcore version |
 | **Apr 2026** | REST API auth fail-close: unconfigured APIs now deny all requests | Set `rest.server.api_key` or `api_user`/`api_password` in config |
+| **Apr 2026** | `loadAll()` WHERE column names validated against model schema | Ensure column names passed to `loadAll()` match `$_definitions['properties']` |
+| **Apr 2026** | `loadAll()` SQL operators validated against allowlist | Ensure operators are standard SQL (`=`, `IN`, `LIKE`, etc.) |
+| **Apr 2026** | Raw SQL string in `loadAll()` `$where` deprecated | Migrate to array syntax (see examples above) |
 | **Feb 2026** | New `batchInsert()` method on `AdapterInterface` | Update custom DB adapters |
 
 ---
@@ -673,7 +705,7 @@ General SDK stability fix.
 |---|---|---|
 | `bin/database-integrity-check` | Feb 2026 | Validate MySQL schema against ORM definitions |
 | `bin/touristic-orphans` | Jan 2026 | Find products without CheapestPrice entries |
-| `bin/integrity-check` | Jan 2026 | General system integrity check |
+| `bin/integrity-check` | Jan 2026 | General system integrity check (now with security config validation) |
 
 ---
 

@@ -184,11 +184,29 @@ abstract class AbstractObject
     }
 
     /**
-     * @param string|array $where
-     * @param array $order
-     * @param array $limit
+     * Loads all records matching the given criteria.
+     *
+     * Column names and operators are validated against the model schema.
+     * Passing a raw SQL string as $where is deprecated -- use array syntax:
+     *
+     *   // Simple equality:
+     *   $obj->loadAll(['status' => 'active']);
+     *
+     *   // With operator:
+     *   $obj->loadAll(['price' => ['>=', 100]]);
+     *
+     *   // IN clause (comma-separated values):
+     *   $obj->loadAll(['type' => ['IN', 'ERROR,FATAL']]);
+     *
+     *   // IS NULL:
+     *   $obj->loadAll(['deleted_at' => 'IS NULL']);
+     *
+     * @param array|string|null $where Array of column => value pairs, or null for no filter
+     * @param array|null $order Array of column => direction ('ASC'|'DESC')
+     * @param array|null $limit Array of [offset, count]
      * @return array
      * @throws Exception
+     * @throws \InvalidArgumentException When column name or operator is not allowed
      */
     public function loadAll($where = null, $order = null, $limit = null)
     {
@@ -202,10 +220,18 @@ abstract class AbstractObject
         if (is_array($where)) {
             $query .= " WHERE ";
             $where_i = 0;
+            $allowedColumns = array_keys($this->_definitions['properties']);
+            $allowedOperators = ['=', '!=', '<>', '<', '>', '<=', '>=', 'LIKE', 'NOT LIKE', 'IN', 'NOT IN', 'IS NULL', 'IS NOT NULL', 'BETWEEN'];
             foreach ($where as $key => $value) {
+                if (!in_array($key, $allowedColumns, true)) {
+                    throw new \InvalidArgumentException(
+                        sprintf('Invalid column name "%s" in WHERE clause for %s. Allowed: %s',
+                            $key, $this->getDbTableName(), implode(', ', $allowedColumns))
+                    );
+                }
                 $variable_replacement = ' ?';
                 if (is_array($value) && count($value) >= 2) {
-                    $operator = $value[0];
+                    $operator = strtoupper(trim($value[0]));
                     $value = $value[1];
                 } elseif(is_array($value) && count($value) == 1) {
                     $value = $value[0];
@@ -216,7 +242,12 @@ abstract class AbstractObject
                 } else {
                     $operator = '=';
                 }
-                if(strtolower($operator) == 'in' || strtolower($operator) == 'not in') {
+                if (!in_array($operator, $allowedOperators, true)) {
+                    throw new \InvalidArgumentException(
+                        sprintf('Invalid SQL operator "%s" in WHERE clause for column "%s"', $operator, $key)
+                    );
+                }
+                if($operator === 'IN' || $operator === 'NOT IN') {
                     $value_array = explode(',', $value);
                     $variable_replacement = ' (' . implode(',', array_fill(0,count($value_array),'?')) . ')';
                     foreach ($value_array as $item) {
@@ -233,17 +264,22 @@ abstract class AbstractObject
                 } else if($value === 'IS NOT NULL') {
                     $operator = 'IS NOT NULL';
                     $variable_replacement = '';
-                } else if(strtolower($operator) != 'in'  && strtolower($operator) != 'not in') {
+                } else if($operator !== 'IN' && $operator !== 'NOT IN') {
                     $values[] = $value;
                 }
                 $keys[] = $key;
                 if($where_i > 0) {
                     $query .= ' AND ';
                 }
-                $query .= $key . ' ' . $operator . $variable_replacement;
+                $query .= '`' . $key . '` ' . $operator . $variable_replacement;
                 $where_i++;
             }
         } else if(!is_null($where)) {
+            @trigger_error(
+                'Passing a raw SQL string as $where to loadAll() is deprecated and will be removed in a future major version. '
+                . 'Use array syntax instead. Class: ' . $class_name,
+                E_USER_DEPRECATED
+            );
             $query .= " WHERE " . $where;
         }
         if(isset($this->_definitions['database']['order_columns']) && !is_null($this->_definitions['database']['order_columns'])) {

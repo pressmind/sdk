@@ -121,7 +121,7 @@ class DashboardController extends AbstractController
     {
         try {
             $log = new Log();
-            $logs = $log->loadAll("type IN ('ERROR', 'FATAL')", ['date' => 'DESC'], [0, $limit]);
+            $logs = $log->loadAll(['type' => ['IN', 'ERROR,FATAL']], ['date' => 'DESC'], [0, $limit]);
             $out = [];
             foreach ($logs as $l) {
                 $out[] = [

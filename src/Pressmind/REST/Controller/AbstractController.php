@@ -48,7 +48,7 @@ abstract class AbstractController
             unset($parameters['apiTemplate']);
         }
         if(isset($parameters['start']) && isset($parameters['limit'])) {
-            $limit = [$parameters['start'], $parameters['limit']];
+            $limit = [(int)$parameters['start'], (int)$parameters['limit']];
             unset($parameters['start']);
             unset($parameters['limit']);
         }
@@ -56,11 +56,20 @@ abstract class AbstractController
             $properties = $parameters['properties'];
             unset($parameters['properties']);
         }
+        if(isset($parameters['order'])) {
+            $orderParam = $parameters['order'];
+            unset($parameters['order']);
+            if(is_array($orderParam)) {
+                $order = $orderParam;
+            }
+        }
         if(count($parameters) == 1 && isset($parameters['id'])) {
             return $this->read($parameters['id'], $readRelations, $apiTemplate, $properties);
         }
         $this->orm_class->setReadRelations($readRelations);
-        if(count($parameters) == 0) $parameters = null;
+        if(count($parameters) == 0) {
+            $parameters = null;
+        }
         if(!is_null($apiTemplate)) {
             $result = [];
             foreach($this->orm_class->loadAll($parameters, $order, $limit) as $object) {

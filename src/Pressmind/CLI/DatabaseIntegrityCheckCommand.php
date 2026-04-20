@@ -10,6 +10,7 @@ use Pressmind\ObjectTypeScaffolder;
 use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\Registry;
 use Pressmind\REST\Client;
+use Pressmind\System\EnvironmentValidation;
 use Pressmind\System\Info;
 
 /**
@@ -60,15 +61,16 @@ class DatabaseIntegrityCheckCommand extends AbstractCommand
         $hasErrors = $this->checkCustomMediaTypes() || $hasErrors;
         $this->checkFragmentation();
         $this->checkLogTableSize();
+        $this->checkSecurityConfiguration();
 
         $this->output->newLine();
 
         if ($hasErrors) {
-            $this->output->warning('Some tables had integrity violations. Review output above.');
+            $this->output->warning('Integrity violations found. Review output above.');
             return 1;
         }
 
-        $this->output->success('All database tables are up to date.');
+        $this->output->success('All checks passed.');
         return 0;
     }
 
@@ -458,5 +460,46 @@ class DatabaseIntegrityCheckCommand extends AbstractCommand
     {
         $this->output->writeln('  ' . $sql);
         $db->execute($sql);
+    }
+
+    private function checkSecurityConfiguration(): void
+    {
+        $this->output->newLine();
+        $this->output->writeln('Checking security configuration...', 'cyan');
+
+        $config = Registry::getInstance()->get('config');
+        if (!is_array($config) || empty($config)) {
+            $this->output->info('No config loaded in Registry. Security check skipped.');
+            $this->output->newLine();
+            return;
+        }
+
+        $configFile = defined('PM_CONFIG') ? PM_CONFIG : (getenv('PM_CONFIG') ?: null);
+        $env = defined('ENV') ? ENV : (getenv('APP_ENV') ?: 'development');
+        $configLabel = ($configFile !== null ? $configFile : 'Registry') . ':' . $env;
+        $this->output->writeln('Config: ' . $configLabel);
+
+        $appPath = defined('APPLICATION_PATH') ? APPLICATION_PATH : getcwd();
+        $result = EnvironmentValidation::validateSecurityConfig($config, $appPath);
+
+        foreach ($result['warnings'] as $warning) {
+            switch ($warning['level']) {
+                case 'critical':
+                    $this->output->error($warning['message'] . ' (' . $warning['field'] . ')');
+                    break;
+                case 'warning':
+                    $this->output->warning($warning['message'] . ' (' . $warning['field'] . ')');
+                    break;
+                default:
+                    $this->output->info($warning['message']);
+                    break;
+            }
+        }
+
+        if (empty($result['warnings'])) {
+            $this->output->success('Security configuration OK.');
+        }
+
+        $this->output->newLine();
     }
 }

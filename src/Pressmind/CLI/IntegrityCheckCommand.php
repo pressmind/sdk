@@ -40,6 +40,9 @@ class IntegrityCheckCommand extends AbstractCommand
         // 3. Check environment consistency
         $hasErrors = $this->checkEnvironmentConsistency() || $hasErrors;
 
+        // 4. Check security configuration
+        $hasErrors = $this->checkSecurityConfiguration() || $hasErrors;
+
         $this->output->newLine();
 
         if ($hasErrors) {
@@ -238,6 +241,59 @@ class IntegrityCheckCommand extends AbstractCommand
         $this->output->writeln('║                                                                       ║', 'red');
         $this->output->writeln('╚═══════════════════════════════════════════════════════════════════════╝', 'red');
         $this->output->newLine();
+    }
+
+    /**
+     * Checks security-relevant configuration settings.
+     *
+     * @return bool True if critical errors were found
+     */
+    private function checkSecurityConfiguration(): bool
+    {
+        $this->output->newLine();
+        $this->output->writeln('Checking security configuration...', 'cyan');
+
+        $config = null;
+        try {
+            $registry = \Pressmind\Registry::getInstance();
+            $registryConfig = $registry->get('config');
+            if (is_array($registryConfig) && !empty($registryConfig)) {
+                $config = $registryConfig;
+            }
+        } catch (\Throwable $e) {
+            // Registry not initialized
+        }
+
+        if ($config === null) {
+            $this->output->info('No config loaded. Security check skipped.');
+            return false;
+        }
+
+        $appPath = $this->getOption('app-path', defined('APPLICATION_PATH') ? APPLICATION_PATH : getcwd());
+        $result = EnvironmentValidation::validateSecurityConfig($config, $appPath);
+
+        if (empty($result['warnings'])) {
+            $this->output->success('Security configuration OK.');
+            return false;
+        }
+
+        $hasCritical = false;
+        foreach ($result['warnings'] as $warning) {
+            switch ($warning['level']) {
+                case 'critical':
+                    $this->output->error($warning['message'] . ' (' . $warning['field'] . ')');
+                    $hasCritical = true;
+                    break;
+                case 'warning':
+                    $this->output->warning($warning['message'] . ' (' . $warning['field'] . ')');
+                    break;
+                default:
+                    $this->output->info($warning['message']);
+                    break;
+            }
+        }
+
+        return $hasCritical;
     }
 
     /**

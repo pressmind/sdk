@@ -488,4 +488,71 @@ class EnvironmentValidation
             'message' => 'Binary verified as PHP.'
         ];
     }
+
+    /**
+     * Validates security-relevant configuration settings.
+     *
+     * @param array $config The already-loaded config array (e.g. from Registry)
+     * @param string $appPath Application directory (used to check for .env file)
+     * @return array{warnings: array<int, array{level: string, message: string, field: string}>, valid: bool}
+     */
+    public static function validateSecurityConfig(array $config, string $appPath = ''): array
+    {
+        $warnings = [];
+
+        if (empty($config)) {
+            return ['warnings' => [['level' => 'warning', 'message' => 'Config is empty', 'field' => 'config']], 'valid' => true];
+        }
+
+        $defaultPasswords = ['change-me-in-production', 'your-secret-password', 'admin', 'password', ''];
+
+        $backendPassword = $config['backend']['auth']['config']['password'] ?? null;
+        if ($backendPassword !== null && in_array($backendPassword, $defaultPasswords, true)) {
+            $warnings[] = [
+                'level' => 'critical',
+                'message' => 'Backend admin password is set to a default/empty value. Change it immediately.',
+                'field' => 'backend.auth.config.password',
+            ];
+        }
+
+        $restApiKey = $config['rest']['server']['api_key'] ?? '';
+        if (empty($restApiKey)) {
+            $warnings[] = [
+                'level' => 'critical',
+                'message' => 'REST API key is empty. The API may be accessible without authentication.',
+                'field' => 'rest.server.api_key',
+            ];
+        }
+
+        $restApiPassword = $config['rest']['server']['api_password'] ?? '';
+        if (empty($restApiPassword)) {
+            $warnings[] = [
+                'level' => 'warning',
+                'message' => 'REST API password is empty.',
+                'field' => 'rest.server.api_password',
+            ];
+        }
+
+        $dbPassword = $config['database']['password'] ?? '';
+        if (empty($dbPassword)) {
+            $warnings[] = [
+                'level' => 'warning',
+                'message' => 'Database password is empty.',
+                'field' => 'database.password',
+            ];
+        }
+
+        if ($appPath !== '' && !file_exists($appPath . '/.env')) {
+            $warnings[] = [
+                'level' => 'info',
+                'message' => 'No .env file found. Consider moving credentials to a .env file for better security.',
+                'field' => '.env',
+            ];
+        }
+
+        return [
+            'warnings' => $warnings,
+            'valid' => empty(array_filter($warnings, function ($w) { return $w['level'] === 'critical'; })),
+        ];
+    }
 }

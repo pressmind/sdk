@@ -181,7 +181,7 @@ class ProcessList extends AbstractObject
     public static function getLock($name)
     {
         $obj = new self();
-        $results = $obj->loadAll('name = "' . $name . '"');
+        $results = $obj->loadAll(['name' => $name]);
         if (empty($results)) {
             return null;
         }

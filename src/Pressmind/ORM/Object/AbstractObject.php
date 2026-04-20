@@ -254,6 +254,13 @@ abstract class AbstractObject
 
         if(!is_null($order) && is_array($order)) {
             foreach ($order as $column_name => $direction) {
+                if(!preg_match('/^[a-zA-Z0-9_]+$/', $column_name)) {
+                    continue;
+                }
+                $direction = strtoupper(trim($direction));
+                if(!in_array($direction, ['ASC', 'DESC'], true)) {
+                    $direction = 'ASC';
+                }
                 $order_columns[] = '`'.$column_name . '` ' . $direction;
             }
         }
@@ -263,7 +270,7 @@ abstract class AbstractObject
         }
 
         if(!is_null($limit)) {
-            $query .= ' LIMIT ' . $limit[0] . ', ' . $limit[1];
+            $query .= ' LIMIT ' . (int)$limit[0] . ', ' . (int)$limit[1];
         }
 
         if($registry->get('config')['cache']['enabled'] && in_array('QUERY', $registry->get('config')['cache']['types']) && $this->_use_cache) {

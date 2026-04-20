@@ -144,7 +144,7 @@ class PageCache
         $is_refresh = isset($_GET['cache-refresh']);
 
         $cache = self::$redis->get(self::$request_hash);
-        $cache = !empty($cache) ? unserialize($cache) : null;
+        $cache = !empty($cache) ? unserialize($cache, ['allowed_classes' => false]) : null;
 
         if (is_array($cache) && empty($cache) === false && !$is_refresh) {
 

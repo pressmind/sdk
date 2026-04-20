@@ -412,6 +412,13 @@ class Search
                 if($direction == 'RAND()') {
                     $order_strings[] = 'RAND()';
                 } else {
+                    if(!preg_match('/^[a-zA-Z0-9_.`]+$/', $property)) {
+                        continue;
+                    }
+                    $direction = strtoupper(trim($direction));
+                    if(!in_array($direction, ['ASC', 'DESC'], true)) {
+                        $direction = 'ASC';
+                    }
                     $order_strings[] = $property . ' ' . $direction;
                 }
             }
@@ -473,7 +480,7 @@ class Search
             $this->_sql .= ' ORDER BY ' . implode(', ', $order_strings);
         }
         if(!empty($this->_limits) && $returnTotalCount == false) {
-            $this->_sql .= " LIMIT " . $this->_limits['start'] . ', ' . $this->_limits['length'];
+            $this->_sql .= " LIMIT " . (int)$this->_limits['start'] . ', ' . (int)$this->_limits['length'];
         }
     }
 

@@ -92,6 +92,25 @@ class SearchController extends AbstractController
             $this->json(['error' => $emptyResult['error']], 400);
             return;
         }
+        if (!preg_match('/^[a-zA-Z0-9_\-.]+$/', $collectionName)) {
+            $emptyResult['error'] = 'Invalid collection name';
+            if ($formatHtml) {
+                $this->render('search/query-result.php', $emptyResult);
+                return;
+            }
+            $this->json(['error' => $emptyResult['error']], 400);
+            return;
+        }
+        $allowedCollections = $this->getAllowedCollections();
+        if ($allowedCollections !== null && !in_array($collectionName, $allowedCollections, true)) {
+            $emptyResult['error'] = 'Collection not allowed';
+            if ($formatHtml) {
+                $this->render('search/query-result.php', $emptyResult);
+                return;
+            }
+            $this->json(['error' => $emptyResult['error']], 403);
+            return;
+        }
         // Parse filter query (relaxed JSON / MongoDB syntax)
         $filter = [];
         $filterError = null;
@@ -102,7 +121,7 @@ class SearchController extends AbstractController
             } elseif (!is_array($parsed)) {
                 $filterError = 'Query must be a JSON object, e.g. {id_media_object: 12345}';
             } else {
-                $filter = $parsed;
+                $filter = $this->sanitizeMongoFilter($parsed);
             }
         }
         if ($filterError !== null) {
@@ -162,6 +181,43 @@ class SearchController extends AbstractController
             }
             $this->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Recursively strip dangerous MongoDB operators from a filter array.
+     *
+     * @param array $filter
+     * @return array
+     */
+    private function sanitizeMongoFilter(array $filter): array
+    {
+        $blockedOperators = [
+            '$where', '$function', '$accumulator', '$expr',
+            '$lookup', '$merge', '$out', '$unionWith',
+        ];
+        $sanitized = [];
+        foreach ($filter as $key => $value) {
+            if (is_string($key) && in_array(strtolower($key), array_map('strtolower', $blockedOperators), true)) {
+                continue;
+            }
+            if (is_array($value)) {
+                $sanitized[$key] = $this->sanitizeMongoFilter($value);
+            } else {
+                $sanitized[$key] = $value;
+            }
+        }
+        return $sanitized;
+    }
+
+    /**
+     * Get allowed collection names for querying.
+     *
+     * @return array|null null means all collections are allowed
+     */
+    private function getAllowedCollections(): ?array
+    {
+        $config = Registry::getInstance()->get('config');
+        return $config['backend']['search']['allowed_collections'] ?? null;
     }
 
     /**

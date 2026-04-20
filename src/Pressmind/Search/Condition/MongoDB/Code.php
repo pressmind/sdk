@@ -55,11 +55,11 @@ class Code
                 if (count($this->_codes) > 1) {
                     $q = [];
                     foreach ($this->_codes as $code) {
-                        $q[] = ['code' => ['$regex' => $code]];
+                        $q[] = ['code' => ['$regex' => preg_quote($code, '/')]];
                     }
                     $query['$' . strtolower($this->_combineOperator)] = $q;
                 } else {
-                    $query['code'] = ['$regex' => $this->_codes[0]];
+                    $query['code'] = ['$regex' => preg_quote($this->_codes[0], '/')];
                 }
             } else {
                 // Use $in operator - works for both scalar and array fields

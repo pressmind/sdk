@@ -154,7 +154,7 @@ class Migrate
     private static function replacer(string $value): string
     {
         if (is_serialized($value)) {
-            $object = unserialize($value);
+            $object = unserialize($value, ['allowed_classes' => false]);
             $object = self::walkRecursive($object, [self::class, 'replace']);
             return serialize($object);
         } else {

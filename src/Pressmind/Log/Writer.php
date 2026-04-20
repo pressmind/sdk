@@ -31,7 +31,7 @@ class Writer
     static function write($log, $output = 'screen', $filename = 'messages', $type = 'INFO')
     {
         $config = Registry::getInstance()->get('config');
-        $log_file_name = $filename;
+        $log_file_name = basename($filename);
         $configMode = $config['logging']['mode'] ?? 'ALL';
         $log_modes = is_array($configMode) ? $configMode : [$configMode];
         $log_categories = (isset($config['logging']['categories']) && is_array($config['logging']['categories'])) ? $config['logging']['categories'] : [$filename];
@@ -49,7 +49,8 @@ class Writer
             $date = new DateTime();
             $storage = $config['logging']['storage'] ?? 'filesystem';
             if($storage == 'filesystem') {
-                $log_text = '[' . $date->format('Y-m-d H:i:s') . '] ' . print_r($log, true);
+                $sanitized_log = str_replace(["\r\n", "\r", "\n"], ' ', print_r($log, true));
+                $log_text = '[' . $date->format('Y-m-d H:i:s') . '] ' . $sanitized_log;
                 if ($configMode == 'ALL' || $type == $configMode) {
                     $log_dir = self::getLogFilePath();
                     if (!is_dir($log_dir)) {
@@ -64,9 +65,9 @@ class Writer
                     $log_set = new Log();
                     $log_set->type = $type;
                     $log_set->trace = json_encode(self::getTrace());
-                    $log_set->category = $filename;
+                    $log_set->category = basename($filename);
                     $log_set->date = $date;
-                    $log_set->text = print_r($log, true);
+                    $log_set->text = str_replace(["\r\n", "\r", "\n"], ' ', print_r($log, true));
                     $log_set->create();
                 }
             }

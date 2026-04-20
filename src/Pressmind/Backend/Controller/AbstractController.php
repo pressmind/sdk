@@ -68,7 +68,7 @@ abstract class AbstractController
      */
     protected function redirect(string $url, int $code = 302): void
     {
-        header('Location: ' . $url, true, $code);
+        header('Location: ' . str_replace(["\r", "\n"], '', $url), true, $code);
         exit;
     }
 

@@ -33,6 +33,71 @@ Changes are categorized as:
 
 ## April 2026
 
+### SECURITY: Security hardening (12 fixes)
+
+Comprehensive security hardening addressing 12 reported vulnerabilities (GHSA advisories).
+
+**BREAKING: REST API authentication fail-close (GHSA-97p4-c5px-x3pj)**
+
+`REST\Server::_checkAuthentication()` now returns `false` (deny) when no API credentials are configured. Previously it returned `true` (allow-all), making unconfigured installations fully open. **Action required:** Ensure `rest.server.api_key` or `rest.server.api_user` + `rest.server.api_password` are set in your `config.json` before upgrading. Installations that already have credentials configured are not affected.
+
+**SQL injection fixes (GHSA-pcj9, GHSA-7578, GHSA-pvg8, GHSA-mfjm)**
+
+- `Touristic\Startingpoint::getOptions()`, `getCheapestOption()`, `getOptionByIdPlus()`: Migrated from string concatenation to prepared statements with parameterized queries. All user-supplied values (IDs, ibe_client, start, limit) now use PDO placeholders or integer casts.
+- `Search::_buildQuery()`: ORDER BY property names are validated against `[a-zA-Z0-9_.` + backtick]`, direction restricted to ASC/DESC, LIMIT values cast to integer.
+- `ORM\Object\AbstractObject::loadAll()`: Order column names validated (alphanumeric + underscore), direction restricted to ASC/DESC, limit values cast to integer.
+
+**NoSQL injection fix (GHSA-g4w3)**
+
+`Backend\Controller\SearchController::queryAction()`: MongoDB filter input is now sanitized to strip dangerous operators (`$where`, `$function`, `$accumulator`, `$expr`, `$lookup`, `$merge`, `$out`, `$unionWith`). Collection names are validated against a character allowlist and optional config-based collection allowlist (`backend.search.allowed_collections`).
+
+**MongoDB regex injection fix (GHSA-fpxg)**
+
+`Search\Condition\MongoDB\Fulltext` and `Code`: User-supplied search terms are now escaped with `preg_quote()` before being used in `$regex` operators, preventing regex oracle attacks, ReDoS, and scope escalation.
+
+**OS command injection fixes (GHSA-vvgr, GHSA-6836)**
+
+- `Image\Processor\Adapter\ImageMagickCLI::process()`: Config values (`max_width`, `max_height`) are cast to integer, `horizontal_crop` is validated against an allowlist of ImageMagick gravity values, and `escapeshellarg()` is applied.
+- `Import::postImport()`: Media object IDs are cast to integer via `array_map('intval', ...)`. All `exec()` calls now use `escapeshellarg()` for PHP binary path and script paths.
+
+**PHP object injection fix (GHSA-c5r7)**
+
+- `WordPress\PageCache`: `unserialize()` call now uses `['allowed_classes' => false]` to prevent PHP object injection via Redis.
+- `CLI\WordPress\Migrate`: `unserialize()` call now uses `['allowed_classes' => false]` to prevent gadget chain execution from WordPress DB values.
+
+**CRLF / HTTP header injection fix (GHSA-9695)**
+
+- `MVC\Response::addHeader()`: CR/LF characters are stripped from both header keys and values.
+- `Backend\Controller\AbstractController::redirect()`: CR/LF characters are stripped from redirect URLs.
+
+**Log injection fix (GHSA-vgxw)**
+
+`Log\Writer::write()`: Newline characters (CR, LF, CRLF) are replaced with spaces in log output to prevent log forging. The `$filename` parameter is sanitized with `basename()` to prevent path traversal.
+
+### FEATURE: OpenSearch k-NN vector search (optional)
+
+Optional **semantic / hybrid search** via OpenSearch `knn_vector` and configurable embedding providers (`openai`, `ollama`). New namespace `Pressmind\Search\Embedding` (`ProviderInterface`, `ProviderFactory`, `OpenAIProvider`, `OllamaProvider`, `EmbeddingCache`, `QueryEmbedding`). Indexer writes `content_vector` when `data.search_opensearch.vector.enabled` is true; `MongoDB` search pipeline can use hybrid or vector-only when `vector.enabled_in_search` is true. MCP: tool **`semantic_search`** and optional **`search(..., semantic=true)`**. MongoDB collections `embedding_cache` and `query_embedding_cache` (TTL on query cache). See `config.default.json` under `data.search_opensearch.vector` and [documentation/mcp-server.md](mcp-server.md).
+
+### FEATURE: MCP server for travel search (`bin/mcp-server`)
+
+Optional **Model Context Protocol** integration via `php-mcp/server` (suggested / require-dev dependency). New namespace `Pressmind\MCP` with tools **search**, **fetch**, **get_categories**, **get_filter_options**, **get_calendar**, **get_cheapest_prices**, **get_touristic_options** implemented as `Pressmind\MCP\Tool\…` backed by `Query::getResult()` and `MediaObject`. CLI entry point `bin/mcp-server` supports **stdio** (Claude/Cursor) and **HTTP+SSE** (remote clients). See [documentation/mcp-server.md](mcp-server.md). `CalendarFilter::initFromArray()` added for non-GET calendar filter input.
+
+### FEATURE: MCP price matrix and touristic options tools
+
+New MCP tools **`get_cheapest_prices`** (`Pressmind\MCP\Tool\CheapestPricesTool`) and **`get_touristic_options`** (`Pressmind\MCP\Tool\TouristicOptionsTool`). **`get_cheapest_prices`** returns filtered rows from `MediaObject::getCheapestPrices()` with per-row **`booking_url`** (IBE3) and **`filter_options`** from `getCheapestPricesOptions()`. **`get_touristic_options`** lists extras/tickets/sightseeing (`Touristic\Option`) with **`required_group`**, **`selection_type`**, and an aggregated **`required_groups`** map. Implemented on **`ProductService`**; registered in **`ServerFactory`**. See [documentation/mcp-server.md](mcp-server.md).
+
+### FEATURE: MCP starting points tool
+
+New MCP tool **`get_starting_points`** (`Pressmind\MCP\Tool\StartingPointsTool`): outbound transports (`way=1`) with **`Touristic\Startingpoint`** and **`Startingpoint\Option`** rows, including pickup services with **`zip_ranges`**. Implemented on **`ProductService`**; registered in **`ServerFactory`**. See [documentation/mcp-server.md](mcp-server.md).
+
+### CHANGE: MCP — `get_insurances` removed
+
+The experimental MCP tool **`get_insurances`** (`InsurancesTool`) and **`ProductService::getInsurances()`** were removed. **BREAKING** for any client that called this tool; use product fetch / IBE data paths instead if needed.
+
+### CHANGE: MCP generic category and filter facet tools
+
+**get_destinations** and **get_travel_types** were replaced by **get_categories** (list `available_fields` or facet rows per `field_name`) and **get_filter_options** (board/transport/starting points/duration/price facets). **search** accepts optional **`categories`** (JSON object) for arbitrary `pm-c` fields. Configure **`category_fields`** via `ServerFactory` options or rely on `bin/mcp-server` (derives field names from `data.search_mongodb.search.categories`). **BREAKING** for MCP integrations: update tool names and parameters.
+
 ### FEATURE: Import `sync` subcommand – hash-based delta import
 
 New CLI subcommand `php bin/import sync` that performs a **hash-based delta import**. Like `fullimport`, it discovers all media object IDs from the API and processes them through the import queue. The key difference: for each object, a SHA-256 hash of the API response is compared against the stored hash from the previous run. Only objects with changed data are fully re-imported (DELETE + INSERT). Unchanged objects still receive time-dependent recalculations (cheapest prices, early-bird expiry, `is_running` flag) and search index updates (MongoDB, OpenSearch, fulltext). Includes orphan removal, post-import hooks, and resume support. A 50ms throttle between hash-only cycles prevents API/NAT saturation. **Recommended for regular cron use** as it is significantly faster than `fullimport` when most objects are unchanged.
@@ -597,6 +662,7 @@ General SDK stability fix.
 | **Jul 2025** | New composer dependencies (opensearch-php, symfony/http-client, nyholm/psr7) | Run `composer update` |
 | **Jun 2025** | Removed `scheduled_tasks` config section | Implement own cron scheduling |
 | **Mar 2025** | REST API version upgraded from v2-18 to v2-21 | Ensure compatible Webcore version |
+| **Apr 2026** | REST API auth fail-close: unconfigured APIs now deny all requests | Set `rest.server.api_key` or `api_user`/`api_password` in config |
 | **Feb 2026** | New `batchInsert()` method on `AdapterInterface` | Update custom DB adapters |
 
 ---

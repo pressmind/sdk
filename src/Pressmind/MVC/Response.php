@@ -73,7 +73,7 @@ class Response
      */
     public function addHeader($pKey, $pValue)
     {
-        $this->_headers[$pKey] = $pValue;
+        $this->_headers[str_replace(["\r", "\n"], '', $pKey)] = str_replace(["\r", "\n"], '', $pValue);
     }
 
     /**

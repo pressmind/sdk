@@ -106,7 +106,7 @@ class Server
             return false;
         }
 
-        return true;
+        return false;
     }
 
     /**

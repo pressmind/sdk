@@ -212,54 +212,70 @@ class Startingpoint extends AbstractObject
      * @throws \Exception
      */
     public static function getOptions($id_starting_point, $start = 0, $limit = 10, $ibe_client = null, $zip = null, $radius = 20, $list_exits = false, $list_pickup_service = false, $zip_search = 'radius', $order_by_code_list = []){
-        if(is_array($id_starting_point)){
-            $id_starting_point = implode(',"', $id_starting_point);
-        }
-        $query = 'select o.* from pmt2core_touristic_startingpoint_options o';
+        $values = [];
+        $id_starting_point = (array)$id_starting_point;
+        $placeholders = implode(',', array_fill(0, count($id_starting_point), '?'));
+        $values = array_merge($values, array_values($id_starting_point));
+
+        $query = 'SELECT o.* FROM pmt2core_touristic_startingpoint_options o';
         if(!empty($zip) && $zip_search == 'range') {
-            $query .= ' left join pmt2core_touristic_startingpoint_options_zip_ranges zr on(o.id = zr.id_option)';
+            $query .= ' LEFT JOIN pmt2core_touristic_startingpoint_options_zip_ranges zr ON(o.id = zr.id_option)';
         }
-        $query .= ' where `id_startingpoint` in( "' . $id_starting_point . '")';
+        $query .= ' WHERE `id_startingpoint` IN(' . $placeholders . ')';
         if($list_exits){
             $query .= ' AND (`exit` = 1 OR (`entry` = 0 AND `exit` = 0))';
         }else{
-            $query .= ' AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0)) ';
+            $query .= ' AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0))';
         }
-        $query .= 'AND `is_pickup_service` = '.($list_pickup_service ? '1' : '0');
+        $query .= ' AND `is_pickup_service` = ?';
+        $values[] = $list_pickup_service ? 1 : 0;
 
         if(!empty($ibe_client)){
-            $query .= ' and FIND_IN_SET("'.$ibe_client.'",ibe_clients)';
+            $query .= ' AND FIND_IN_SET(?, ibe_clients)';
+            $values[] = $ibe_client;
         }
         $Geodata = new Geodata();
+        $zips = [];
         if(!empty($zip) && $zip_search == 'radius'){
-            $zips = [];
             foreach($Geodata->getZipsAroundZip($zip, $radius) as $item){
                 $zips[] = $item->postleitzahl;
             }
             if(!empty($zips)){
-                $query .= ' and zip in("'.implode('","', $zips).'")';
+                $zipPlaceholders = implode(',', array_fill(0, count($zips), '?'));
+                $query .= ' AND zip IN(' . $zipPlaceholders . ')';
+                $values = array_merge($values, $zips);
             }
         }
         $currentCity = false;
         if(!empty($zip) && $zip_search == 'range') {
-            $query .= ' and ' . (int)$zip . ' between cast(zr.`from` as UNSIGNED) and cast(zr.`to` as UNSIGNED)';
+            $query .= ' AND ? BETWEEN CAST(zr.`from` AS UNSIGNED) AND CAST(zr.`to` AS UNSIGNED)';
+            $values[] = (int)$zip;
             $currentCity = $Geodata->getByZip($zip);
         }
         $order_by_field_list = ' ';
         if(!empty($order_by_code_list)){
-            $order_by_field_list = ' FIELD(o.code, "'.implode('","', $order_by_code_list).'") = 0, FIELD(o.code, "'.implode('","', $order_by_code_list).'"), ';
+            $sanitized_codes = array_filter($order_by_code_list, function($code) {
+                return preg_match('/^[a-zA-Z0-9_\-]+$/', $code);
+            });
+            if(!empty($sanitized_codes)){
+                $codePlaceholders = implode(',', array_fill(0, count($sanitized_codes), '?'));
+                $order_by_field_list = ' FIELD(o.code, ' . $codePlaceholders . ') = 0, FIELD(o.code, ' . $codePlaceholders . '), ';
+                $values = array_merge($values, array_values($sanitized_codes), array_values($sanitized_codes));
+            }
         }
         if(!empty($zips)){
-            $query .= ' order by'.$order_by_field_list.'start_time ASC, FIELD(zip, "'.implode('","', $zips).'"), price ASC';
+            $zipOrderPlaceholders = implode(',', array_fill(0, count($zips), '?'));
+            $query .= ' ORDER BY' . $order_by_field_list . 'start_time ASC, FIELD(zip, ' . $zipOrderPlaceholders . '), price ASC';
+            $values = array_merge($values, $zips);
         }else{
-            $query .= ' order by '.$order_by_field_list.'start_time ASC, price ASC, zip ASC';
+            $query .= ' ORDER BY' . $order_by_field_list . 'start_time ASC, price ASC, zip ASC';
         }
         if(!empty($limit)){
-            $query .= ' limit '.$start.','.$limit;
+            $query .= ' LIMIT ' . (int)$start . ',' . (int)$limit;
         }
         $registry = Registry::getInstance();
         $db = $registry->get('db');
-        $result = $db->fetchAll($query);
+        $result = $db->fetchAll($query, $values);
         $output = [];
         foreach($result as $row){
             $Option = new Startingpoint\Option();
@@ -287,22 +303,25 @@ class Startingpoint extends AbstractObject
         if(isset(self::$_run_time_cache[$key])){
             return self::$_run_time_cache[$key];
         }
-        if(is_array($id_starting_point)){
-            $id_starting_point = implode(',"', $id_starting_point);
-        }
-        $query = 'select o.* from pmt2core_touristic_startingpoint_options o 
-                    where `id_startingpoint` in( "' . $id_starting_point . '") 
+        $values = [];
+        $id_starting_point = (array)$id_starting_point;
+        $placeholders = implode(',', array_fill(0, count($id_starting_point), '?'));
+        $values = array_merge($values, array_values($id_starting_point));
+
+        $query = 'SELECT o.* FROM pmt2core_touristic_startingpoint_options o
+                    WHERE `id_startingpoint` IN(' . $placeholders . ')
                     AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0))';
         if(!empty($ibe_client)){
-            $query .= ' and FIND_IN_SET("'.$ibe_client.'",ibe_clients)';
+            $query .= ' AND FIND_IN_SET(?, ibe_clients)';
+            $values[] = $ibe_client;
         }
         if($price_gte){
-            $query .= ' and price >= 0';
+            $query .= ' AND price >= 0';
         }
-        $query .= ' order by price ASC';
+        $query .= ' ORDER BY price ASC';
         $registry = Registry::getInstance();
         $db = $registry->get('db');
-        $result = $db->fetchRow($query);
+        $result = $db->fetchRow($query, $values);
         if(!empty($result)){
             $Option = new Startingpoint\Option();
             $Option->fromStdClass($result);
@@ -321,21 +340,25 @@ class Startingpoint extends AbstractObject
      * @throws \Exception
      */
     public static function getOptionByIdPlus($id_starting_point_option, $ibe_client = null, $exit = false, $pickup_service = false){
-        $query = 'select o.* from pmt2core_touristic_startingpoint_options o where `id` = "' . $id_starting_point_option . '"';
+        $values = [];
+        $query = 'SELECT o.* FROM pmt2core_touristic_startingpoint_options o WHERE `id` = ?';
+        $values[] = $id_starting_point_option;
         if($exit){
             $query .= ' AND (`exit` = 1 OR (`entry` = 0 AND `exit` = 0))';
         }else{
-            $query .= ' AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0)) ';
+            $query .= ' AND (`entry` = 1 OR (`entry` = 0 AND `exit` = 0))';
         }
-        $query .= 'AND `is_pickup_service` = '.($pickup_service ? '1' : '0');
+        $query .= ' AND `is_pickup_service` = ?';
+        $values[] = $pickup_service ? 1 : 0;
 
         if(!empty($ibe_client)){
-            $query .= ' and FIND_IN_SET("'.$ibe_client.'",ibe_clients)';
+            $query .= ' AND FIND_IN_SET(?, ibe_clients)';
+            $values[] = $ibe_client;
         }
-        $query .= ' limit 1';
+        $query .= ' LIMIT 1';
         $registry = Registry::getInstance();
         $db = $registry->get('db');
-        $result = $db->fetchAll($query);
+        $result = $db->fetchAll($query, $values);
         if(!empty($result)){
             $Option = new Startingpoint\Option();
             $Option->fromStdClass($result[0]);

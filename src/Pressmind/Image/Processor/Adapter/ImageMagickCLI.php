@@ -31,11 +31,15 @@ class ImageMagickCLI implements AdapterInterface
         }
 
         if(!empty(exec('which convert'))) {
+            $width = (int)$config->max_width;
+            $height = (int)$config->max_height;
 
             if ($config->crop == true) {
-                $command = 'convert - -resize ' . $config->max_width . '^x' . $config->max_height . '^ -gravity ' . $config->horizontal_crop . ' -crop ' . $config->max_width . 'x' . $config->max_height . '+0+0 -';
+                $allowedGravity = ['Center', 'North', 'South', 'East', 'West', 'NorthWest', 'NorthEast', 'SouthWest', 'SouthEast'];
+                $gravity = in_array($config->horizontal_crop, $allowedGravity, true) ? $config->horizontal_crop : 'Center';
+                $command = 'convert - -resize ' . $width . '^x' . $height . '^ -gravity ' . escapeshellarg($gravity) . ' -crop ' . $width . 'x' . $height . '+0+0 -';
             } else {
-                $command = 'convert - -resize ' . $config->max_width . '^x' . $config->max_height . '^ -';
+                $command = 'convert - -resize ' . $width . '^x' . $height . '^ -';
             }
             Writer::write('Generating derivative ' . $derivativeName . ' for file ' . $file->name, WRITER::OUTPUT_FILE, 'image_processor', WRITER::TYPE_INFO);
             Writer::write($command, WRITER::OUTPUT_FILE, 'image_processor', Writer::TYPE_INFO);

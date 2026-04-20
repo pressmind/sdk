@@ -50,7 +50,7 @@ class Fulltext
         if ($type == 'first_match') {
             return [
                 'fulltext' => [
-                        '$regex' => '\\b'.$this->_searchString,
+                        '$regex' => '\\b' . preg_quote($this->_searchString, '/'),
                         '$options' => 'i'
                 ]
             ];

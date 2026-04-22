@@ -303,8 +303,11 @@ class Startingpoint extends AbstractObject
         if(isset(self::$_run_time_cache[$key])){
             return self::$_run_time_cache[$key];
         }
+        $id_starting_point = array_filter((array)$id_starting_point, function($v) { return !is_null($v) && $v !== ''; });
+        if(empty($id_starting_point)){
+            return null;
+        }
         $values = [];
-        $id_starting_point = (array)$id_starting_point;
         $placeholders = implode(',', array_fill(0, count($id_starting_point), '?'));
         $values = array_merge($values, array_values($id_starting_point));
 

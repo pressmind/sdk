@@ -137,7 +137,7 @@ class Ibe
         $result['pickup_services']['options'] = empty($id_starting_point) ? [] : StartingPoint::getPickupOptionByZip($id_starting_point, $icc);
         $result['exit_points']['total'] = empty($id_exit_point) ? 0 : count(StartingPoint::getExitOptionsByZipRadius($id_exit_point, $icc, null, 20, 0, null));
         $result['exit_points']['exit_point_options'] = empty($id_exit_point) ? [] : StartingPoint::getExitOptionsByZipRadius($id_exit_point, $icc, null, 20,0, $starting_points_limit);
-        $result['has_pickup_services'] = Startingpoint::hasPickupService($id_starting_point, $icc);
+        $result['has_pickup_services'] = empty($id_starting_point) ? false : Startingpoint::hasPickupService($id_starting_point, $icc);
         $result['has_starting_points'] = $result['starting_points']['total'] > 0;
         $result['has_seatplan'] = false;
         if(!empty($result['transport_pairs'])){

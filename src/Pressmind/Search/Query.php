@@ -128,7 +128,7 @@ class Query
                 $item['is_running'] = empty($document['is_running'])  ? false : true;
                 $item['sold_out'] = empty($document['sold_out'])  ? false : true;
                 $item['dates_per_month'] = [];
-                $item['fst_date_departure'] = !empty($document['fst_date_departure']) ? new \DateTime($document['fst_date_departure']) : null;
+                $item['fst_date_departure'] = self::parseBsonDate($document['fst_date_departure'] ?? null);
                 $item['possible_durations'] = !empty($document['possible_durations']) ? $document['possible_durations'] : [];
                 $item['last_modified_date'] = $document['last_modified_date'];
                 $item['object_type_order'] = !empty($document['object_type_order']) ? $document['object_type_order'] : null;
@@ -1109,6 +1109,27 @@ class Query
             }
         }
         return $description;
+    }
+
+    /**
+     * Parse a BSON date value that may arrive as string, Extended JSON array, or null
+     * after json_decode(json_encode($bsonDocument), true).
+     * @param $value
+     * @return \DateTime|null
+     * @throws \Exception
+     */
+    private static function parseBsonDate($value): ?\DateTime
+    {
+        if (empty($value)) {
+            return null;
+        }
+        if (is_string($value)) {
+            return new \DateTime($value);
+        }
+        if (is_array($value) && isset($value['$date']['$numberLong'])) {
+            return new \DateTime('@' . intdiv((int)$value['$date']['$numberLong'], 1000));
+        }
+        return null;
     }
 
 }

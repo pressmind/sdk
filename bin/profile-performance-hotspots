@@ -1,0 +1,361 @@
+<?php
+
+require_once __DIR__ . '/../tests/bootstrap.php';
+
+use Pressmind\DB\Adapter\AdapterInterface;
+use Pressmind\Import\TouristicData;
+use Pressmind\Registry;
+use Pressmind\Search\MongoDB\AbstractIndex;
+use Pressmind\Search\MongoDB\Indexer;
+
+final class ProfileDbAdapter implements AdapterInterface
+{
+    public function __construct(private array $storedItems)
+    {
+    }
+
+    public function fetchAll($query, $params = null)
+    {
+        return $this->storedItems;
+    }
+
+    public function fetchRow($query, $params = null)
+    {
+        return null;
+    }
+
+    public function fetchOne($query, $params = null)
+    {
+        return null;
+    }
+
+    public function execute($query, $params = null)
+    {
+    }
+
+    public function getAffectedRows()
+    {
+        return 0;
+    }
+
+    public function insert($tableName, $data, $replace_into = true)
+    {
+    }
+
+    public function replace($tableName, $data)
+    {
+    }
+
+    public function update($tableName, $data, $where = null)
+    {
+    }
+
+    public function delete($tableName, $where = null)
+    {
+    }
+
+    public function truncate($tableName)
+    {
+    }
+
+    public function batchInsert($tableName, $columns, $rows, $replace_into = true)
+    {
+        return count($rows);
+    }
+
+    public function getTablePrefix()
+    {
+        return 'pmt2core_';
+    }
+
+    public function beginTransaction()
+    {
+    }
+
+    public function commit()
+    {
+    }
+
+    public function rollback()
+    {
+    }
+
+    public function inTransaction()
+    {
+        return false;
+    }
+}
+
+final class ProfileMediaObject
+{
+    public int $id_object_type = 1;
+    public string $name = 'Profile object';
+    public int $getDataForLanguageCalls = 0;
+
+    public function __construct(private ProfileContentObject $content)
+    {
+    }
+
+    public function getDataForLanguage(string $language): ProfileContentObject
+    {
+        $this->getDataForLanguageCalls++;
+        return $this->content;
+    }
+}
+
+final class ProfileContentObject
+{
+    public int $toStdClassCalls = 0;
+
+    public function __construct(private \stdClass $data)
+    {
+    }
+
+    public function toStdClass(): \stdClass
+    {
+        $this->toStdClassCalls++;
+        return $this->data;
+    }
+}
+
+final class ProfileCategoryTreeItem
+{
+    public function __construct(
+        public int $id_item,
+        public ProfileCategoryNode $item
+    ) {
+    }
+}
+
+final class ProfileCategoryNode
+{
+    public static int $idReads = 0;
+
+    public function __construct(
+        private int $id,
+        private string $name,
+        private int $idTree,
+        private ?int $idParent,
+        private string $code,
+        private int $sort
+    ) {
+    }
+
+    public static function reset(): void
+    {
+        self::$idReads = 0;
+    }
+
+    public function __isset(string $name): bool
+    {
+        if ($name === 'id') {
+            self::$idReads++;
+            return true;
+        }
+        return $this->__get($name) !== null;
+    }
+
+    public function __get(string $name)
+    {
+        if ($name === 'id') {
+            self::$idReads++;
+            return $this->id;
+        }
+        if ($name === 'id_tree') {
+            return $this->idTree;
+        }
+        if ($name === 'id_parent') {
+            return $this->idParent;
+        }
+        if ($name === 'name') {
+            return $this->name;
+        }
+        if ($name === 'code') {
+            return $this->code;
+        }
+        if ($name === 'sort') {
+            return $this->sort;
+        }
+        return null;
+    }
+}
+
+final class ProfileStartingpointOption
+{
+    public static int $idReads = 0;
+
+    public function __construct(
+        private int $id,
+        private int $idStartingPoint
+    ) {
+    }
+
+    public static function reset(): void
+    {
+        self::$idReads = 0;
+    }
+
+    public function __get(string $name)
+    {
+        if ($name === 'id') {
+            self::$idReads++;
+            return $this->id;
+        }
+        if ($name === 'id_starting_point') {
+            return $this->idStartingPoint;
+        }
+        return null;
+    }
+}
+
+function create_indexer(object $mediaObject, array $config): Indexer
+{
+    $ref = new ReflectionClass(Indexer::class);
+    /** @var Indexer $indexer */
+    $indexer = $ref->newInstanceWithoutConstructor();
+
+    $configProperty = new ReflectionProperty(AbstractIndex::class, '_config');
+    $configProperty->setAccessible(true);
+    $configProperty->setValue($indexer, array_replace_recursive([
+        'search' => [
+            'custom_order' => [],
+            'categories' => [],
+        ],
+    ], $config));
+
+    $indexer->mediaObject = $mediaObject;
+
+    return $indexer;
+}
+
+function measure(string $name, callable $callback, int $iterations): array
+{
+    $start = hrtime(true);
+    $metrics = null;
+    for ($i = 0; $i < $iterations; $i++) {
+        $metrics = $callback();
+    }
+    $durationMs = (hrtime(true) - $start) / 1_000_000;
+
+    return [
+        'name' => $name,
+        'iterations' => $iterations,
+        'duration_ms' => round($durationMs, 3),
+        'per_iteration_ms' => round($durationMs / $iterations, 6),
+        'metrics' => $metrics,
+    ];
+}
+
+Registry::clear();
+Registry::getInstance()->add('config', [
+    'cache' => ['enabled' => false, 'types' => []],
+    'database' => ['dbname' => 'test'],
+    'logging' => [
+        'enable_advanced_object_log' => false,
+        'mode' => 'ALL',
+        'storage' => 'filesystem',
+    ],
+]);
+
+$results = [];
+
+$results[] = measure('custom_order', function (): array {
+    $fieldCount = 50;
+    $data = new stdClass();
+    $customOrderConfig = [];
+    for ($i = 1; $i <= $fieldCount; $i++) {
+        $shortname = 'sort_' . $i;
+        $field = 'field_' . $i;
+        $data->{$field} = 'Value ' . $i;
+        $customOrderConfig[$shortname] = ['field' => $field];
+    }
+
+    $content = new ProfileContentObject($data);
+    $mediaObject = new ProfileMediaObject($content);
+    $indexer = create_indexer($mediaObject, [
+        'search' => [
+            'custom_order' => [
+                1 => $customOrderConfig,
+            ],
+        ],
+    ]);
+    $method = new ReflectionMethod(Indexer::class, '_custom_order');
+    $method->setAccessible(true);
+    $result = $method->invoke($indexer, 'de', null);
+
+    return [
+        'result_count' => count($result),
+        'getDataForLanguageCalls' => $mediaObject->getDataForLanguageCalls,
+        'toStdClassCalls' => $content->toStdClassCalls,
+    ];
+}, 500);
+
+$results[] = measure('map_categories', function (): array {
+    ProfileCategoryNode::reset();
+    $categoryCount = 120;
+    $categories = [];
+    for ($i = 1; $i <= $categoryCount; $i++) {
+        $categories[] = new ProfileCategoryTreeItem(
+            $i,
+            new ProfileCategoryNode(
+                $i,
+                'Category ' . $i,
+                10,
+                $i > 1 ? $i - 1 : null,
+                'cat-' . $i,
+                $i
+            )
+        );
+    }
+
+    $data = new stdClass();
+    $data->topics = $categories;
+    $mediaObject = new ProfileMediaObject(new ProfileContentObject($data));
+    $indexer = create_indexer($mediaObject, [
+        'search' => [
+            'categories' => [
+                1 => [
+                    'topics' => [],
+                ],
+            ],
+        ],
+    ]);
+    $method = new ReflectionMethod(Indexer::class, '_mapCategories');
+    $method->setAccessible(true);
+    $result = $method->invoke($indexer, 'de');
+
+    return [
+        'result_count' => count($result),
+        'idReads' => ProfileCategoryNode::$idReads,
+    ];
+}, 80);
+
+$results[] = measure('startingpoint_orphans', function (): array {
+    ProfileStartingpointOption::reset();
+    $optionCount = 300;
+    $startingpointId = 100;
+    $importedOptions = [];
+    $storedOptions = [];
+    for ($i = 1; $i <= $optionCount; $i++) {
+        $importedOptions[] = new ProfileStartingpointOption($i, $startingpointId);
+        $storedOptions[] = (object) [
+            'id' => $i,
+            'id_startingpoint' => $startingpointId,
+        ];
+    }
+
+    Registry::getInstance()->add('db', new ProfileDbAdapter($storedOptions));
+
+    $method = new ReflectionMethod(TouristicData::class, '_removeStartingPointOrphans');
+    $method->setAccessible(true);
+    $method->invoke(new TouristicData(), [
+        'touristic_startingpoints_options' => $importedOptions,
+    ]);
+
+    return [
+        'stored_count' => count($storedOptions),
+        'idReads' => ProfileStartingpointOption::$idReads,
+    ];
+}, 120);
+
+echo json_encode($results, JSON_PRETTY_PRINT) . PHP_EOL;

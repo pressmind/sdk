@@ -394,7 +394,7 @@ class TouristicData extends AbstractImport
         foreach($data as $touristic_object_name => $touristic_objects){
             if($touristic_object_name == 'touristic_startingpoints_options'){
                 foreach($touristic_objects as $item){
-                    $startingpoints_options[$item->id_starting_point][(int)$item->id] = true;
+                    $startingpoints_options[$item->id_starting_point][$item->id] = true;
                 }
             }
         }
@@ -413,7 +413,7 @@ class TouristicData extends AbstractImport
                 $id_startingpoint = $storedItem->id_startingpoint;
                 $id_startingpoint_option = $storedItem->id;
                 if (isset($startingpoints_options[$id_startingpoint])) {
-                    if (!isset($startingpoints_options[$id_startingpoint][(int)$id_startingpoint_option])) {
+                    if (!isset($startingpoints_options[$id_startingpoint][$id_startingpoint_option])) {
                         $ids_to_delete[] = $storedItem->id;
                     }
                 }

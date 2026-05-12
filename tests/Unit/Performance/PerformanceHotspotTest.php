@@ -167,6 +167,32 @@ class PerformanceHotspotTest extends AbstractTestCase
         ]);
     }
 
+    public function testStartingpointOrphanCleanupKeepsAlphanumericOptionIdsDistinct(): void
+    {
+        $db = $this->createMock(AdapterInterface::class);
+        $db->expects($this->once())
+            ->method('fetchAll')
+            ->willReturn([
+                (object) ['id' => 'spopt_keep', 'id_startingpoint' => 'sp_alpha'],
+                (object) ['id' => 'spopt_delete', 'id_startingpoint' => 'sp_alpha'],
+            ]);
+        $db->expects($this->once())
+            ->method('execute')
+            ->with(
+                $this->stringContains('DELETE FROM pmt2core_touristic_startingpoint_options WHERE id IN (?)'),
+                ['spopt_delete']
+            );
+        Registry::getInstance()->add('db', $db);
+
+        $method = new \ReflectionMethod(TouristicData::class, '_removeStartingPointOrphans');
+        $method->setAccessible(true);
+        $method->invoke(new TouristicData(), [
+            'touristic_startingpoints_options' => [
+                (object) ['id' => 'spopt_keep', 'id_starting_point' => 'sp_alpha'],
+            ],
+        ]);
+    }
+
     private function createIndexerWithConfig(object $mediaObject, array $config): Indexer
     {
         $indexer = $this->getMockBuilder(Indexer::class)
@@ -288,8 +314,8 @@ final class CountingStartingpointOption
     public static int $idReads = 0;
 
     public function __construct(
-        private int $id,
-        private int $idStartingPoint
+        private int|string $id,
+        private int|string $idStartingPoint
     ) {
     }
 

@@ -185,8 +185,8 @@ final class ProfileStartingpointOption
     public static int $idReads = 0;
 
     public function __construct(
-        private int $id,
-        private int $idStartingPoint
+        private int|string $id,
+        private int|string $idStartingPoint
     ) {
     }
 

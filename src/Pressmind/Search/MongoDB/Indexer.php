@@ -702,17 +702,16 @@ class Indexer extends AbstractIndex
             if((int)$this->mediaObject->id_object_type != (int)$id_object_type){
                 continue;
             }
+            $moc = $this->mediaObject->getDataForLanguage($language);
+            $data = empty($moc) ? null : $moc->toStdClass();
             foreach($custom_orders as $shortname => $fieldConfig){
                 $value = null;
-                $moc = $this->mediaObject->getDataForLanguage($language);
                 
                 if(empty($moc) || empty($fieldConfig['field'])){
                     $result[$shortname] = 'ZZZZZ';
                     continue;
                 }
-                
-                $data = $moc->toStdClass();
-                
+
                 // Read field value (similar to _mapDescriptions)
                 if(!empty($fieldConfig['from']) && !empty($data->{$fieldConfig['from']})){
                     // Read from linked object
@@ -1031,6 +1030,9 @@ class Indexer extends AbstractIndex
             }
             if($type == 'categorytree') {
                 if(!empty($data->$varName) && is_array($data->$varName)) {
+                    $treeLookup = self::_buildTreeLookup($data->$varName);
+                    $treeDepthCache = [];
+                    $treePathCache = [];
                     foreach ($data->$varName as $treeitem) {
                         if(empty($treeitem->item->id)){
                             continue;
@@ -1043,10 +1045,10 @@ class Indexer extends AbstractIndex
                         $stdItem->code = $treeitem->item->code;
                         $stdItem->sort = $treeitem->item->sort;
                         $stdItem->field_name = !empty($additionalInfo['field']) ? $field : $varName;
-                        $stdItem->level = self::getTreeDepth($data->$varName, $treeitem->id_item);
-                        $stdItem->path_str = self::getTreePath($data->$varName, $treeitem->id_item, 'name');
+                        $stdItem->level = self::_getTreeDepthFromLookup($treeLookup, $treeitem->id_item, $treeDepthCache);
+                        $stdItem->path_str = self::_getTreePathFromLookup($treeLookup, $treeitem->id_item, 'name', $treePathCache);
                         krsort($stdItem->path_str);
-                        $stdItem->path_ids = self::getTreePath($data->$varName, $treeitem->id_item, 'id');
+                        $stdItem->path_ids = self::_getTreePathFromLookup($treeLookup, $treeitem->id_item, 'id', $treePathCache);
                         krsort($stdItem->path_ids);
                         $categories[] = (array)$stdItem;
                     }
@@ -1063,6 +1065,78 @@ class Indexer extends AbstractIndex
         }
 
         return $categories;
+    }
+
+    /**
+     * Build a first-match lookup that preserves the legacy tree helpers' behavior for duplicate ids.
+     * @param array $serialized_list
+     * @return array
+     */
+    private static function _buildTreeLookup($serialized_list)
+    {
+        $lookup = [];
+        foreach($serialized_list as $item){
+            if(empty($item->item->id)){
+                continue;
+            }
+            $id = (string)$item->item->id;
+            if(!isset($lookup[$id])){
+                $lookup[$id] = $item;
+            }
+        }
+        return $lookup;
+    }
+
+    /**
+     * @param array $treeLookup
+     * @param string|int $id
+     * @param array $cache
+     * @return int
+     */
+    private static function _getTreeDepthFromLookup($treeLookup, $id, &$cache)
+    {
+        $cacheKey = (string)$id;
+        if(isset($cache[$cacheKey])){
+            return $cache[$cacheKey];
+        }
+        if(!isset($treeLookup[$cacheKey])){
+            $cache[$cacheKey] = 0;
+            return 0;
+        }
+        $item = $treeLookup[$cacheKey];
+        if(empty($item->item->id_parent)){
+            $cache[$cacheKey] = 0;
+            return 0;
+        }
+        $cache[$cacheKey] = 1 + self::_getTreeDepthFromLookup($treeLookup, $item->item->id_parent, $cache);
+        return $cache[$cacheKey];
+    }
+
+    /**
+     * @param array $treeLookup
+     * @param string|int $id
+     * @param string $key
+     * @param array $cache
+     * @return array
+     */
+    private static function _getTreePathFromLookup($treeLookup, $id, $key, &$cache)
+    {
+        $cacheKey = $key . ':' . (string)$id;
+        if(isset($cache[$cacheKey])){
+            return $cache[$cacheKey];
+        }
+        $lookupKey = (string)$id;
+        if(!isset($treeLookup[$lookupKey])){
+            $cache[$cacheKey] = [];
+            return [];
+        }
+        $item = $treeLookup[$lookupKey];
+        $path = [$item->item->{$key}];
+        if(!empty($item->item->id_parent)){
+            $path = array_merge($path, self::_getTreePathFromLookup($treeLookup, $item->item->id_parent, $key, $cache));
+        }
+        $cache[$cacheKey] = $path;
+        return $path;
     }
 
     /**

@@ -9,10 +9,31 @@ use Pressmind\Tests\Unit\AbstractTestCase;
 
 class GeodataTest extends AbstractTestCase
 {
-    public function testGetByZipReturnsFalseForNonInteger(): void
+    public function testGetByZipReturnsFalseForNonNumericZip(): void
     {
         $geodata = new Geodata(null, false);
         $this->assertFalse($geodata->getByZip('abc'));
+    }
+
+    public function testGetByZipExecutesQueryForLeadingZeroPostalCode(): void
+    {
+        $db = $this->createMock(AdapterInterface::class);
+        $db->expects($this->once())
+            ->method('fetchAll')
+            ->with(
+                $this->callback(function ($query) {
+                    return is_string($query)
+                        && str_contains($query, 'postleitzahl')
+                        && str_contains($query, '?');
+                }),
+                $this->equalTo(['01099'])
+            )
+            ->willReturn([]);
+
+        Registry::getInstance()->add('db', $db);
+
+        $geodata = new Geodata(null, false);
+        $this->assertFalse($geodata->getByZip('01099'));
     }
 
     public function testGetByZipReturnsFalseWhenNoResults(): void
@@ -66,7 +87,7 @@ class GeodataTest extends AbstractTestCase
         $db->method('commit')->willReturn(null);
         $db->method('rollback')->willReturn(null);
 
-        Registry::getInstance()->add('db', $db, true);
+        Registry::getInstance()->add('db', $db);
 
         $result = Geodata::validate('TEST');
         $this->assertSame([], $result);

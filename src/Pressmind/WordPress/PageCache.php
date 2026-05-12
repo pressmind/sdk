@@ -381,14 +381,26 @@ class PageCache
      */
     public static function get_by_pattern($pattern)
     {
+        if (self::$redis === null) {
+            self::init();
+        }
+        if (self::$redis === false) {
+            return [];
+        }
         $iterator = null;
         $keys = [];
         self::$redis->setOption(\Redis::OPT_SCAN, \Redis::SCAN_RETRY);
-        while ($scanned_keys = self::$redis->scan($iterator, $pattern)) {
+        // Do not use truthiness on the scan result: phpredis may return an empty
+        // array for a chunk while the cursor is not finished (see phpredis scan examples).
+        do {
+            $scanned_keys = self::$redis->scan($iterator, $pattern);
+            if ($scanned_keys === false) {
+                break;
+            }
             foreach ($scanned_keys as $str_key) {
                 $keys[] = $str_key;
             }
-        }
+        } while ($iterator != 0);
         return $keys;
     }
 

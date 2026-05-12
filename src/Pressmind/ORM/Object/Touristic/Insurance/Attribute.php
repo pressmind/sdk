@@ -14,6 +14,7 @@ use Pressmind\Registry;
  * @property string $code
  * @property string $code_ibe
  * @property integer $order
+ * @property integer $priority
  */
 class Attribute extends AbstractObject
 {
@@ -78,7 +79,32 @@ class Attribute extends AbstractObject
                 'required' => false,
                 'filters' => NULL,
             ],
+            'priority' => [
+                'title' => 'Priority',
+                'name' => 'priority',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 11,
+                    ],
+                    [
+                        'name' => 'unsigned',
+                        'params' => null,
+                    ],
+                ],
+                'filters' => NULL,
+            ],
         ]
     );
+
+    public function fromStdClass($object)
+    {
+        if (is_a($object, 'stdClass') && (!isset($object->priority) || $object->priority === '' || $object->priority === null)) {
+            $object->priority = 99;
+        }
+        parent::fromStdClass($object);
+    }
 
 }

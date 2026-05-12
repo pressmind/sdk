@@ -12,6 +12,7 @@
  * Options:
  *   --non-interactive  No interactive prompts, output only
  *   -n                 Short form for --non-interactive
+ *   --static-only      Check/apply only static SDK ORM models
  */
 
 // Find autoloader - supports installation as vendor package and standalone

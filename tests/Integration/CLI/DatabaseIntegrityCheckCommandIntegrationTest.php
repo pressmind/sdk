@@ -64,6 +64,13 @@ class DatabaseIntegrityCheckCommandIntegrationTest extends AbstractIntegrationTe
         $this->assertStringContainsString('fragmentation', strtolower($result['output']));
     }
 
+    public function testStaticOnlySkipsCustomMediaTypeChecks(): void
+    {
+        $result = $this->runCommand(['database-integrity-check', '--non-interactive', '--static-only']);
+        $this->assertStringContainsString('Checking static models for integrity', $result['output']);
+        $this->assertStringNotContainsString('Checking custom media objects for integrity', $result['output']);
+    }
+
     public function testLogTableCheckRuns(): void
     {
         $result = $this->runCommand(['database-integrity-check', '-n']);

@@ -110,7 +110,7 @@ class ClientTest extends AbstractTestCase
 
     public function testExpectedSnapshotApiVersionConstant(): void
     {
-        $this->assertSame('v2-25', Client::WEBCORE_API_VERSION);
+        $this->assertSame('v2-27', Client::WEBCORE_API_VERSION);
     }
 
     /** @param string|false $body */

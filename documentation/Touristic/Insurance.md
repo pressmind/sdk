@@ -137,8 +137,9 @@ Attributes are reusable coverage items (e.g. “Reiseabbruch”, “Gepäck”, 
 | `code` | string | Internal code (e.g. “ABBRUCH”, “GEPAECK”) |
 | `code_ibe` | string | CRS/IBE code for mapping |
 | `order` | integer | Sort order when displaying the attribute list |
+| `priority` | integer | Display/sort priority from API v2-27; defaults to `99` when the API omits it or sends `null`/empty string. |
 
-An insurance is linked to attributes via the mapping table `pmt2core_touristic_insurance_to_attributes`. Only attributes that are linked to an insurance are shown for that product; the Attribute’s `order` is typically used to sort the list (e.g. in checklists or comparison views). Orphaned attributes (not referenced by any insurance) are removed during import by `_removeInsuranceOrphans()`.
+An insurance is linked to attributes via the mapping table `pmt2core_touristic_insurance_to_attributes`. Only attributes that are linked to an insurance are shown for that product; the Attribute’s `order` and `priority` values can be used to sort the list (e.g. in checklists or comparison views). Orphaned attributes (not referenced by any insurance) are removed during import by `_removeInsuranceOrphans()`.
 
 ---
 

@@ -23,6 +23,7 @@ use Pressmind\System\Info;
  * Options:
  *   --non-interactive  No interactive prompts; auto-applies all schema fixes (static models, custom media types, PHP scaffolds)
  *   -n                 Short form for --non-interactive
+ *   --static-only      Check/apply only static SDK ORM models, without custom media type scaffolding
  *
  * Interactive prompts: y = yes, n = no, a = all (apply to this and all remaining)
  *
@@ -58,10 +59,13 @@ class DatabaseIntegrityCheckCommand extends AbstractCommand
         $hasErrors = false;
 
         $hasErrors = $this->checkStaticModels() || $hasErrors;
-        $hasErrors = $this->checkCustomMediaTypes() || $hasErrors;
-        $this->checkFragmentation();
-        $this->checkLogTableSize();
-        $this->checkSecurityConfiguration();
+
+        if (!$this->hasOption('static-only')) {
+            $hasErrors = $this->checkCustomMediaTypes() || $hasErrors;
+            $this->checkFragmentation();
+            $this->checkLogTableSize();
+            $this->checkSecurityConfiguration();
+        }
 
         $this->output->newLine();
 

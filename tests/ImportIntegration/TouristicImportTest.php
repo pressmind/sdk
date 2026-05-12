@@ -202,6 +202,16 @@ class TouristicImportTest extends AbstractImportTestCase
         $this->assertContains('id', $names);
     }
 
+    public function testInsuranceAttributeTableHasPriorityColumn(): void
+    {
+        self::assertNotNull($this->db);
+        $row = $this->db->fetchRow("SHOW TABLES LIKE 'pmt2core_touristic_insurance_attributes'");
+        $this->assertNotEmpty($row);
+        $cols = $this->db->fetchAll('DESCRIBE pmt2core_touristic_insurance_attributes');
+        $names = array_map(fn($c) => $c->Field, $cols);
+        $this->assertContains('priority', $names);
+    }
+
     public function testTouristicDatesDateColumnsValidFormat(): void
     {
         self::assertNotNull($this->db);

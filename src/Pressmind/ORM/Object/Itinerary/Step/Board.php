@@ -14,6 +14,7 @@ use Pressmind\ORM\Object\AbstractObject;
  * @property boolean $breakfast
  * @property boolean $lunch
  * @property boolean $dinner
+ * @property string $distance
  */
 class Board extends AbstractObject
 {
@@ -76,6 +77,14 @@ class Board extends AbstractObject
                 'title' => 'breakfast',
                 'name' => 'breakfast',
                 'type' => 'boolean',
+                'required' => false,
+                'validators' => null,
+                'filters' => null
+            ],
+            'distance' => [
+                'title' => 'distance',
+                'name' => 'distance',
+                'type' => 'string',
                 'required' => false,
                 'validators' => null,
                 'filters' => null

@@ -16,6 +16,7 @@ use Pressmind\ORM\Object\Itinerary\Step\Section\Content;
  * @property string $name
  * @property string $varname
  * @property string $language
+ * @property string $tags
  * @property Content $content
  */
 class Section extends AbstractObject
@@ -101,6 +102,14 @@ class Section extends AbstractObject
                         'params' => null
                     ]
                 ]
+            ],
+            'tags' => [
+                'title' => 'tags',
+                'name' => 'tags',
+                'type' => 'string',
+                'required' => false,
+                'validators' => null,
+                'filters' => null
             ],
             'content' => [
                 'title' => 'content',

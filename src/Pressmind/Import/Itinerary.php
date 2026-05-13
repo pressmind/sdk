@@ -88,11 +88,7 @@ class Itinerary extends AbstractImport implements ImportInterface
                 if(is_a($step->document_media_objects, 'stdClass')) {
                     $step->document_media_objects = [$step->document_media_objects];
                 }
-                foreach ($step->sections as &$section) {
-                    $id_section = $section->id;
-                    $section->id_section = $id_section;
-                    unset($section->id);
-                }
+                $this->_mapSections($step);
                 $img_sort = 0;
                 foreach ($step->document_media_objects as &$document_media_object) {
                     foreach($document_media_object->urls as $key => $url) {
@@ -150,11 +146,7 @@ class Itinerary extends AbstractImport implements ImportInterface
             if(is_a($step->document_media_objects, 'stdClass')) {
                 $step->document_media_objects = [$step->document_media_objects];
             }
-            foreach ($step->sections as &$section) {
-                $id_section = $section->id;
-                $section->id_section = $id_section;
-                unset($section->id);
-            }
+            $this->_mapSections($step);
             $img_sort = 0;
             foreach ($step->document_media_objects as &$document_media_object) {
                 $mapped_object = new \stdClass();
@@ -186,6 +178,18 @@ class Itinerary extends AbstractImport implements ImportInterface
             $new_step->id_media_object = $id_media_object;
             $new_step->create();
             $c++;
+        }
+    }
+
+    private function _mapSections($step)
+    {
+        foreach ($step->sections as &$section) {
+            $id_section = $section->id;
+            $section->id_section = $id_section;
+            unset($section->id);
+            if (isset($section->tags) && is_array($section->tags)) {
+                $section->tags = implode(',', $section->tags);
+            }
         }
     }
 }

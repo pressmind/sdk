@@ -162,6 +162,22 @@ class InstallSchemaTest extends AbstractImportTestCase
         $this->assertContains('id_booking_package', $names);
     }
 
+    public function testItineraryBoardTableHasDistanceColumn(): void
+    {
+        self::assertNotNull($this->db);
+        $cols = $this->db->fetchAll('DESCRIBE pmt2core_itinerary_step_boards');
+        $names = array_map(fn($c) => $c->Field, $cols);
+        $this->assertContains('distance', $names);
+    }
+
+    public function testItinerarySectionTableHasTagsColumn(): void
+    {
+        self::assertNotNull($this->db);
+        $cols = $this->db->fetchAll('DESCRIBE pmt2core_itinerary_step_sections');
+        $names = array_map(fn($c) => $c->Field, $cols);
+        $this->assertContains('tags', $names);
+    }
+
     public function testImportQueueTableExists(): void
     {
         self::assertNotNull($this->db);

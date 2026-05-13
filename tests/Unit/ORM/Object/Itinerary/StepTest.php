@@ -3,6 +3,8 @@
 namespace Pressmind\Tests\Unit\ORM\Object\Itinerary;
 
 use Pressmind\ORM\Object\Itinerary\Step;
+use Pressmind\ORM\Object\Itinerary\Step\Board;
+use Pressmind\ORM\Object\Itinerary\Step\Section;
 use Pressmind\Registry;
 use Pressmind\Tests\Unit\AbstractTestCase;
 use stdClass;
@@ -55,6 +57,24 @@ class StepTest extends AbstractTestCase
 
         $result = $step->getContentForlanguage('de');
         $this->assertSame('Deutscher Inhalt', $result);
+    }
+
+    public function testBoardDefinesDistanceField(): void
+    {
+        $board = new Board();
+
+        $this->assertTrue($board->hasProperty('distance'));
+        $this->assertSame('string', $board->getPropertyDefinition('distance')['type']);
+        $this->assertContains('distance', $board->getPropertyNames());
+    }
+
+    public function testSectionDefinesTagsField(): void
+    {
+        $section = new Section();
+
+        $this->assertTrue($section->hasProperty('tags'));
+        $this->assertSame('string', $section->getPropertyDefinition('tags')['type']);
+        $this->assertContains('tags', $section->getPropertyNames());
     }
 
     private function createSection(string $language, string $content): stdClass

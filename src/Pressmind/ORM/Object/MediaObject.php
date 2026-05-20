@@ -2748,6 +2748,7 @@ class MediaObject extends AbstractObject
                     $QueryFilter->request = ['pm-id' => $this->getId()];
                     $QueryFilter->occupancy = null;
                     $QueryFilter->skip_search_hooks = true;
+                    $QueryFilter->allowed_visibilities = $config['data']['media_types_allowed_visibilities'][$this->id_object_type] ?? [30];
                     Query::$agency_id_price_index = $agency;
                     $r = Query::getResult($QueryFilter);
                     if($r['total_result'] > 0){
@@ -2772,8 +2773,9 @@ class MediaObject extends AbstractObject
             $QueryFilter->request = ['pm-id' => $this->getId()];
             $QueryFilter->occupancy = null;
             $QueryFilter->skip_search_hooks = true;
+            $QueryFilter->allowed_visibilities = $config['data']['media_types_allowed_visibilities'][$this->id_object_type] ?? [30];
             $r = Query::getResult($QueryFilter);
-            $result[] = '     '.($r['total_result'] > 0 ? '✅' : '❌') . ' MongoIndex Results (count: '.$r['total_result'].')';
+            $result[] = '     '.($r['total_result'] > 0 ? '✅' : '❌') . '  MongoIndex Results (count: '.$r['total_result'].')';
             if($r['total_result'] == 0 && !empty($r['mongodb']['aggregation_pipeline_search'])){
                 $result[] = '    Mongo Aggregation: '.$r['mongodb']['aggregation_pipeline_search'];
             }

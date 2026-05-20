@@ -50,6 +50,19 @@ class SchemaMigrator
         'location' => 'LONGTEXT',  // relation type
         'link' => 'LONGTEXT',  // relation type
         'key_value' => 'LONGTEXT',  // relation type
+        'repeated_form' => 'LONGTEXT',  // relation type
+    ];
+
+    private static array $_relation_field_types = [
+        'table',
+        'picture',
+        'objectlink',
+        'file',
+        'categorytree',
+        'location',
+        'link',
+        'key_value',
+        'repeated_form',
     ];
 
     /**
@@ -334,6 +347,16 @@ class SchemaMigrator
                 continue;
             }
 
+            if (self::isRelationFieldType($fieldType)) {
+                Writer::write(
+                    'SchemaMigrator: Skipping relation field ' . $fieldName . ' (' . $fieldType . ') for ' . $tableName,
+                    Writer::OUTPUT_FILE,
+                    'schema_migration',
+                    Writer::TYPE_INFO
+                );
+                continue;
+            }
+
             $mysqlType = self::mapFieldType($fieldType);
             $sql = "ALTER TABLE `{$tableName}` ADD COLUMN `{$fieldName}` {$mysqlType} NULL";
 
@@ -366,6 +389,11 @@ class SchemaMigrator
     public static function mapFieldType(string $fieldType): string
     {
         return self::$_mysql_type_map[$fieldType] ?? 'LONGTEXT';
+    }
+
+    private static function isRelationFieldType(string $fieldType): bool
+    {
+        return in_array($fieldType, self::$_relation_field_types, true);
     }
 
     /**
@@ -444,6 +472,7 @@ class SchemaMigrator
             'location' => 'relation',
             'link' => 'relation',
             'key_value' => 'relation',
+            'repeated_form' => 'relation',
         ];
 
         $definitionFields = [

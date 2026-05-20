@@ -122,22 +122,7 @@ class MediaObjectData extends AbstractImport implements ImportInterface
 
                         if (!isset($values[$language])) $values[$language] = [];
                         $section_id = $section->id;
-                        $value = null;
-                        if($data_field->type == 'categorytree' && isset($data_field->value)) {
-                            $value = $data_field->value;
-                            if(!empty($value)){
-                                $value->id_object_type = $this->_data->id_media_objects_data_type;
-                            }
-                        } else if($data_field->type == 'key_value') {
-                            if(!empty($data_field->value)) {
-                                $value = [
-                                    'columns' => $data_field->columns,
-                                    'values' => $data_field->value->$section_id
-                                ];
-                            }
-                        } else if(isset($data_field->value) && isset($data_field->value->$section_id)) {
-                            $value = $data_field->value->$section_id;
-                        }
+                        $value = $this->extractSectionValue($data_field, $section_id);
                         $import_linked_objects = true;
                         if (!empty($conf['data']['disable_recursive_import'][$this->_data->id_media_objects_data_type]) && is_array($conf['data']['disable_recursive_import'][$this->_data->id_media_objects_data_type]) && in_array($column_name, $conf['data']['disable_recursive_import'][$this->_data->id_media_objects_data_type])) {
                             $this->_log[] = Writer::write('                               MediaObjectData::import(' . $this->_id_media_object . '): object_link "lazy" for field "' . $column_name . '" (data.disable_recursive_import). Linked IDs are still collected; import runs only when response hash changed.', Writer::OUTPUT_SCREEN, 'import', Writer::TYPE_INFO);
@@ -195,6 +180,37 @@ class MediaObjectData extends AbstractImport implements ImportInterface
             'category_tree_ids' => $category_tree_ids,
             'languages' => array_unique($languages)
         ];
+    }
+
+    private function extractSectionValue($data_field, $section_id)
+    {
+        if ($data_field->type == 'categorytree' && isset($data_field->value)) {
+            $value = $data_field->value;
+            if (!empty($value)) {
+                $value->id_object_type = $this->_data->id_media_objects_data_type;
+            }
+            return $value;
+        }
+
+        if ($data_field->type == 'key_value' || $data_field->type == 'repeated_form') {
+            if (!empty($data_field->value)) {
+                $columns = $data_field->columns ?? [];
+                if ($data_field->type == 'repeated_form') {
+                    $columns = $data_field->repeated_form->fields ?? $columns;
+                }
+                return [
+                    'columns' => $columns,
+                    'values' => $data_field->value->$section_id ?? [],
+                ];
+            }
+            return null;
+        }
+
+        if (isset($data_field->value) && isset($data_field->value->$section_id)) {
+            return $data_field->value->$section_id;
+        }
+
+        return null;
     }
 
     /**

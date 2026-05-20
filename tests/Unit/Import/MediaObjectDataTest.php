@@ -41,4 +41,108 @@ class MediaObjectDataTest extends AbstractTestCase
         $this->assertSame([], $result['linked_media_object_ids']);
         $this->assertSame([], $result['category_tree_ids']);
     }
+
+    public function testExtractSectionValueReturnsRepeatedFormSectionPayload(): void
+    {
+        $data = (object) [
+            'id_media_objects_data_type' => 10,
+            'data' => [],
+        ];
+        $import = new MediaObjectData($data, 123, 'full', true);
+        $field = (object) [
+            'type' => 'repeated_form',
+            'repeated_form' => (object) [
+                'fields' => [
+                    (object) ['sort' => 1, 'label' => 'Text', 'varName' => 'text'],
+                ],
+            ],
+            'value' => (object) [
+                'default-section' => [
+                    (object) [
+                        'sorting' => 1,
+                        'values' => (object) ['text' => 'Titel'],
+                    ],
+                ],
+            ],
+        ];
+
+        $method = new \ReflectionMethod(MediaObjectData::class, 'extractSectionValue');
+        $method->setAccessible(true);
+        $result = $method->invoke($import, $field, 'default-section');
+
+        $this->assertIsArray($result);
+        $this->assertSame($field->repeated_form->fields, $result['columns']);
+        $this->assertSame($field->value->{'default-section'}, $result['values']);
+    }
+
+    public function testExtractSectionValueKeepsKeyValueSectionPayload(): void
+    {
+        $import = new MediaObjectData((object) ['id_media_objects_data_type' => 10, 'data' => []], 123, 'full', true);
+        $field = (object) [
+            'type' => 'key_value',
+            'columns' => [
+                (object) ['sort' => 0, 'name' => 'Headline', 'var_name' => 'headline'],
+            ],
+            'value' => (object) [
+                'default-section' => [
+                    (object) ['sort' => 0, 'value_0_string' => 'Tag 1'],
+                ],
+            ],
+        ];
+
+        $result = $this->invokeExtractSectionValue($import, $field, 'default-section');
+
+        $this->assertSame($field->columns, $result['columns']);
+        $this->assertSame($field->value->{'default-section'}, $result['values']);
+    }
+
+    public function testExtractSectionValueKeepsCategorytreePayloadAndAddsObjectType(): void
+    {
+        $data = (object) [
+            'id_media_objects_data_type' => 607,
+            'data' => [],
+        ];
+        $import = new MediaObjectData($data, 123, 'full', true);
+        $field = (object) [
+            'type' => 'categorytree',
+            'value' => (object) ['id_category' => 99],
+        ];
+
+        $result = $this->invokeExtractSectionValue($import, $field, 'default-section');
+
+        $this->assertSame($field->value, $result);
+        $this->assertSame(607, $result->id_object_type);
+    }
+
+    public function testExtractSectionValueKeepsPlainSectionValue(): void
+    {
+        $import = new MediaObjectData((object) ['id_media_objects_data_type' => 10, 'data' => []], 123, 'full', true);
+        $field = (object) [
+            'type' => 'text',
+            'value' => (object) [
+                'default-section' => 'Plain text',
+            ],
+        ];
+
+        $this->assertSame('Plain text', $this->invokeExtractSectionValue($import, $field, 'default-section'));
+    }
+
+    public function testExtractSectionValueReturnsNullForMissingSection(): void
+    {
+        $import = new MediaObjectData((object) ['id_media_objects_data_type' => 10, 'data' => []], 123, 'full', true);
+        $field = (object) [
+            'type' => 'text',
+            'value' => (object) [],
+        ];
+
+        $this->assertNull($this->invokeExtractSectionValue($import, $field, 'default-section'));
+    }
+
+    private function invokeExtractSectionValue(MediaObjectData $import, $field, string $sectionId)
+    {
+        $method = new \ReflectionMethod(MediaObjectData::class, 'extractSectionValue');
+        $method->setAccessible(true);
+
+        return $method->invoke($import, $field, $sectionId);
+    }
 }

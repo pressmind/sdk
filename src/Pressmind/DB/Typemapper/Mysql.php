@@ -47,6 +47,7 @@ class Mysql
         'location' => 'relation',
         'link' => 'relation',
         'key_value' => 'relation',
+        'repeated_form' => 'relation',
         'qrcode' => 'text',
     );
 

@@ -3,6 +3,7 @@
 namespace Pressmind\Tests\Unit\System;
 
 use Pressmind\Registry;
+use Pressmind\DB\Adapter\AdapterInterface;
 use Pressmind\System\SchemaMigrator;
 use Pressmind\Tests\Unit\AbstractTestCase;
 
@@ -50,7 +51,27 @@ class SchemaMigratorTest extends AbstractTestCase
         $this->assertEquals('LONGTEXT', SchemaMigrator::mapFieldType('location'));
         $this->assertEquals('LONGTEXT', SchemaMigrator::mapFieldType('link'));
         $this->assertEquals('LONGTEXT', SchemaMigrator::mapFieldType('key_value'));
+        $this->assertEquals('LONGTEXT', SchemaMigrator::mapFieldType('repeated_form'));
         $this->assertEquals('LONGTEXT', SchemaMigrator::mapFieldType('table'));
+    }
+
+    public function testAddDatabaseColumnsSkipsRelationFieldTypes(): void
+    {
+        $db = $this->createMock(AdapterInterface::class);
+        $db->method('fetchAll')->willReturn([
+            (object) ['Field' => 'id'],
+            (object) ['Field' => 'id_media_object'],
+        ]);
+        $db->expects($this->once())
+            ->method('execute')
+            ->with('ALTER TABLE `objectdata_607` ADD COLUMN `headline_default` LONGTEXT NULL');
+        Registry::getInstance()->add('db', $db);
+
+        SchemaMigrator::addDatabaseColumns(607, [
+            'headline_default' => 'text',
+            'auflistung_default' => 'repeated_form',
+            'key_value_default' => 'key_value',
+        ]);
     }
 
     /**

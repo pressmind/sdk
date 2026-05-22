@@ -9,8 +9,13 @@ use Pressmind\HelperFunctions;
 use Pressmind\Import;
 use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\Itinerary\Step;
+use Pressmind\ORM\Object\Itinerary\Step\DocumentMediaObject;
 use Pressmind\ORM\Object\Itinerary\Step\TextMediaObject;
 use Pressmind\ORM\Object\Itinerary\Variant;
+use Pressmind\Registry;
+use Pressmind\Storage\Bucket;
+use Pressmind\Storage\File;
+
 class Itinerary extends AbstractImport implements ImportInterface
 {
     /**
@@ -59,6 +64,7 @@ class Itinerary extends AbstractImport implements ImportInterface
         /** @var Variant[] $variants */
         $variants = Variant::listAll(['id_media_object' => $id_media_object]);
         foreach ($variants as $variant) {
+            $this->_deleteDocumentMediaObjectFilesFromSteps($variant->steps ?? [], $id_media_object);
             $variant->delete(true);
         }
         foreach ($data as $result) {
@@ -119,6 +125,7 @@ class Itinerary extends AbstractImport implements ImportInterface
     private function _importSteps($data, $id_media_object)
     {
         $old_steps = Step::listAll(['id_media_object' => $id_media_object]);
+        $this->_deleteDocumentMediaObjectFilesFromSteps($old_steps, $id_media_object);
         foreach ($old_steps as $old_step) {
             $old_step->delete(true);
         }
@@ -191,5 +198,94 @@ class Itinerary extends AbstractImport implements ImportInterface
                 $section->tags = implode(',', $section->tags);
             }
         }
+    }
+
+    /**
+     * Delete stale physical files before old itinerary DB rows are removed.
+     *
+     * @param Step[] $steps
+     * @param int $id_media_object
+     * @return void
+     */
+    private function _deleteDocumentMediaObjectFilesFromSteps(array $steps, $id_media_object)
+    {
+        $deleted = 0;
+        foreach ($steps as $step) {
+            $document_media_objects = $step->document_media_objects ?? [];
+            if ($document_media_objects instanceof \stdClass) {
+                $document_media_objects = [$document_media_objects];
+            }
+            if (empty($document_media_objects) && !empty($step->id)) {
+                $document_media_objects = DocumentMediaObject::listAll(['id_step' => $step->id]);
+            }
+            if (!is_array($document_media_objects)) {
+                continue;
+            }
+            foreach ($document_media_objects as $document_media_object) {
+                $deleted += $this->_deleteDocumentMediaObjectFiles($document_media_object);
+            }
+        }
+        if ($deleted > 0) {
+            $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::importItinerary(' . $id_media_object . '): Deleted ' . $deleted . ' stale itinerary image file(s)';
+        }
+    }
+
+    /**
+     * @param object $document_media_object
+     * @return int
+     */
+    private function _deleteDocumentMediaObjectFiles($document_media_object)
+    {
+        if (empty($document_media_object->file_name)) {
+            return 0;
+        }
+        $config = Registry::getInstance()->get('config');
+        if (empty($config['image_handling']['storage'])) {
+            return 0;
+        }
+
+        $bucket = new Bucket($config['image_handling']['storage']);
+        $file_names = [$document_media_object->file_name];
+        $prefix = pathinfo($document_media_object->file_name, PATHINFO_FILENAME) . '_';
+
+        if ($bucket->supportsPrefixListing()) {
+            $file_names = array_merge($file_names, array_keys($bucket->listByPrefix($prefix)));
+        }
+
+        if (!empty($document_media_object->derivatives) && is_array($document_media_object->derivatives)) {
+            foreach ($document_media_object->derivatives as $derivative) {
+                if (empty($derivative->file_name)) {
+                    continue;
+                }
+                $file_names[] = $derivative->file_name;
+                $path_info = pathinfo($derivative->file_name);
+                $file_names[] = $path_info['filename'] . '.webp';
+            }
+        }
+
+        foreach (($config['image_handling']['processor']['derivatives'] ?? []) as $derivative_name => $derivative_config) {
+            $file_names[] = $prefix . $derivative_name . '.jpg';
+            if (!empty($derivative_config['webp_create'])) {
+                $file_names[] = $prefix . $derivative_name . '.webp';
+            }
+        }
+
+        $deleted = 0;
+        foreach (array_unique($file_names) as $file_name) {
+            if (empty($file_name)) {
+                continue;
+            }
+            try {
+                $file = new File($bucket);
+                $file->name = $file_name;
+                if ($file->exists()) {
+                    $file->delete();
+                    $deleted++;
+                }
+            } catch (Exception $e) {
+                $this->_errors[] = 'Failed to delete stale itinerary image file ' . $file_name . ': ' . $e->getMessage();
+            }
+        }
+        return $deleted;
     }
 }

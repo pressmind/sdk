@@ -71,6 +71,7 @@ Welcome to the pressmind SDK documentation. This documentation covers the comple
 | [Schema Migration](schema-migration.md) | Automatic schema migration for new PIM fields |
 | [Image Processor](image-processor.md) | Image derivatives, filters, watermarks, storage providers |
 | [CheapestPrice Aggregation](cheapest-price-aggregation.md) | Price calculation pipeline, state machine, early bird discounts |
+| [CheapestPriceSpeed Reference](cheapest-price-speed-reference.md) | Complete property reference for the denormalized offer price table |
 
 ### CLI Reference
 
@@ -97,6 +98,7 @@ Welcome to the pressmind SDK documentation. This documentation covers the comple
 
 | Document | Description |
 |---|---|
+| [Booking Offer Table](booking-offer-table.md) | Rendering dates & prices, booking links, availability checks, CheapestPriceSpeed vs ORM loop |
 | [Template Interface](template-interface.md) | PHP template system, scaffolding, `MediaObject::render()` |
 | [Real-World Examples](real-world-examples.md) | 13 proven SDK usage patterns from ~80 production installations |
 
@@ -177,6 +179,7 @@ pressmind PIM
 - **Setting up search?** See [MongoDB Index Configuration](search-mongodb-index-configuration.md) → [Search API](search-mongodb-api.md)
 - **Products not showing?** See [Troubleshooting](troubleshooting-missing-products.md)
 - **Building templates?** See [Template Interface](template-interface.md) → [Real-World Examples](real-world-examples.md)
+- **Rendering dates & prices?** See [Booking Offer Table](booking-offer-table.md) for the complete offer table guide
 - **Understanding prices?** See [CheapestPrice Aggregation](cheapest-price-aggregation.md) and [Price Selection Logic](price-selection-logic.md)
 - **CLI commands (import, index-mongo, etc.)?** See [CLI Reference](cli-reference.md); for WordPress helpers see [CLI WordPress Tools](cli-wordpress-tools.md)
 - **Full-page cache setup?** See [WordPress Full-Page Cache](wordpress-page-cache.md)

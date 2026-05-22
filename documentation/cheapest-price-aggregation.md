@@ -1,6 +1,6 @@
 # CheapestPrice Aggregation
 
-[← Back to Import Process](import-process.md) | [→ Architecture](architecture.md)
+[← Back to Import Process](import-process.md) | [→ Booking Offer Table](booking-offer-table.md) | [→ Architecture](architecture.md)
 
 ---
 
@@ -288,7 +288,7 @@ Editor-defined discounts from the PIM that are converted to early bird format du
 **Table:** `pmt2core_cheapest_price_speed`
 **Class:** `Pressmind\ORM\Object\CheapestPriceSpeed`
 
-The denormalized output table containing one row per price combination.
+The denormalized output table containing one row per price combination. For the **complete property reference** with detailed descriptions of every field, see [CheapestPriceSpeed Property Reference](cheapest-price-speed-reference.md).
 
 | Column Group | Columns | Description |
 |---|---|---|

@@ -84,6 +84,7 @@ MediaObjects carry:
 
 ## Related Documentation
 
+- [Booking Offer Table](booking-offer-table.md) – How to render the booking offer table (dates, prices, booking links)
 - [Booking Package](Touristic/Booking/Package.md) – Touristic packages within this MediaObject
 - [Template Interface](template-interface.md) – How to render MediaObject data in templates via `render()`
 - [Import Process](import-process.md) – How MediaObjects are imported from the PIM

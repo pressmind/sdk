@@ -143,15 +143,40 @@ Each section is documented in detail in its own file:
 
 ---
 
-## Environments
+## Config Modes
 
-The `config.json` supports three environments:
+The SDK supports two config modes: the new **env mode** and the **legacy mode**.
+
+### Env Mode (recommended)
+
+When the config file contains an `env` key at the root level, the SDK uses it as the **exclusive** configuration source. The `development`, `production`, and `testing` branches are **completely ignored**.
+
+Credentials and environment-specific values (database, API keys, hosts, paths) are loaded from environment variables with the `PM_` prefix. See [environment.md](environment.md) for the full reference.
+
+```json
+{
+  "env": {
+    "database": { "engine": "MySQL" },
+    "data": { "media_types": { ... } }
+  }
+}
+```
+
+```bash
+# .env (not in git)
+PM_DATABASE_HOST=127.0.0.1
+PM_DATABASE_PASSWORD=secret
+```
+
+### Legacy Mode
+
+If no `env` key exists, the SDK falls back to the legacy behavior with three environments:
 
 - **`development`** – Development environment (reference configuration)
 - **`testing`** – Testing environment
 - **`production`** – Production environment
 
-The active environment is determined when the configuration is loaded. Values from `testing` or `production` override those from `development`.
+Values from `testing` or `production` override those from `development` (shallow `array_merge` on top-level keys).
 
 ```json
 {
@@ -164,10 +189,23 @@ The active environment is determined when the configuration is loaded. Values fr
 }
 ```
 
+**Note:** The `PM_*` environment variable overlay is applied in **both** modes. Even legacy installations can start using `.env` files immediately without changing the config structure.
+
+### Migration
+
+Use the built-in migration tool to convert from legacy to env mode:
+
+```bash
+php integrity_check.php --migrate-env
+```
+
+This generates `.env.development`, `.env.production`, and a migrated config file. See [environment.md](environment.md) for details.
+
 ---
 
 ## Related Documentation
 
+- **[Environment Variables & .env](environment.md)** – PM_* variable reference, .env setup, migration from legacy config, Docker/Serverless
 - **[Configuration Examples & Best Practices](config-examples.md)** – Real-world configuration patterns from ~40 production installations, complete examples for tour operators and cruise operators
 - [Architecture & Design Patterns](architecture.md) – SDK design patterns, pipeline architecture, functional overview
 - [REST API Endpoints](rest-api-endpoints.md) – Complete REST API reference with all controllers

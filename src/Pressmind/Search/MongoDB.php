@@ -5,6 +5,7 @@ namespace Pressmind\Search;
 use Pressmind\Cache\Adapter\Factory;
 use Pressmind\Log\Writer;
 use Pressmind\Registry;
+use Pressmind\Search\Embedding\QueryEmbedding;
 use Pressmind\Search\Hook\SearchHookManager;
 use Pressmind\Search\Hook\SearchHookResult;
 
@@ -441,7 +442,23 @@ class MongoDB extends AbstractSearch
                 $this->_addLog('getResult(): adding OpenSearch and MediaObject (ids in) condition');
                 try{
                     $OpenSearch = new OpenSearch($searchString, $this->_language, 10000);
-                    $ids = $OpenSearch->getResult($search_type === SearchType::AUTOCOMPLETE);
+                    $config = Registry::getInstance()->get('config');
+                    $vecCfg = $config['data']['search_opensearch']['vector'] ?? [];
+                    if ($search_type !== SearchType::AUTOCOMPLETE
+                        && ! empty($vecCfg['enabled'])
+                        && ! empty($vecCfg['enabled_in_search'])
+                    ) {
+                        $vector = QueryEmbedding::getVector($searchString, $vecCfg);
+                        $k = (int) ($vecCfg['k'] ?? 50);
+                        $mode = isset($vecCfg['search_mode']) ? (string) $vecCfg['search_mode'] : 'hybrid';
+                        if ($mode === 'vector') {
+                            $ids = $OpenSearch->getVectorSearchResultIds($vector, $k);
+                        } else {
+                            $ids = $OpenSearch->getHybridSearchResultIds($searchString, $vector, $k);
+                        }
+                    } else {
+                        $ids = $OpenSearch->getResult($search_type === SearchType::AUTOCOMPLETE);
+                    }
                     if(!empty($ids)){
                         $ConditionMediaObject = new Condition\MongoDB\MediaObject($ids);
                         $this->addCondition('MediaObject', $ConditionMediaObject);
@@ -454,7 +471,7 @@ class MongoDB extends AbstractSearch
                     if(!empty($_GET['debug']) || (defined('PM_SDK_DEBUG') && PM_SDK_DEBUG)) {
                         echo '<pre>opensearch: '.json_encode($e->getMessage()).'</pre>';
                     }
-                    exit;
+                    throw new \RuntimeException('OpenSearch fulltext search failed: ' . $e->getMessage(), 0, $e);
                 }
             }
         }
@@ -497,11 +514,10 @@ class MongoDB extends AbstractSearch
                 }
             }
         }catch (\Exception $exception){
-            echo $exception->getMessage();
             if(!empty($_GET['debug']) || (defined('PM_SDK_DEBUG') && PM_SDK_DEBUG)) {
-                echo '<pre>'.json_encode($query).'</pre>';
+                echo '<pre>' . $exception->getMessage() . "\n" . json_encode($query) . '</pre>';
             }
-            exit;
+            throw new \RuntimeException('MongoDB aggregation failed: ' . $exception->getMessage(), 0, $exception);
         }
         if (!empty($ttl) && Registry::getInstance()->get('config')['cache']['enabled'] && in_array('MONGODB', Registry::getInstance()->get('config')['cache']['types']) && $this->_skip_cache == false) {
             Writer::write(get_class($this) . ' exec() writing to cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);

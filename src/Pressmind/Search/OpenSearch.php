@@ -172,12 +172,69 @@ class OpenSearch extends AbstractSearch
     }
 
     /**
-     * @return array
+     * Lexical full-text hits (paginated via search_after), same as before vector search.
+     *
+     * @return array<int, array<string, mixed>>
      */
     public function fetchAllOpenSearchHits()
     {
+        return $this->fetchAllOpenSearchHitsWithScores();
+    }
+
+    /**
+     * @return list<array{_id: string, _score: float}>
+     */
+    private function fetchAllOpenSearchHitsWithScores(): array
+    {
         $allHits = [];
         $searchAfter = null;
+        $shouldClauses = $this->buildLexicalShouldClauses();
+        if ($shouldClauses === []) {
+            return [];
+        }
+
+        while (true) {
+            $body = [
+                '_source' => false,
+                'size' => $this->_limit,
+                'sort' => [
+                    ['_score' => 'desc'],
+                    ['id' => 'asc']
+                ],
+                'query' => [
+                    'bool' => [
+                        'should' => $shouldClauses,
+                        'minimum_should_match' => 1,
+                        'filter' => []
+                    ]
+                ]
+            ];
+            if ($searchAfter) {
+                $body['search_after'] = $searchAfter;
+            }
+            $search_params =[
+                'index' => $this->_index_name,
+                'body' => $body
+            ];
+            if (!empty($_GET['debug']) || (defined('PM_SDK_DEBUG') && PM_SDK_DEBUG)) {
+                echo '<pre>opensearch: ' . json_encode($search_params) . '</pre>';
+            }
+            $response = $this->_client->search($search_params);
+            $hits = $response['hits']['hits'];
+            if (empty($hits)) {
+                break;
+            }
+            $allHits = array_merge($allHits, $hits);
+            $searchAfter = end($hits)['sort'] ?? null;
+        }
+        return $allHits;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function buildLexicalShouldClauses(): array
+    {
         $textFields = $this->_getFields('text');
         $keywordFields = $this->_getFields('keyword');
 
@@ -216,41 +273,133 @@ class OpenSearch extends AbstractSearch
             ];
         }
 
-        while (true) {
-            $body = [
-                '_source' => false,
-                'size' => $this->_limit,
-                'sort' => [
-                    ['_score' => 'desc'],
-                    ['id' => 'asc']
-                ],
-                'query' => [
-                    'bool' => [
-                        'should' => $shouldClauses,
-                        'minimum_should_match' => 1,
-                        'filter' => []
-                    ]
-                ]
-            ];
-            if ($searchAfter) {
-                $body['search_after'] = $searchAfter;
-            }
-            $search_params =[
-                'index' => $this->_index_name,
-                'body' => $body
-            ];
-            if (!empty($_GET['debug']) || (defined('PM_SDK_DEBUG') && PM_SDK_DEBUG)) {
-                echo '<pre>opensearch: ' . json_encode($search_params) . '</pre>';
-            }
-            $response = $this->_client->search($search_params);
-            $hits = $response['hits']['hits'];
-            if (empty($hits)) {
-                break;
-            }
-            $allHits = array_merge($allHits, $hits);
-            $searchAfter = end($hits)['sort'] ?? null;
+        return $shouldClauses;
+    }
+
+    /**
+     * k-NN only: returns OpenSearch document _id list in relevance order.
+     *
+     * @param  list<float>  $queryVector
+     * @return list<string>
+     */
+    public function getVectorSearchResultIds(array $queryVector, $k = null): array
+    {
+        $vecCfg = $this->_config['data']['search_opensearch']['vector'] ?? [];
+        $field = (string) ($vecCfg['vector_field'] ?? 'content_vector');
+        $k = $k !== null ? (int) $k : (int) ($vecCfg['k'] ?? $this->_limit);
+        if ($k < 1) {
+            $k = 1;
         }
-        return $allHits;
+        $minScore = (float) ($vecCfg['min_score'] ?? 0.0);
+        $map = $this->fetchVectorHitsWithScores($queryVector, $field, $k, $minScore);
+
+        if (!empty($_GET['debug']) || (defined('PM_SDK_DEBUG') && PM_SDK_DEBUG)) {
+            echo '<pre>opensearch vector ids: ' . count($map) . ' (min_score=' . $minScore . ')</pre>';
+        }
+
+        return array_slice(array_keys($map), 0, $k);
+    }
+
+    /**
+     * Hybrid lexical + k-NN: weighted score fusion, returns up to $k document _ids.
+     *
+     * @param  list<float>  $queryVector
+     * @return list<string>
+     */
+    public function getHybridSearchResultIds(string $term, array $queryVector, $k = null): array
+    {
+        $vecCfg = $this->_config['data']['search_opensearch']['vector'] ?? [];
+        $k = $k !== null ? (int) $k : (int) ($vecCfg['k'] ?? $this->_limit);
+        if ($k < 1) {
+            $k = 1;
+        }
+        $lw = (float) ($vecCfg['lexical_weight'] ?? 0.4);
+        $sw = (float) ($vecCfg['semantic_weight'] ?? 0.6);
+        $field = (string) ($vecCfg['vector_field'] ?? 'content_vector');
+        $minScore = (float) ($vecCfg['min_score'] ?? 0.0);
+
+        $semMap = $this->fetchVectorHitsWithScores($queryVector, $field, $k, $minScore);
+        $term = $this->sanitizeSearchTerm($term);
+        if ($term === '') {
+            return array_slice(array_keys($semMap), 0, $k);
+        }
+
+        $savedTerm = $this->_search_term;
+        $this->_search_term = $term;
+        $lexHits = $this->fetchAllOpenSearchHitsWithScores();
+        $this->_search_term = $savedTerm;
+
+        $lexMap = [];
+        foreach ($lexHits as $hit) {
+            $id = (string) ($hit['_id'] ?? '');
+            if ($id === '') {
+                continue;
+            }
+            $lexMap[$id] = (float) ($hit['_score'] ?? 0.0);
+        }
+
+        if ($semMap === [] && $lexMap === []) {
+            return [];
+        }
+        if ($semMap === []) {
+            return array_slice(array_keys($lexMap), 0, $k);
+        }
+        if ($lexMap === []) {
+            return array_slice(array_keys($semMap), 0, $k);
+        }
+
+        $maxL = max($lexMap) ?: 1.0;
+        $maxS = max($semMap) ?: 1.0;
+        $allIds = array_unique(array_merge(array_keys($lexMap), array_keys($semMap)));
+        $combined = [];
+        foreach ($allIds as $id) {
+            $nl = ($lexMap[$id] ?? 0.0) / $maxL;
+            $ns = ($semMap[$id] ?? 0.0) / $maxS;
+            $combined[$id] = $lw * $nl + $sw * $ns;
+        }
+        arsort($combined, SORT_NUMERIC);
+
+        return array_slice(array_keys($combined), 0, $k);
+    }
+
+    /**
+     * @param  list<float>  $queryVector
+     * @return array<string, float>  id => raw _score
+     */
+    private function fetchVectorHitsWithScores(array $queryVector, string $field, int $k, float $minScore = 0.0): array
+    {
+        $body = [
+            '_source' => false,
+            'size' => $k,
+            'query' => [
+                'knn' => [
+                    $field => [
+                        'vector' => $queryVector,
+                        'k' => $k,
+                    ],
+                ],
+            ],
+        ];
+        $search_params = [
+            'index' => $this->_index_name,
+            'body' => $body,
+        ];
+        $response = $this->_client->search($search_params);
+        $hits = $response['hits']['hits'] ?? [];
+        $map = [];
+        foreach ($hits as $hit) {
+            $id = (string) ($hit['_id'] ?? '');
+            if ($id === '') {
+                continue;
+            }
+            $score = (float) ($hit['_score'] ?? 0.0);
+            if ($minScore > 0.0 && $score < $minScore) {
+                continue;
+            }
+            $map[$id] = $score;
+        }
+
+        return $map;
     }
 
     /**

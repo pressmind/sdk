@@ -154,13 +154,31 @@ class FulltextSearch extends AbstractObject
     }
 
     /**
-     * @param $str
-     * @return string
+     * Normalize text for fulltext indexing: control chars to spaces (preserve word boundaries),
+     * whitespace collapse, umlaut transliteration.
+     *
+     * @param array|string|mixed $str Row array for pmt2core_fulltext_search or a single string
+     * @return array|string|mixed
      */
-    public static function replaceChars($str){
+    public static function replaceChars($str)
+    {
+        if (is_array($str)) {
+            $out = [];
+            foreach ($str as $k => $v) {
+                $out[$k] = self::replaceChars($v);
+            }
+            return $out;
+        }
+        if (! is_string($str)) {
+            return $str;
+        }
+        // Replace C0/C1 control characters with space (do not delete — avoids merging words)
+        $str = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]+/u', ' ', $str);
+        $str = preg_replace('/\s+/u', ' ', $str);
         $search = ['ä', 'ö', 'ü', 'Ä', 'Ö', 'Ü', 'ß'];
         $replace = ['ae', 'oe', 'ue', 'Ae', 'Oe', 'Ue', 'ss'];
-        return str_replace($search, $replace, $str);
+
+        return trim(str_replace($search, $replace, $str));
     }
 
 }

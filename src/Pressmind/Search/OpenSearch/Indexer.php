@@ -3,10 +3,13 @@
 namespace Pressmind\Search\OpenSearch;
 
 use Pressmind\DB\Adapter\Pdo;
+use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\CategoryTree;
 use Pressmind\ORM\Object\FulltextSearch;
 use Pressmind\ORM\Object\MediaObject;
 use Pressmind\Registry;
+use Pressmind\Search\Embedding\EmbeddingCache;
+use Pressmind\Search\Embedding\ProviderFactory;
 
 class Indexer extends AbstractIndex
 {
@@ -61,6 +64,21 @@ class Indexer extends AbstractIndex
                     ]
                 ]
             ];
+            $vectorCfg = $this->_config['vector'] ?? [];
+            if (! empty($vectorCfg['enabled'])) {
+                $params['body']['settings']['index']['knn'] = true;
+                $dims = (int) ($vectorCfg['dimensions'] ?? 1536);
+                $space = (string) ($vectorCfg['space_type'] ?? 'cosinesimil');
+                $fieldName = (string) ($vectorCfg['vector_field'] ?? 'content_vector');
+                $params['body']['mappings']['properties'][$fieldName] = [
+                    'type' => 'knn_vector',
+                    'dimension' => $dims,
+                    'method' => [
+                        'name' => 'hnsw',
+                        'space_type' => $space,
+                    ],
+                ];
+            }
             foreach ($this->_config['index'] as $property_name => $property) {
                 if (empty($property['object_type_mapping'])) {
                     continue;
@@ -237,7 +255,84 @@ class Indexer extends AbstractIndex
             }
             $searchObject->{$property_name} = FulltextSearch::replaceChars($string);
         }
+        $vectorCfg = $this->_config['vector'] ?? [];
+        if (! empty($vectorCfg['enabled'])) {
+            $this->attachContentVector($searchObject, $vectorCfg);
+        }
+
         return $searchObject;
+    }
+
+    /**
+     * @param  \stdClass  $searchObject
+     * @param  array<string, mixed>  $vectorCfg
+     */
+    private function attachContentVector($searchObject, array $vectorCfg): void
+    {
+        $embedText = $this->buildEmbeddingSourceText($searchObject, $vectorCfg);
+        $minLen = (int) ($vectorCfg['min_text_length'] ?? 50);
+        if (strlen($embedText) < $minLen) {
+            $field = (string) ($vectorCfg['vector_field'] ?? 'content_vector');
+            $searchObject->{$field} = null;
+
+            return;
+        }
+        try {
+            $provider = ProviderFactory::create($vectorCfg);
+            $model = (string) ($vectorCfg['model'] ?? 'text-embedding-3-small');
+            $dims = (int) ($vectorCfg['dimensions'] ?? 1536);
+            $field = (string) ($vectorCfg['vector_field'] ?? 'content_vector');
+            $cacheEnabled = ! empty($vectorCfg['cache']['enabled']);
+            $cache = null;
+            if ($cacheEnabled) {
+                $cache = EmbeddingCache::fromRegistry();
+                $cache->ensureIndexes();
+                $cached = $cache->getDocumentEmbedding($embedText, $model, $dims);
+                if ($cached !== null) {
+                    $searchObject->{$field} = $cached;
+
+                    return;
+                }
+            }
+            $vector = $provider->embed($embedText);
+            $searchObject->{$field} = $vector;
+            if ($cacheEnabled && $cache !== null) {
+                $cache->putDocumentEmbedding($embedText, $model, $dims, $vector);
+            }
+        } catch (\Throwable $e) {
+            Writer::write(
+                'OpenSearch Indexer: embedding failed for media object: ' . $e->getMessage(),
+                Writer::OUTPUT_FILE,
+                'opensearch',
+                Writer::TYPE_WARNING
+            );
+            $field = (string) ($vectorCfg['vector_field'] ?? 'content_vector');
+            $searchObject->{$field} = null;
+        }
+    }
+
+    /**
+     * @param  \stdClass  $searchObject
+     * @param  array<string, mixed>  $vectorCfg
+     */
+    private function buildEmbeddingSourceText($searchObject, array $vectorCfg): string
+    {
+        $source = isset($vectorCfg['text_source']) ? (string) $vectorCfg['text_source'] : 'fulltext';
+        if ($source === '' || $source === 'fulltext') {
+            return (string) ($searchObject->fulltext ?? '');
+        }
+        $parts = array_map('trim', explode(',', $source));
+        $buf = [];
+        foreach ($parts as $prop) {
+            if ($prop === '') {
+                continue;
+            }
+            if (isset($searchObject->{$prop}) && is_string($searchObject->{$prop})) {
+                $buf[] = $searchObject->{$prop};
+            }
+        }
+
+        return implode(' ', $buf);
     }
 
     public function getFields($language, $id_object_type)

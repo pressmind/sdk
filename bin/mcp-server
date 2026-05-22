@@ -1,0 +1,163 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * Pressmind MCP server: travel search tools for ChatGPT, Claude, Cursor, etc.
+ *
+ * Requires: composer install (with dev: php-mcp/server), valid pm-config.php, MongoDB search index.
+ *
+ * Usage:
+ *   php bin/mcp-server --application-path=/path/to/travelshop
+ *   php bin/mcp-server --application-path=/path/to/travelshop --transport=http --host=127.0.0.1 --port=8080
+ *   PM_CONFIG=pm-config.php php bin/mcp-server --application-path=/path/to/travelshop
+ *
+ * HTTP (SSE): ChatGPT expects a public URL like https://host/mcp/sse (see php-mcp HttpServerTransport).
+ */
+
+declare(strict_types=1);
+
+$mcpServerPackage = 'php-mcp/server';
+
+$autoloadPaths = [
+    __DIR__ . '/../../../autoload.php',
+    __DIR__ . '/../vendor/autoload.php',
+];
+
+$autoload = null;
+foreach ($autoloadPaths as $p) {
+    if (is_file($p)) {
+        $autoload = $p;
+        break;
+    }
+}
+
+if ($autoload === null) {
+    fwrite(STDERR, "Autoloader not found. Run composer install in the SDK or project root.\n");
+    exit(1);
+}
+
+require_once $autoload;
+
+if (! class_exists(\PhpMcp\Server\Server::class)) {
+    fwrite(STDERR, "Missing {$mcpServerPackage}. Install with: composer require {$mcpServerPackage}\n");
+    exit(1);
+}
+
+$opts = getopt('', ['application-path:', 'pm-config:', 'transport:', 'host:', 'port:', 'mcp-prefix:', 'help', 'instructions:', 'site-url:', 'ibe-url:']);
+
+if (isset($opts['help'])) {
+    echo <<<HELP
+Pressmind Travel MCP server
+
+Options:
+  --application-path=DIR   Directory containing pm-config.php (required)
+  --pm-config=FILE           Config basename (default: PM_CONFIG env or pm-config.php)
+  --transport=stdio|http    Default: stdio
+  --host=HOST               HTTP bind host (default: 127.0.0.1)
+  --port=PORT               HTTP port (default: 8080)
+  --mcp-prefix=PREFIX       URL prefix for /PREFIX/sse and /PREFIX/message (default: mcp)
+  --site-url=URL            Public website URL (default: from pm-config server.webserver_http or mcp.site_url)
+  --ibe-url=URL             IBE3 booking engine URL (default: from pm-config ib3.*, mcp.ibe_url, or env TS_IBE3_BASE_URL)
+  --instructions=TEXT       Optional server instructions for MCP clients
+  --help                    This message
+
+Environment:
+  PM_CONFIG, APP_ENV, TS_IBE3_BASE_URL
+
+HELP;
+    exit(0);
+}
+
+$appPath = $opts['application-path'] ?? getenv('MCP_APPLICATION_PATH');
+if ($appPath === false || $appPath === '' || ! is_dir($appPath)) {
+    fwrite(STDERR, "Missing or invalid --application-path (or MCP_APPLICATION_PATH).\n");
+    exit(1);
+}
+
+$pmConfig = $opts['pm-config'] ?? null;
+$transport = $opts['transport'] ?? 'stdio';
+$host = $opts['host'] ?? '127.0.0.1';
+$port = isset($opts['port']) ? (int) $opts['port'] : 8080;
+$mcpPrefix = $opts['mcp-prefix'] ?? 'mcp';
+$instructions = isset($opts['instructions']) && is_string($opts['instructions']) ? $opts['instructions'] : null;
+
+try {
+    \Pressmind\Registry::clear();
+    \Pressmind\MCP\Bootstrap::init($appPath, $pmConfig);
+} catch (Throwable $e) {
+    fwrite(STDERR, 'Bootstrap failed: ' . $e->getMessage() . "\n");
+    exit(1);
+}
+
+$siteUrlOpt = $opts['site-url'] ?? null;
+$ibeUrlOpt = $opts['ibe-url'] ?? null;
+
+$factoryOptions = [];
+if ($instructions !== null) {
+    $factoryOptions['instructions'] = $instructions;
+}
+$pmcConfig = \Pressmind\Registry::getInstance()->get('config');
+if (is_array($pmcConfig)) {
+    $search = [];
+    if (isset($pmcConfig['mcp']['search']) && is_array($pmcConfig['mcp']['search'])) {
+        $search = $pmcConfig['mcp']['search'];
+    }
+    if (! empty($pmcConfig['mcp']['destination_category_field'])) {
+        $search['destination_category_field'] = (string) $pmcConfig['mcp']['destination_category_field'];
+    }
+    if (! empty($pmcConfig['mcp']['travel_type_category_field'])) {
+        $search['travel_type_category_field'] = (string) $pmcConfig['mcp']['travel_type_category_field'];
+    }
+    $catCfg = $pmcConfig['data']['search_mongodb']['search']['categories'] ?? [];
+    if (is_array($catCfg)) {
+        $fields = [];
+        foreach ($catCfg as $fieldMap) {
+            if (! is_array($fieldMap)) {
+                continue;
+            }
+            foreach (array_keys($fieldMap) as $fn) {
+                if (is_string($fn) && $fn !== '') {
+                    $fields[$fn] = true;
+                }
+            }
+        }
+        $search['category_fields'] = array_keys($fields);
+        sort($search['category_fields']);
+    }
+    if ($search !== []) {
+        $factoryOptions['search'] = $search;
+    }
+
+    if (is_string($siteUrlOpt) && $siteUrlOpt !== '') {
+        $factoryOptions['site_url'] = $siteUrlOpt;
+    } elseif (! empty($pmcConfig['mcp']['site_url'])) {
+        $factoryOptions['site_url'] = (string) $pmcConfig['mcp']['site_url'];
+    } elseif (! empty($pmcConfig['server']['webserver_http'])) {
+        $factoryOptions['site_url'] = (string) $pmcConfig['server']['webserver_http'];
+    }
+
+    if (is_string($ibeUrlOpt) && $ibeUrlOpt !== '') {
+        $factoryOptions['ibe_url'] = $ibeUrlOpt;
+    } elseif (! empty($pmcConfig['mcp']['ibe_url'])) {
+        $factoryOptions['ibe_url'] = (string) $pmcConfig['mcp']['ibe_url'];
+    } elseif (! empty($pmcConfig['ib3']['api_endpoint'])) {
+        $factoryOptions['ibe_url'] = (string) $pmcConfig['ib3']['api_endpoint'];
+    } elseif (! empty($pmcConfig['ib3']['endpoint'])) {
+        $factoryOptions['ibe_url'] = (string) $pmcConfig['ib3']['endpoint'];
+    } else {
+        $envIbe = getenv('TS_IBE3_BASE_URL');
+        if (is_string($envIbe) && $envIbe !== '') {
+            $factoryOptions['ibe_url'] = $envIbe;
+        }
+    }
+}
+
+$server = \Pressmind\MCP\ServerFactory::create($factoryOptions);
+
+if ($transport === 'http') {
+    $httpTransport = new \PhpMcp\Server\Transports\HttpServerTransport($host, $port, $mcpPrefix);
+    $server->listen($httpTransport);
+} else {
+    $stdio = new \PhpMcp\Server\Transports\StdioServerTransport();
+    $server->listen($stdio);
+}

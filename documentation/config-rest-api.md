@@ -176,20 +176,6 @@ API key for REST server authentication. When set, the server accepts **either** 
 
 Comparison is timing-safe (`hash_equals()`). If `api_key` is empty, only Basic Auth (or no auth when user/password are empty) applies for general endpoints; command and redis endpoints then throw when called.
 
-#### Example (e.g. in Travelshop `.env`)
-
-```bash
-PM_REST_SERVER_API_KEY=your-secret-api-key
-```
-
-Config (e.g. `pm-config.php`):
-
-```json
-"api_key": ""
-```
-
-Typically filled via `getenv("PM_REST_SERVER_API_KEY")` so the secret stays in `.env`.
-
 ---
 
 ### `rest.server.api_user`

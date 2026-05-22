@@ -461,6 +461,28 @@
               ]
             }
           }
+        },
+        "vector": {
+          "enabled": false,
+          "enabled_in_search": false,
+          "search_mode": "hybrid",
+          "vector_field": "content_vector",
+          "provider": "openai",
+          "model": "text-embedding-3-small",
+          "dimensions": 1536,
+          "api_key_env": "OPENAI_API_KEY",
+          "api_url": "https://api.openai.com/v1/embeddings",
+          "space_type": "cosinesimil",
+          "k": 50,
+          "text_source": "fulltext",
+          "lexical_weight": 0.4,
+          "semantic_weight": 0.6,
+          "min_text_length": 50,
+          "min_score": 0.75,
+          "cache": {
+            "enabled": true,
+            "query_cache_ttl": 604800
+          }
         }
       },
       "media_types_allowed_visibilities": {

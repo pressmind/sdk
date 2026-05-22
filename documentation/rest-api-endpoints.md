@@ -58,7 +58,7 @@ If the request reaches a **Command** or **Redis** action, the controller runs a 
 
 ### Where to send the credentials
 
-- **API key (recommended):** Request header **`X-Api-Key`** with the value of `rest.server.api_key` (e.g. from `PM_REST_SERVER_API_KEY`). No API key in the URL.
+- **API key (recommended):** Request header **`X-Api-Key`** with the value of `rest.server.api_key`. No API key in the URL.
 - **API key (alternative for general only):** Header **`Authorization: Bearer <api_key>`** (cannot be combined with Basic Auth in one header).
 - **Basic Auth:** Header **`Authorization: Basic <base64(username:password)>`**. Username = `rest.server.api_user`, password = `rest.server.api_password`.
 

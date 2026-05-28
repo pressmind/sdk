@@ -178,6 +178,14 @@ class InstallSchemaTest extends AbstractImportTestCase
         $this->assertContains('tags', $names);
     }
 
+    public function testItineraryStepPortsTableHasDescriptionColumn(): void
+    {
+        self::assertNotNull($this->db);
+        $cols = $this->db->fetchAll('DESCRIBE pmt2core_itinerary_step_ports');
+        $names = array_map(fn($c) => $c->Field, $cols);
+        $this->assertContains('description', $names);
+    }
+
     public function testImportQueueTableExists(): void
     {
         self::assertNotNull($this->db);

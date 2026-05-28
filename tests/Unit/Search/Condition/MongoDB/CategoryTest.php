@@ -18,8 +18,36 @@ class CategoryTest extends TestCase
         $c = new Category('destination', 5);
         $query = $c->getQuery('first_match');
         $this->assertIsArray($query);
-        $this->assertSame('destination', $query['categories.field_name']);
-        $this->assertSame(5, $query['categories.id_item']);
+        $this->assertSame(
+            [
+                'categories' => [
+                    '$elemMatch' => [
+                        'field_name' => 'destination',
+                        'id_item' => 5,
+                    ],
+                ],
+            ],
+            $query
+        );
+    }
+
+    public function testFirstMatchQueryKeepsCategoryFieldAndItemOnSameElement(): void
+    {
+        $c = new Category('starthafen_default', 'c_port_780');
+
+        $query = $c->getQuery('first_match');
+
+        $this->assertSame(
+            [
+                'categories' => [
+                    '$elemMatch' => [
+                        'field_name' => 'starthafen_default',
+                        'id_item' => 'c_port_780',
+                    ],
+                ],
+            ],
+            $query
+        );
     }
 
     public function testFirstMatchQueryMultipleIdsOr(): void
@@ -27,7 +55,29 @@ class CategoryTest extends TestCase
         $c = new Category('destination', [1, 2], 'OR');
         $query = $c->getQuery('first_match');
         $this->assertIsArray($query);
-        $this->assertArrayHasKey('$or', $query);
+        $this->assertSame(
+            [
+                '$or' => [
+                    [
+                        'categories' => [
+                            '$elemMatch' => [
+                                'field_name' => 'destination',
+                                'id_item' => 1,
+                            ],
+                        ],
+                    ],
+                    [
+                        'categories' => [
+                            '$elemMatch' => [
+                                'field_name' => 'destination',
+                                'id_item' => 2,
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            $query
+        );
     }
 
     public function testFirstMatchQueryWithCategoryIdsNot(): void
@@ -56,6 +106,28 @@ class CategoryTest extends TestCase
     {
         $c = new Category('destination', [1, 2], 'AND');
         $query = $c->getQuery('first_match');
-        $this->assertArrayHasKey('$and', $query);
+        $this->assertSame(
+            [
+                '$and' => [
+                    [
+                        'categories' => [
+                            '$elemMatch' => [
+                                'field_name' => 'destination',
+                                'id_item' => 1,
+                            ],
+                        ],
+                    ],
+                    [
+                        'categories' => [
+                            '$elemMatch' => [
+                                'field_name' => 'destination',
+                                'id_item' => 2,
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            $query
+        );
     }
 }

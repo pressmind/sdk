@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the pressmind SDK from February 2025 to April 2026.
+All notable changes to the pressmind SDK from February 2025 to May 2026.
 
 Changes are categorized as:
 - **FEATURE** – New functionality
@@ -12,6 +12,7 @@ Changes are categorized as:
 
 ## Table of Contents
 
+- [May 2026](#may-2026)
 - [April 2026](#april-2026)
 - [March 2026](#march-2026)
 - [February 2026](#february-2026)
@@ -28,6 +29,16 @@ Changes are categorized as:
 - [March 2025](#march-2025)
 - [February 2025](#february-2025)
 - [Summary of Breaking Changes](#summary-of-breaking-changes)
+
+---
+
+## May 2026
+
+### CHANGE: Webcore API v2-30
+
+- Updated the default Webcore REST API version from `v2-29` to `v2-30`.
+- Added `description` to `ORM\Object\Itinerary\Step\Port`, persisted in `pmt2core_itinerary_step_ports.description` for itinerary port labels from `Itinerary/get`.
+- Existing databases should be aligned with `bin/database-integrity-check --non-interactive --static-only` before importing v2-30 itinerary data.
 
 ---
 

@@ -70,7 +70,7 @@ class ItineraryTest extends AbstractTestCase
         $this->assertCount(1, $import->getErrors());
     }
 
-    public function testImportPersistsBoardDistanceAndSectionTags(): void
+    public function testImportPersistsBoardDistanceSectionTagsAndPortDescription(): void
     {
         $inserted = [];
         $db = $this->createMock(AdapterInterface::class);
@@ -126,7 +126,16 @@ class ItineraryTest extends AbstractTestCase
                             ],
                         ],
                         'geopoints' => [],
-                        'ports' => [],
+                        'ports' => [
+                            (object) [
+                                'id' => 'c73644d298ea1d6307fe366b6377e439',
+                                'id_port' => '251',
+                                'departure_time' => '12:00',
+                                'arrival_time' => '10:00',
+                                'day' => 0,
+                                'description' => 'Hafen Bezeichnung',
+                            ],
+                        ],
                         'document_media_objects' => [],
                         'text_media_objects' => [],
                     ],
@@ -140,6 +149,7 @@ class ItineraryTest extends AbstractTestCase
 
         $this->assertSame('456', $inserted['pmt2core_itinerary_step_boards'][0]['distance']);
         $this->assertSame('Hafen,Anreise', $inserted['pmt2core_itinerary_step_sections'][0]['tags']);
+        $this->assertSame('Hafen Bezeichnung', $inserted['pmt2core_itinerary_step_ports'][0]['description']);
     }
 
     public function testDatelessImportDeletesStaleItineraryImageFilesBeforeReplacingSteps(): void

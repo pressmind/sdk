@@ -48,17 +48,14 @@ class Category
     public function getQuery($type = 'first_match')
     {
         if($type == 'first_match') {
-            $query = [
-                'categories.field_name' => $this->_varName,
-            ];
             if (count($this->_categoryIds) > 1) {
                 $ids = [];
                 foreach ($this->_categoryIds as $categoryId) {
-                    $ids[] = ['categories.id_item' => $categoryId];
+                    $ids[] = $this->_createElemMatchQuery($categoryId);
                 }
-                $query['$' . strtolower($this->_combineOperator)] = $ids;
+                $query = ['$' . strtolower($this->_combineOperator) => $ids];
             } else {
-                $query['categories.id_item'] = $this->_categoryIds[0];
+                $query = $this->_createElemMatchQuery($this->_categoryIds[0]);
             }
             // Exclude categories if categoryIdsNot is set
             if(!empty($this->_categoryIdsNot)) {
@@ -77,5 +74,17 @@ class Category
             return $query;
         }
         return null;
+    }
+
+    private function _createElemMatchQuery($categoryId)
+    {
+        return [
+            'categories' => [
+                '$elemMatch' => [
+                    'field_name' => $this->_varName,
+                    'id_item' => $categoryId
+                ]
+            ]
+        ];
     }
 }

@@ -15,6 +15,7 @@ use Pressmind\ORM\Object\AbstractObject;
  * @property string $departure_time
  * @property string $arrival_time
  * @property integer $day
+ * @property string $description
  */
 class Port extends AbstractObject
 {
@@ -95,6 +96,14 @@ class Port extends AbstractObject
                 'title' => 'day',
                 'name' => 'day',
                 'type' => 'integer',
+                'required' => false,
+                'validators' => null,
+                'filters' => null
+            ],
+            'description' => [
+                'title' => 'description',
+                'name' => 'description',
+                'type' => 'string',
                 'required' => false,
                 'validators' => null,
                 'filters' => null

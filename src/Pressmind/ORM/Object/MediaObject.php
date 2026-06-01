@@ -2736,6 +2736,20 @@ class MediaObject extends AbstractObject
                 $result[] = '          > '.$log;
             }
         }
+        $build_for_origin = 0;
+        $build_for_language = null;
+        if (!empty($config['data']['search_mongodb']['search']['build_for'][$this->id_object_type][0])) {
+            $bf = $config['data']['search_mongodb']['search']['build_for'][$this->id_object_type][0];
+            $build_for_origin = $bf['origin'] ?? 0;
+            $build_for_language = $bf['language'] ?? null;
+        }
+        $prev_touristic_origin = Query::$touristic_origin;
+        $prev_language_code = Query::$language_code;
+        Query::$touristic_origin = $build_for_origin;
+        if (!empty($build_for_language) && empty(Query::$language_code)) {
+            Query::$language_code = $build_for_language;
+        }
+
         $agency_based_option_and_prices_enabled = !isset($config['data']['touristic']['agency_based_option_and_prices']['enabled']) ? false : $config['data']['touristic']['agency_based_option_and_prices']['enabled'];
         if($agency_based_option_and_prices_enabled){
             $agencies = empty($config['data']['touristic']['agency_based_option_and_prices']['allowed_agencies']) ? null : $config['data']['touristic']['agency_based_option_and_prices']['allowed_agencies'];
@@ -2761,7 +2775,7 @@ class MediaObject extends AbstractObject
                 foreach($agencies as $agency) {
                     $Filter = new CalendarFilter();
                     $Filter->agency = $agency;
-                    $Calendar = $this->getCalendar($Filter);
+                    $Calendar = $this->getCalendar($Filter, 3, $build_for_origin, $build_for_language);
                     if(!empty($Calendar->calendar)){
                         $agencies_with_calendar[] = $agency;
                     }
@@ -2780,9 +2794,11 @@ class MediaObject extends AbstractObject
                 $result[] = '    Mongo Aggregation: '.$r['mongodb']['aggregation_pipeline_search'];
             }
             $Filter = new CalendarFilter();
-            $Calendar = $this->getCalendar($Filter);
+            $Calendar = $this->getCalendar($Filter, 3, $build_for_origin, $build_for_language);
             $result[] = '     '.(!empty($Calendar->calendar) ? '✅' : '❌') . '  Mongo Calendar';
         }
+        Query::$touristic_origin = $prev_touristic_origin;
+        Query::$language_code = $prev_language_code;
         // MongoDB Indexer validation - shows detailed reasons why indexing might fail
         if(!empty($config['data']['search_mongodb']['enabled'])) {
             try {

@@ -1020,6 +1020,11 @@ abstract class AbstractObject
                 $objects = $this->$key;
                 if(!empty($objects) && is_array($objects)) {
                     foreach ($objects as $object) {
+                        // Defensive: relation values can be scalars (e.g. '0' from the API meaning "none")
+                        // instead of hydrated objects. Skip those to avoid a fatal "Call to create() on string".
+                        if (!is_object($object)) {
+                            continue;
+                        }
                         $object->create();
                         $relation_table_object = new $relation_table_object_class_name();
                         $relation_table_object->$related_id_name = $this->getId();

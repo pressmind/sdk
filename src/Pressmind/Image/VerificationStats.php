@@ -134,7 +134,7 @@ class VerificationStats
         // Build derivative suffix list: suffix => [name, extension] for matching
         $suffixList = [];
         foreach ($derivativesConfig as $derivativeName => $derivativeConfig) {
-            $extensions = ['jpg'];
+            $extensions = ['jpg', 'png'];
             if (!empty($derivativeConfig['webp_create'])) {
                 $extensions[] = 'webp';
             }
@@ -349,7 +349,7 @@ class VerificationStats
             $existingFiles = $usePrefixListing ? $bucket->listByPrefix($prefix) : [];
 
             foreach ($derivativesConfig as $derivativeName => $derivativeConfig) {
-                $extensions = ['jpg'];
+                $extensions = ['jpg', 'png'];
                 if (!empty($derivativeConfig['webp_create'])) {
                     $extensions[] = 'webp';
                 }
@@ -453,7 +453,7 @@ class VerificationStats
             $existingFiles = $usePrefixListing ? $bucket->listByPrefix($prefix) : [];
 
             foreach ($derivativesConfig as $derivativeName => $derivativeConfig) {
-                $extensions = ['jpg'];
+                $extensions = ['jpg', 'png'];
                 if (!empty($derivativeConfig['webp_create'])) {
                     $extensions[] = 'webp';
                 }
@@ -559,7 +559,7 @@ class VerificationStats
             $existingFiles = $usePrefixListing ? $bucket->listByPrefix($prefix) : [];
 
             foreach ($derivativesConfig as $derivativeName => $derivativeConfig) {
-                $extensions = ['jpg'];
+                $extensions = ['jpg', 'png'];
                 if (!empty($derivativeConfig['webp_create'])) {
                     $extensions[] = 'webp';
                 }

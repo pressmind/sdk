@@ -28,18 +28,6 @@ class ImageMagick implements AdapterInterface
         if(is_a($file, File::class) === false) {
             throw new ImagickException('Error: $file must be of type ' . File::class);
         }
-        $path_info = pathinfo($file->name);
-        //$new_name = $path_info['filename'] . '_' . $derivativeName . '.' . $path_info['extension'];
-        $new_name = $path_info['filename'] . '_' . $derivativeName . '.jpg';
-        $derivative_file = new File($file->getBucket());
-        $derivative_file->name = $new_name;
-        $derivative_file->mimetype = 'image/jpeg';
-        if($derivative_file->exists()) {
-            Writer::write('Derivative ' . $derivative_file->name . ' already exists. Skipping ...', WRITER::OUTPUT_SCREEN, 'image_processor', WRITER::TYPE_INFO);
-            $derivative_file->read();
-            return $derivative_file;
-        }
-        Writer::write('Generating derivative ' . $derivativeName . ' for file ' . $file->name, WRITER::OUTPUT_FILE, 'image_processor', WRITER::TYPE_INFO);
         $image = new Imagick();
         $image->readImageBlob($file->content);
         if($config->crop == true) {
@@ -57,7 +45,25 @@ class ImageMagick implements AdapterInterface
             }
         }
 
-        if($image->getImageFormat() != 'jpg'){
+        $hasAlpha = $this->hasAlphaChannel($image);
+        $path_info = pathinfo($file->name);
+        $extension = $hasAlpha ? 'png' : 'jpg';
+        $derivative_file = new File($file->getBucket());
+        $derivative_file->name = $path_info['filename'] . '_' . $derivativeName . '.' . $extension;
+        $derivative_file->mimetype = $hasAlpha ? 'image/png' : 'image/jpeg';
+        if($derivative_file->exists()) {
+            Writer::write('Derivative ' . $derivative_file->name . ' already exists. Skipping ...', WRITER::OUTPUT_SCREEN, 'image_processor', WRITER::TYPE_INFO);
+            $derivative_file->read();
+            return $derivative_file;
+        }
+        Writer::write('Generating derivative ' . $derivativeName . ' for file ' . $file->name, WRITER::OUTPUT_FILE, 'image_processor', WRITER::TYPE_INFO);
+
+        if($hasAlpha) {
+            if (method_exists($image, 'setImageAlphaChannel') && defined(Imagick::class . '::ALPHACHANNEL_ACTIVATE')) {
+                $image->setImageAlphaChannel(Imagick::ALPHACHANNEL_ACTIVATE);
+            }
+            $image->setImageFormat('png');
+        } else {
             $image->setCompressionQuality(85);
             $image->setImageFormat('jpg');
         }
@@ -100,6 +106,17 @@ class ImageMagick implements AdapterInterface
             return true;
         }
         return false;
+    }
+
+    private function hasAlphaChannel(Imagick $image): bool
+    {
+        if (!method_exists($image, 'getImageAlphaChannel')) {
+            return false;
+        }
+
+        $alphaChannel = $image->getImageAlphaChannel();
+        return $alphaChannel === true
+            || (defined(Imagick::class . '::ALPHACHANNEL_ACTIVATE') && $alphaChannel === Imagick::ALPHACHANNEL_ACTIVATE);
     }
 
 }

@@ -64,6 +64,30 @@ class WebPictureTest extends AbstractTestCase
         $this->assertSame('test-landscape.webp', $result->name);
     }
 
+    /**
+     * @requires extension gd
+     */
+    public function testProcessConvertsPalettePngWithAlphaToWebp(): void
+    {
+        $bucket = $this->createTempBucket();
+        $file = $this->createTransparentPngFile($bucket, 'transparent-logo_thumb.png', true);
+        $config = Config::create('webp', ['webp_create' => true, 'webp_quality' => 80]);
+        $adapter = new WebPicture();
+        $result = $adapter->process($config, $file, 'webp');
+
+        $this->assertSame('transparent-logo_thumb.webp', $result->name);
+        $this->assertNotEmpty($result->content);
+
+        $img = imagecreatefromstring($result->content);
+        $this->assertNotFalse($img);
+        $corner = imagecolorsforindex($img, imagecolorat($img, 0, 0));
+        $center = imagecolorsforindex($img, imagecolorat($img, 40, 20));
+        imagedestroy($img);
+
+        $this->assertSame(127, $corner['alpha']);
+        $this->assertSame(0, $center['alpha']);
+    }
+
     public function testIsImageCorruptedReturnsFalse(): void
     {
         $bucket = $this->createTempBucket();

@@ -61,6 +61,50 @@ trait ImageFixtureTrait
         return $file;
     }
 
+    protected function createTransparentPngFile(Bucket $bucket, string $name = 'transparent-logo.png', bool $palette = false): File
+    {
+        if (!extension_loaded('gd')) {
+            throw new \RuntimeException('Need gd extension for createTransparentPngFile');
+        }
+
+        $width = 80;
+        $height = 40;
+        $img = $palette ? imagecreate($width, $height) : imagecreatetruecolor($width, $height);
+        if ($img === false) {
+            throw new \RuntimeException('GD could not create transparent PNG fixture');
+        }
+
+        if (!$palette) {
+            imagealphablending($img, false);
+            imagesavealpha($img, true);
+        }
+
+        $transparent = imagecolorallocatealpha($img, 0, 0, 0, 127);
+        imagefill($img, 0, 0, $transparent);
+
+        if ($palette) {
+            imagecolortransparent($img, $transparent);
+        }
+
+        $blue = imagecolorallocatealpha($img, 30, 167, 255, 0);
+        imagefilledrectangle($img, 20, 10, 60, 30, $blue);
+
+        ob_start();
+        imagepng($img);
+        $content = ob_get_clean();
+        imagedestroy($img);
+
+        if ($content === false) {
+            throw new \RuntimeException('GD could not encode transparent PNG fixture');
+        }
+
+        $file = new File($bucket);
+        $file->name = $name;
+        $file->content = $content;
+        $file->mimetype = 'image/png';
+        return $file;
+    }
+
     protected function createCroppedSection(int $x, int $y, int $w, int $h): string
     {
         $path = $this->getTestImagePath();

@@ -265,6 +265,7 @@ class Itinerary extends AbstractImport implements ImportInterface
 
         foreach (($config['image_handling']['processor']['derivatives'] ?? []) as $derivative_name => $derivative_config) {
             $file_names[] = $prefix . $derivative_name . '.jpg';
+            $file_names[] = $prefix . $derivative_name . '.png';
             if (!empty($derivative_config['webp_create'])) {
                 $file_names[] = $prefix . $derivative_name . '.webp';
             }

@@ -101,6 +101,31 @@ class ImageMagickTest extends AbstractTestCase
 
     /**
      * @requires extension imagick
+     * @requires extension gd
+     */
+    public function testProcessPreservesAlphaForTransparentPng(): void
+    {
+        $bucket = $this->createTempBucket();
+        $file = $this->createTransparentPngFile($bucket);
+        $config = Config::create('thumb', ['max_width' => 80, 'max_height' => 40, 'crop' => false, 'preserve_aspect_ratio' => true]);
+        $adapter = new ImageMagick();
+        $result = $adapter->process($config, $file, 'thumb');
+
+        $this->assertSame('transparent-logo_thumb.png', $result->name);
+        $this->assertSame('image/png', $result->mimetype);
+
+        $img = imagecreatefromstring($result->content);
+        $this->assertNotFalse($img);
+        $corner = imagecolorsforindex($img, imagecolorat($img, 0, 0));
+        $center = imagecolorsforindex($img, imagecolorat($img, 40, 20));
+        imagedestroy($img);
+
+        $this->assertSame(127, $corner['alpha']);
+        $this->assertSame(0, $center['alpha']);
+    }
+
+    /**
+     * @requires extension imagick
      */
     public function testProcessDerivativeNameInFilename(): void
     {
@@ -194,6 +219,9 @@ class ImageMagickTest extends AbstractTestCase
         $adapter->isImageCorrupted($file);
     }
 
+    /**
+     * @requires extension imagick
+     */
     public function testIsImageCorruptedThrowsOnNonFileType(): void
     {
         $adapter = new ImageMagick();

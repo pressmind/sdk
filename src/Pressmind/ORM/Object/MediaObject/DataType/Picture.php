@@ -839,7 +839,7 @@ class Picture extends AbstractObject
             }
         }
         foreach ($config['image_handling']['processor']['derivatives'] as $derivative_name => $derivative_config) {
-            $extensions = ['jpg'];
+            $extensions = ['jpg', 'png'];
             if(!empty($derivative_config['webp_create'])){
                 $extensions[] = 'webp';
             }

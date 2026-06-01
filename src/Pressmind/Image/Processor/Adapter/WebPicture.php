@@ -26,12 +26,22 @@ class WebPicture implements AdapterInterface
             Writer::write('Generating WebP-Version ' . $webp_file->name . ' for file ' . $file->name, WRITER::OUTPUT_FILE, 'image_processor', WRITER::TYPE_INFO);
             if(!$webp_file->exists()) {
                 $image = imagecreatefromstring($file->content);
+                if ($image !== false) {
+                    if (!imageistruecolor($image)) {
+                        imagepalettetotruecolor($image);
+                    }
+                    imagealphablending($image, false);
+                    imagesavealpha($image, true);
+                }
                 ob_start();
                 try {
                     imagewebp($image, null, $config->webp_quality);
                     $raw_content = ob_get_contents();
                 } finally {
                     ob_end_clean();
+                }
+                if ($image !== false) {
+                    imagedestroy($image);
                 }
                 $webp_file->content = $raw_content;
                 $webp_file->save();

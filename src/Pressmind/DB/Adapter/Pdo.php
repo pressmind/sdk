@@ -55,12 +55,21 @@ class Pdo implements AdapterInterface
 
     /**
      * Reconnect after "MySQL server has gone away" (e.g. long idle or server restart).
-     * Resets statement and creates a new PDO connection. Not safe during an open transaction.
+     * Resets statement, transaction level, and creates a new PDO connection.
+     * @throws Exception if called during an active transaction (data integrity would be lost)
      */
     public function reconnect(): void
     {
         if ($this->config === null) {
             return;
+        }
+        if ($this->transactionLevel > 0) {
+            $this->transactionLevel = 0;
+            throw new Exception(
+                'MySQL connection lost during an active transaction. ' .
+                'Reconnecting would silently discard uncommitted changes. ' .
+                'The caller should catch this, retry the entire transaction.'
+            );
         }
         $this->statement = null;
         $this->databaseConnection = new \PDO(
@@ -88,6 +97,7 @@ class Pdo implements AdapterInterface
     /**
      * Ensures the connection is alive (e.g. after long idle). Runs SELECT 1 and reconnects on failure.
      * Call before DB access after long-running phases (e.g. post-import) to avoid "MySQL server has gone away".
+     * @throws Exception if the connection is lost during an active transaction (reconnect would lose data)
      */
     public function ensureConnected(): void
     {
@@ -138,6 +148,7 @@ class Pdo implements AdapterInterface
             }
         }
     }
+
 
     /**
      * @return int

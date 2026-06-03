@@ -2110,6 +2110,30 @@ class Indexer extends AbstractIndex
                     $values[':agency'] = $agency;
                 }
                 $result = $db->fetchAll($query, $values);
+
+                $quota_query = "SELECT date_departure, SUM(quota_pax) as quota_total
+                    FROM pmt2core_cheapest_price_speed
+                    WHERE date_departure BETWEEN :departure_from AND :departure_to
+                        AND id_media_object = :id_media_object
+                        AND id_origin = :id_origin
+                        AND quota_pax IS NOT NULL
+                        ".(empty($agency) ? "" : " AND agency = :agency")."
+                    GROUP BY date_departure";
+                $quota_values = [
+                    ':id_media_object' => $this->mediaObject->id,
+                    ':id_origin' => $origin,
+                    ':departure_from' => $year . "-" . $month . "-01",
+                    ':departure_to' => $year . "-" . $month . "-" . $max_days,
+                ];
+                if(!empty($agency)){
+                    $quota_values[':agency'] = $agency;
+                }
+                $quota_result = $db->fetchAll($quota_query, $quota_values);
+                $quota_map = [];
+                foreach($quota_result as $qr){
+                    $quota_map[$qr->date_departure] = (int)$qr->quota_total;
+                }
+
                 $date_list = [];
                 $c = 0;
                 foreach($result as $v){
@@ -2122,6 +2146,7 @@ class Indexer extends AbstractIndex
                     $v->option_occupancy = (int)$v->option_occupancy;
                     $v->state = (int)$v->state;
                     $v->duration = (int)$v->duration;
+                    $v->quota_pax = $quota_map[$v->date_departure] ?? null;
                     if(!isset($date_list[$v->date_departure])){
                         if($c <  5){
                             $v->durations_from_this_departure = [$v->duration];

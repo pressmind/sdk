@@ -55,7 +55,7 @@ class Pdo implements AdapterInterface
 
     /**
      * Reconnect after "MySQL server has gone away" (e.g. long idle or server restart).
-     * Resets statement, transaction level, and creates a new PDO connection.
+     * Resets statement and creates a new PDO connection.
      * @throws Exception if called during an active transaction (data integrity would be lost)
      */
     public function reconnect(): void
@@ -64,7 +64,6 @@ class Pdo implements AdapterInterface
             return;
         }
         if ($this->transactionLevel > 0) {
-            $this->transactionLevel = 0;
             throw new Exception(
                 'MySQL connection lost during an active transaction. ' .
                 'Reconnecting would silently discard uncommitted changes. ' .
@@ -439,6 +438,7 @@ class Pdo implements AdapterInterface
 
     /**
      * Commit the current transaction. With nested transactions, only the outermost commit() actually commits.
+     * The decrement happens AFTER PDO::commit() so that if commit throws, rollback() can still clean up.
      * @return void
      * @throws Exception
      */
@@ -447,22 +447,30 @@ class Pdo implements AdapterInterface
         if ($this->transactionLevel <= 0) {
             return;
         }
-        $this->transactionLevel--;
-        if ($this->transactionLevel === 0) {
+        if ($this->transactionLevel === 1) {
             $this->databaseConnection->commit();
         }
+        $this->transactionLevel--;
     }
 
     /**
      * Roll back the current transaction. Resets nesting level; all changes since the first beginTransaction() are discarded.
+     * Also acts as a safety net: if transactionLevel is already 0 but PDO still has an active transaction
+     * (e.g. after a failed reconnect reset the counter), it rolls back the PDO transaction to prevent
+     * "There is already an active transaction" errors on the next beginTransaction().
      * @return void
      */
     public function rollback()
     {
         if ($this->transactionLevel <= 0) {
+            if ($this->databaseConnection->inTransaction()) {
+                try {
+                    $this->databaseConnection->rollBack();
+                } catch (\Throwable $ignore) {}
+            }
             return;
         }
-        if ($this->transactionLevel > 0 && $this->databaseConnection->inTransaction()) {
+        if ($this->databaseConnection->inTransaction()) {
             $this->databaseConnection->rollBack();
         }
         $this->transactionLevel = 0;

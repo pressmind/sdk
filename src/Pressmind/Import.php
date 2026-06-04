@@ -507,7 +507,16 @@ class Import
     public function importMediaObjectsFromArray($media_object_ids, $import_linked_objects = true, $force = false)
     {
         foreach ($media_object_ids as $media_object_id) {
-            $this->importMediaObject($media_object_id, $import_linked_objects, $force);
+            try {
+                $this->importMediaObject($media_object_id, $import_linked_objects, $force);
+            } catch (\Throwable $e) {
+                $this->_errors[] = '[FatalImportError] MediaObject ' . $media_object_id . ': ' . $e->getMessage();
+                $this->_log[] = Writer::write(
+                    'FATAL: importMediaObject(' . $media_object_id . ') threw uncaught exception: ' . $e->getMessage(),
+                    Writer::OUTPUT_BOTH, 'import', Writer::TYPE_ERROR
+                );
+                $this->_db->rollback();
+            }
             $this->_imported_ids[] = $media_object_id;
         }
     }
@@ -746,8 +755,8 @@ class Import
                 $has_media_type_hooks = (isset($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type]) && is_array($config['data']['media_type_custom_import_hooks'][$response[0]->id_media_objects_data_type]));
                 $has_custom_hooks = $has_my_content || $has_media_type_hooks;
                 if ($has_custom_hooks) {
-                    $this->_db->beginTransaction();
                     try {
+                        $this->_db->beginTransaction();
                         if ($has_my_content) {
                             foreach ($response[0]->my_contents_to_media_object as $my_content) {
                                 if (isset($config['data']['touristic']['my_content_class_map'][$my_content->id_my_content])) {
@@ -818,8 +827,8 @@ class Import
             }
 
             $this->_start_time = microtime(true);
-            $this->_db->beginTransaction();
             try {
+            $this->_db->beginTransaction();
             $current_object = new ORM\Object\MediaObject($id_media_object, false, true);
             $disable_touristic_data_import = (isset($config['data']['touristic']['disable_touristic_data_import']) && in_array($response[0]->id_media_objects_data_type, $config['data']['touristic']['disable_touristic_data_import']));
             if (false == $disable_touristic_data_import) {

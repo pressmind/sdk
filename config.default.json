@@ -227,6 +227,9 @@
           "uri": "mongodb+srv://",
           "db": ""
         },
+        "term_resolver": {
+          "enabled": false
+        },
         "search": {
           "build_for": {
             "123": [

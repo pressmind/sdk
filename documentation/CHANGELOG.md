@@ -38,9 +38,11 @@ Changes are categorized as:
 ### FEATURE: TermResolver – Category-based search term recognition
 
 - New class `Pressmind\Search\TermResolver` that detects when a search term matches a known category name (destination, trip type, ship name, etc.) and converts the fulltext search into an exact category filter.
-- The resolvable fields are automatically derived from the `search_mongodb.search.categories` configuration – no explicit flag needed.
+- **SDK-integrated:** When enabled via `search_mongodb.term_resolver.enabled: true`, the TermResolver runs automatically inside `MongoDB::getResult()` before OpenSearch processing. This works for all search entry points (`Query::getResult()`, `Query::fromRequest()`, theme `BuildSearch`, manual conditions) – no theme-level code changes required.
+- The resolvable fields are automatically derived from the `search_mongodb.search.categories` configuration.
 - Dictionary is pre-computed and stored in dedicated MongoDB collections (`term_resolver_*`) for fast runtime lookups without expensive aggregations.
 - `Pressmind\Search\MongoDB\Indexer::rebuildTermDictionary()` is called automatically after `createIndexes()` to rebuild the dictionary.
+- **Activation:** Set `data.search_mongodb.term_resolver.enabled: true` in `config.json`. Default is `false` (opt-in).
 - Documentation: [TermResolver](search-opensearch.md#termresolver-category-based-search-optimization)
 
 ### CHANGE: OpenSearch `prefix_length` default raised to 5 (configurable)

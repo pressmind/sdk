@@ -41,6 +41,8 @@ use Pressmind\ORM\Object\Touristic\Option\Discount;
  * @property integer $auto_book
  * @property integer $required
  * @property string $required_group
+ * @property integer $required_group_min
+ * @property integer $required_group_max
  * @property string $description_long
  * @property integer $min_pax
  * @property integer $max_pax
@@ -48,7 +50,7 @@ use Pressmind\ORM\Object\Touristic\Option\Discount;
  * @property DateTime $reservation_date_to
  * @property integer $age_from
  * @property integer $age_to
- * @property string $selection_type
+ * @property string $selection_type @deprecated Use required_group_min/required_group_max instead
  * @property boolean $use_earlybird
  * @property string $request_code
  * @property string $price_group
@@ -526,6 +528,22 @@ class Option extends AbstractObject
                 ],
                 'filters' => NULL,
             ],
+            'required_group_min' => [
+                'title' => 'Required_group_min',
+                'name' => 'required_group_min',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'required_group_max' => [
+                'title' => 'Required_group_max',
+                'name' => 'required_group_max',
+                'type' => 'integer',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
             'description_long' => [
                 'title' => 'Description_long',
                 'name' => 'description_long',
@@ -626,7 +644,7 @@ class Option extends AbstractObject
                 ],
                 'filters' => NULL,
             ],
-            'selection_type' => [
+            'selection_type' => [ // @deprecated Use required_group_min/required_group_max instead
                 'title' => 'Selection_type',
                 'name' => 'selection_type',
                 'type' => 'string',

@@ -424,6 +424,24 @@ class MongoDB extends AbstractSearch
             $hookContext['_hook_result'] = $hookResult;
         }
         
+        // TermResolver: convert known category terms to exact category filters before fulltext search
+        $config = Registry::getInstance()->get('config');
+        $termResolverEnabled = !empty($config['data']['search_mongodb']['term_resolver']['enabled']);
+        if ($termResolverEnabled && ($this->hasCondition('Fulltext') || $this->hasCondition('AtlasLuceneFulltext'))) {
+            $fulltextCondition = $this->getConditionByType('Fulltext') ?: $this->getConditionByType('AtlasLuceneFulltext');
+            if ($fulltextCondition) {
+                $searchTerm = $fulltextCondition->getSearchStringRaw();
+                $termMatch = TermResolver::resolve($searchTerm, $this->_language, $this->_origin);
+                if ($termMatch !== null) {
+                    $this->_addLog('getResult(): TermResolver matched "' . $searchTerm . '" → ' . $termMatch['field'] . ':' . $termMatch['id']);
+                    $this->removeCondition($fulltextCondition->getType());
+                    $this->addCondition('Category', new Condition\MongoDB\Category(
+                        $termMatch['field'], [$termMatch['id']], 'OR'
+                    ));
+                }
+            }
+        }
+
         if($this->_use_opensearch && ($this->hasCondition('AtlasLuceneFulltext') || $this->hasCondition('Fulltext'))) {
             $searchString = '';
             $condition = $this->getConditionByType('AtlasLuceneFulltext');
@@ -442,7 +460,6 @@ class MongoDB extends AbstractSearch
                 $this->_addLog('getResult(): adding OpenSearch and MediaObject (ids in) condition');
                 try{
                     $OpenSearch = new OpenSearch($searchString, $this->_language, 10000);
-                    $config = Registry::getInstance()->get('config');
                     $vecCfg = $config['data']['search_opensearch']['vector'] ?? [];
                     if ($search_type !== SearchType::AUTOCOMPLETE
                         && ! empty($vecCfg['enabled'])

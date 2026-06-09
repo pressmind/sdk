@@ -2007,12 +2007,15 @@ Each document in the collection:
 
 ### Configuration
 
-The TermResolver requires no explicit configuration. It automatically derives the resolvable fields from:
+The TermResolver must be explicitly enabled via `search_mongodb.term_resolver.enabled`:
 
 ```json
 {
   "data": {
     "search_mongodb": {
+      "term_resolver": {
+        "enabled": true
+      },
       "search": {
         "categories": {
           "123": {
@@ -2026,7 +2029,11 @@ The TermResolver requires no explicit configuration. It automatically derives th
 }
 ```
 
-All fields listed in `categories` are automatically included in the TermResolver dictionary.
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `term_resolver.enabled` | Boolean | `false` | Enable automatic category term resolution in the MongoDB search pipeline. When `true`, fulltext searches matching a known category name are converted to exact category filters before OpenSearch/regex processing |
+
+All fields listed in `categories` are automatically included in the TermResolver dictionary. The dictionary is pre-computed during MongoDB indexing.
 
 ### Rebuilding the Dictionary
 

@@ -364,6 +364,7 @@
       "search_opensearch": {
         "enabled": false,
         "enabled_in_mongo_search": true,
+        "index_prefix": null,
         "uri": "http://opensearch:9200",
         "user": null,
         "password": null,

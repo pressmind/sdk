@@ -182,6 +182,10 @@ class AbstractIndex
     public function getDefaultFilterForLanguage($language = null)
     {
         $language = strtolower((string)$language);
+        $config = Registry::getInstance()->get('config');
+        $customStopwords = $config['data']['search_opensearch']['stopwords'] ?? null;
+
+        $deStopwords = self::_loadStopwords('de', $customStopwords);
         $map = [
             'de' => [
                 'german_stemmer' => [
@@ -190,7 +194,7 @@ class AbstractIndex
                 ],
                 'german_stop' => [
                     'type' => 'stop',
-                    'stopwords' => '_german_'
+                    'stopwords' => $deStopwords,
                 ],
             ],
             'en' => [
@@ -217,11 +221,15 @@ class AbstractIndex
     public function getDefaultAnalyzerForLanguage($language = null)
     {
         $language = strtolower((string)$language);
+        $config = Registry::getInstance()->get('config');
+        $customStopwords = $config['data']['search_opensearch']['stopwords'] ?? null;
+
+        $deStopwords = self::_loadStopwords('de', $customStopwords);
         $map = [
             'de' => [
                 'german_default' => [
                     'type' => 'standard',
-                    'stopwords' => '_german_'
+                    'stopwords' => $deStopwords,
                 ],
                 'autocomplete_de' => [
                     'type' => 'custom',
@@ -271,6 +279,56 @@ class AbstractIndex
             return $map[$language];
         }
         return $map['de'];
+    }
+
+    /**
+     * Load stop words for the given language.
+     * Returns the custom list from file, a config override, or the built-in language default.
+     *
+     * @param string $language
+     * @param array|string|null $configOverride Value from search_opensearch.stopwords config
+     * @return array|string Array of words or OpenSearch built-in identifier (e.g. "_german_")
+     */
+    private static function _loadStopwords(string $language, $configOverride = null)
+    {
+        if (is_array($configOverride)) {
+            return $configOverride;
+        }
+        if (is_string($configOverride) && !empty($configOverride)) {
+            if (str_starts_with($configOverride, '_')) {
+                return $configOverride;
+            }
+            if (file_exists($configOverride)) {
+                return self::_parseStopwordsFile($configOverride);
+            }
+        }
+
+        $defaultFile = __DIR__ . '/resources/stopwords_' . $language . '.txt';
+        if (file_exists($defaultFile)) {
+            return self::_parseStopwordsFile($defaultFile);
+        }
+
+        $builtinMap = ['de' => '_german_', 'en' => '_english_', 'fr' => '_french_', 'es' => '_spanish_'];
+        return $builtinMap[$language] ?? '_none_';
+    }
+
+    /**
+     * Parse a stop words text file (one word per line, # comments).
+     *
+     * @param string $filePath
+     * @return string[]
+     */
+    private static function _parseStopwordsFile(string $filePath): array
+    {
+        $lines = file($filePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $words = [];
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line !== '' && $line[0] !== '#') {
+                $words[] = $line;
+            }
+        }
+        return $words;
     }
 
     /**

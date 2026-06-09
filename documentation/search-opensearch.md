@@ -59,6 +59,9 @@
 - [Indexing During Import](#indexing-during-import)
 - [Caching](#caching)
 - [Complete Configuration Example](#complete-configuration-example)
+- [Fuzzy Matching Tuning](#fuzzy-matching-tuning)
+- [Stop Words Configuration](#stop-words-configuration)
+- [TermResolver (Category-Based Search Optimization)](#termresolver-category-based-search-optimization)
 - [Common Scenarios](#common-scenarios)
   - [Scenario 1: MongoDB Only (Default)](#scenario-1-mongodb-only-default)
   - [Scenario 2: OpenSearch + MongoDB (Recommended)](#scenario-2-opensearch--mongodb-recommended)
@@ -532,7 +535,7 @@ Searches across multiple fields simultaneously:
 | `type` | `best_fields` | Uses the score from the single best-matching field |
 | `operator` | `and` | ALL terms in the query must be present in a field |
 | `fuzziness` | `AUTO` | Auto edit distance: 0 for 1-2 chars, 1 for 3-5 chars, 2 for 6+ chars |
-| `prefix_length` | `3` | First 3 characters must match exactly (no fuzziness applied) |
+| `prefix_length` | `5` (configurable) | First N characters must match exactly (no fuzziness applied). Configured via `search_opensearch.prefix_length` |
 
 **`type` options explained:**
 - `best_fields` (used): Takes the score from the field that matches best. Ideal when fields contain similar content and one is "the best match".
@@ -554,7 +557,7 @@ Fuzziness uses Levenshtein edit distance (insertions, deletions, substitutions):
 | 3-5 characters | 1 edit allowed | "Reiße" matches "Reise" |
 | 6+ characters | 2 edits allowed | "Mallroca" matches "Mallorca" |
 
-`prefix_length: 3` restricts fuzziness to start after the 3rd character. This prevents "Mallorca" from matching unrelated words and significantly reduces the query expansion cost.
+`prefix_length` (default: `5`, configurable via `search_opensearch.prefix_length`) restricts fuzziness to start after the Nth character. This prevents "Berlin" from matching "Bernina" and significantly reduces false positives in tourism search contexts.
 
 > **Reference:** [OpenSearch Multi-Match Query](https://opensearch.org/docs/latest/query-dsl/full-text/multi-match/)
 
@@ -664,7 +667,9 @@ All OpenSearch settings are under `data.search_opensearch` in `config.json`:
   "data": {
     "search_opensearch": {
       "enabled": false,
-      "enabled_in_mongo_search": true
+      "enabled_in_mongo_search": true,
+      "prefix_length": 5,
+      "stopwords": null
     }
   }
 }
@@ -674,6 +679,8 @@ All OpenSearch settings are under `data.search_opensearch` in `config.json`:
 |---|---|---|---|
 | `enabled` | Boolean | `false` | Enable OpenSearch indexing during import. When `true`, media objects are indexed into OpenSearch during the import pipeline |
 | `enabled_in_mongo_search` | Boolean | `true` | Use OpenSearch for fulltext queries within MongoDB search at query time. If `false`, OpenSearch is indexed but not queried |
+| `prefix_length` | Integer | `5` | Number of leading characters that must match exactly in fuzzy queries. Higher values reduce false positives (e.g. "Berlin" no longer matches "Bernina"). See [Fuzzy Matching Tuning](#fuzzy-matching-tuning) |
+| `stopwords` | mixed | `null` | Custom stop words configuration. `null` = use SDK built-in tourism-optimized list. Can also be an array of words, a file path, or a built-in identifier like `"_german_"`. See [Stop Words Configuration](#stop-words-configuration) |
 
 **Important:** Both flags must be `true` for the hybrid search to work. Setting `enabled: true` but `enabled_in_mongo_search: false` allows indexing into OpenSearch without using it for search (useful for testing or building the index before switching over).
 
@@ -1240,7 +1247,7 @@ The SDK's standard fulltext search uses a `bool` query with `should` clauses to 
             "type": "best_fields",
             "operator": "and",
             "fuzziness": "AUTO",
-            "prefix_length": 3
+            "prefix_length": 5
           }
         },
         {
@@ -1845,6 +1852,226 @@ Handles index creation and document indexing.
 
 ---
 
+## Fuzzy Matching Tuning
+
+The `prefix_length` setting controls how many leading characters of a search term must match exactly before fuzziness (Levenshtein edits) is applied. This is critical for avoiding false positives in tourism search.
+
+### Problem
+
+With the previous default (`prefix_length: 3`), searching for "Berlin" would also match "Bernina" (only 2 character difference after the 3rd position). Similarly, "Mittelmeer" would match "Mittelalter".
+
+### Solution
+
+The SDK now defaults to `prefix_length: 5`, which means the first 5 characters must match exactly. This eliminates most false positives while still allowing reasonable typo tolerance for longer terms.
+
+### Configuration
+
+```json
+{
+  "data": {
+    "search_opensearch": {
+      "prefix_length": 5
+    }
+  }
+}
+```
+
+| Value | Effect | Example |
+|---|---|---|
+| `3` | Old default, very permissive | "Berlin" matches "Bernina" |
+| `4` | Moderate | "Berlin" no longer matches "Bernina", but "Mittel" still matches both "Mittelmeer" and "Mittelalter" |
+| `5` | New default, recommended | Eliminates most false positives in German tourism context |
+| `6+` | Very strict | Almost no fuzziness, only for very long words |
+
+**Recommendation:** Use the default `5` for German tourism search. Consider `4` only if you need more lenient typo tolerance.
+
+---
+
+## Stop Words Configuration
+
+Stop words are common words that are removed from the search index and queries because they don't contribute to relevance. The SDK provides a **tourism-optimized German stop words list** that removes problematic geographic terms from the standard German list.
+
+### Problem with Standard German Stop Words
+
+The built-in OpenSearch `_german_` stop words list contains words that are also geographic names in the tourism context:
+
+| Stop Word | Geographic Relevance |
+|---|---|
+| `seine` | River Seine (Paris river cruises) |
+| `oder` | River Oder (cycling tours, Germany-Poland border) |
+| `aller` | River Aller (Lower Saxony tours) |
+
+With the standard list, searching for "Seine" (the river) would produce zero results because the term is removed before querying.
+
+### SDK Built-in List
+
+When `stopwords` is `null` (default), the SDK uses its built-in tourism-optimized list located at `src/Pressmind/Search/OpenSearch/resources/stopwords_de.txt`. This list is based on the standard German list with the above geographic terms removed.
+
+### Configuration Options
+
+```json
+{
+  "data": {
+    "search_opensearch": {
+      "stopwords": null
+    }
+  }
+}
+```
+
+| Value | Behavior |
+|---|---|
+| `null` | Use SDK built-in tourism-optimized list (recommended) |
+| `"_german_"` | Use OpenSearch built-in German list (legacy behavior) |
+| `["word1", "word2", ...]` | Use a custom array of stop words |
+| `"/path/to/file.txt"` | Load stop words from a text file (one word per line, `#` comments) |
+
+### Custom Stop Words File Format
+
+```text
+# Custom stop words (one per line, # for comments)
+aber
+alle
+als
+am
+an
+```
+
+**Important:** After changing stop words, you must recreate index templates and reindex all documents:
+
+```bash
+php bin/index-opensearch create_index_templates
+php bin/index-opensearch all
+```
+
+---
+
+## TermResolver (Category-Based Search Optimization)
+
+The `TermResolver` detects when a user's search term matches a known category name (e.g. a destination, trip type, or ship name) and converts the fulltext search into a precise category filter. This ensures exact results without relying on fuzzy text matching.
+
+### How It Works
+
+```
+User searches: "Berlin"
+                │
+                ▼
+┌──────────────────────────────┐
+│  TermResolver::resolve()     │
+│                              │
+│  1. Normalize: "berlin"      │
+│  2. Lookup in dictionary     │
+│  3. Match found:             │
+│     field: zielgebiet_default│
+│     id: "cat_12345"         │
+│     name: "Berlin"          │
+└──────────┬───────────────────┘
+           │
+           ▼
+┌──────────────────────────────┐
+│  Search Controller           │
+│                              │
+│  Instead of:                 │
+│    pm-t=Berlin (fulltext)    │
+│  Uses:                       │
+│    pm-c[zielgebiet]=cat_123  │
+│    (exact category filter)   │
+└──────────────────────────────┘
+```
+
+### Dictionary Source
+
+The TermResolver dictionary is automatically built from **all category fields** defined in the `search_mongodb.search.categories` configuration. It reads all unique category names from the MongoDB search collections and stores them in a pre-computed lookup collection.
+
+### MongoDB Collections
+
+The indexer creates `term_resolver_*` collections during `createIndexes()`:
+
+| Collection Name | Content |
+|---|---|
+| `term_resolver_de_origin_0` | German terms, origin 0 |
+| `term_resolver_origin_0` | Terms without language prefix, origin 0 |
+| `term_resolver_de_origin_0_agency_1` | German terms, origin 0, agency 1 |
+
+Each document in the collection:
+
+```json
+{
+  "_id": "berlin",
+  "field": "zielgebiet_default",
+  "id_item": "cat_12345",
+  "name": "Berlin",
+  "count": 42
+}
+```
+
+### Configuration
+
+The TermResolver requires no explicit configuration. It automatically derives the resolvable fields from:
+
+```json
+{
+  "data": {
+    "search_mongodb": {
+      "search": {
+        "categories": {
+          "123": {
+            "zielgebiet_default": null,
+            "reiseart_default": null
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+All fields listed in `categories` are automatically included in the TermResolver dictionary.
+
+### Rebuilding the Dictionary
+
+The dictionary is rebuilt automatically when the MongoDB indexer runs `createIndexes()`. To manually rebuild:
+
+```php
+$indexer = new \Pressmind\Search\MongoDB\Indexer();
+$indexer->rebuildTermDictionary();
+```
+
+Or via the standard CLI:
+
+```bash
+php bin/index-mongo
+```
+
+### PHP Usage
+
+```php
+use Pressmind\Search\TermResolver;
+
+$match = TermResolver::resolve('Berlin', 'de', 0);
+// Returns: ['field' => 'zielgebiet_default', 'id' => 'cat_123', 'name' => 'Berlin', 'count' => 42]
+// Or null if no match found
+
+$fields = TermResolver::getCategoryFields();
+// Returns: ['zielgebiet_default', 'reiseart_default']
+```
+
+### Integration in Travelshop
+
+In a Travelshop theme's `BuildSearch.php`, the TermResolver is called before the fulltext search:
+
+```php
+if (!empty($term)) {
+    $termMatch = \Pressmind\Search\TermResolver::resolve($term);
+    if ($termMatch !== null) {
+        $request[$prefix.'-c'][$termMatch['field']] = $termMatch['id'];
+        $term = null; // Skip fulltext search
+    }
+}
+```
+
+---
+
 ## Troubleshooting
 
 ### Common Issues
@@ -1853,7 +2080,9 @@ Handles index creation and document indexing.
 |---|---|---|
 | "Index template does not exist" | First run, templates not yet created | Run `createIndexTemplates()` before indexing |
 | Empty search results with OpenSearch | `enabled_in_mongo_search` is `false` | Set both `enabled` and `enabled_in_mongo_search` to `true` |
-| Fuzzy matching not working for short queries | `prefix_length: 3` requires first 3 chars correct | Expected behavior – first 3 characters must match exactly |
+| Fuzzy matching not working for short queries | `prefix_length: 5` (default) requires first 5 chars correct | Expected behavior – reduce `prefix_length` in config if more lenience needed |
+| False positives like "Berlin" → "Bernina" | `prefix_length` too low | Increase `prefix_length` (default 5 should prevent this) |
+| Geographic names not found (e.g. "Seine") | Standard `_german_` stop words remove the term | Use SDK default (`stopwords: null`) which has these terms removed |
 | Wrong language stemming | `language` field in mapping is wrong or `null` | Set correct language code in `object_type_mapping` |
 | Stale search results after config change | Old index with different config hash | `deleteAllIndexesThatNotMatchConfigHash()` runs during template creation |
 | OpenSearch connection refused | Wrong URI or OpenSearch not running | Verify `uri` setting and OpenSearch service status |

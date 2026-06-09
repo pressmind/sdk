@@ -366,6 +366,11 @@
         "password": null,
         "number_of_shards": 1,
         "number_of_replicas": 0,
+        "prefix_length": 5,
+        "stopwords": null,
+        "EXAMPLE_stopwords_custom_array": ["aber", "alle", "als", "am", "an"],
+        "EXAMPLE_stopwords_builtin": "_german_",
+        "EXAMPLE_stopwords_file_path": "/path/to/custom_stopwords.txt",
         "index": {
           "code": {
             "type": "keyword",

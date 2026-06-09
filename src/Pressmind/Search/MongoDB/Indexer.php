@@ -153,6 +153,61 @@ class Indexer extends AbstractIndex
                 }
             }
         }
+
+        $this->rebuildTermDictionary();
+    }
+
+    /**
+     * Rebuild the term_resolver collection(s) from category data in
+     * the search collections. Provides a pre-computed lookup for
+     * TermResolver::resolve() at query time.
+     */
+    public function rebuildTermDictionary(): void
+    {
+        $categoryFields = \Pressmind\Search\TermResolver::getCategoryFields();
+        if (empty($categoryFields)) {
+            return;
+        }
+
+        foreach ($this->_config['search']['build_for'] as $build_infos) {
+            foreach ($build_infos as $build_info) {
+                foreach ($this->_agencies as $agency) {
+                    $sourceCollection = $this->getCollectionName(
+                        $build_info['origin'], $build_info['language'], $agency
+                    );
+                    $targetCollection = 'term_resolver_'
+                        . (!empty($build_info['language']) ? $build_info['language'] . '_' : '')
+                        . 'origin_' . $build_info['origin']
+                        . (!empty($agency) ? '_agency_' . $agency : '');
+
+                    $pipeline = [
+                        ['$unwind' => '$categories'],
+                        ['$match' => ['categories.field_name' => ['$in' => $categoryFields]]],
+                        ['$group' => [
+                            '_id' => ['$toLower' => '$categories.name'],
+                            'field' => ['$first' => '$categories.field_name'],
+                            'id_item' => ['$first' => '$categories.id_item'],
+                            'name' => ['$first' => '$categories.name'],
+                            'count' => ['$sum' => 1],
+                        ]],
+                        ['$out' => $targetCollection],
+                    ];
+
+                    try {
+                        $this->db->{$sourceCollection}->aggregate($pipeline, ['allowDiskUse' => true]);
+                        Writer::write(
+                            'TermResolver: rebuilt dictionary "' . $targetCollection . '" from "' . $sourceCollection . '"',
+                            Writer::OUTPUT_FILE, 'mongodb_indexer'
+                        );
+                    } catch (\Exception $e) {
+                        Writer::write(
+                            'TermResolver: failed to rebuild "' . $targetCollection . '": ' . $e->getMessage(),
+                            Writer::OUTPUT_FILE, 'mongodb_indexer', Writer::TYPE_ERROR
+                        );
+                    }
+                }
+            }
+        }
     }
 
     /**

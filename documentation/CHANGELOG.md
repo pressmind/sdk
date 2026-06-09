@@ -12,6 +12,7 @@ Changes are categorized as:
 
 ## Table of Contents
 
+- [June 2026](#june-2026)
 - [May 2026](#may-2026)
 - [April 2026](#april-2026)
 - [March 2026](#march-2026)
@@ -29,6 +30,31 @@ Changes are categorized as:
 - [March 2025](#march-2025)
 - [February 2025](#february-2025)
 - [Summary of Breaking Changes](#summary-of-breaking-changes)
+
+---
+
+## June 2026
+
+### FEATURE: TermResolver – Category-based search term recognition
+
+- New class `Pressmind\Search\TermResolver` that detects when a search term matches a known category name (destination, trip type, ship name, etc.) and converts the fulltext search into an exact category filter.
+- The resolvable fields are automatically derived from the `search_mongodb.search.categories` configuration – no explicit flag needed.
+- Dictionary is pre-computed and stored in dedicated MongoDB collections (`term_resolver_*`) for fast runtime lookups without expensive aggregations.
+- `Pressmind\Search\MongoDB\Indexer::rebuildTermDictionary()` is called automatically after `createIndexes()` to rebuild the dictionary.
+- Documentation: [TermResolver](search-opensearch.md#termresolver-category-based-search-optimization)
+
+### CHANGE: OpenSearch `prefix_length` default raised to 5 (configurable)
+
+- **BREAKING (behavior):** The default `prefix_length` for fuzzy matching in `multi_match` queries is now `5` (previously hardcoded to `3`). This significantly reduces false positives (e.g. "Berlin" no longer matches "Bernina", "Mittelmeer" no longer matches "Mittelalter").
+- The value is now configurable via `data.search_opensearch.prefix_length` in `config.json`.
+- **Action required:** After upgrading, recreate index templates (`php bin/index-opensearch create_index_templates`) and verify search behavior. If you need more lenient matching, set `prefix_length` to `4` or `3` in your config.
+
+### FEATURE: Tourism-optimized German stop words
+
+- New built-in stop words file (`src/Pressmind/Search/OpenSearch/resources/stopwords_de.txt`) that removes geographic terms ("seine", "oder", "aller") from the standard German stop word list. These terms are relevant as river/location names in tourism search.
+- The stop words configuration is now customizable via `data.search_opensearch.stopwords` – supports `null` (SDK default), an array of words, a file path, or a built-in identifier.
+- **BREAKING (behavior):** New installations will use the tourism-optimized list by default. Existing installations that upgrade must recreate index templates to apply the new stop words. Set `"stopwords": "_german_"` to keep the old behavior.
+- **Action required:** Recreate index templates and reindex after upgrading: `php bin/index-opensearch create_index_templates && php bin/index-opensearch all`
 
 ---
 

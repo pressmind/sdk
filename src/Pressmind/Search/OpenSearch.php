@@ -247,7 +247,7 @@ class OpenSearch extends AbstractSearch
                     'type' => 'best_fields',
                     'operator' => 'and',
                     'fuzziness' => 'AUTO',
-                    'prefix_length' => 3
+                    'prefix_length' => $this->_config['data']['search_opensearch']['prefix_length'] ?? 5
                 ]
             ];
         }

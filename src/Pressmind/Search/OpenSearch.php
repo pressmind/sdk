@@ -10,6 +10,7 @@ use Pressmind\Registry;
 
 class OpenSearch extends AbstractSearch
 {
+    use OpenSearch\IndexNameTrait;
     /**
      * @var string[]
      */
@@ -78,31 +79,9 @@ class OpenSearch extends AbstractSearch
         $this->_limit = $limit;
     }
 
-    /**
-     * @param $language
-     * @return string
-     */
-    public function getIndexTemplateName($language = null)
+    protected function getOpenSearchConfig(): array
     {
-        if (empty($language)) {
-            return 'index_' . $this->getConfigHash();
-        }
-        $language = strtolower($language);
-        return 'index_' . $this->getConfigHash() . '_' . $language;
-    }
-
-    /**
-     * @return string
-     */
-    public function getConfigHash()
-    {
-        $config = $this->_config['data']['search_opensearch'];
-        unset($config['uri'], $config['username'], $config['password']);
-        $hash = md5(serialize($config));
-        if (!empty($this->_config['data']['search_opensearch']['index_prefix'])) {
-            return $this->_config['data']['search_opensearch']['index_prefix'] . '_' . $hash;
-        }
-        return $hash;
+        return $this->_config['data']['search_opensearch'];
     }
 
 

@@ -697,6 +697,52 @@ Number of replicas per shard. For high availability, at least `1` should be conf
 
 ---
 
+### `data.search_opensearch.index_prefix`
+
+| Property | Value |
+|---|---|
+| **Type** | `string` or `null` |
+| **Default** | Auto-derived from installation path |
+| **Required** | No |
+| **Used in** | `Search\OpenSearch\IndexNameTrait.php` |
+
+#### Description
+
+Namespace prefix for OpenSearch index names. Used to isolate indices when multiple environments (e.g., development and production) share the same OpenSearch cluster.
+
+When set explicitly, the value is used directly as the prefix. When not set, the SDK automatically derives an 8-character hash from the installation path (`substr(md5(realpath(__DIR__)), 0, 8)`), ensuring that different installations on the same server never collide.
+
+#### Resulting Index Name Pattern
+
+```
+index_{prefix}_{configHash}
+index_{prefix}_{configHash}_{language}
+```
+
+#### Example
+
+```json
+"search_opensearch": {
+  "index_prefix": "prod",
+  "enabled": true,
+  ...
+}
+```
+
+This produces index names like `index_prod_c3e30bd984bf5c9563edeb8827c3e3c0`.
+
+#### Multi-Environment Setup
+
+| Environment | Config | Result |
+|---|---|---|
+| Production | `"index_prefix": "prod"` | `index_prod_{hash}` |
+| Development | `"index_prefix": "dev"` | `index_dev_{hash}` |
+| No prefix set | *(auto)* | `index_{8charPathHash}_{hash}` |
+
+**Important:** The `deleteAllIndexesThatNotMatchConfigHash()` cleanup method only deletes indices matching the current prefix scope. This prevents one environment from accidentally destroying another environment's index during re-indexing.
+
+---
+
 ### `data.search_opensearch.index`
 
 | Property | Value |

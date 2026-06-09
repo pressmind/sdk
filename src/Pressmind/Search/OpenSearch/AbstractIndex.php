@@ -14,6 +14,7 @@ use Pressmind\Search\CheapestPrice;
 
 class AbstractIndex
 {
+    use IndexNameTrait;
     /**
      * @var MediaObject null
      */
@@ -105,17 +106,9 @@ class AbstractIndex
         return trim($text);
     }
 
-    /**
-     * @param $language
-     * @return string
-     */
-    public function getIndexTemplateName($language = null)
+    protected function getOpenSearchConfig(): array
     {
-        if (empty($language)) {
-            return 'index_' . $this->getConfigHash();
-        }
-        $language = strtolower($language);
-        return 'index_' . $this->getConfigHash() . '_' . $language;
+        return $this->_config;
     }
 
     /**
@@ -125,9 +118,7 @@ class AbstractIndex
     {
         $indexes = $this->getIndexes();
         $hash = $this->getConfigHash();
-        $prefix = !empty($this->_config['index_prefix'])
-            ? 'index_' . $this->_config['index_prefix'] . '_'
-            : 'index_';
+        $prefix = 'index_' . $this->getIndexPrefix() . '_';
         foreach ($indexes as $index) {
             if (strpos($index['index'], $prefix) !== 0) {
                 continue;
@@ -387,18 +378,5 @@ class AbstractIndex
         return array_unique($object_types);
     }
 
-    /**
-     * @return string
-     */
-    public function getConfigHash()
-    {
-        $config = $this->_config;
-        unset($config['uri'], $config['username'], $config['password']);
-        $hash = md5(serialize($config));
-        if (!empty($this->_config['index_prefix'])) {
-            return $this->_config['index_prefix'] . '_' . $hash;
-        }
-        return $hash;
-    }
 
 }

@@ -1157,21 +1157,35 @@ The template defines:
 ### Index Naming Convention
 
 ```
-index_{configHash}
-index_{configHash}_{language}
+index_{prefix}_{configHash}
+index_{prefix}_{configHash}_{language}
 ```
 
-The `configHash` is an MD5 hash of the OpenSearch config object (excluding connection-only fields: `uri`, `username`, `password`). This ensures:
+Each index name consists of:
+- **`prefix`** – Either an explicit `index_prefix` from config, or an auto-derived 8-char hash from the installation path. This isolates environments sharing the same OpenSearch cluster.
+- **`configHash`** – An MD5 hash of the OpenSearch config (excluding `uri`, `username`, `password`). Config changes (fields, boosts) produce a new hash.
+
+This ensures:
+- **Environment isolation** – Different installations (dev/prod) on the same server get unique prefixes automatically
 - **Config changes create new indexes automatically** – Adding a field or changing boost values generates a new hash
-- **Old indexes from previous configurations are cleaned up** – `deleteAllIndexesThatNotMatchConfigHash()` removes stale indexes
+- **Old indexes from previous configurations are cleaned up** – `deleteAllIndexesThatNotMatchConfigHash()` only removes stale indexes within the same prefix scope
 - **Connection changes don't trigger reindexing** – Changing the URI/credentials doesn't affect the hash
 
-**Hash calculation:**
+**Logic (centralized in `IndexNameTrait`):**
 ```php
-$config = $this->_config; // full search_opensearch config
+$config = $this->getOpenSearchConfig();
 unset($config['uri'], $config['username'], $config['password']);
-return md5(serialize($config));
+$hash = md5(serialize($config));
+$prefix = $config['index_prefix'] ?? substr(md5(realpath(__DIR__)), 0, 8);
+return $prefix . '_' . $hash;
 ```
+
+**Examples:**
+| Config | Resulting Index Name |
+|---|---|
+| `"index_prefix": "prod"` | `index_prod_c3e30bd9...` |
+| `"index_prefix": "dev"` | `index_dev_058a72d0...` |
+| No prefix set (path: `/var/www/.../production/...`) | `index_a1b2c3d4_c3e30bd9...` |
 
 ### Automatic Analyzers
 

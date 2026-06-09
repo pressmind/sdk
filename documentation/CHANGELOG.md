@@ -45,6 +45,15 @@ Changes are categorized as:
 - **Activation:** Set `data.search_mongodb.term_resolver.enabled: true` in `config.json`. Default is `false` (opt-in).
 - Documentation: [TermResolver](search-opensearch.md#termresolver-category-based-search-optimization)
 
+### FEATURE: OpenSearch `index_prefix` – Environment isolation for shared clusters
+
+- New config option `data.search_opensearch.index_prefix` allows explicit namespace isolation (e.g., `"dev"`, `"prod"`).
+- **Auto-default:** When no `index_prefix` is configured, the SDK automatically derives a unique 8-character prefix from the installation path. This prevents multiple installations on the same server from accidentally sharing or destroying each other's indices.
+- **Centralized logic:** `getConfigHash()` and `getIndexTemplateName()` are now provided by a shared `IndexNameTrait` (previously duplicated in `OpenSearch.php` and `AbstractIndex.php`).
+- **Safe cleanup:** `deleteAllIndexesThatNotMatchConfigHash()` now only removes stale indices within the current prefix scope, preventing cross-environment index deletion.
+- **BREAKING (index name):** Index names change from `index_{hash}` to `index_{prefix}_{hash}`. A one-time re-index is required after upgrading: `php bin/index-opensearch create_index_templates && php bin/index-opensearch all`
+- Documentation: [index_prefix config](config-search.md#datasearch_opensearchindex_prefix)
+
 ### CHANGE: OpenSearch `prefix_length` default raised to 5 (configurable)
 
 - **BREAKING (behavior):** The default `prefix_length` for fuzzy matching in `multi_match` queries is now `5` (previously hardcoded to `3`). This significantly reduces false positives (e.g. "Berlin" no longer matches "Bernina", "Mittelmeer" no longer matches "Mittelalter").

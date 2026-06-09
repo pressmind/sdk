@@ -125,8 +125,11 @@ class AbstractIndex
     {
         $indexes = $this->getIndexes();
         $hash = $this->getConfigHash();
+        $prefix = !empty($this->_config['index_prefix'])
+            ? 'index_' . $this->_config['index_prefix'] . '_'
+            : 'index_';
         foreach ($indexes as $index) {
-            if (strpos($index['index'], 'index_') !== 0) {
+            if (strpos($index['index'], $prefix) !== 0) {
                 continue;
             }
             if (strpos($index['index'], 'index_' . $hash) === false) {
@@ -391,7 +394,11 @@ class AbstractIndex
     {
         $config = $this->_config;
         unset($config['uri'], $config['username'], $config['password']);
-        return md5(serialize($config));
+        $hash = md5(serialize($config));
+        if (!empty($this->_config['index_prefix'])) {
+            return $this->_config['index_prefix'] . '_' . $hash;
+        }
+        return $hash;
     }
 
 }

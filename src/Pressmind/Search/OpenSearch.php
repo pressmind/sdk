@@ -98,7 +98,11 @@ class OpenSearch extends AbstractSearch
     {
         $config = $this->_config['data']['search_opensearch'];
         unset($config['uri'], $config['username'], $config['password']);
-        return md5(serialize($config));
+        $hash = md5(serialize($config));
+        if (!empty($this->_config['data']['search_opensearch']['index_prefix'])) {
+            return $this->_config['data']['search_opensearch']['index_prefix'] . '_' . $hash;
+        }
+        return $hash;
     }
 
 
@@ -247,7 +251,7 @@ class OpenSearch extends AbstractSearch
                     'type' => 'best_fields',
                     'operator' => 'and',
                     'fuzziness' => 'AUTO',
-                    'prefix_length' => $this->_config['data']['search_opensearch']['prefix_length'] ?? 5
+                    'prefix_length' => $this->_config['data']['search_opensearch']['prefix_length'] ?? 7
                 ]
             ];
         }
@@ -407,16 +411,37 @@ class OpenSearch extends AbstractSearch
      */
     public function fetchAutocompleteSuggestions(): array
     {
+        $textFields = $this->_getFields('text');
+        $keywordFields = $this->_getFields('keyword');
+        $shouldClauses = [];
+        if (!empty($textFields)) {
+            $shouldClauses[] = [
+                'multi_match' => [
+                    'query' => $this->_search_term,
+                    'fields' => $textFields,
+                    'type' => 'best_fields',
+                    'operator' => 'and',
+                ]
+            ];
+        }
+        if (!empty($keywordFields)) {
+            $shouldClauses[] = [
+                'multi_match' => [
+                    'query' => $this->_search_term,
+                    'fields' => $keywordFields,
+                    'type' => 'best_fields',
+                    'operator' => 'and',
+                ]
+            ];
+        }
         $body = [
-            '_source' => ['id'], // oder relevante Felder für die Suggestion
+            '_source' => ['id'],
             'size' => 10,
             'sort' => [['_score' => 'desc']],
             'query' => [
-                'multi_match' => [
-                    'query' => $this->_search_term,
-                    'fields' => $this->_getFields('text'),
-                    'type' => 'phrase_prefix',
-                    'operator' => 'and'
+                'bool' => [
+                    'should' => $shouldClauses,
+                    'minimum_should_match' => 1,
                 ]
             ]
         ];

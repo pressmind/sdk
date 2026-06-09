@@ -424,20 +424,17 @@ class MongoDB extends AbstractSearch
             $hookContext['_hook_result'] = $hookResult;
         }
         
-        // TermResolver: convert known category terms to exact category filters before fulltext search
+        // TermResolver: resolve known category terms to supplement fulltext results
         $config = Registry::getInstance()->get('config');
         $termResolverEnabled = !empty($config['data']['search_mongodb']['term_resolver']['enabled']);
+        $termResolverMatch = null;
         if ($termResolverEnabled && ($this->hasCondition('Fulltext') || $this->hasCondition('AtlasLuceneFulltext'))) {
             $fulltextCondition = $this->getConditionByType('Fulltext') ?: $this->getConditionByType('AtlasLuceneFulltext');
             if ($fulltextCondition) {
                 $searchTerm = $fulltextCondition->getSearchStringRaw();
-                $termMatch = TermResolver::resolve($searchTerm, $this->_language, $this->_origin);
-                if ($termMatch !== null) {
-                    $this->_addLog('getResult(): TermResolver matched "' . $searchTerm . '" → ' . $termMatch['field'] . ':' . $termMatch['id']);
-                    $this->removeCondition($fulltextCondition->getType());
-                    $this->addCondition('Category', new Condition\MongoDB\Category(
-                        $termMatch['field'], [$termMatch['id']], 'OR'
-                    ));
+                $termResolverMatch = TermResolver::resolve($searchTerm, $this->_language, $this->_origin);
+                if ($termResolverMatch !== null) {
+                    $this->_addLog('getResult(): TermResolver matched "' . $searchTerm . '" → ' . $termResolverMatch['field'] . ':' . $termResolverMatch['id'] . ' (additive mode)');
                 }
             }
         }
@@ -476,12 +473,47 @@ class MongoDB extends AbstractSearch
                     } else {
                         $ids = $OpenSearch->getResult($search_type === SearchType::AUTOCOMPLETE);
                     }
+
+                    // TermResolver additive: merge category-matched IDs with OpenSearch results
+                    if ($termResolverMatch !== null) {
+                        $db = $this->_getDatabase();
+                        $categoryIds = $db->{$this->_collection_name}->distinct('_id', [
+                            'categories' => ['$elemMatch' => [
+                                'field_name' => $termResolverMatch['field'],
+                                'id_item' => (int) $termResolverMatch['id'],
+                            ]]
+                        ]);
+                        if (!empty($categoryIds)) {
+                            $ids = array_values(array_unique(array_merge($ids ?? [], $categoryIds)));
+                            $this->_addLog('getResult(): TermResolver added ' . count($categoryIds) . ' category IDs, total: ' . count($ids));
+                        }
+                    }
+
                     if(!empty($ids)){
                         $ConditionMediaObject = new Condition\MongoDB\MediaObject($ids);
                         $this->addCondition('MediaObject', $ConditionMediaObject);
                     } else {
-                        $ConditionMediaObject = new Condition\MongoDB\MediaObject([0]);
-                        $this->addCondition('MediaObject', $ConditionMediaObject);
+                        // OpenSearch returned no results - but TermResolver might still have matches
+                        if ($termResolverMatch !== null) {
+                            $db = $this->_getDatabase();
+                            $categoryIds = $db->{$this->_collection_name}->distinct('_id', [
+                                'categories' => ['$elemMatch' => [
+                                    'field_name' => $termResolverMatch['field'],
+                                    'id_item' => (int) $termResolverMatch['id'],
+                                ]]
+                            ]);
+                            if (!empty($categoryIds)) {
+                                $ConditionMediaObject = new Condition\MongoDB\MediaObject($categoryIds);
+                                $this->addCondition('MediaObject', $ConditionMediaObject);
+                                $this->_addLog('getResult(): OpenSearch empty, TermResolver provided ' . count($categoryIds) . ' category IDs');
+                            } else {
+                                $ConditionMediaObject = new Condition\MongoDB\MediaObject([0]);
+                                $this->addCondition('MediaObject', $ConditionMediaObject);
+                            }
+                        } else {
+                            $ConditionMediaObject = new Condition\MongoDB\MediaObject([0]);
+                            $this->addCondition('MediaObject', $ConditionMediaObject);
+                        }
                     }
                 }catch (\Exception $e) {
                     $this->_addLog('getResult(): OpenSearch error: ' . $e->getMessage());
@@ -491,6 +523,14 @@ class MongoDB extends AbstractSearch
                     throw new \RuntimeException('OpenSearch fulltext search failed: ' . $e->getMessage(), 0, $e);
                 }
             }
+        }
+
+        // TermResolver fallback: if OpenSearch is not active but TermResolver matched, add category filter
+        if ($termResolverMatch !== null && !$this->_use_opensearch && !$this->hasCondition('MediaObject')) {
+            $this->addCondition('Category', new Condition\MongoDB\Category(
+                $termResolverMatch['field'], [$termResolverMatch['id']], 'OR'
+            ));
+            $this->_addLog('getResult(): TermResolver fallback (no OpenSearch) – added category filter');
         }
         $this->setGetFilters($getFilters);
         $this->setReturnFiltersOnly($returnFiltersOnly);

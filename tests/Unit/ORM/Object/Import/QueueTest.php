@@ -48,6 +48,11 @@ class QueueTest extends AbstractTestCase
         $this->assertTrue(Queue::addToQueue(100, 'webhook', 'touristic'));
     }
 
+    public function testAddToQueueAcceptsDepublishAction(): void
+    {
+        $this->assertTrue(Queue::addToQueue(101, 'webhook', 'depublish'));
+    }
+
     public function testQueueDefinitionsContainExpectedTableName(): void
     {
         $queue = new Queue();

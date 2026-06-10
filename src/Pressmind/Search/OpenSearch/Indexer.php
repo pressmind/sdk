@@ -13,6 +13,37 @@ use Pressmind\Search\Embedding\ProviderFactory;
 
 class Indexer extends AbstractIndex
 {
+    /**
+     * @param string|int|array<int|string> $id_media_objects
+     * @throws \Exception
+     */
+    public function deleteMediaObject($id_media_objects): void
+    {
+        if (empty($id_media_objects)) {
+            return;
+        }
+        if (!is_array($id_media_objects)) {
+            $id_media_objects = array_map('intval', explode(',', (string)$id_media_objects));
+        }
+
+        foreach ($id_media_objects as $id_media_object) {
+            $id_media_object = (int)$id_media_object;
+            if ($id_media_object <= 0) {
+                continue;
+            }
+            foreach ($this->_languages as $language) {
+                $params = [
+                    'index' => $this->getIndexTemplateName($language),
+                    'id' => $id_media_object
+                ];
+                try {
+                    $this->client->delete($params);
+                } catch (\OpenSearch\Common\Exceptions\Missing404Exception|\OpenSearch\Exception\NotFoundHttpException $e) {
+                    // Document or index is already gone.
+                }
+            }
+        }
+    }
 
     public function createIndexes()
     {

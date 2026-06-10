@@ -32,7 +32,7 @@ class IndexOpenSearchCommand extends AbstractCommand
 
         switch ($subcommand) {
             case 'all':
-                $indexer = new Indexer();
+                $indexer = $this->createIndexer();
                 $indexer->createIndexes();
                 break;
             case 'mediaobject':
@@ -41,8 +41,17 @@ class IndexOpenSearchCommand extends AbstractCommand
                     $this->output->error('mediaobject requires comma-separated id(s) as second argument.');
                     return 1;
                 }
-                $indexer = new Indexer();
+                $indexer = $this->createIndexer();
                 $indexer->upsertMediaObject($ids);
+                break;
+            case 'destroy':
+                $ids = $this->parseIds($arg1);
+                if (empty($ids)) {
+                    $this->output->error('destroy requires comma-separated id(s) as second argument.');
+                    return 1;
+                }
+                $indexer = $this->createIndexer();
+                $indexer->deleteMediaObject($ids);
                 break;
             case 'search':
                 $term = $arg1 ?? '';
@@ -59,7 +68,7 @@ class IndexOpenSearchCommand extends AbstractCommand
                 }
                 break;
             case 'create_index_templates':
-                $indexer = new Indexer();
+                $indexer = $this->createIndexer();
                 $indexer->createIndexTemplates();
                 $indexes = $indexer->getIndexes();
                 if (is_array($indexes) && count($indexes) > 0) {
@@ -91,6 +100,11 @@ class IndexOpenSearchCommand extends AbstractCommand
             return [];
         }
         return array_map('intval', array_map('trim', explode(',', $idsArg)));
+    }
+
+    protected function createIndexer()
+    {
+        return new Indexer();
     }
 
     private function printHelp(): void

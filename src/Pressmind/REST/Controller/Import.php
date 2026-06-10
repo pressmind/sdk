@@ -19,14 +19,14 @@ class Import
      * @param $parameters
      *   - id_media_object: The media object ID to add (alternative to code)
      *   - code: The media object code to search for (alternative to id_media_object)
-     *   - queue_action (optional): The action to perform ('mediaobject' or 'touristic', default: 'mediaobject')
+     *   - queue_action (optional): The action to perform ('mediaobject', 'touristic' or 'depublish', default: 'mediaobject')
      * @return array
      * @throws Exception
      */
     public function addToQueue($parameters)
     {
         $queue_action = isset($parameters['queue_action']) ? $parameters['queue_action'] : 'mediaobject';
-        if (!in_array($queue_action, ['mediaobject', 'touristic'])) {
+        if (!in_array($queue_action, ['mediaobject', 'touristic', 'depublish'])) {
             $queue_action = 'mediaobject';
         }
         if (isset($parameters['id_media_object']) && preg_match('/^[0-9]+$/', $parameters['id_media_object'])) {
@@ -303,4 +303,3 @@ class Import
     }
 
 }
-

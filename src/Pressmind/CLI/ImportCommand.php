@@ -6,6 +6,7 @@ use Exception;
 use Pressmind\System\SchemaMigratedException;
 use Pressmind\Import;
 use Pressmind\Import\CategoryTree;
+use Pressmind\Import\MediaObjectDepublisher;
 use Pressmind\Registry;
 use Pressmind\Import\Itinerary as ItineraryImporter;
 use Pressmind\Log\Writer;
@@ -466,16 +467,22 @@ class ImportCommand extends AbstractCommand
             return 0;
         }
         Writer::write('Depublishing mediaobject ID(s): ' . implode(',', $ids), Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
-        foreach ($ids as $id) {
-            try {
-                $mediaObject = new MediaObject($id);
-                $mediaObject->visibility = 10;
-                $mediaObject->update();
-                $mediaObject->createMongoDBIndex();
-                Writer::write('Mediaobject ' . $id . ' successfully depublished (visibility set to 10/nobody)', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
-            } catch (Exception $e) {
-                $this->logImportException($e, $logPath, 'Depublish for id ' . $id . ' failed');
+        $result = (new MediaObjectDepublisher())->depublish($ids);
+        foreach ($result->getSuccesses() as $id => $targets) {
+            Writer::write(
+                'Mediaobject ' . $id . ' depublish steps completed: ' . implode(',', array_keys($targets)),
+                Writer::OUTPUT_BOTH,
+                'import',
+                Writer::TYPE_INFO
+            );
+        }
+        if ($result->hasErrors()) {
+            foreach ($result->getErrors() as $id => $errors) {
+                foreach ($errors as $target => $message) {
+                    $this->logImportException(new Exception($message), $logPath, 'Depublish for id ' . $id . ' failed at ' . $target);
+                }
             }
+            return 1;
         }
         return 0;
     }

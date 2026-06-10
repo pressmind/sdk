@@ -11,6 +11,7 @@ use Pressmind\Import\FileStorage as FileStorageImporter;
 use Pressmind\Import\ImportInterface;
 use Pressmind\Import\Itinerary;
 use Pressmind\Import\ManualCheapestPrice;
+use Pressmind\Import\MediaObjectDepublisher;
 use Pressmind\Import\MediaObjectCheapestPrice;
 use Pressmind\Import\MediaObjectData;
 use Pressmind\Import\MediaObjectDiscount;
@@ -567,6 +568,16 @@ class Import
                 switch ($action) {
                     case 'touristic':
                         $this->importTouristicDataOnly($id);
+                        break;
+                    case 'depublish':
+                        $result = (new MediaObjectDepublisher())->depublish($id);
+                        if ($result->hasErrors()) {
+                            foreach ($result->getErrors() as $idMediaObject => $errors) {
+                                foreach ($errors as $target => $message) {
+                                    $this->_errors[] = '[Depublish] ' . $idMediaObject . ' ' . $target . ': ' . $message;
+                                }
+                            }
+                        }
                         break;
                     case 'mediaobject':
                     default:

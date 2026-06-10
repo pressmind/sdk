@@ -1288,7 +1288,7 @@ class MediaObject extends AbstractObject
             $id_channel = $config['data']['media_types_pretty_url'][$this->id_object_type]['id_channel'] ?? null;
         }else{
             foreach($config['data']['media_types_pretty_url'] as $v){
-                $languageMatch = ($v['language'] === null || $v['language'] == $language);
+                $languageMatch = (!isset($v['language']) || $v['language'] == $language);
                 if($v['id_object_type'] == $this->id_object_type && $languageMatch){
                     $fields = $v['field'] ?? $v['fields'] ?? ['name'];
                     $separator = $v['separator'] ?? $separator;

@@ -38,6 +38,7 @@ Welcome to the pressmind SDK documentation. This documentation covers the comple
 
 | Document | Description |
 |---|---|
+| [Booking Package Guide](booking-package-guide.md) | Conceptual guide — how and when Booking Packages are used, season matching, reservation date linking |
 | [Booking Package](Touristic/Booking/Package.md) | Root touristic entity — duration, price_mix, IBE type |
 | [Date](Touristic/Date.md) | Departure/return dates, state enum, season matching |
 | [Option](Touristic/Option.md) | Services (housing, extra, ticket, sightseeing) — price_due, required groups, state enums |

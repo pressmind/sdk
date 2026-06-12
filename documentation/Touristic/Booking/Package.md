@@ -118,6 +118,7 @@ MediaObject
 
 ## Related Documentation
 
+- [Booking Package Conceptual Guide](../../booking-package-guide.md) – How and when Booking Packages are used, season matching, reservation date linking
 - [CheapestPrice Aggregation](../../cheapest-price-aggregation.md) – How base prices are calculated from Booking Package data
 - [Date](../Date.md) – Departure/return dates and their states
 - [Option](../Option.md) – Services, accommodations, and their price_due modes

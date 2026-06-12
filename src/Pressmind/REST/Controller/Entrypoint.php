@@ -84,6 +84,9 @@ class Entrypoint
                 }
                 $payload = $response->data[0];
                 $payload->url = $url;
+                if (!empty($payload->cache_token)) {
+                    $payload->url .= (strpos($payload->url, '?') !== false ? '&' : '?') . 'ctoken=' . urlencode($payload->cache_token);
+                }
                 if(empty($response)){
                     throw new Exception('No availability check response. '.$raw);
                 }

@@ -13,6 +13,8 @@ use Pressmind\ORM\Object\MediaObject\DataType\Repeated_form\Row\Column;
  * @property integer $id
  * @property integer $id_repeated_form
  * @property integer $sort
+ * @property \DateTime $valid_from
+ * @property \DateTime $valid_to
  * @property Column[] $columns
  */
 class Row extends AbstractObject
@@ -69,6 +71,22 @@ class Row extends AbstractObject
                 'name' => 'sort',
                 'type' => 'integer',
                 'required' => true,
+                'filters' => null,
+                'validators' => null,
+            ],
+            'valid_from' => [
+                'title' => 'valid_from',
+                'name' => 'valid_from',
+                'type' => 'datetime',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+            ],
+            'valid_to' => [
+                'title' => 'valid_to',
+                'name' => 'valid_to',
+                'type' => 'datetime',
+                'required' => false,
                 'filters' => null,
                 'validators' => null,
             ],

@@ -196,7 +196,7 @@ class MediaObjectData extends AbstractImport implements ImportInterface
             if (!empty($data_field->value)) {
                 $columns = $data_field->columns ?? [];
                 if ($data_field->type == 'repeated_form') {
-                    $columns = $data_field->repeated_form->fields ?? $columns;
+                    $columns = $this->getRepeatedFormColumns($data_field, $columns);
                 }
                 return [
                     'columns' => $columns,
@@ -211,6 +211,51 @@ class MediaObjectData extends AbstractImport implements ImportInterface
         }
 
         return null;
+    }
+
+    private function getRepeatedFormColumns($data_field, array $fallback_columns): array
+    {
+        $columns = $data_field->repeated_form->fields ?? $fallback_columns;
+        if (!is_array($columns)) {
+            $columns = [];
+        }
+
+        $seen = [];
+        foreach ($columns as $column) {
+            if (is_object($column)) {
+                $seen[$this->getRepeatedFormColumnKey($column)] = true;
+            }
+        }
+
+        $ibe_teaser_columns = $data_field->repeated_form->ibe_teaser ?? [];
+        if (is_object($ibe_teaser_columns)) {
+            $ibe_teaser_columns = array_values(get_object_vars($ibe_teaser_columns));
+        }
+        if (!is_array($ibe_teaser_columns)) {
+            return $columns;
+        }
+
+        foreach ($ibe_teaser_columns as $column) {
+            if (!is_object($column)) {
+                continue;
+            }
+            $key = $this->getRepeatedFormColumnKey($column);
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $columns[] = $column;
+        }
+
+        return $columns;
+    }
+
+    private function getRepeatedFormColumnKey($column): string
+    {
+        $type = $column->type ?? '';
+        $var_name = $column->varName ?? ($column->var_name ?? '');
+
+        return $type . ':' . $var_name;
     }
 
     /**

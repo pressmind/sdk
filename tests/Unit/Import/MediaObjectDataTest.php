@@ -55,6 +55,17 @@ class MediaObjectDataTest extends AbstractTestCase
                 'fields' => [
                     (object) ['sort' => 1, 'label' => 'Text', 'varName' => 'text'],
                 ],
+                'ibe_teaser' => [
+                    (object) [
+                        'id' => 'ibe-teaser-field',
+                        'sort' => 2,
+                        'type' => 'ibe_teaser',
+                        'label' => 'IBE Teaser',
+                        'varName' => 'cta',
+                        'template' => 'teaser',
+                        'link' => '',
+                    ],
+                ],
             ],
             'value' => (object) [
                 'default-section' => [
@@ -71,7 +82,10 @@ class MediaObjectDataTest extends AbstractTestCase
         $result = $method->invoke($import, $field, 'default-section');
 
         $this->assertIsArray($result);
-        $this->assertSame($field->repeated_form->fields, $result['columns']);
+        $this->assertCount(2, $result['columns']);
+        $this->assertSame('text', $result['columns'][0]->varName);
+        $this->assertSame('cta', $result['columns'][1]->varName);
+        $this->assertSame('ibe_teaser', $result['columns'][1]->type);
         $this->assertSame($field->value->{'default-section'}, $result['values']);
     }
 

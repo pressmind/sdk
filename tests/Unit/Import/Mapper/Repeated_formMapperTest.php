@@ -103,6 +103,86 @@ class Repeated_formMapperTest extends AbstractTestCase
         $this->assertSame('string', $result[0]->rows[0]->columns[1]->datatype);
     }
 
+    public function testMapAddsIbeTeaserColumnsFromConfiguredVarName(): void
+    {
+        $mapper = new Repeated_form();
+        $object = [
+            'columns' => [
+                (object) [
+                    'type' => 'input_text',
+                    'label' => 'Text',
+                    'varName' => 'text',
+                    'sort' => 1,
+                ],
+                (object) [
+                    'type' => 'ibe_teaser',
+                    'label' => 'IBE Teaser',
+                    'varName' => 'cta',
+                    'template' => 'teaser',
+                    'link' => '',
+                    'sort' => 2,
+                ],
+            ],
+            'values' => [
+                (object) [
+                    'id' => '1781515878851-6ezva1hf',
+                    'sorting' => 1,
+                    'validFrom' => '2026-06-15',
+                    'validTo' => '2029-05-15',
+                    'values' => (object) [
+                        'text' => 'Titel',
+                        'cta_template' => 'teaser-highlight',
+                        'cta_link' => 'param1',
+                    ],
+                ],
+            ],
+        ];
+
+        $result = $mapper->map(869750, 'de', 'auflistung_default', $object);
+
+        $this->assertSame('2026-06-15 00:00:00', $result[0]->rows[0]->valid_from->format('Y-m-d H:i:s'));
+        $this->assertSame('2029-05-15 00:00:00', $result[0]->rows[0]->valid_to->format('Y-m-d H:i:s'));
+        $this->assertCount(3, $result[0]->rows[0]->columns);
+        $this->assertSame('text', $result[0]->rows[0]->columns[0]->var_name);
+        $this->assertSame('cta_template', $result[0]->rows[0]->columns[1]->var_name);
+        $this->assertSame('IBE Teaser Template', $result[0]->rows[0]->columns[1]->title);
+        $this->assertSame('teaser-highlight', $result[0]->rows[0]->columns[1]->value_string);
+        $this->assertSame('cta_link', $result[0]->rows[0]->columns[2]->var_name);
+        $this->assertSame('IBE Teaser Link', $result[0]->rows[0]->columns[2]->title);
+        $this->assertSame('param1', $result[0]->rows[0]->columns[2]->value_string);
+    }
+
+    public function testMapUsesIbeTeaserDefinitionDefaultsWhenRowValuesMissing(): void
+    {
+        $mapper = new Repeated_form();
+        $object = [
+            'columns' => [
+                (object) [
+                    'type' => 'ibe_teaser',
+                    'label' => 'IBE Teaser',
+                    'varName' => 'teaser',
+                    'template' => 'teaser',
+                    'link' => '',
+                    'sort' => 1,
+                ],
+            ],
+            'values' => [
+                (object) [
+                    'sorting' => 1,
+                    'values' => (object) [],
+                ],
+            ],
+        ];
+
+        $result = $mapper->map(42, 'de', 'auflistung_default', $object);
+
+        $this->assertCount(2, $result[0]->rows[0]->columns);
+        $this->assertSame('teaser_template', $result[0]->rows[0]->columns[0]->var_name);
+        $this->assertSame('teaser', $result[0]->rows[0]->columns[0]->value_string);
+        $this->assertSame('teaser_link', $result[0]->rows[0]->columns[1]->var_name);
+        $this->assertNull($result[0]->rows[0]->columns[1]->value_string);
+    }
+
     public function testMapIgnoresUnsupportedNonScalarValues(): void
     {
         $mapper = new Repeated_form();

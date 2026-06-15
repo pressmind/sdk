@@ -52,4 +52,17 @@ class RepeatedFormTest extends AbstractTestCase
 
         $this->assertNull($mock->asHTML());
     }
+
+    public function testRowAcceptsValidityDates(): void
+    {
+        $row = new Repeated_form\Row();
+        $row->sort = 1;
+        $row->valid_from = '2026-06-15';
+        $row->valid_to = '2029-05-15';
+
+        $stdClass = $row->toStdClass(false);
+
+        $this->assertSame('2026-06-15 00:00:00', $stdClass->valid_from->format('Y-m-d H:i:s'));
+        $this->assertSame('2029-05-15 00:00:00', $stdClass->valid_to->format('Y-m-d H:i:s'));
+    }
 }

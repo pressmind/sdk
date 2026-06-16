@@ -1470,7 +1470,7 @@ class Import
             $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::postImport(): '.$cmd, Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
         }
         $file_downloader_path = APPLICATION_PATH . '/cli/file_downloader.php';
-        if(!$this->checkRunFile($image_processor_path))
+        if(!$this->checkRunFile($file_downloader_path))
         {
             $cmd = sprintf('bash -c %s', escapeshellarg('exec nohup ' . escapeshellarg($php_binary) . ' ' . escapeshellarg($file_downloader_path) . ' > /dev/null 2>&1 &'));
             exec($cmd);

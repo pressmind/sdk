@@ -1048,15 +1048,21 @@ class Import
                     $this->_log[] = ' Inserting Route entries for media object id: ' . $id_media_object;
                     $pretty_urls_from_api = isset($response[0]->pretty_urls) && is_array($response[0]->pretty_urls) ? $response[0]->pretty_urls : [];
                     $route_data = [];
-                    foreach ($imported_languages as $language) {
+                    $route_languages = $media_object->usesPrettyUrlStrategy('pressmind') ? [null] : $imported_languages;
+                    foreach ($route_languages as $language) {
                         try {
-                            $urls = $media_object->buildPrettyUrls($language, $pretty_urls_from_api);
-                            foreach ($urls as $url) {
+                            $routes = $media_object->buildPrettyUrlRouteData($language, $pretty_urls_from_api, $imported_languages);
+                            foreach ($routes as $route) {
+                                if (!empty($route['warning'])) {
+                                    $this->_log[] = Writer::write($route['warning'], Writer::OUTPUT_BOTH, 'import', Writer::TYPE_WARNING);
+                                }
                                 $route_data[] = [
                                     'id_media_object' => $id_media_object,
                                     'id_object_type' => $media_object->id_object_type,
-                                    'route' => $url,
-                                    'language' => $language
+                                    'route' => $route['route'],
+                                    'language' => $route['language'],
+                                    'title' => $route['title'],
+                                    'description' => $route['description'],
                                 ];
                             }
                         } catch (Exception $e) {
@@ -1222,7 +1228,7 @@ class Import
 
     /**
      * Batch insert routes for better performance
-     * @param array $routes Array of route data arrays with keys: id_media_object, id_object_type, route, language
+     * @param array $routes Array of route data arrays with keys: id_media_object, id_object_type, route, language, title, description
      */
     private function _batchInsertRoutes($routes)
     {
@@ -1230,16 +1236,18 @@ class Import
             return;
         }
 
-        $columns = ['id_media_object', 'id_object_type', 'route', 'language'];
+        $columns = ['id_media_object', 'id_object_type', 'route', 'language', 'title', 'description'];
         $placeholders = [];
         $values = [];
 
         foreach ($routes as $route) {
-            $placeholders[] = '(?, ?, ?, ?)';
+            $placeholders[] = '(?, ?, ?, ?, ?, ?)';
             $values[] = $route['id_media_object'];
             $values[] = $route['id_object_type'];
             $values[] = $route['route'];
             $values[] = $route['language'];
+            $values[] = $route['title'] ?? null;
+            $values[] = $route['description'] ?? null;
         }
 
         $query = "INSERT INTO pmt2core_routes (" . implode(', ', $columns) . ") VALUES " . implode(', ', $placeholders);

@@ -53,6 +53,8 @@ class MediaObjectPrettyUrlTest extends AbstractTestCase
         $route1->language = 'de';
         $route1->id_media_object = 100;
         $route1->id_object_type = 1;
+        $route1->title = 'SEO Title';
+        $route1->description = 'SEO Description';
 
         $mo = $this->createMediaObject();
         $mo->setId(100);
@@ -84,6 +86,8 @@ class MediaObjectPrettyUrlTest extends AbstractTestCase
         $route1->language = 'de';
         $route1->id_media_object = 100;
         $route1->id_object_type = 1;
+        $route1->title = 'SEO Title';
+        $route1->description = 'SEO Description';
 
         $mo = $this->createMediaObject();
         $mo->setId(100);
@@ -94,6 +98,8 @@ class MediaObjectPrettyUrlTest extends AbstractTestCase
         $this->assertInstanceOf(GetPrettyUrls::class, $result[0]);
         $this->assertSame('/product-a', $result[0]->route);
         $this->assertSame('de', $result[0]->language);
+        $this->assertSame('SEO Title', $result[0]->title);
+        $this->assertSame('SEO Description', $result[0]->description);
         $this->assertTrue($result[0]->is_default);
     }
 
@@ -200,6 +206,121 @@ class MediaObjectPrettyUrlTest extends AbstractTestCase
         $this->assertStringContainsString('my-test-product', $urls[0]);
     }
 
+    public function testBuildPrettyUrlRouteDataUniqueStrategyKeepsFieldBasedUrlAndNullMeta(): void
+    {
+        $db = $this->createMock(\Pressmind\DB\Adapter\AdapterInterface::class);
+        $db->method('fetchAll')->willReturn([]);
+        $db->method('fetchRow')->willReturn(null);
+        $db->method('fetchOne')->willReturn(null);
+        $db->method('getAffectedRows')->willReturn(0);
+        $db->method('getTablePrefix')->willReturn('pmt2core_');
+        $db->method('execute')->willReturn(null);
+        $db->method('insert')->willReturn(null);
+        $db->method('replace')->willReturn(null);
+        $db->method('update')->willReturn(null);
+        $db->method('delete')->willReturn(null);
+        $db->method('truncate')->willReturn(null);
+        $db->method('batchInsert')->willReturn(1);
+        $db->method('beginTransaction')->willReturn(null);
+        $db->method('commit')->willReturn(null);
+        $db->method('rollback')->willReturn(null);
+        $db->method('inTransaction')->willReturn(false);
+        Registry::getInstance()->add('db', $db);
+
+        $mo = $this->createMediaObject();
+        $mo->setId(100);
+        $mo->id_object_type = 1;
+        $mo->name = 'My Test Product';
+
+        $routes = $mo->buildPrettyUrlRouteData('de');
+
+        $this->assertCount(1, $routes);
+        $this->assertSame('/my-test-product', $routes[0]['route']);
+        $this->assertSame('de', $routes[0]['language']);
+        $this->assertNull($routes[0]['title']);
+        $this->assertNull($routes[0]['description']);
+        $this->assertNull($routes[0]['warning']);
+    }
+
+    public function testBuildPrettyUrlRouteDataCountUpStrategyKeepsDuplicateSuffixAndNullMeta(): void
+    {
+        $config = Registry::getInstance()->get('config');
+        $config['data']['media_types_pretty_url'][1]['strategy'] = 'count-up';
+        Registry::getInstance()->add('config', $config);
+
+        $db = $this->createMock(\Pressmind\DB\Adapter\AdapterInterface::class);
+        $db->method('fetchAll')->willReturnCallback(function ($query, $params = null) {
+            if (isset($params[0]) && $params[0] === '/my-test-product') {
+                return [(object) ['id' => 1]];
+            }
+            return [];
+        });
+        $db->method('fetchRow')->willReturn(null);
+        $db->method('fetchOne')->willReturn(null);
+        $db->method('getAffectedRows')->willReturn(0);
+        $db->method('getTablePrefix')->willReturn('pmt2core_');
+        $db->method('execute')->willReturn(null);
+        $db->method('insert')->willReturn(null);
+        $db->method('replace')->willReturn(null);
+        $db->method('update')->willReturn(null);
+        $db->method('delete')->willReturn(null);
+        $db->method('truncate')->willReturn(null);
+        $db->method('batchInsert')->willReturn(1);
+        $db->method('beginTransaction')->willReturn(null);
+        $db->method('commit')->willReturn(null);
+        $db->method('rollback')->willReturn(null);
+        $db->method('inTransaction')->willReturn(false);
+        Registry::getInstance()->add('db', $db);
+
+        $mo = $this->createMediaObject();
+        $mo->setId(100);
+        $mo->id_object_type = 1;
+        $mo->name = 'My Test Product';
+
+        $routes = $mo->buildPrettyUrlRouteData('de');
+
+        $this->assertCount(1, $routes);
+        $this->assertSame('/my-test-product-001', $routes[0]['route']);
+        $this->assertSame('de', $routes[0]['language']);
+        $this->assertNull($routes[0]['title']);
+        $this->assertNull($routes[0]['description']);
+        $this->assertNull($routes[0]['warning']);
+    }
+
+    public function testBuildPrettyUrlRouteDataChannelStrategyKeepsChannelUrlAndNullMeta(): void
+    {
+        $config = Registry::getInstance()->get('config');
+        $config['data']['media_types_pretty_url'] = [
+            1 => [
+                'strategy' => 'channel',
+                'id_channel' => 7,
+                'prefix' => '/detail',
+                'suffix' => '/',
+            ],
+        ];
+        Registry::getInstance()->add('config', $config);
+
+        $mo = $this->createMediaObject();
+        $mo->setId(100);
+        $mo->id_object_type = 1;
+
+        $routes = $mo->buildPrettyUrlRouteData('de', [
+            (object) [
+                'id_channel' => 7,
+                'url' => '/venedig',
+                'meta_title' => 'Should not be imported for channel',
+                'meta_description' => 'Should not be imported for channel',
+            ],
+        ]);
+
+        $this->assertCount(1, $routes);
+        $this->assertSame('/detail/venedig/', $routes[0]['route']);
+        $this->assertSame('de', $routes[0]['language']);
+        $this->assertNull($routes[0]['title']);
+        $this->assertNull($routes[0]['description']);
+        $this->assertNull($routes[0]['warning']);
+    }
+
     /**
      * buildPrettyUrls with strategy 'channel' without id_channel throws.
      */
@@ -252,5 +373,150 @@ class MediaObjectPrettyUrlTest extends AbstractTestCase
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('no entry found for id_channel');
         $mo->buildPrettyUrls('de', $prettyUrlsFromApi);
+    }
+
+    public function testBuildPrettyUrlRouteDataPressmindStrategyReturnsApiRouteMeta(): void
+    {
+        $config = Registry::getInstance()->get('config');
+        $config['data']['media_types_pretty_url'] = [
+            [
+                'id_object_type' => 1,
+                'language' => null,
+                'strategy' => 'pressmind',
+                'prefix' => '/verpflegung/',
+                'suffix' => '/',
+            ],
+        ];
+        Registry::getInstance()->add('config', $config);
+
+        $mo = $this->createMediaObject();
+        $mo->setId(3461949);
+        $mo->id_object_type = 1;
+
+        $routes = $mo->buildPrettyUrlRouteData(null, [
+            (object) [
+                'var_name' => 'url',
+                'language' => '',
+                'url' => '/venedig',
+                'meta_title' => 'Venedig Reise',
+                'meta_description' => 'Kurzbeschreibung Venedig',
+            ],
+        ], ['de']);
+
+        $this->assertCount(1, $routes);
+        $this->assertSame('/verpflegung/venedig/', $routes[0]['route']);
+        $this->assertSame('de', $routes[0]['language']);
+        $this->assertSame('Venedig Reise', $routes[0]['title']);
+        $this->assertSame('Kurzbeschreibung Venedig', $routes[0]['description']);
+        $this->assertNull($routes[0]['warning']);
+    }
+
+    public function testBuildPrettyUrlRouteDataPressmindStrategyReturnsAllLanguagesWhenApiContainsSeveralLanguages(): void
+    {
+        $config = Registry::getInstance()->get('config');
+        $config['data']['media_types_pretty_url'] = [
+            [
+                'id_object_type' => 1,
+                'language' => null,
+                'strategy' => 'pressmind',
+                'prefix' => '',
+                'suffix' => '',
+            ],
+        ];
+        Registry::getInstance()->add('config', $config);
+
+        $mo = $this->createMediaObject();
+        $mo->setId(3461949);
+        $mo->id_object_type = 1;
+
+        $routes = $mo->buildPrettyUrlRouteData(null, [
+            [
+                'language' => 'de',
+                'url' => '/venedig',
+                'meta_title' => 'Venedig',
+                'meta_description' => 'Beschreibung DE',
+            ],
+            [
+                'language' => 'en',
+                'url' => '/venice',
+                'meta_title' => 'Venice',
+                'meta_description' => 'Description EN',
+            ],
+        ], ['de', 'en']);
+
+        $this->assertCount(2, $routes);
+        $this->assertSame('/venedig', $routes[0]['route']);
+        $this->assertSame('de', $routes[0]['language']);
+        $this->assertSame('Venedig', $routes[0]['title']);
+        $this->assertSame('/venice', $routes[1]['route']);
+        $this->assertSame('en', $routes[1]['language']);
+        $this->assertSame('Venice', $routes[1]['title']);
+    }
+
+    public function testBuildPrettyUrlRouteDataPressmindStrategyUsesLanguageSpecificConfigWhenBuildingAllRoutes(): void
+    {
+        $config = Registry::getInstance()->get('config');
+        $config['data']['media_types_pretty_url'] = [
+            [
+                'id_object_type' => 1,
+                'language' => 'de',
+                'strategy' => 'pressmind',
+                'prefix' => '/verpflegung/',
+                'suffix' => '/',
+            ],
+        ];
+        Registry::getInstance()->add('config', $config);
+
+        $mo = $this->createMediaObject();
+        $mo->setId(3461949);
+        $mo->id_object_type = 1;
+
+        $routes = $mo->buildPrettyUrlRouteData(null, [
+            [
+                'language' => 'de',
+                'url' => '/venedig',
+                'meta_title' => 'Venedig',
+                'meta_description' => 'Beschreibung DE',
+            ],
+        ], ['de']);
+
+        $this->assertCount(1, $routes);
+        $this->assertSame('/verpflegung/venedig/', $routes[0]['route']);
+        $this->assertSame('de', $routes[0]['language']);
+    }
+
+    public function testBuildPrettyUrlRouteDataPressmindStrategyFallsBackToMediaObjectIdWhenUrlMissing(): void
+    {
+        $config = Registry::getInstance()->get('config');
+        $config['data']['media_types_pretty_url'] = [
+            [
+                'id_object_type' => 1,
+                'language' => null,
+                'strategy' => 'pressmind',
+                'prefix' => '/verpflegung/',
+                'suffix' => '/',
+            ],
+        ];
+        Registry::getInstance()->add('config', $config);
+
+        $mo = $this->createMediaObject();
+        $mo->setId(3461949);
+        $mo->id_object_type = 1;
+
+        $routes = $mo->buildPrettyUrlRouteData(null, [
+            [
+                'language' => '',
+                'url' => '',
+                'meta_title' => 'Fallback Title',
+                'meta_description' => 'Fallback Description',
+            ],
+        ], ['de']);
+
+        $this->assertCount(1, $routes);
+        $this->assertSame('/verpflegung/3461949/', $routes[0]['route']);
+        $this->assertSame('de', $routes[0]['language']);
+        $this->assertSame('Fallback Title', $routes[0]['title']);
+        $this->assertSame('Fallback Description', $routes[0]['description']);
+        $this->assertStringContainsString('fallback route', $routes[0]['warning']);
     }
 }

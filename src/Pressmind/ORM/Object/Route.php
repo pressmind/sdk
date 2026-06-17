@@ -12,6 +12,8 @@ namespace Pressmind\ORM\Object;
  * @property integer $id_media_object
  * @property integer $id_object_type
  * @property string $language
+ * @property string $title
+ * @property string $description
  */
 class Route extends AbstractObject
 {
@@ -95,6 +97,22 @@ class Route extends AbstractObject
                 'index' => [
                     'language' => 'index'
                 ]
+            ],
+            'title' => [
+                'title' => 'title',
+                'name' => 'title',
+                'type' => 'string',
+                'required' => false,
+                'validators' => null,
+                'filters' => null,
+            ],
+            'description' => [
+                'title' => 'description',
+                'name' => 'description',
+                'type' => 'string',
+                'required' => false,
+                'validators' => null,
+                'filters' => null,
             ]
         ]
     ];

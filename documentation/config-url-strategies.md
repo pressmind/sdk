@@ -13,7 +13,7 @@ This page describes how to configure SEO-friendly URLs (routes) for media object
 
 ## Recommendation for new setups
 
-**Use the `channel` strategy** when your pressmind project has URL Steuerung (channel-based URLs) enabled. The URL is then taken 1:1 from the pressmind API response (`pretty_urls` per channel), so URLs stay in sync with pressmind and can be managed centrally there. For older setups or when channel URLs are not available, use `unique` or `count-up` with field-based generation.
+**Use the `channel` or `pressmind` strategy** when your pressmind project has URL Steuerung enabled. `channel` selects one configured channel by `id_channel`; `pressmind` takes the URL/meta data from the API `pretty_urls` response directly. For older setups or when API URLs are not available, use `unique` or `count-up` with field-based generation.
 
 ---
 
@@ -22,6 +22,7 @@ This page describes how to configure SEO-friendly URLs (routes) for media object
 | Strategy | URL source | When to use |
 |----------|------------|-------------|
 | **channel** *(recommended for new setups)* | pressmind API `pretty_urls` for a configured channel | URL Steuerung in pressmind; one config entry per object type with `id_channel` |
+| **pressmind** | pressmind/Webcore API `pretty_urls.url` plus `meta_title` / `meta_description` | URL and route SEO meta data are managed centrally in pressmind/Webcore |
 | **unique** | Built from object fields | SEO slugs from name/code; import fails if the same URL already exists |
 | **count-up** | Built from object fields | Same as unique, but duplicates get a numeric suffix (`-001`, `-002`, …) instead of failing |
 
@@ -71,6 +72,18 @@ Products are often **re-released per season** (e.g. "Spanien Entdecken" 2022, 20
   - Empty URL: `URL strategy "channel": channel id … found in pretty_urls but url is empty for media object …`
   - RebuildRoutesCommand: `MediaObject #… (type …): URL strategy "channel" requires a full re-import to rebuild routes. Run the importer instead.`
 
+## Strategy 4: `pressmind`
+
+- **Behaviour:** The URL is read from the API response field `pretty_urls.url`. The route meta data is stored in `pmt2core_routes.title` from `meta_title` and `pmt2core_routes.description` from `meta_description`. No field-based slug is generated.
+- **Language handling:** If the API response contains entries for several non-empty languages, all language entries are stored. If there is only one language or no language in the API response, only the first entry is used. Empty API language values are assigned to the current/default import language.
+- **Fallback:** If the selected API entry has no usable `url`, the SDK stores a fallback route based on the media object ID (for example `/verpflegung/3461949/`) and writes an import warning. The media object remains reachable.
+- **Config:** `strategy: "pressmind"`, optional `prefix`, `suffix`, and `language`. `fields`, `separator`, and `id_channel` are not used by this strategy.
+- **Schema upgrade:** Existing databases need the new static route columns before importing:
+
+```bash
+php bin/database-integrity-check --non-interactive --static-only
+```
+
 ---
 
 ## Supported field types for `fields` (strategies `unique` and `count-up`)
@@ -100,6 +113,7 @@ Use `fields: ["code", "name"]` or `fields: ["headline"]` etc. as needed. For `he
 | `URL strategy "channel" requires "id_channel" to be configured …` | Channel strategy is set but `id_channel` is missing in config | Add `id_channel` (pressmind channel ID) to the config entry |
 | `no entry found for id_channel … in pretty_urls …` | Channel strategy and `id_channel` are set, but the API response has no `pretty_urls` entry for that channel | Assign the channel to the media object in pressmind (URL Steuerung) |
 | `channel id … found in pretty_urls but url is empty` | API returns the channel but with an empty `url` | Fix the URL in pressmind for that channel |
+| `URL strategy "pressmind": no usable pretty_urls.url …` | Pressmind strategy is configured, but API URL data is missing or empty | The SDK uses the media object ID as fallback route; fix URL data in pressmind/Webcore if a pretty URL is required |
 | `Route with url … already exists … strategy is set to unique` | Duplicate URL with `unique` strategy | Use `count-up` or make names/codes unique, or change the URL in pressmind (channel strategy) |
 | RebuildRoutesCommand: `URL strategy "channel" requires a full re-import …` | RebuildRoutesCommand has no API data; channel URLs cannot be rebuilt | Run a full import instead of rebuild routes |
 
@@ -118,6 +132,13 @@ Use `fields: ["code", "name"]` or `fields: ["headline"]` etc. as needed. For `he
     "id_channel": 1053,
     "prefix": "",
     "suffix": ""
+  },
+  {
+    "id_object_type": 2752,
+    "language": null,
+    "strategy": "pressmind",
+    "prefix": "/verpflegung/",
+    "suffix": "/"
   },
   {
     "id_object_type": 607,
@@ -157,6 +178,7 @@ Use `fields: ["code", "name"]` or `fields: ["headline"]` etc. as needed. For `he
 ### Example URLs
 
 - **Channel:** API returns `url: "/mtf-musical-020906"` → route stored as `/mtf-musical-020906` (or with prefix/suffix if set).
+- **Pressmind:** API returns `url: "/venedig", meta_title: "Venedig Reise", meta_description: "Kurzbeschreibung"` with `prefix: "/verpflegung/"`, `suffix: "/"` → route stored as `/verpflegung/venedig/`, title stored as `Venedig Reise`, description stored as `Kurzbeschreibung`.
 - **Unique/count-up with fields:** `prefix: "/"`, `fields: ["code", "name"]`, `code: "020906"`, `name: "Toskana Rundreise"` → `/020906-toskana-rundreise`.
 - **Unique with headline:** `fields: ["headline"]`, headline content "Beautiful Mallorca Holiday" → slug like `/beautiful-mallorca-holiday` (HTML stripped).
 

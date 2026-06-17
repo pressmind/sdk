@@ -151,6 +151,8 @@ class InstallSchemaTest extends AbstractImportTestCase
         $names = array_map(fn($c) => $c->Field, $cols);
         $this->assertContains('id', $names);
         $this->assertContains('id_media_object', $names);
+        $this->assertContains('title', $names);
+        $this->assertContains('description', $names);
     }
 
     public function testCheapestPriceSpeedTableHasRequiredColumns(): void

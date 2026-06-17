@@ -12,6 +12,8 @@ namespace Pressmind\ValueObject\MediaObject\Result;
  * @property integer $id_object_type
  * @property integer $route
  * @property string $language
+ * @property string $title
+ * @property string $description
  * @property boolean $is_default
  */
 class GetPrettyUrls
@@ -21,5 +23,7 @@ class GetPrettyUrls
     public $id_object_type;
     public $route;
     public $language;
+    public $title;
+    public $description;
     public $is_default;
 }

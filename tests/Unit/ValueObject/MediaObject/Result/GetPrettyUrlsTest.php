@@ -15,6 +15,8 @@ class GetPrettyUrlsTest extends AbstractTestCase
         $vo->id_object_type = 200;
         $vo->route = 'detail';
         $vo->language = 'de';
+        $vo->title = 'SEO Title';
+        $vo->description = 'SEO Description';
         $vo->is_default = true;
 
         $this->assertSame(1, $vo->id);
@@ -22,6 +24,8 @@ class GetPrettyUrlsTest extends AbstractTestCase
         $this->assertSame(200, $vo->id_object_type);
         $this->assertSame('detail', $vo->route);
         $this->assertSame('de', $vo->language);
+        $this->assertSame('SEO Title', $vo->title);
+        $this->assertSame('SEO Description', $vo->description);
         $this->assertTrue($vo->is_default);
     }
 }

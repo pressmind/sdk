@@ -1265,59 +1265,254 @@ class MediaObject extends AbstractObject
 
     /**
      * @param string|null $language
-     * @param array $pretty_urls_from_api Optional. Array of stdClass with id_channel, url (from API response pretty_urls). Required when strategy is "channel".
+     * @param array $pretty_urls_from_api Optional. Array of stdClass with id_channel, url (from API response pretty_urls). Required when strategy is "channel" or "pressmind".
      * @return string[]
      * @throws Exception
      */
     public function buildPrettyUrls($language = null, array $pretty_urls_from_api = [])
     {
+        return array_map(function ($route) {
+            return $route['route'];
+        }, $this->buildPrettyUrlRouteData($language, $pretty_urls_from_api));
+    }
+
+    /**
+     * @param string|null $language
+     * @param array $pretty_urls_from_api
+     * @param array $available_languages Languages imported for this media object. Used to assign one-language pressmind URLs.
+     * @return array[]
+     * @throws Exception
+     */
+    public function buildPrettyUrlRouteData($language = null, array $pretty_urls_from_api = [], array $available_languages = [])
+    {
+        $settings = $this->_getPrettyUrlSettings($language, $language === null);
+        if ($settings['strategy'] === 'channel') {
+            return $this->_buildChannelPrettyUrlRouteData($settings, $language, $pretty_urls_from_api);
+        }
+        if ($settings['strategy'] === 'pressmind') {
+            return $this->_buildPressmindPrettyUrlRouteData($settings, $language, $pretty_urls_from_api, $available_languages);
+        }
+        return $this->_buildFieldBasedPrettyUrlRouteData($settings, $language);
+    }
+
+    /**
+     * @param string $strategy
+     * @return bool
+     */
+    public function usesPrettyUrlStrategy($strategy): bool
+    {
+        $settings = $this->_getPrettyUrlSettings(null, true);
+        return $settings['strategy'] === $strategy;
+    }
+
+    /**
+     * @param string|null $language
+     * @param bool $ignore_language
+     * @return array
+     */
+    private function _getPrettyUrlSettings($language = null, bool $ignore_language = false): array
+    {
         $config = Registry::getInstance()->get('config');
-        $is_legancy = !isset($config['data']['media_types_pretty_url'][array_key_first($config['data']['media_types_pretty_url'])]['id_object_type']);
-        $fields = [];
-        $separator = '-';
-        $strategy = 'unique';
-        $prefix = '/';
-        $suffix = '';
-        $id_channel = null;
-        if($is_legancy){
-            $fields = $config['data']['media_types_pretty_url'][$this->id_object_type]['fields'] ?? ['name'];
-            $separator = $config['data']['media_types_pretty_url'][$this->id_object_type]['separator'] ?? $separator;
-            $strategy = $config['data']['media_types_pretty_url'][$this->id_object_type]['strategy'] ?? $strategy;
-            $prefix = $config['data']['media_types_pretty_url'][$this->id_object_type]['prefix'] ?? $prefix;
-            $suffix = $config['data']['media_types_pretty_url'][$this->id_object_type]['suffix'] ?? $suffix;
-            $id_channel = $config['data']['media_types_pretty_url'][$this->id_object_type]['id_channel'] ?? null;
-        }else{
-            foreach($config['data']['media_types_pretty_url'] as $v){
-                $languageMatch = (!isset($v['language']) || $v['language'] == $language);
-                if($v['id_object_type'] == $this->id_object_type && $languageMatch){
-                    $fields = $v['field'] ?? $v['fields'] ?? ['name'];
-                    $separator = $v['separator'] ?? $separator;
-                    $strategy = $v['strategy'] ?? $strategy;
-                    $prefix = $v['prefix'] ?? $prefix;
-                    $suffix = $v['suffix'] ?? $suffix;
-                    $id_channel = $v['id_channel'] ?? null;
-                    break;
-                }
+        $settings = [
+            'fields' => [],
+            'separator' => '-',
+            'strategy' => 'unique',
+            'prefix' => '/',
+            'suffix' => '',
+            'id_channel' => null,
+        ];
+        $pretty_url_config = $config['data']['media_types_pretty_url'] ?? [];
+        if (empty($pretty_url_config) || !is_array($pretty_url_config)) {
+            return $settings;
+        }
+
+        $first_key = array_key_first($pretty_url_config);
+        $first_entry = $first_key !== null ? $pretty_url_config[$first_key] : null;
+        $is_legacy = is_array($first_entry) && !isset($first_entry['id_object_type']);
+        if ($is_legacy) {
+            if (!isset($pretty_url_config[$this->id_object_type]) || !is_array($pretty_url_config[$this->id_object_type])) {
+                return $settings;
+            }
+            $entry = $pretty_url_config[$this->id_object_type];
+            $settings['fields'] = $entry['fields'] ?? ['name'];
+            $settings['separator'] = $entry['separator'] ?? $settings['separator'];
+            $settings['strategy'] = $entry['strategy'] ?? $settings['strategy'];
+            $settings['prefix'] = $entry['prefix'] ?? $settings['prefix'];
+            $settings['suffix'] = $entry['suffix'] ?? $settings['suffix'];
+            $settings['id_channel'] = $entry['id_channel'] ?? null;
+            return $settings;
+        }
+
+        foreach ($pretty_url_config as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $language_match = $ignore_language || !isset($entry['language']) || $entry['language'] == $language;
+            if (($entry['id_object_type'] ?? null) == $this->id_object_type && $language_match) {
+                $settings['fields'] = $entry['field'] ?? $entry['fields'] ?? ['name'];
+                $settings['separator'] = $entry['separator'] ?? $settings['separator'];
+                $settings['strategy'] = $entry['strategy'] ?? $settings['strategy'];
+                $settings['prefix'] = $entry['prefix'] ?? $settings['prefix'];
+                $settings['suffix'] = $entry['suffix'] ?? $settings['suffix'];
+                $settings['id_channel'] = $entry['id_channel'] ?? null;
+                return $settings;
             }
         }
-        if ($strategy === 'channel') {
-            if ($id_channel === null || $id_channel === '') {
-                throw new Exception('URL strategy "channel" requires "id_channel" to be configured in media_types_pretty_url for object type ' . $this->id_object_type);
+        return $settings;
+    }
+
+    /**
+     * @param array $settings
+     * @param string|null $language
+     * @param array $pretty_urls_from_api
+     * @return array[]
+     * @throws Exception
+     */
+    private function _buildChannelPrettyUrlRouteData(array $settings, $language, array $pretty_urls_from_api): array
+    {
+        if ($settings['id_channel'] === null || $settings['id_channel'] === '') {
+            throw new Exception('URL strategy "channel" requires "id_channel" to be configured in media_types_pretty_url for object type ' . $this->id_object_type);
+        }
+        if (empty($pretty_urls_from_api)) {
+            return [];
+        }
+        foreach ($pretty_urls_from_api as $pretty_url) {
+            $pu = is_array($pretty_url) ? (object) $pretty_url : $pretty_url;
+            if ((int) $pu->id_channel === (int) $settings['id_channel']) {
+                if ($pu->url === null || $pu->url === '') {
+                    throw new Exception('URL strategy "channel": channel id ' . $settings['id_channel'] . ' found in pretty_urls but url is empty for media object ' . $this->id);
+                }
+                return [[
+                    'route' => $settings['prefix'] . $pu->url . $settings['suffix'],
+                    'language' => $language,
+                    'title' => null,
+                    'description' => null,
+                    'warning' => null,
+                ]];
             }
-            if (empty($pretty_urls_from_api)) {
+        }
+        throw new Exception('URL strategy "channel": no entry found for id_channel ' . $settings['id_channel'] . ' in pretty_urls of media object ' . $this->id . '. Check that the channel is assigned in pressmind.');
+    }
+
+    /**
+     * @param array $settings
+     * @param string|null $language
+     * @param array $pretty_urls_from_api
+     * @param array $available_languages
+     * @return array[]
+     */
+    private function _buildPressmindPrettyUrlRouteData(array $settings, $language, array $pretty_urls_from_api, array $available_languages): array
+    {
+        $entries = [];
+        foreach ($pretty_urls_from_api as $pretty_url) {
+            $entries[] = $this->_normalizePressmindPrettyUrl($pretty_url);
+        }
+        if (empty($entries)) {
+            $entries[] = ['language' => '', 'url' => '', 'title' => null, 'description' => null];
+        }
+
+        $languages = [];
+        foreach ($entries as $entry) {
+            if ($entry['language'] !== '') {
+                $languages[$entry['language']] = true;
+            }
+        }
+
+        if (count($languages) > 1) {
+            $selected_entries = [];
+            foreach ($entries as $entry) {
+                if ($entry['language'] === '') {
+                    continue;
+                }
+                if ($language === null || $entry['language'] === $language) {
+                    $selected_entries[] = $entry;
+                }
+            }
+        } else {
+            $first_entry = $entries[0];
+            if ($language !== null && $first_entry['language'] !== '' && $first_entry['language'] !== $language) {
                 return [];
             }
-            foreach ($pretty_urls_from_api as $pretty_url) {
-                $pu = is_array($pretty_url) ? (object) $pretty_url : $pretty_url;
-                if ((int) $pu->id_channel === (int) $id_channel) {
-                    if ($pu->url === null || $pu->url === '') {
-                        throw new Exception('URL strategy "channel": channel id ' . $id_channel . ' found in pretty_urls but url is empty for media object ' . $this->id);
-                    }
-                    return [$prefix . $pu->url . $suffix];
-                }
-            }
-            throw new Exception('URL strategy "channel": no entry found for id_channel ' . $id_channel . ' in pretty_urls of media object ' . $this->id . '. Check that the channel is assigned in pressmind.');
+            $selected_entries = [$first_entry];
         }
+
+        $result = [];
+        foreach ($selected_entries as $entry) {
+            $route_language = $entry['language'] !== '' ? $entry['language'] : $this->_resolvePrettyUrlLanguage($language, $available_languages);
+            $url = $entry['url'];
+            $warning = null;
+            if ($url === '') {
+                $url = (string) $this->getId();
+                $warning = 'URL strategy "pressmind": no usable pretty_urls.url for media object ' . $this->getId() . '; using fallback route based on media object id.';
+            }
+            $result[] = [
+                'route' => $this->_joinPrettyUrlParts($settings['prefix'], $url, $settings['suffix']),
+                'language' => $route_language,
+                'title' => $entry['title'],
+                'description' => $entry['description'],
+                'warning' => $warning,
+            ];
+        }
+        return $result;
+    }
+
+    /**
+     * @param mixed $pretty_url
+     * @return array
+     */
+    private function _normalizePressmindPrettyUrl($pretty_url): array
+    {
+        $entry = is_array($pretty_url) ? $pretty_url : get_object_vars($pretty_url);
+        return [
+            'language' => isset($entry['language']) ? trim((string) $entry['language']) : '',
+            'url' => isset($entry['url']) ? trim((string) $entry['url']) : '',
+            'title' => isset($entry['meta_title']) && $entry['meta_title'] !== '' ? (string) $entry['meta_title'] : null,
+            'description' => isset($entry['meta_description']) && $entry['meta_description'] !== '' ? (string) $entry['meta_description'] : null,
+        ];
+    }
+
+    /**
+     * @param string|null $language
+     * @param array $available_languages
+     * @return string|null
+     */
+    private function _resolvePrettyUrlLanguage($language, array $available_languages)
+    {
+        if ($language !== null && $language !== '') {
+            return $language;
+        }
+        if (!empty($available_languages)) {
+            return reset($available_languages);
+        }
+        $config = Registry::getInstance()->get('config');
+        return $config['data']['languages']['default'] ?? null;
+    }
+
+    /**
+     * @param string $prefix
+     * @param string $url
+     * @param string $suffix
+     * @return string
+     */
+    private function _joinPrettyUrlParts($prefix, $url, $suffix): string
+    {
+        $path = trim((string) $url, '/');
+        $route = $prefix === '' ? '/' . $path : rtrim((string) $prefix, '/') . '/' . $path;
+        if ($suffix !== '') {
+            $route = rtrim($route, '/') . '/' . ltrim((string) $suffix, '/');
+        }
+        return $route;
+    }
+
+    /**
+     * @param array $settings
+     * @param string|null $language
+     * @return array[]
+     * @throws Exception
+     */
+    private function _buildFieldBasedPrettyUrlRouteData(array $settings, $language): array
+    {
+        $fields = $settings['fields'];
         if (!is_array($fields)) {
             $fields = [$fields];
         }
@@ -1355,16 +1550,16 @@ class MediaObject extends AbstractObject
                 }*/
             }
         }
-        $url = implode($separator, $url_array);
-        $final_url = $prefix . trim(preg_replace('/\W+/', '-', $url), '-') . $suffix;
-        if($strategy == 'unique' || $strategy == 'count-up') {
+        $url = implode($settings['separator'], $url_array);
+        $final_url = $settings['prefix'] . trim(preg_replace('/\W+/', '-', $url), '-') . $settings['suffix'];
+        if($settings['strategy'] == 'unique' || $settings['strategy'] == 'count-up') {
             if($this->_doesRouteExist($final_url)) {
-                if($strategy == 'unique') {
+                if($settings['strategy'] == 'unique') {
                     throw new Exception('Route with url ' . $final_url . ' already exists and route-building strategy is set to unique in config. Please check your configuration file.');
                 }
-                if($strategy == 'count-up') {
+                if($settings['strategy'] == 'count-up') {
                     for ($i = 1; $i < 1000; $i++) {
-                        $check_url = $prefix . trim(preg_replace('/\W+/', '-', $url), '-') . '-' . str_pad($i, 3, '0', STR_PAD_LEFT) . $suffix;
+                        $check_url = $settings['prefix'] . trim(preg_replace('/\W+/', '-', $url), '-') . '-' . str_pad($i, 3, '0', STR_PAD_LEFT) . $settings['suffix'];
                         if ($this->_doesRouteExist($check_url) == false) {
                             $final_url = $check_url;
                             break;
@@ -1373,7 +1568,13 @@ class MediaObject extends AbstractObject
                 }
             }
         }
-        return [$final_url];
+        return [[
+            'route' => $final_url,
+            'language' => $language,
+            'title' => null,
+            'description' => null,
+            'warning' => null,
+        ]];
     }
 
     /**
@@ -1424,6 +1625,8 @@ class MediaObject extends AbstractObject
             $object->id_object_type = $route->id_object_type;
             $object->route = $route->route;
             $object->language = $route->language;
+            $object->title = $route->title ?? null;
+            $object->description = $route->description ?? null;
             $object->is_default = $route->language == $config['data']['languages']['default'];
 
             $result[] = $object;

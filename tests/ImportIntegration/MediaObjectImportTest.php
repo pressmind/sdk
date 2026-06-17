@@ -49,6 +49,8 @@ class MediaObjectImportTest extends AbstractImportTestCase
         $cols = $this->db->fetchAll('DESCRIBE pmt2core_routes');
         $names = array_map(fn($c) => $c->Field, $cols);
         $this->assertContains('id_media_object', $names);
+        $this->assertContains('title', $names);
+        $this->assertContains('description', $names);
     }
 
     public function testRoutesCountConsistentWithMediaObjects(): void

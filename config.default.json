@@ -178,6 +178,14 @@
           "suffix": ""
         },
         {
+          "_example": "pressmind strategy: URL, title and description are taken from API pretty_urls.url/meta_title/meta_description. If URL is missing, the media object id is used as fallback route.",
+          "id_object_type": 0,
+          "language": null,
+          "strategy": "pressmind",
+          "prefix": "/",
+          "suffix": ""
+        },
+        {
           "_example": "count-up strategy: URL from multiple fields (e.g. code + name). Duplicates get numeric suffix (-001, -002, ...).",
           "id_object_type": 0,
           "language": null,

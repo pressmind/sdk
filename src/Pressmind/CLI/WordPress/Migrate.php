@@ -164,9 +164,14 @@ class Migrate
 
     /**
      * Simple string replacement of old site URL with new site URL.
+     * Non-string values in serialized data are returned unchanged.
      */
-    private static function replace(string $value): string
+    private static function replace($value)
     {
+        if (!is_string($value)) {
+            return $value;
+        }
+
         return str_replace(self::$oldSite, self::$newSite, $value);
     }
 

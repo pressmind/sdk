@@ -60,6 +60,37 @@ class OpenSearchSearchIntegrationTest extends AbstractIntegrationTestCase
             && $config['data']['search_opensearch']['uri'] !== '';
     }
 
+    private function requireOpenSearch(): void
+    {
+        $this->ensureOpenSearchConfig();
+        if (!$this->isOpenSearchConfigured()) {
+            if ($this->mustRequireOpenSearch()) {
+                $this->fail(
+                    'OpenSearch must be tested in CI/Docker integration. OPENSEARCH_URI is not set or not in config. '
+                    . 'getenv(OPENSEARCH_URI)=' . var_export(getenv('OPENSEARCH_URI'), true)
+                    . ' SERVER=' . ($_SERVER['OPENSEARCH_URI'] ?? 'unset')
+                );
+            }
+            $this->markTestSkipped('OPENSEARCH_URI not set or search_opensearch not in config.');
+        }
+        try {
+            $this->getOpenSearchClient()->cluster()->health();
+        } catch (\Throwable $e) {
+            if ($this->mustRequireOpenSearch()) {
+                $this->fail('OpenSearch must be reachable in CI/Docker integration. ' . $e->getMessage());
+            }
+            $this->markTestSkipped('OpenSearch not reachable: ' . $e->getMessage());
+        }
+    }
+
+    private function mustRequireOpenSearch(): bool
+    {
+        return getenv('CI') === 'true'
+            || getenv('GITHUB_ACTIONS') === 'true'
+            || getenv('DB_HOST') === 'mysql'
+            || getenv('MONGODB_URI') === 'mongodb://mongodb:27017';
+    }
+
     /**
      * Build OpenSearch client from current config (for cluster health / index ops).
      */
@@ -122,24 +153,9 @@ class OpenSearchSearchIntegrationTest extends AbstractIntegrationTestCase
 
     public function testClusterHealth(): void
     {
-        $this->ensureOpenSearchConfig();
-        if (!$this->isOpenSearchConfigured()) {
-            $inDocker = (getenv('DB_HOST') === 'mysql' || getenv('MONGODB_URI') === 'mongodb://mongodb:27017');
-            if ($inDocker) {
-                $this->fail(
-                    'OpenSearch must be tested in Docker integration. OPENSEARCH_URI is not set or not in config. '
-                    . 'getenv(OPENSEARCH_URI)=' . var_export(getenv('OPENSEARCH_URI'), true)
-                    . ' SERVER=' . ($_SERVER['OPENSEARCH_URI'] ?? 'unset')
-                );
-            }
-            $this->markTestSkipped('OPENSEARCH_URI not set or search_opensearch not in config.');
-        }
-        try {
-            $client = $this->getOpenSearchClient();
-            $health = $client->cluster()->health();
-        } catch (\Throwable $e) {
-            $this->fail('OpenSearch must be reachable in Docker integration. ' . $e->getMessage());
-        }
+        $this->requireOpenSearch();
+        $client = $this->getOpenSearchClient();
+        $health = $client->cluster()->health();
         $this->assertIsArray($health);
         $this->assertArrayHasKey('status', $health);
         $this->assertContains($health['status'], ['green', 'yellow'], 'Cluster status should be green or yellow');
@@ -147,15 +163,8 @@ class OpenSearchSearchIntegrationTest extends AbstractIntegrationTestCase
 
     public function testGetResultOnEmptyIndex(): void
     {
-        $this->ensureOpenSearchConfig();
-        if (!$this->isOpenSearchConfigured()) {
-            $this->markTestSkipped('OPENSEARCH_URI not set');
-        }
-        try {
-            $search = new OpenSearch('test', 'de', 10);
-        } catch (\Throwable $e) {
-            $this->markTestSkipped('OpenSearch not reachable: ' . $e->getMessage());
-        }
+        $this->requireOpenSearch();
+        $search = new OpenSearch('test', 'de', 10);
         $indexName = $search->getIndexTemplateName('de');
         $this->assertNotEmpty($indexName);
         $this->assertStringStartsWith('index_', $indexName);
@@ -186,17 +195,10 @@ class OpenSearchSearchIntegrationTest extends AbstractIntegrationTestCase
 
     public function testGetResultReturnsDocumentIdsWhenIndexed(): void
     {
-        $this->ensureOpenSearchConfig();
-        if (!$this->isOpenSearchConfigured()) {
-            $this->markTestSkipped('OPENSEARCH_URI not set');
-        }
+        $this->requireOpenSearch();
         // Allow cluster to settle after previous test's index operations (reduces 403 flakiness)
         sleep(2);
-        try {
-            $search = new OpenSearch('Reise', 'de', 10);
-        } catch (\Throwable $e) {
-            $this->markTestSkipped('OpenSearch not reachable: ' . $e->getMessage());
-        }
+        $search = new OpenSearch('Reise', 'de', 10);
         $indexName = $search->getIndexTemplateName('de');
         $client = $this->getOpenSearchClient();
         if ($client->indices()->exists(['index' => $indexName])) {

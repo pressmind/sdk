@@ -54,7 +54,7 @@ class Writer
                 if ($configMode == 'ALL' || $type == $configMode) {
                     $log_dir = self::getLogFilePath();
                     if (!is_dir($log_dir)) {
-                        mkdir($log_dir, 0644, true);
+                        mkdir($log_dir, 0775, true);
                     }
                     if (file_put_contents($log_dir . DIRECTORY_SEPARATOR . $log_file_name . '.log', $log_text . "\n", FILE_APPEND) == false) {
                         throw new Exception('Failed to write logfile ' . $log_dir . DIRECTORY_SEPARATOR . $filename);

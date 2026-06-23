@@ -82,8 +82,24 @@ class OpenSearchIndexerIntegrationTest extends AbstractIntegrationTestCase
     private function requireOpenSearch(): void
     {
         if (!$this->isOpenSearchConfigured()) {
+            if ($this->mustRequireOpenSearch()) {
+                $this->fail('OpenSearch must be configured in CI integration. OPENSEARCH_URI is not set.');
+            }
             $this->markTestSkipped('OPENSEARCH_URI not set');
         }
+        try {
+            $this->getClient()->cluster()->health();
+        } catch (\Throwable $e) {
+            if ($this->mustRequireOpenSearch()) {
+                $this->fail('OpenSearch must be reachable in CI integration. ' . $e->getMessage());
+            }
+            $this->markTestSkipped('OpenSearch not reachable: ' . $e->getMessage());
+        }
+    }
+
+    private function mustRequireOpenSearch(): bool
+    {
+        return getenv('CI') === 'true' || getenv('GITHUB_ACTIONS') === 'true';
     }
 
     private function getClient(): \OpenSearch\Client
@@ -171,7 +187,7 @@ class OpenSearchIndexerIntegrationTest extends AbstractIntegrationTestCase
         $hash1 = $indexer->getConfigHash();
         $hash2 = $indexer->getConfigHash();
         $this->assertSame($hash1, $hash2);
-        $this->assertSame(32, strlen($hash1), 'MD5 hash should be 32 chars');
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{8}_[a-f0-9]{32}$/', $hash1);
     }
 
     public function testHtmlToFulltext(): void

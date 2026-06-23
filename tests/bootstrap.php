@@ -40,13 +40,27 @@ if ($opensearchUri !== false && $opensearchUri !== '') {
 // Constants required by HelperFunctions::replaceConstantsFromConfig (e.g. Storage/Filesystem tests).
 // Use ImportIntegration _app path so InstallCommand and Import (ObjectTypeScaffolder) find ObjectTypeScaffolderTemplates.
 $defaultAppPath = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR . 'ImportIntegration' . DIRECTORY_SEPARATOR . '_app';
+$customClassPaths = [
+    $defaultAppPath,
+    __DIR__ . DIRECTORY_SEPARATOR . 'Fixtures',
+];
+$ensureTestDirectory = static function (string $dir): void {
+    if (is_dir($dir)) {
+        return;
+    }
+    if (!@mkdir($dir, 0775, true) && !is_dir($dir)) {
+        throw new RuntimeException('Could not create test directory: ' . $dir);
+    }
+};
 
-spl_autoload_register(function ($class) use ($defaultAppPath) {
+spl_autoload_register(function ($class) use ($customClassPaths) {
     if (str_starts_with($class, 'Custom\\')) {
-        $file = $defaultAppPath . DIRECTORY_SEPARATOR . str_replace('\\', DIRECTORY_SEPARATOR, $class) . '.php';
-        if (is_file($file)) {
-            require_once $file;
-            return true;
+        foreach ($customClassPaths as $customClassPath) {
+            $file = $customClassPath . DIRECTORY_SEPARATOR . str_replace('\\', DIRECTORY_SEPARATOR, $class) . '.php';
+            if (is_file($file)) {
+                require_once $file;
+                return true;
+            }
         }
     }
     if ($class === 'Pressmind\\AbstractController' && !class_exists($class, false)) {
@@ -58,14 +72,10 @@ spl_autoload_register(function ($class) use ($defaultAppPath) {
     }
     return false;
 });
-if (!is_dir($defaultAppPath)) {
-    mkdir($defaultAppPath, 0775, true);
-    foreach (['Custom/MediaType', 'Custom/Views', 'ObjectTypeScaffolderTemplates', 'logs', 'tmp', 'docs/objecttypes', 'assets/files', 'assets/images'] as $subdir) {
-        $dir = $defaultAppPath . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $subdir);
-        if (!is_dir($dir)) {
-            mkdir($dir, 0775, true);
-        }
-    }
+$ensureTestDirectory($defaultAppPath);
+foreach (['Custom/MediaType', 'Custom/Views', 'ObjectTypeScaffolderTemplates', 'logs', 'tmp', 'docs/objecttypes', 'assets/files', 'assets/images'] as $subdir) {
+    $dir = $defaultAppPath . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $subdir);
+    $ensureTestDirectory($dir);
 }
 if (!defined('BASE_PATH')) {
     define('BASE_PATH', dirname($defaultAppPath));

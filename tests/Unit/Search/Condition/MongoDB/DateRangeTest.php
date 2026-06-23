@@ -33,7 +33,7 @@ class DateRangeTest extends TestCase
         $this->assertIsArray($query);
         $this->assertArrayHasKey('prices', $query);
         $this->assertStringContainsString('2026-06-01', json_encode($query));
-        $this->assertStringContainsString('2026-06-30', json_encode($query));
+        $this->assertStringContainsString('2026-07-01', json_encode($query));
     }
 
     public function testDepartureFilterQuery(): void
@@ -65,7 +65,7 @@ class DateRangeTest extends TestCase
         $this->assertArrayHasKey('date_departures', $elemMatch);
         $inner = $elemMatch['date_departures']['$elemMatch'];
         $this->assertSame('2026-07-01', $inner['$gte']);
-        $this->assertSame('2026-07-31', $inner['$lte']);
+        $this->assertSame('2026-08-01', $inner['$lt']);
     }
 
     public function testDepartureFilterQueryStructure(): void
@@ -81,7 +81,7 @@ class DateRangeTest extends TestCase
         $this->assertArrayHasKey('input', $filter);
         $json = json_encode($filter);
         $this->assertStringContainsString('2026-08-01', $json);
-        $this->assertStringContainsString('2026-08-15', $json);
+        $this->assertStringContainsString('2026-08-16', $json);
         $this->assertStringContainsString('date_departures', $json);
     }
 

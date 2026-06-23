@@ -21,6 +21,7 @@ class IntegrityCheckCommandIntegrationTest extends AbstractIntegrationTestCase
         parent::setUp();
         $this->tmpDir = sys_get_temp_dir() . '/sdk_integrity_test_' . uniqid();
         mkdir($this->tmpDir, 0755, true);
+        $this->setSafeSecurityConfig();
     }
 
     protected function tearDown(): void
@@ -47,6 +48,15 @@ class IntegrityCheckCommandIntegrationTest extends AbstractIntegrationTestCase
             throw $e;
         }
         return ['exit' => $exit, 'output' => $output];
+    }
+
+    private function setSafeSecurityConfig(): void
+    {
+        $config = Registry::getInstance()->get('config');
+        $config['rest']['server']['api_key'] = 'test-api-key';
+        $config['rest']['server']['api_password'] = 'test-api-password';
+        $config['database']['password'] = 'test-db-password';
+        Registry::getInstance()->add('config', $config);
     }
 
     public function testPhpVersionCheckPasses(): void

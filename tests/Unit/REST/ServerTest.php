@@ -59,6 +59,15 @@ class ServerTest extends AbstractTestCase
         return new Server(null, $request, new Response(), $router);
     }
 
+    private function enableApiKeyAuth(string $apiKey = 'secret123'): void
+    {
+        $config = $this->createMockConfig([
+            'rest' => ['server' => ['api_key' => $apiKey]],
+        ]);
+        Registry::getInstance()->add('config', $config);
+        $_SERVER['HTTP_X_API_KEY'] = $apiKey;
+    }
+
     // --- HTTP Method tests ---
 
     public function testDeleteMethodReturns405(): void
@@ -109,6 +118,7 @@ class ServerTest extends AbstractTestCase
 
     public function testGetWithNoMatchingRouteReturns404(): void
     {
+        $this->enableApiKeyAuth();
         $request = $this->buildRequest('GET', '/nonexistent');
         $response = $this->buildServer($request)->run();
         $this->assertSame(404, $response->getCode());
@@ -116,21 +126,21 @@ class ServerTest extends AbstractTestCase
 
     public function testPostWithNoMatchingRouteReturns404(): void
     {
+        $this->enableApiKeyAuth();
         $request = $this->buildRequest('POST', '/nonexistent');
         $response = $this->buildServer($request)->run();
         $this->assertSame(404, $response->getCode());
     }
 
-    // --- Authentication: no auth configured -> 200 (pass through) ---
+    // --- Authentication: no auth configured -> 403 (fail-close) ---
 
-    public function testNoAuthConfiguredAllowsRequest(): void
+    public function testNoAuthConfiguredRejectsRequest(): void
     {
         $request = $this->buildRequest('GET', '/test');
         $router = new Router();
         $router->addRoute(new Router\Route('test', 'GET', __NAMESPACE__, 'StubController', 'ok'));
         $response = $this->buildServer($request, $router)->run();
-        $this->assertSame(200, $response->getCode());
-        $this->assertSame(['ok' => true], $response->getBody());
+        $this->assertSame(403, $response->getCode());
     }
 
     // --- Authentication: API key ---
@@ -150,7 +160,7 @@ class ServerTest extends AbstractTestCase
         $this->assertSame(200, $response->getCode());
     }
 
-    public function testApiKeyOnlyWithWrongKeyFallsThroughWhenNoBasicAuthConfigured(): void
+    public function testApiKeyOnlyWithWrongKeyRejectsWhenNoBasicAuthConfigured(): void
     {
         $config = $this->createMockConfig([
             'rest' => ['server' => ['api_key' => 'secret123']],
@@ -162,9 +172,7 @@ class ServerTest extends AbstractTestCase
         $router = new Router();
         $router->addRoute(new Router\Route('test', 'GET', __NAMESPACE__, 'StubController', 'ok'));
         $response = $this->buildServer($request, $router)->run();
-        // Server auth falls through to "return true" when API key does not match
-        // and no basic auth is configured (open-access fallback).
-        $this->assertSame(200, $response->getCode());
+        $this->assertSame(403, $response->getCode());
     }
 
     public function testApiKeyPlusBasicAuthConfiguredRejects403WhenBothWrong(): void
@@ -284,6 +292,7 @@ class ServerTest extends AbstractTestCase
 
     public function testControllerActionCalledAndBodySet(): void
     {
+        $this->enableApiKeyAuth();
         $request = $this->buildRequest('GET', '/test');
         $router = new Router();
         $router->addRoute(new Router\Route('test', 'GET', __NAMESPACE__, 'StubController', 'ok'));
@@ -294,6 +303,7 @@ class ServerTest extends AbstractTestCase
 
     public function testControllerExceptionReturns500(): void
     {
+        $this->enableApiKeyAuth();
         $request = $this->buildRequest('GET', '/test');
         $router = new Router();
         $router->addRoute(new Router\Route('test', 'GET', __NAMESPACE__, 'StubController', 'fail'));
@@ -306,6 +316,7 @@ class ServerTest extends AbstractTestCase
 
     public function testControllerRedirectSets302(): void
     {
+        $this->enableApiKeyAuth();
         $request = $this->buildRequest('GET', '/test');
         $router = new Router();
         $router->addRoute(new Router\Route('test', 'GET', __NAMESPACE__, 'StubController', 'redirect'));
@@ -317,6 +328,7 @@ class ServerTest extends AbstractTestCase
 
     public function testNonexistentControllerReturns500(): void
     {
+        $this->enableApiKeyAuth();
         $request = $this->buildRequest('GET', '/test');
         $router = new Router();
         $router->addRoute(new Router\Route('test', 'GET', 'Nonexistent\\Namespace', 'Controller', 'action'));
@@ -329,6 +341,7 @@ class ServerTest extends AbstractTestCase
 
     public function testNonexistentActionReturns500(): void
     {
+        $this->enableApiKeyAuth();
         $request = $this->buildRequest('GET', '/test');
         $router = new Router();
         $router->addRoute(new Router\Route('test', 'GET', __NAMESPACE__, 'StubController', 'nonexistent'));
@@ -343,6 +356,7 @@ class ServerTest extends AbstractTestCase
 
     public function testCorsHeadersSetOnSuccessfulRequest(): void
     {
+        $this->enableApiKeyAuth();
         $request = $this->buildRequest('GET', '/test');
         $router = new Router();
         $router->addRoute(new Router\Route('test', 'GET', __NAMESPACE__, 'StubController', 'ok'));
@@ -356,6 +370,7 @@ class ServerTest extends AbstractTestCase
 
     public function testContentTypeSetToJson(): void
     {
+        $this->enableApiKeyAuth();
         $request = $this->buildRequest('GET', '/test');
         $router = new Router();
         $router->addRoute(new Router\Route('test', 'GET', __NAMESPACE__, 'StubController', 'ok'));

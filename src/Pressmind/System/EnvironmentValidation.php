@@ -42,7 +42,7 @@ class EnvironmentValidation
 
         foreach ($files as $file) {
             $content = file_get_contents($file);
-            if ($content !== false && preg_match('/define\s*\(\s*[\'"]IBETEAM_VERSION[\'"]\s*,/', $content)) {
+            if ($content !== false && preg_match('/define\s*\(\s*[\'"]IBETEAM_VERSION[\'"]/', $content)) {
                 return $file;
             }
         }

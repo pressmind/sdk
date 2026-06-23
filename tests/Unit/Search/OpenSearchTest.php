@@ -101,7 +101,7 @@ class OpenSearchTest extends AbstractTestCase
         $search = $this->createOpenSearchStub();
         $hash = $search->getConfigHash();
         $this->assertIsString($hash);
-        $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $hash);
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{8}_[a-f0-9]{32}$/', $hash);
     }
 
     public function testGenerateCacheKey(): void

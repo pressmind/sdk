@@ -79,8 +79,24 @@ class OpenSearchIndexerTemplateTest extends AbstractIntegrationTestCase
     private function requireOpenSearch(): void
     {
         if (!$this->isOpenSearchConfigured()) {
+            if ($this->mustRequireOpenSearch()) {
+                $this->fail('OpenSearch must be configured in CI integration. OPENSEARCH_URI is not set.');
+            }
             $this->markTestSkipped('OPENSEARCH_URI not set');
         }
+        try {
+            $this->getClient()->cluster()->health();
+        } catch (\Throwable $e) {
+            if ($this->mustRequireOpenSearch()) {
+                $this->fail('OpenSearch must be reachable in CI integration. ' . $e->getMessage());
+            }
+            $this->markTestSkipped('OpenSearch not reachable: ' . $e->getMessage());
+        }
+    }
+
+    private function mustRequireOpenSearch(): bool
+    {
+        return getenv('CI') === 'true' || getenv('GITHUB_ACTIONS') === 'true';
     }
 
     private function getClient(): \OpenSearch\Client

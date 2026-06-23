@@ -154,7 +154,7 @@ class AbstractIndexTest extends AbstractTestCase
     {
         $index = $this->createAbstractIndexStub();
         $hash = $index->getConfigHash();
-        $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $hash);
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{8}_[a-f0-9]{32}$/', $hash);
     }
 
     public function testGetLanguages(): void

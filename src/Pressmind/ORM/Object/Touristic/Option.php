@@ -27,6 +27,7 @@ use Pressmind\ORM\Object\Touristic\Option\Discount;
  * @property integer $occupancy
  * @property integer $occupancy_child
  * @property integer $quota
+ * @property string|null $available_units csv list of available units (cabin numbers or room numbers), e.g. "123,124". Validated: must be null or alphanumeric values separated by commas.
  * @property integer $renewal_duration
  * @property float $renewal_price
  * @property integer $order
@@ -66,6 +67,8 @@ use Pressmind\ORM\Object\Touristic\Option\Discount;
  * @property string $crs_meta_data
  * @property boolean $dont_use_for_offers
  * @property int $id_media_object_option
+ * @property string|null $deck_name deck/floor name for cruise or multi-level accommodations
+ * @property string|null $code_ibe_deck IBE code for the deck assignment
  */
 class Option extends AbstractObject
 {
@@ -825,6 +828,35 @@ class Option extends AbstractObject
                 'type' => 'integer',
                 'required' => false,
                 'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'deck_name' => [
+                'title' => 'deck_name',
+                'name' => 'deck_name',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'code_ibe_deck' => [
+                'title' => 'code_ibe_deck',
+                'name' => 'code_ibe_deck',
+                'type' => 'string',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'available_units' => [
+                'title' => 'available_units',
+                'name' => 'available_units',
+                'type' => 'longtext',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'csvlist',
+                        'params' => null,
+                    ]
+                ],
                 'filters' => NULL,
             ],
         ]

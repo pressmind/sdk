@@ -35,6 +35,12 @@ Changes are categorized as:
 
 ## June 2026
 
+### FEATURE: Option – deck_name, code_ibe_deck, available_units properties
+
+- Added `deck_name` (string) and `code_ibe_deck` (string) to `Touristic\Option` for cruise/multi-level accommodation deck assignments.
+- Added `available_units` (longtext) to `Touristic\Option` for storing cabin/room number lists as CSV.
+- New validator `Pressmind\ORM\Validator\Csvlist` ensures `available_units` is either null or a valid comma-separated alphanumeric list.
+
 ### FEATURE: TermResolver – Category-based search term recognition
 
 - New class `Pressmind\Search\TermResolver` that detects when a search term matches a known category name (destination, trip type, ship name, etc.) and converts the fulltext search into an exact category filter.

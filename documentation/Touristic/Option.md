@@ -53,6 +53,9 @@ An Option represents a **bookable service** within a touristic product. Options 
 | `ibe_clients` | string | no | Comma-separated list of allowed CRS clients |
 | `crs_meta_data` | longtext | no | Free-form CRS metadata (JSON) |
 | `id_media_object_option` | integer | no | Reference to a linked MediaObject for this option |
+| `deck_name` | string(255) | no | Deck/floor name for cruise or multi-level accommodations |
+| `code_ibe_deck` | string(255) | no | IBE code for the deck assignment |
+| `available_units` | longtext | no | CSV list of available units (cabin or room numbers), e.g. "123,124". Validated: must be null or alphanumeric values separated by commas |
 | `request_code` | string(255) | no | CRS request code |
 | `price_group` | string(255) | no | CRS price group |
 | `product_group` | string(255) | no | CRS product group |

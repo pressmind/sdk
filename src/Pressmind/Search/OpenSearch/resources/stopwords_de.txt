@@ -3,6 +3,7 @@
 # terms removed to prevent false negatives in travel search contexts.
 #
 # Removed from standard list (geographic relevance):
+#   "sein"   - Prefix of "Seine", removed to avoid empty query during typing
 #   "seine"  - River Seine (Paris cruises)
 #   "oder"   - River Oder (cycling tours, border region)
 #   "aller"  - River Aller (Lower Saxony tours)
@@ -171,7 +172,6 @@ nur
 ob
 ohne
 sehr
-sein
 seinem
 seinen
 seiner

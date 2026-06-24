@@ -47,7 +47,8 @@
     },
     "bin": [
         "bin/integrity-check",
-        "bin/mcp-server"
+        "bin/mcp-server",
+        "bin/ai-catalog"
     ],
     "scripts": {
         "integrity-check": "php bin/integrity-check",

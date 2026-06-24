@@ -715,52 +715,78 @@ The SDK does not validate JWTs. Host [protected resource metadata](https://devel
 
 ---
 
-## AI discovery (`.well-known/mcp.json`, `llms.txt`)
+## AI discovery (`ai-catalog.json`, MCP Server Card)
 
-Public MCP servers should be **discoverable** by AI clients without manual configuration. The Travelshop theme ships two PHP endpoints that generate discovery files dynamically from `config-theme.php`:
+Public MCP servers should be **discoverable** by AI clients and registries without manual configuration. The SDK provides a static generator for the current Agentic Resource Discovery (ARD) draft and MCP Server Card discovery:
 
-| URL | File | Purpose |
-|-----|------|---------|
-| `/.well-known/mcp.json` | `well-known/mcp-json.php` | MCP Server Card ([SEP-2127](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2127)). Tells AI clients where the MCP endpoint is, which tools are available, and what the server does. |
-| `/llms.txt` | `well-known/llms-txt.php` | AI discovery file ([llms.txt spec v1.1](https://www.ai-visibility.org.uk/specifications/llms-txt/)). Human- and machine-readable Markdown describing the travel shop for LLM crawlers. |
+| URL | Generated file | Purpose |
+|-----|----------------|---------|
+| `/.well-known/ai-catalog.json` | `<document-root>/.well-known/ai-catalog.json` | ARD v0.9 / AI Catalog manifest. Lists the Pressmind MCP server as an agentic resource. |
+| `/.well-known/mcp/server-card.json` | `<document-root>/.well-known/mcp/server-card.json` | MCP Server Card. Tells clients where the MCP endpoint is, which tools are available, and what the server does. |
+| `/robots.txt` | `<document-root>/robots.txt` | Adds an `Agentmap:` directive pointing crawlers to `/.well-known/ai-catalog.json`. Existing content is preserved and duplicate Agentmap lines are not added. |
 
-Both files are served through WordPress rewrite rules defined in `functions/rewrite_rules.php`. After deployment, flush rewrite rules once:
+Generate both files after deployment or whenever MCP discovery metadata changes:
 
 ```bash
-wp rewrite flush --hard --allow-root
+php vendor/bin/ai-catalog --application-path=/var/www/vhosts/example.com/development/wp-content/themes/travelshop
 ```
 
-### config-theme.php: `TS_MCP_DISCOVERY`
+The command reads `pm-config.php`, resolves `server.document_root` as the public output directory, writes both JSON files below `.well-known/`, and ensures `robots.txt` contains:
 
-Shop-specific discovery metadata is configured in **`config-theme.php`** (not `pm-config.php`) via the `TS_MCP_DISCOVERY` constant. This follows the same pattern as other theme-level constants (`TS_SEARCH`, `TS_FILTERS`, `SITE_URL`, etc.).
+```text
+Agentmap: https://www.example.com/.well-known/ai-catalog.json
+```
 
-All keys are optional. The endpoints derive sensible defaults from `SITE_URL` / `$_SERVER['HTTP_HOST']` when keys are missing.
+It does **not** bootstrap the MCP server and does **not** open database, MongoDB, or OpenSearch connections.
+
+Useful overrides:
+
+```bash
+php vendor/bin/ai-catalog \
+  --application-path=/var/www/vhosts/example.com/development/wp-content/themes/travelshop \
+  --document-root=/var/www/vhosts/example.com/development/httpdocs \
+  --site-url=https://www.example.com \
+  --mcp-prefix=mcp \
+  --server-title="Example Reisen Travel Search" \
+  --description="Search and book package holidays, city trips, and cruises."
+```
+
+### pm-config.php: `mcp.*` discovery metadata
+
+Shop-specific discovery metadata can live in **`pm-config.php`** under `mcp.*`. All keys are optional.
 
 ```php
-define('TS_MCP_DISCOVERY', [
-    // Server Card (.well-known/mcp.json)
-    'name'              => 'pressmind-travel-example-com',
-    'title'             => 'Example Reisen – Travel Search',
+'mcp' => [
+    'site_url'          => 'https://www.example.com',
+    'server_name'       => 'pressmind-travel-example-com',
+    'server_title'      => 'Example Reisen Travel Search',
     'description'       => 'Search and book package holidays, city trips, and cruises.',
     'version'           => '1.0.0',
-    'endpoint'          => 'https://www.example.com/mcp',
+    'mcp_prefix'        => 'mcp',
     'icon_url'          => 'https://www.example.com/favicon.png',
     'documentation_url' => 'https://www.example.com',
-
-    // llms.txt
-    'site_name'         => 'Example Reisen',
-    'site_description'  => 'Online travel shop for package holidays, city trips, and cruises in Europe and worldwide. Search, compare, and book directly.',
-    'contact_email'     => 'info@example.com',
-    'contact_phone'     => '+49 123 456789',
-    'key_information'   => [
-        'Over 5,000 travel products from 20+ tour operators',
-        'Destinations: Europe, Mediterranean, North Africa, worldwide',
-        'Online booking with real-time availability',
-    ],
-]);
+],
 ```
 
 The MCP server runtime settings (`site_url`, `ibe_url`) remain in **`pm-config.php`** under `mcp.*` (see [URL configuration](#url-configuration-site_url-ibe_url)).
+
+### llms.txt
+
+`llms.txt` is not generated by `bin/ai-catalog`. It remains a separate AI visibility file for human- and machine-readable Markdown context about the travel shop.
+
+In Travelshop themes that ship a dynamic `llms.txt` endpoint, keep serving it through the existing theme mechanism, for example `/llms.txt` backed by `well-known/llms-txt.php` and theme rewrite rules. The ARD catalog and MCP Server Card describe callable agentic resources; `llms.txt` describes crawlable context and editorial guidance. Both mechanisms can exist side by side.
+
+### Web server headers
+
+Serve the generated files as public, cacheable JSON:
+
+```text
+Content-Type: application/json; charset=utf-8
+Access-Control-Allow-Origin: *
+Cache-Control: public, max-age=3600
+```
+
+HTTPS is expected for production discovery endpoints. Local `http://127.0.0.1` URLs are acceptable for development only.
 
 ### Additional discovery mechanisms
 
@@ -771,7 +797,7 @@ Beyond the files shipped with the theme, consider these complementary steps:
 | **MCP Registry** | Central directory at [modelcontextprotocol.io/registry](https://modelcontextprotocol.io/registry) | Publish `server.json` via `mcp-publisher` CLI |
 | **DNS TXT record** | Machine-level discovery ([IETF draft](https://www.ietf.org/archive/id/draft-serra-mcp-discovery-uri-02.txt)) | `_mcp.example.com. TXT "v=mcp1 url=https://example.com/mcp"` |
 | **Schema.org / JSON-LD** | Google AI Overviews, Bing Copilot | Add `TouristTrip`, `LodgingReservation` structured data to product pages |
-| **robots.txt** | Allow AI crawlers | Ensure `User-agent: *` does not block `/llms.txt` or `/.well-known/` |
+| **robots.txt crawler rules** | Allow AI crawlers | `bin/ai-catalog` adds `Agentmap`; also ensure `User-agent: *` does not block `/llms.txt` or `/.well-known/` |
 
 ---
 

@@ -291,6 +291,44 @@ The following commands are part of the SDK CLI and can be run via theme wrapper 
 
 ---
 
+### AI Catalog / ARD Discovery
+
+**Purpose:** Generates static AI discovery files for the public web root:
+
+- `/.well-known/ai-catalog.json` (Agentic Resource Discovery / AI Catalog)
+- `/.well-known/mcp/server-card.json` (MCP Server Card)
+- `/robots.txt` with an `Agentmap:` line pointing to the generated AI Catalog
+
+The command reads `pm-config.php` only. It does not open database, MongoDB, OpenSearch, or MCP server connections.
+
+| Option | Description |
+|--------|-------------|
+| `--application-path=DIR` | Directory containing `pm-config.php` (default: current working directory). |
+| `--pm-config=FILE` | Config basename (default: `PM_CONFIG` env or `pm-config.php`). |
+| `--env=ENV` | Config environment (default: `APP_ENV` env or `development`). |
+| `--document-root=DIR` | Public output root (default: `server.document_root`). |
+| `--site-url=URL` | Public site URL (default: `mcp.site_url` or `server.webserver_http`). |
+| `--mcp-prefix=PREFIX` | Public MCP URL prefix for SSE endpoint (default: `mcp`). |
+| `--server-name=NAME` | MCP server machine name. |
+| `--server-title=TITLE` | Human-readable server title. |
+| `--description=TEXT` | Discovery description. |
+| `--version=VERSION` | Discovery artifact version. |
+| `--auth-required` | Include auth metadata in `server-card.json`. |
+| `--auth-schemes=LIST` | Comma-separated schemes, e.g. `bearer,oauth2`. |
+| `--dry-run` | Validate config and print target paths without writing files. |
+
+**Examples:**
+
+```bash
+php bin/ai-catalog --application-path=/path/to/theme
+php bin/ai-catalog --application-path=/path/to/theme --dry-run
+php vendor/bin/ai-catalog --application-path=/path/to/theme --site-url=https://www.example.com
+```
+
+See [MCP server — AI discovery](mcp-server.md#ai-discovery-ai-catalogjson-mcp-server-card) for deployment details and web server headers.
+
+---
+
 ### Cache Primer
 
 **Purpose:** Outputs all pretty URLs for primary media types (one per line). Can be used to prime an HTTP cache (e.g. Redis) by requesting these URLs.

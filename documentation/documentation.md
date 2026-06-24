@@ -183,6 +183,7 @@ pressmind PIM
 - **Rendering dates & prices?** See [Booking Offer Table](booking-offer-table.md) for the complete offer table guide
 - **Understanding prices?** See [CheapestPrice Aggregation](cheapest-price-aggregation.md) and [Price Selection Logic](price-selection-logic.md)
 - **CLI commands (import, index-mongo, etc.)?** See [CLI Reference](cli-reference.md); for WordPress helpers see [CLI WordPress Tools](cli-wordpress-tools.md)
+- **AI/MCP discovery?** See [MCP server](mcp-server.md#ai-discovery-ai-catalogjson-mcp-server-card) and `bin/ai-catalog`
 - **Full-page cache setup?** See [WordPress Full-Page Cache](wordpress-page-cache.md)
 - **Web backend (config, commands, logs, validation)?** See [Management Backend](backend.md)
 - **Running or writing tests?** See [Testing Guide](testing.md) → [Makefile Reference](makefile.md); for coverage metrics see [Code Coverage Summary](code-coverage-summary.md)

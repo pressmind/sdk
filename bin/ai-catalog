@@ -1,0 +1,32 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * Pressmind ARD / AI Catalog generator.
+ *
+ * Usage:
+ *   php bin/ai-catalog --application-path=/path/to/travelshop
+ *   php bin/ai-catalog --application-path=/path/to/travelshop --document-root=/path/to/httpdocs
+ */
+
+$autoloadPaths = [
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../../autoload.php',
+];
+
+$autoloaderFound = false;
+foreach ($autoloadPaths as $autoloadPath) {
+    if (file_exists($autoloadPath)) {
+        require_once $autoloadPath;
+        $autoloaderFound = true;
+        break;
+    }
+}
+
+if (!$autoloaderFound) {
+    fwrite(STDERR, "Autoloader not found. Please run 'composer install'.\n");
+    exit(1);
+}
+
+$command = new \Pressmind\CLI\AiCatalogCommand();
+exit($command->run($argv));

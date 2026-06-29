@@ -60,6 +60,7 @@ Welcome to the pressmind SDK documentation. This documentation covers the comple
 | [MongoDB Search API (`pm-*` Parameters)](search-mongodb-api.md) | Complete query parameter reference for the MongoDB search |
 | [MongoDB Index Configuration](search-mongodb-index-configuration.md) | How to configure the search index (descriptions, categories, touristic, groups) |
 | [OpenSearch Configuration](search-opensearch.md) | OpenSearch fulltext search and MongoDB integration |
+| [Natural Language Search](natural-language-search.md) | How natural language queries are converted into `pm-*` filters and how object type/category mappings are configured |
 | [Price Selection Logic](price-selection-logic.md) | How the displayed “cheapest” price is chosen (occupancy, state, fallbacks); methods and config |
 
 ### Import & Processing

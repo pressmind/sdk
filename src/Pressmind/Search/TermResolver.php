@@ -37,6 +37,18 @@ class TermResolver
     }
 
     /**
+     * Return the complete pre-built category dictionary.
+     *
+     * @param string|null $language
+     * @param int $origin
+     * @return array<string, array{field: string, id: string, name: string, count: int}>
+     */
+    public static function all(?string $language = null, int $origin = 0): array
+    {
+        return self::_loadDictionary($language, $origin);
+    }
+
+    /**
      * Load the full dictionary from the pre-built term_resolver collection.
      * Result is cached per process (static).
      *

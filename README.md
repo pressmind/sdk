@@ -23,6 +23,7 @@ The complete documentation is in the `documentation` folder:
 | Configuration Examples (Production) | [config-examples.md](documentation/config-examples.md) |
 | Touristic Data Model | [Booking Package](documentation/Touristic/Booking/Package.md), [Date](documentation/Touristic/Date.md), [Option](documentation/Touristic/Option.md), [Transport](documentation/Touristic/Transport.md) |
 | MongoDB Search API | [search-mongodb-api.md](documentation/search-mongodb-api.md) |
+| Natural Language Search | [natural-language-search.md](documentation/natural-language-search.md) |
 | Import Process | [import-process.md](documentation/import-process.md) |
 | CheapestPrice Aggregation | [cheapest-price-aggregation.md](documentation/cheapest-price-aggregation.md) |
 | Template Interface | [template-interface.md](documentation/template-interface.md) |

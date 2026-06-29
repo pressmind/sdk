@@ -66,7 +66,7 @@ class Option extends AbstractObject
                 'validators' => [
                     [
                         'name' => 'maxlength',
-                        'params' => 32,
+                        'params' => 45,
                     ],
                 ],
                 'filters' => NULL,

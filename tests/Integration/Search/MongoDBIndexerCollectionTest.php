@@ -166,6 +166,45 @@ class MongoDBIndexerCollectionTest extends AbstractIntegrationTestCase
         }
     }
 
+    public function testFulltextTextIndexUsesSimpleCollation(): void
+    {
+        $this->requireMongo();
+
+        // The text index branch only runs when OpenSearch is disabled for the mongo search.
+        // Override the config and build a fresh Indexer so it picks up _use_opensearch = false.
+        $config = Registry::getInstance()->get('config');
+        $config['data']['search_opensearch'] = ['enabled' => false, 'enabled_in_mongo_search' => false];
+        Registry::getInstance()->add('config', $config);
+        Indexer::resetIndexCheckCache();
+        $indexer = new Indexer();
+
+        // Reproduce production: the collection carries a non-simple (de) default collation.
+        // Without the fix the inherited collation makes the text index creation fail on MongoDB 7.
+        $name = self::TEST_PREFIX . 'fulltext_' . uniqid();
+        $this->trackCollection($name);
+        $this->mongoDb->createCollection($name, ['collation' => ['locale' => 'de']]);
+
+        $indexer->createCollectionIndex($name);
+
+        $textIdx = null;
+        foreach ($this->mongoDb->selectCollection($name)->listIndexes() as $idx) {
+            if ($idx->getName() === 'fulltext_text') {
+                $textIdx = $idx;
+            }
+        }
+        $this->assertNotNull($textIdx, 'fulltext_text index must be created');
+
+        // MongoDB does not persist a simple collation: a simple index has no collation field at all.
+        $collation = isset($textIdx['collation'])
+            ? json_decode(json_encode($textIdx['collation']), true)
+            : null;
+        $this->assertTrue(
+            $collation === null || ($collation['locale'] ?? null) === 'simple',
+            'fulltext_text must not inherit the de collation; got: ' . json_encode($collation)
+        );
+        $this->assertNotSame('de', $collation['locale'] ?? null);
+    }
+
     public function testCreateCollectionIndexSkipsOnSecondCall(): void
     {
         $this->requireMongo();

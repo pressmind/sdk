@@ -114,22 +114,7 @@ $totalMissingAll = $stats['pictures']['missing'] + $stats['sections']['missing']
     $missingRows = [];
     foreach (['pictures' => 'Picture', 'sections' => 'Section', 'documents' => 'Document'] as $key => $typeLabel) {
         foreach ($stats[$key]['missing_list'] as $item) {
-            $reasons = [];
-            if (!empty($item['missing_keys']) && is_array($item['missing_keys'])) {
-                $reasons[] = 'Missing: ' . implode(', ', array_map('strval', $item['missing_keys']));
-            }
-            if (!empty($item['duplicate_derivative_names']) && is_array($item['duplicate_derivative_names'])) {
-                $reasons[] = 'Duplicates: ' . implode(', ', array_map('strval', $item['duplicate_derivative_names']));
-            }
-            $missingRows[] = [
-                'type' => $typeLabel,
-                'id' => $item['id'],
-                'id_media_object' => $item['id_media_object'],
-                'file_name' => $item['file_name'],
-                'section_name' => $item['section_name'] ?? '',
-                'id_step' => $item['id_step'] ?? '',
-                'reason' => implode(' | ', $reasons),
-            ];
+            $missingRows[] = ['type' => $typeLabel, 'id' => $item['id'], 'id_media_object' => $item['id_media_object'], 'file_name' => $item['file_name'], 'section_name' => $item['section_name'] ?? '', 'id_step' => $item['id_step'] ?? ''];
         }
     }
     $missingShown = count($missingRows);
@@ -142,17 +127,16 @@ $totalMissingAll = $stats['pictures']['missing'] + $stats['sections']['missing']
     </div>
     <div class="table-responsive">
         <table class="table table-sm mb-0 table-striped" id="imagecache-missing-table">
-            <thead><tr><th>Type</th><th>ID</th><th>Media Object</th><th>File name</th><th>Section / Step</th><th>Reason</th></tr></thead>
+            <thead><tr><th>Type</th><th>ID</th><th>Media Object</th><th>File name</th><th>Section / Step</th></tr></thead>
             <tbody>
                 <?php foreach ($missingRows as $item) {
-                    $rowSearch = $item['type'] . ' ' . $item['id'] . ' ' . $item['id_media_object'] . ' ' . $item['file_name'] . ' ' . $item['section_name'] . ' ' . $item['id_step'] . ' ' . $item['reason'];
+                    $rowSearch = $item['type'] . ' ' . $item['id'] . ' ' . $item['id_media_object'] . ' ' . $item['file_name'] . ' ' . $item['section_name'] . ' ' . $item['id_step'];
                     echo '<tr data-search="' . htmlspecialchars($rowSearch) . '">';
                     echo '<td>' . htmlspecialchars($item['type']) . '</td>';
                     echo '<td>' . (int) $item['id'] . '</td>';
                     echo '<td>' . htmlspecialchars((string) $item['id_media_object']) . '</td>';
                     echo '<td>' . htmlspecialchars(mb_substr($item['file_name'], 0, 60)) . (mb_strlen($item['file_name']) > 60 ? '…' : '') . '</td>';
                     echo '<td>' . htmlspecialchars($item['section_name'] !== '' ? $item['section_name'] : (string) $item['id_step']) . '</td>';
-                    echo '<td>' . htmlspecialchars($item['reason']) . '</td>';
                     echo '</tr>';
                 } ?>
             </tbody>

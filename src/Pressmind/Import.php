@@ -1414,7 +1414,9 @@ class Import
      */
     public function postImport($id_media_object = null)
     {
-        $id_media_object = $this->normalizePostImportMediaObjectIds($id_media_object);
+        if(!is_array($id_media_object)){
+            $id_media_object = [$id_media_object];
+        }
         $config = $this->_config;
         if(isset($config['data']['media_type_custom_post_import_hooks']) &&
             is_array($config['data']['media_type_custom_post_import_hooks'])) {
@@ -1450,7 +1452,10 @@ class Import
                 }
             }
         }
-        $safe_ids = implode(',', $id_media_object);
+        $safe_ids = '';
+        if(!empty($id_media_object)) {
+            $safe_ids = implode(',', array_map('intval', (array)$id_media_object));
+        }
         $image_processor_script = APPLICATION_PATH . '/cli/image_processor.php';
         $image_processor_args = empty($safe_ids) ? '' : ' mediaobject ' . $safe_ids;
         $image_processor_path = $image_processor_script . $image_processor_args;
@@ -1503,24 +1508,6 @@ class Import
                 );
             }
         }
-    }
-
-    private function normalizePostImportMediaObjectIds($id_media_object): array
-    {
-        if (!is_array($id_media_object)) {
-            $id_media_object = [$id_media_object];
-        }
-        $ids = [];
-        foreach ($id_media_object as $id) {
-            $id = trim((string)$id);
-            if ($id !== '' && ctype_digit($id)) {
-                $id = (int)$id;
-                if ($id > 0) {
-                    $ids[$id] = $id;
-                }
-            }
-        }
-        return array_values($ids);
     }
 
     /**

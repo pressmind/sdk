@@ -259,13 +259,20 @@ class DocumentMediaObject extends Picture
     public function createDerivative($derivative_config, $image_processor, $image)
     {
         $derivative_binary_file = $image_processor->process($derivative_config, $image, $derivative_config->name);
-        $derivative = new Derivative();
-        $derivative->id_document_media_object= $this->getId();
-        $derivative->name = $derivative_config->name;
-        $derivative->file_name = $derivative_binary_file->name;
-        $derivative->width = $derivative_config->max_width;
-        $derivative->height = $derivative_config->max_height;
-        $derivative->create();
+        $this->createOrUpdateDerivativeRow(
+            Derivative::class,
+            [
+                'id_document_media_object' => $this->getId(),
+                'name' => $derivative_config->name,
+            ],
+            [
+                'id_document_media_object' => $this->getId(),
+                'name' => $derivative_config->name,
+                'file_name' => $derivative_binary_file->name,
+                'width' => $derivative_config->max_width,
+                'height' => $derivative_config->max_height,
+            ]
+        );
         $derivative_binary_file->save();
         $webp_processor = new \Pressmind\Image\Processor\Adapter\WebPicture();
         $webp_processor->process($derivative_config, $derivative_binary_file, $derivative_config->name);

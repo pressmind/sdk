@@ -3,6 +3,7 @@
 namespace Pressmind\CLI;
 
 use Exception;
+use Pressmind\Image\DerivativeCompleteness;
 use Pressmind\Image\Processor\Adapter\Factory;
 use Pressmind\Image\Processor\Config;
 use Pressmind\Image\VerificationStats;
@@ -37,6 +38,7 @@ class ImageProcessorCommand extends AbstractCommand
 
     private array $config;
     private array $idMediaObjects = [];
+    private ?array $mediaObjectFilterIds = null;
 
     /** @var Bucket|null Shared bucket instance (cached S3 client) for the duration of the run */
     private $bucket = null;
@@ -60,8 +62,12 @@ class ImageProcessorCommand extends AbstractCommand
             return $this->handleUnlock();
         }
 
+        if (!$this->parseMediaObjectFilterFromArguments()) {
+            return 1;
+        }
+
         // Handle reset-missing command (no lock required)
-        if ($this->getArgument(0) === 'reset-missing') {
+        if (in_array('reset-missing', $this->arguments, true)) {
             return $this->handleResetMissing();
         }
 
@@ -94,6 +100,36 @@ class ImageProcessorCommand extends AbstractCommand
         }
 
         return 0;
+    }
+
+    private function parseMediaObjectFilterFromArguments(): bool
+    {
+        $mediaObjectArgumentIndex = array_search('mediaobject', $this->arguments, true);
+        if ($mediaObjectArgumentIndex === false) {
+            return true;
+        }
+
+        $this->mediaObjectFilterIds = $this->parseMediaObjectIds($this->arguments[$mediaObjectArgumentIndex + 1] ?? '');
+        if (empty($this->mediaObjectFilterIds)) {
+            $this->output->warning('No valid mediaobject IDs given.');
+            return false;
+        }
+        return true;
+    }
+
+    private function parseMediaObjectIds(string $ids): array
+    {
+        $result = [];
+        foreach (explode(',', $ids) as $id) {
+            $id = trim($id);
+            if ($id !== '' && ctype_digit($id)) {
+                $id = (int)$id;
+                if ($id > 0) {
+                    $result[$id] = $id;
+                }
+            }
+        }
+        return array_values($result);
     }
 
     /**
@@ -140,9 +176,11 @@ class ImageProcessorCommand extends AbstractCommand
     private function cleanupOriginalFiles(): void
     {
         try {
+            $where = $this->buildDownloadSuccessfulWhere(1);
             $result = array_merge(
-                Picture::listAll(['download_successful' => 1]),
-                DocumentMediaObject::listAll(['download_successful' => 1])
+                Picture::listAll($where),
+                Section::listAll($where),
+                DocumentMediaObject::listAll($where)
             );
         } catch (Exception $e) {
             Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, self::PROCESS_NAME, Writer::TYPE_ERROR);
@@ -170,9 +208,11 @@ class ImageProcessorCommand extends AbstractCommand
     private function processImages(): void
     {
         try {
+            $where = $this->buildDownloadSuccessfulWhere(0);
             $result = array_merge(
-                Picture::listAll(['download_successful' => 0]),
-                DocumentMediaObject::listAll(['download_successful' => 0])
+                Picture::listAll($where),
+                Section::listAll($where),
+                DocumentMediaObject::listAll($where)
             );
         } catch (Exception $e) {
             Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, self::PROCESS_NAME, Writer::TYPE_ERROR);
@@ -186,10 +226,19 @@ class ImageProcessorCommand extends AbstractCommand
         }
     }
 
+    private function buildDownloadSuccessfulWhere(int $downloadSuccessful): array
+    {
+        $where = ['download_successful' => $downloadSuccessful];
+        if ($this->mediaObjectFilterIds !== null) {
+            $where['id_media_object'] = ['IN', implode(',', $this->mediaObjectFilterIds)];
+        }
+        return $where;
+    }
+
     /**
      * Processes a single image.
      *
-     * @param Picture|DocumentMediaObject $image
+     * @param Picture|Section|DocumentMediaObject $image
      */
     private function processSingleImage($image): void
     {
@@ -223,65 +272,38 @@ class ImageProcessorCommand extends AbstractCommand
         $this->createDerivatives($image, $binaryImage);
         unset($binaryImage);
 
-        // Set download_successful only after derivatives were created successfully (prevents stuck state if derivative creation fails)
-        $image->download_successful = true;
-        $image->update();
+        if (!$this->hasWorkToDo($image)) {
+            $image->download_successful = true;
+            $image->update();
+            Writer::write('Set download_successful = true (all derivates are complete)', Writer::OUTPUT_BOTH, self::PROCESS_NAME, Writer::TYPE_INFO);
+        } else {
+            Writer::write('Image ID:' . $image->getId() . ' still has missing or duplicate derivates, keeping download_successful = false', Writer::OUTPUT_BOTH, self::PROCESS_NAME, Writer::TYPE_WARNING);
+        }
     }
 
     /**
      * Checks if there's work to do for an image.
      *
-     * @param Picture|DocumentMediaObject $image
+     * @param Picture|Section|DocumentMediaObject $image
      */
     private function hasWorkToDo($image): bool
     {
+        $existingFiles = null;
         if ($this->bucket->supportsPrefixListing()) {
-            $prefix = pathinfo($image->file_name, PATHINFO_FILENAME) . '_';
-            $existingFiles = $this->bucket->listByPrefix($prefix);
-            foreach ($this->config['image_handling']['processor']['derivatives'] as $derivativeName => $derivativeConfig) {
-                $extensions = ['jpg'];
-                if (!empty($derivativeConfig['webp_create'])) {
-                    $extensions[] = 'webp';
-                }
-                foreach ($extensions as $extension) {
-                    $expectedKey = $prefix . $derivativeName . '.' . $extension;
-                    if (!isset($existingFiles[$expectedKey])) {
-                        return true;
-                    }
-                }
-            }
-            if (!empty($image->sections) && is_array($image->sections)) {
-                foreach ($image->sections as $section) {
-                    if ($this->sectionHasWorkToDo($section)) {
-                        return true;
-                    }
-                }
-            }
-            return false;
+            $existingFiles = $this->bucket->listByPrefix(pathinfo($image->file_name, PATHINFO_FILENAME) . '_');
         }
-
-        foreach ($this->config['image_handling']['processor']['derivatives'] as $derivativeName => $derivativeConfig) {
-            $extensions = ['jpg'];
-            if (!empty($derivativeConfig['webp_create'])) {
-                $extensions[] = 'webp';
-            }
-            foreach ($extensions as $extension) {
-                $file = new File($this->bucket);
-                $file->name = pathinfo($image->file_name, PATHINFO_FILENAME) . '_' . $derivativeName . '.' . $extension;
-                if (!$file->exists()) {
+        $completeness = DerivativeCompleteness::check($image, $this->config, $this->bucket, $existingFiles);
+        if (!$completeness->isComplete()) {
+            return true;
+        }
+        if (!empty($image->sections) && is_array($image->sections)) {
+            foreach ($image->sections as $section) {
+                if ($this->sectionHasWorkToDo($section)) {
                     return true;
                 }
-                if (!empty($image->sections) && is_array($image->sections)) {
-                    foreach ($image->sections as $section) {
-                        $sectionFile = new File($this->bucket);
-                        $sectionFile->name = pathinfo($section->file_name, PATHINFO_FILENAME) . '_' . $derivativeName . '.' . $extension;
-                        if (!$sectionFile->exists()) {
-                            return true;
-                        }
-                    }
-                }
             }
         }
+
         return false;
     }
 
@@ -366,6 +388,14 @@ class ImageProcessorCommand extends AbstractCommand
                 Writer::write('Creating section image derivatives', Writer::OUTPUT_BOTH, self::PROCESS_NAME, Writer::TYPE_INFO);
                 $section->createDerivative($processorConfig, $imageProcessor, $binarySectionFile);
                 unset($binarySectionFile);
+
+                if (!$this->sectionHasWorkToDo($section)) {
+                    $section->download_successful = true;
+                    $section->update();
+                    Writer::write('Set section download_successful = true (all derivates are complete)', Writer::OUTPUT_FILE, self::PROCESS_NAME, Writer::TYPE_INFO);
+                } else {
+                    Writer::write('Section ID:' . $section->getId() . ' still has missing or duplicate derivates, keeping download_successful = false', Writer::OUTPUT_BOTH, self::PROCESS_NAME, Writer::TYPE_WARNING);
+                }
             } catch (Exception $e) {
                 Writer::write($e->getMessage(), Writer::OUTPUT_BOTH, self::PROCESS_NAME, Writer::TYPE_ERROR);
             }
@@ -377,38 +407,12 @@ class ImageProcessorCommand extends AbstractCommand
      */
     private function sectionHasWorkToDo(Section $section): bool
     {
+        $existingFiles = null;
         if ($this->bucket->supportsPrefixListing()) {
-            $prefix = pathinfo($section->file_name, PATHINFO_FILENAME) . '_';
-            $existingFiles = $this->bucket->listByPrefix($prefix);
-            foreach ($this->config['image_handling']['processor']['derivatives'] as $derivativeName => $derivativeConfig) {
-                $extensions = ['jpg'];
-                if (!empty($derivativeConfig['webp_create'])) {
-                    $extensions[] = 'webp';
-                }
-                foreach ($extensions as $extension) {
-                    $expectedKey = $prefix . $derivativeName . '.' . $extension;
-                    if (!isset($existingFiles[$expectedKey])) {
-                        return true;
-                    }
-                }
-            }
-            return false;
+            $existingFiles = $this->bucket->listByPrefix(pathinfo($section->file_name, PATHINFO_FILENAME) . '_');
         }
 
-        foreach ($this->config['image_handling']['processor']['derivatives'] as $derivativeName => $derivativeConfig) {
-            $extensions = ['jpg'];
-            if (!empty($derivativeConfig['webp_create'])) {
-                $extensions[] = 'webp';
-            }
-            foreach ($extensions as $extension) {
-                $sectionFile = new File($this->bucket);
-                $sectionFile->name = pathinfo($section->file_name, PATHINFO_FILENAME) . '_' . $derivativeName . '.' . $extension;
-                if (!$sectionFile->exists()) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return !DerivativeCompleteness::check($section, $this->config, $this->bucket, $existingFiles)->isComplete();
     }
 
     /**
@@ -419,8 +423,6 @@ class ImageProcessorCommand extends AbstractCommand
     private function downloadSection(Section $section): ?File
     {
         if ($section->exists()) {
-            $section->download_successful = true;
-            $section->update();
             Writer::write('Section file exists (' . $section->file_name . '), no download required', Writer::OUTPUT_FILE, self::PROCESS_NAME, Writer::TYPE_INFO);
             return $section->getBinaryFile();
         }
@@ -471,11 +473,16 @@ class ImageProcessorCommand extends AbstractCommand
             }
         };
 
-        return VerificationStats::collect($this->config, [
+        $options = [
             'chunk_size' => VerificationStats::DEFAULT_CHUNK_SIZE,
             'max_missing_list' => VerificationStats::DEFAULT_MAX_MISSING_LIST,
             'progress_callback' => $progressCallback,
-        ]);
+        ];
+        if ($this->mediaObjectFilterIds !== null) {
+            $options['media_object_ids'] = $this->mediaObjectFilterIds;
+        }
+
+        return VerificationStats::collect($this->config, $options);
     }
 
     /**
@@ -761,6 +768,10 @@ class ImageProcessorCommand extends AbstractCommand
                             $line = str_pad($idStr, 12, ' ') . " | MediaObject: " . str_pad($item['id_media_object'], 10, ' ') . " | " . str_pad($fileStr, 80, ' ');
                         }
                         echo "│" . str_pad($line, $tableWidth - 2, ' ') . "│\n";
+                        $reason = $this->formatMissingReason($item);
+                        if ($reason !== '') {
+                            echo "│" . str_pad('  Reason: ' . $reason, $tableWidth - 2, ' ') . "│\n";
+                        }
                     }
                 }
             }
@@ -771,6 +782,18 @@ class ImageProcessorCommand extends AbstractCommand
             echo "└" . $borderLine . "┘\n";
         }
         echo "\n";
+    }
+
+    private function formatMissingReason(array $item): string
+    {
+        $parts = [];
+        if (!empty($item['missing_keys']) && is_array($item['missing_keys'])) {
+            $parts[] = 'Missing: ' . implode(', ', array_map('strval', $item['missing_keys']));
+        }
+        if (!empty($item['duplicate_derivative_names']) && is_array($item['duplicate_derivative_names'])) {
+            $parts[] = 'Duplicates: ' . implode(', ', array_map('strval', $item['duplicate_derivative_names']));
+        }
+        return implode(' | ', $parts);
     }
 
     /**

@@ -286,11 +286,11 @@ When `crop: true`, you control the crop anchor point:
 For each derivative with `webp_create: true`, an additional `.webp` file is generated:
 
 ```
-image_teaser.jpg     → JPEG derivative (always created)
+image_teaser.jpg     → Main derivative (usually JPEG; PNG is also valid)
 image_teaser.webp    → WebP derivative (if webp_create is true)
 ```
 
-The WebP quality is controlled by `webp_quality` (0-100, default 80).
+The WebP quality is controlled by `webp_quality` (0-100, default 80). Existing WebP sidecars are reused only when they are non-empty and readable as images; empty or corrupt `.webp` files are regenerated. If the main derivative content cannot be decoded, WebP generation fails explicitly and the image is not marked as successfully processed.
 
 ---
 
@@ -482,6 +482,15 @@ In templates, images are accessed via: `$picture->getUri('teaser')` which return
 
 The image processor can run an **image verification** step that checks whether all derivatives for entities with `download_successful=1` actually exist on storage and prints a detailed report (summary, per-type counts, derivative summary, missing list, total size). Images that are reported as missing get `download_successful=0` so they are reprocessed on the next run.
 
+An entity is considered complete only when all of the following are true:
+
+- every configured derivative name has exactly one database row for that entity;
+- the derivative file from the row's `file_name` exists on storage and has a non-zero size;
+- if `webp_create: true` is configured, the matching `.webp` sidecar exists and has a non-zero size;
+- no duplicate derivative rows exist for the same entity and derivative name.
+
+The missing list includes diagnostic fields such as `missing_keys` and `duplicate_derivative_names`, and the CLI/Backend report displays these reasons.
+
 > **Important:** Verification is **off by default** because it is very expensive on large installations (high memory and CPU usage). To enable it, pass `--report` when running the image processor. When the image processor is spawned automatically after an import (`postImport()`), verification does not run.
 
 ### Large buckets (S3, 1M+ files)
@@ -489,10 +498,11 @@ The image processor can run an **image verification** step that checks whether a
 For large buckets (e.g. 1 million images with many derivatives), verification uses a **streaming scan** instead of one storage API call per image:
 
 - The bucket is scanned once (paginated, e.g. 1000 keys per request).
-- An entity prefix map is built from the database (Pictures, Sections, Documents with `download_successful=1`).
-- Each storage key is matched against expected derivative keys; no full key list is kept in memory.
+- Pictures, Sections and DocumentMediaObjects with `download_successful=1` are loaded from the database.
+- Derivative rows are preloaded per entity type in batches, so verification does not run one derivative query per image.
+- Each storage key is matched against concrete expected derivative filenames; no full key list is kept in memory.
 
-This avoids an N+1 pattern (one API call per image) and keeps memory usage low (~150–200 MB for the prefix map). Progress is printed every 100,000 keys and a final line shows total keys and duration.
+This avoids an N+1 storage pattern and keeps memory usage bounded. Progress is printed every 100,000 keys and a final line shows total keys and duration.
 
 **Progress output example:**
 
@@ -527,7 +537,7 @@ A `.lock` file is created for each image during download. This prevents parallel
 
 ## ORM Integration (Derivative Records)
 
-Each generated derivative is tracked in the database:
+Each generated derivative is tracked in the database. Picture and Section derivatives use:
 
 **Table:** `pmt2core_media_object_image_derivatives`
 
@@ -542,6 +552,10 @@ Each generated derivative is tracked in the database:
 | `width` | Integer | Width in pixels |
 | `height` | Integer | Height in pixels |
 | `download_successful` | Boolean | Whether download/generation succeeded |
+
+DocumentMediaObject derivatives use `pmt2core_itinerary_step_document_media_object_derivatives` with `id_document_media_object`.
+
+Derivative creation is idempotent by entity and derivative `name`: reprocessing updates an existing row instead of inserting a duplicate. If duplicate rows already exist for the same entity and derivative name, reprocessing keeps one row and deletes the extras.
 
 Access in PHP:
 
@@ -575,6 +589,8 @@ exec($cmd);
 
 This ensures the import pipeline doesn't block waiting for image processing. Because `--report` is not passed, the expensive verification step is skipped during post-import, keeping memory usage low and the pipeline fast.
 
+`postImport()` sanitizes the media object ID list before spawning the image processor. Empty, zero or invalid IDs are not passed as `mediaobject 0`; if no valid ID remains, the processor is started without a `mediaobject` filter.
+
 **2. On-Demand / Manual**
 
 The image processor can be run manually:
@@ -585,7 +601,9 @@ php cli/image_processor.php --report           # Process pending images + run ve
 php cli/image_processor.php mediaobject 123    # Process images for specific object
 ```
 
-The processor checks if each derivative already exists before generating it, so running it multiple times is safe (idempotent).
+The `mediaobject` filter applies consistently to cleanup, pending processing, verification report and missing-image reset. It includes Pictures, Sections and DocumentMediaObjects for the selected media object IDs.
+
+The processor checks real derivative completeness before marking an image successful, so running it multiple times is safe (idempotent).
 
 ---
 
@@ -593,6 +611,9 @@ The processor checks if each derivative already exists before generating it, so 
 
 | Argument / Option | Description |
 |-------------------|-------------|
+| `unlock` | Remove the image processor process lock. |
+| `reset-missing` | Run verification and set incomplete Pictures, Sections and DocumentMediaObjects to `download_successful=0` so they are reprocessed on the next run. Can be combined with `mediaobject <ids>`. |
+| `mediaobject <id>[,<id>...]` | Process only the given media object IDs. IDs must be positive integers; invalid or partially numeric values such as `123abc` are ignored. If no valid ID remains the command exits with an error for manual runs. |
 | `--report` | Generate the verification report after processing (storage scan, derivative statistics, missing-image reset). **Off by default** because it is expensive on large buckets. |
 | `--skip-verification` | *(deprecated)* Verification is now off by default; this option is accepted but has no effect. |
 
@@ -602,6 +623,8 @@ The processor checks if each derivative already exists before generating it, so 
 php cli/image_processor.php                          # Process images, no verification
 php cli/image_processor.php --report                 # Process images + verification report
 php cli/image_processor.php mediaobject 123 --report # Specific objects + report
+php cli/image_processor.php reset-missing            # Reset incomplete images for reprocessing
+php cli/image_processor.php reset-missing mediaobject 123,456
 ```
 
 See [CLI Reference](cli-reference.md#image-processor) for all image processor arguments (`unlock`, `reset-missing`, `mediaobject`, etc.).

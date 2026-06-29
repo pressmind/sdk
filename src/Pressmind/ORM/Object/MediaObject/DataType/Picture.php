@@ -4,6 +4,7 @@ namespace Pressmind\ORM\Object\MediaObject\DataType;
 use Aws\S3\Exception\S3Exception;
 use Exception;
 use Pressmind\HelperFunctions;
+use Pressmind\Image\WebpSidecar;
 use Pressmind\Image\Downloader;
 use Pressmind\Image\Processor;
 use Pressmind\Log\Writer;
@@ -41,6 +42,7 @@ use Pressmind\Storage\File;
  */
 class Picture extends AbstractObject
 {
+    private static array $missingWebpFileCache = [];
 
     protected $_definitions = [
         'class' => [
@@ -311,9 +313,9 @@ class Picture extends AbstractObject
                 Writer::write('This is a Section object. Section details: section_name=' . ($this->section_name ?? 'NULL') . ', file_name=' . ($this->file_name ?? 'NULL'), WRITER::OUTPUT_BOTH, 'picture_debug', Writer::TYPE_INFO);
             }
         }
-        if($this->download_successful == false) {
+        if($this->download_successful == false && is_null($derivativeName)) {
             if($debug) {
-                Writer::write('download_successful is false, returning getTmpUri()', WRITER::OUTPUT_BOTH, 'picture_debug', Writer::TYPE_INFO);
+                Writer::write('download_successful is false and no derivative was requested, returning getTmpUri()', WRITER::OUTPUT_BOTH, 'picture_debug', Writer::TYPE_INFO);
             }
             return $this->getTmpUri($derivativeName, $sectionName);
         }
@@ -366,20 +368,7 @@ class Picture extends AbstractObject
             if($debug) {
                 Writer::write('Derivative found: name=' . $derivative->name . ', file_name=' . $derivative->file_name . ', id=' . $derivative->getId(), WRITER::OUTPUT_BOTH, 'picture_debug', Writer::TYPE_INFO);
             }
-            $uri = HelperFunctions::replaceConstantsFromConfig($config['image_handling']['http_src']) . '/' . $derivative->file_name;
-            if(
-                (
-                    $config['image_handling']['processor']['webp_support'] == true &&
-                    $config['image_handling']['processor']['derivatives'][$derivativeName]['webp_create'] == true &&
-                    defined('WEBP_SUPPORT') && WEBP_SUPPORT === true
-                ) || $force_webp == true
-            ) {
-                $path_info = pathinfo($uri);
-                $uri = str_replace($path_info['extension'], 'webp', $uri);
-                if($debug) {
-                    Writer::write('WebP version requested, returning: ' . $uri, WRITER::OUTPUT_BOTH, 'picture_debug', Writer::TYPE_INFO);
-                }
-            }
+            $uri = $this->buildDerivativeUri($config, $derivativeName, $derivative->file_name, $force_webp, $debug);
             if($debug) {
                 Writer::write('Returning URI: ' . $uri, WRITER::OUTPUT_BOTH, 'picture_debug', Writer::TYPE_INFO);
             }
@@ -393,18 +382,7 @@ class Picture extends AbstractObject
                 if($debug) {
                     Writer::write('Using fallback derivative: name=' . $fallback_derivative->name . ', file_name=' . $fallback_derivative->file_name, WRITER::OUTPUT_BOTH, 'picture_debug', Writer::TYPE_INFO);
                 }
-                $uri = HelperFunctions::replaceConstantsFromConfig($config['image_handling']['http_src']) . '/' . $fallback_derivative->file_name;
-                if(
-                    (
-                        $config['image_handling']['processor']['webp_support'] == true &&
-                        isset($config['image_handling']['processor']['derivatives'][$fallback_derivative->name]['webp_create']) &&
-                        $config['image_handling']['processor']['derivatives'][$fallback_derivative->name]['webp_create'] == true &&
-                        defined('WEBP_SUPPORT') && WEBP_SUPPORT === true
-                    ) || $force_webp == true
-                ) {
-                    $path_info = pathinfo($uri);
-                    $uri = str_replace($path_info['extension'], 'webp', $uri);
-                }
+                $uri = $this->buildDerivativeUri($config, $fallback_derivative->name, $fallback_derivative->file_name, $force_webp, $debug);
                 if($debug) {
                     Writer::write('Returning fallback URI: ' . $uri, WRITER::OUTPUT_BOTH, 'picture_debug', Writer::TYPE_INFO);
                 }
@@ -416,6 +394,57 @@ class Picture extends AbstractObject
             return $this->getTmpUri($derivativeName, $sectionName);
         }
     }
+
+    private function buildDerivativeUri(array $config, string $derivativeName, string $fileName, bool $force_webp, bool $debug): string
+    {
+        $uri = HelperFunctions::replaceConstantsFromConfig($config['image_handling']['http_src']) . '/' . $fileName;
+        if ($this->shouldUseWebpUri($config, $derivativeName, $fileName, $force_webp)) {
+            $uri = preg_replace('/\.(jpe?g|png|gif)$/i', '.webp', $uri);
+            if($debug) {
+                Writer::write('WebP version requested, returning: ' . $uri, WRITER::OUTPUT_BOTH, 'picture_debug', Writer::TYPE_INFO);
+            }
+        }
+        return $uri;
+    }
+
+    private function shouldUseWebpUri(array $config, string $derivativeName, string $fileName, bool $force_webp): bool
+    {
+        if ($force_webp == true) {
+            return $this->webpFileExists($config, $fileName);
+        }
+        if (
+            empty($config['image_handling']['processor']['webp_support']) ||
+            empty($config['image_handling']['processor']['derivatives'][$derivativeName]['webp_create']) ||
+            !defined('WEBP_SUPPORT') ||
+            WEBP_SUPPORT !== true
+        ) {
+            return false;
+        }
+        return $this->webpFileExists($config, $fileName);
+    }
+
+    private function webpFileExists(array $config, string $fileName): bool
+    {
+        if (empty($config['image_handling']['storage'])) {
+            return false;
+        }
+        $webpFileName = WebpSidecar::fileName($fileName);
+        $cacheKey = md5(json_encode($config['image_handling']['storage'])) . ':' . $webpFileName;
+        if (array_key_exists($cacheKey, self::$missingWebpFileCache)) {
+            return false;
+        }
+        try {
+            $exists = WebpSidecar::isValid(new Bucket($config['image_handling']['storage']), $webpFileName);
+            if (!$exists) {
+                self::$missingWebpFileCache[$cacheKey] = true;
+            }
+            return $exists;
+        } catch (Exception $e) {
+            self::$missingWebpFileCache[$cacheKey] = true;
+            return false;
+        }
+    }
+
     /**
      * @param $derivativeName
      * @param bool $asHTMLAttributes
@@ -801,19 +830,62 @@ class Picture extends AbstractObject
     public function createDerivative($derivative_config, $image_processor, $image)
     {
         $derivative_binary_file = $image_processor->process($derivative_config, $image, $derivative_config->name);
-        $derivative = new Derivative();
-        $derivative->id_image = $this->getId();
-        $derivative->id_media_object = $this->id_media_object;
-        $derivative->name = $derivative_config->name;
-        $derivative->file_name = $derivative_binary_file->name;
-        $derivative->download_successful = true;
-        $derivative->width = $derivative_config->max_width;
-        $derivative->height = $derivative_config->max_height;
-        $derivative->create();
+        $this->createOrUpdateDerivativeRow(
+            Derivative::class,
+            [
+                'id_image' => $this->getId(),
+                'name' => $derivative_config->name,
+            ],
+            [
+                'id_image' => $this->getId(),
+                'id_media_object' => $this->id_media_object,
+                'name' => $derivative_config->name,
+                'file_name' => $derivative_binary_file->name,
+                'download_successful' => true,
+                'width' => $derivative_config->max_width,
+                'height' => $derivative_config->max_height,
+            ]
+        );
         $derivative_binary_file->save();
         $webp_processor = new Processor\Adapter\WebPicture();
         $webp_processor->process($derivative_config, $derivative_binary_file, $derivative_config->name);
         unset($derivative_binary_file);
+    }
+
+    protected function createOrUpdateDerivativeRow(string $derivativeClass, array $where, array $values)
+    {
+        $existingRows = $derivativeClass::listAll($where);
+        $derivative = array_shift($existingRows);
+        if (!$derivative) {
+            $derivative = new $derivativeClass();
+        }
+
+        foreach ($values as $property => $value) {
+            $derivative->$property = $value;
+        }
+
+        if (!empty($derivative->getId())) {
+            $derivative->update();
+            foreach ($existingRows as $duplicate) {
+                if (!empty($duplicate->getId())) {
+                    $duplicate->delete();
+                }
+            }
+        } else {
+            $derivative->create();
+        }
+
+        $objectVars = get_object_vars($this);
+        if (array_key_exists('derivatives', $objectVars) && is_array($objectVars['derivatives'])) {
+            $derivatives = array_values(array_filter(
+                $objectVars['derivatives'],
+                static fn($existingDerivative) => ($existingDerivative->name ?? null) !== ($derivative->name ?? null)
+            ));
+            $derivatives[] = $derivative;
+            $this->derivatives = $derivatives;
+        }
+
+        return $derivative;
     }
 
     /**
@@ -844,7 +916,7 @@ class Picture extends AbstractObject
                 $extensions[] = 'webp';
             }
             foreach($extensions as $extension) {
-                $derivative_file_name = pathinfo($this->file_name, PATHINFO_FILENAME) . '_' . $derivative_name . '.' . $extension;
+	                $derivative_file_name = WebpSidecar::derivativePrefix($this->file_name) . $derivative_name . '.' . $extension;
                 $existing_derivative = $existingByName[$derivative_name] ?? null;
                 if($existing_derivative) {
                     $File = new File(new Bucket($config['image_handling']['storage']));

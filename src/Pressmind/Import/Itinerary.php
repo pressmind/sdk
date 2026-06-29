@@ -6,6 +6,7 @@ namespace Pressmind\Import;
 
 use Exception;
 use Pressmind\HelperFunctions;
+use Pressmind\Image\WebpSidecar;
 use Pressmind\Import;
 use Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\Itinerary\Step;
@@ -246,7 +247,7 @@ class Itinerary extends AbstractImport implements ImportInterface
 
         $bucket = new Bucket($config['image_handling']['storage']);
         $file_names = [$document_media_object->file_name];
-        $prefix = pathinfo($document_media_object->file_name, PATHINFO_FILENAME) . '_';
+	        $prefix = WebpSidecar::derivativePrefix($document_media_object->file_name);
 
         if ($bucket->supportsPrefixListing()) {
             $file_names = array_merge($file_names, array_keys($bucket->listByPrefix($prefix)));
@@ -256,12 +257,11 @@ class Itinerary extends AbstractImport implements ImportInterface
             foreach ($document_media_object->derivatives as $derivative) {
                 if (empty($derivative->file_name)) {
                     continue;
-                }
-                $file_names[] = $derivative->file_name;
-                $path_info = pathinfo($derivative->file_name);
-                $file_names[] = $path_info['filename'] . '.webp';
-            }
-        }
+	                }
+	                $file_names[] = $derivative->file_name;
+	                $file_names[] = WebpSidecar::fileName($derivative->file_name);
+	            }
+	        }
 
         foreach (($config['image_handling']['processor']['derivatives'] ?? []) as $derivative_name => $derivative_config) {
             $file_names[] = $prefix . $derivative_name . '.jpg';

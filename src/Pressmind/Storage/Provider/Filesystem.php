@@ -189,17 +189,19 @@ class Filesystem extends AbstractProvider implements ProviderInterface, PrefixLi
      * @param Bucket $bucket
      * @return array<string, int> filename => filesize in bytes
      */
-    public function listByPrefix(string $prefix, Bucket $bucket): array
-    {
-        $bucket->name = HelperFunctions::replaceConstantsFromConfig($bucket->name);
-        $result = [];
-        $pattern = $bucket->name . DIRECTORY_SEPARATOR . $prefix . '*';
-        foreach (glob($pattern) as $path) {
-            if (is_file($path)) {
-                $result[basename($path)] = (int) filesize($path);
-            }
-        }
-        return $result;
+	    public function listByPrefix(string $prefix, Bucket $bucket): array
+	    {
+	        $bucket->name = HelperFunctions::replaceConstantsFromConfig($bucket->name);
+	        $result = [];
+	        $pattern = $bucket->name . DIRECTORY_SEPARATOR . $prefix . '*';
+	        foreach (glob($pattern) as $path) {
+	            if (is_file($path)) {
+	                $relativeKey = ltrim(substr($path, strlen(rtrim($bucket->name, DIRECTORY_SEPARATOR)) + 1), DIRECTORY_SEPARATOR);
+	                $relativeKey = str_replace(DIRECTORY_SEPARATOR, '/', $relativeKey);
+	                $result[$relativeKey] = (int) filesize($path);
+	            }
+	        }
+	        return $result;
     }
 
     /**

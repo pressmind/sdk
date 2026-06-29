@@ -153,6 +153,20 @@ class FilesystemTest extends AbstractTestCase
         $this->assertSame(1, $byPrefix['img_2.jpg']);
     }
 
+    public function testListByPrefixKeepsSubdirectoryInReturnedKey(): void
+    {
+        $file = new File($this->bucket);
+        $file->name = 'subdir/img_1.jpg';
+        $file->content = 'aa';
+        $this->bucket->addFile($file);
+
+        $byPrefix = $this->bucket->listByPrefix('subdir/img_');
+
+        $this->assertArrayHasKey('subdir/img_1.jpg', $byPrefix);
+        $this->assertArrayNotHasKey('img_1.jpg', $byPrefix);
+        $this->assertSame(2, $byPrefix['subdir/img_1.jpg']);
+    }
+
     public function testScanAllKeys(): void
     {
         $f = new File($this->bucket);

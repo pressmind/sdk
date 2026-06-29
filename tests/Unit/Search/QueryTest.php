@@ -2,10 +2,14 @@
 
 namespace Pressmind\Tests\Unit\Search;
 
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use Pressmind\Registry;
 use Pressmind\Search\MongoDB;
 use Pressmind\Search\Query;
 use Pressmind\Search\Query\Filter;
+use Pressmind\Storage\Bucket;
+use Pressmind\Storage\File;
 use Pressmind\Tests\Unit\AbstractTestCase;
 
 class QueryTest extends AbstractTestCase
@@ -531,6 +535,149 @@ class QueryTest extends AbstractTestCase
         }
         $this->assertNotNull($facet);
         $this->assertSame(1, $facet['$sort']['sales_priority']);
+    }
+
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function testTransformImageUrlsKeepsJpgWhenWebpSidecarIsMissing(): void
+    {
+        define('WEBP_SUPPORT', true);
+        $bucketPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'pm_query_webp_' . uniqid('', true);
+        mkdir($bucketPath, 0755, true);
+        $bucket = new Bucket(['provider' => 'filesystem', 'bucket' => $bucketPath]);
+        $this->writeStorageFile($bucket, 'image_teaser.jpg', 'jpg');
+        Registry::getInstance()->add('config', $this->createMockConfig([
+            'image_handling' => [
+                'storage' => ['provider' => 'filesystem', 'bucket' => $bucketPath],
+                'http_src' => '/images',
+            ],
+        ]));
+
+        $description = $this->transformImageUrlsToWebp([
+            'teaser' => ['url' => '/images/image_teaser.jpg', 'size' => 'teaser'],
+        ]);
+
+        $this->assertSame('/images/image_teaser.jpg', $description['teaser']['url']);
+    }
+
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function testTransformImageUrlsUsesWebpWhenSidecarExists(): void
+    {
+        define('WEBP_SUPPORT', true);
+        $bucketPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'pm_query_webp_' . uniqid('', true);
+        mkdir($bucketPath, 0755, true);
+        $bucket = new Bucket(['provider' => 'filesystem', 'bucket' => $bucketPath]);
+        $this->writeStorageFile($bucket, 'image_teaser.jpg', 'jpg');
+        $this->writeValidWebpFile($bucket, 'image_teaser.webp');
+        Registry::getInstance()->add('config', $this->createMockConfig([
+            'image_handling' => [
+                'storage' => ['provider' => 'filesystem', 'bucket' => $bucketPath],
+                'http_src' => '/images',
+            ],
+        ]));
+
+        $description = $this->transformImageUrlsToWebp([
+            'teaser' => ['url' => '/images/image_teaser.jpg', 'size' => 'teaser'],
+        ]);
+
+        $this->assertSame('/images/image_teaser.webp', $description['teaser']['url']);
+    }
+
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function testTransformImageUrlsKeepsJpgWhenWebpSidecarIsCorrupt(): void
+    {
+        define('WEBP_SUPPORT', true);
+        $bucketPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'pm_query_webp_' . uniqid('', true);
+        mkdir($bucketPath, 0755, true);
+        $bucket = new Bucket(['provider' => 'filesystem', 'bucket' => $bucketPath]);
+        $this->writeStorageFile($bucket, 'image_teaser.jpg', 'jpg');
+        $this->writeStorageFile($bucket, 'image_teaser.webp', 'broken webp');
+        Registry::getInstance()->add('config', $this->createMockConfig([
+            'image_handling' => [
+                'storage' => ['provider' => 'filesystem', 'bucket' => $bucketPath],
+                'http_src' => '/images',
+            ],
+        ]));
+
+        $description = $this->transformImageUrlsToWebp([
+            'teaser' => ['url' => '/images/image_teaser.jpg', 'size' => 'teaser'],
+        ]);
+
+        $this->assertSame('/images/image_teaser.jpg', $description['teaser']['url']);
+    }
+
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function testTransformImageUrlsMapsCdnHttpSrcToStorageFileName(): void
+    {
+        define('WEBP_SUPPORT', true);
+        $bucketPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'pm_query_webp_' . uniqid('', true);
+        mkdir($bucketPath, 0755, true);
+        $bucket = new Bucket(['provider' => 'filesystem', 'bucket' => $bucketPath]);
+        $this->writeValidWebpFile($bucket, 'image_teaser.webp');
+        Registry::getInstance()->add('config', $this->createMockConfig([
+            'image_handling' => [
+                'storage' => ['provider' => 'filesystem', 'bucket' => $bucketPath],
+                'http_src' => 'https://cdn.example.com/images',
+            ],
+        ]));
+
+        $description = $this->transformImageUrlsToWebp([
+            'teaser' => ['url' => 'https://cdn.example.com/images/image_teaser.jpg', 'size' => 'teaser'],
+        ]);
+
+        $this->assertSame('https://cdn.example.com/images/image_teaser.webp', $description['teaser']['url']);
+    }
+
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function testTransformImageUrlsDoesNotUsePathOnlyMatchForDifferentCdnHost(): void
+    {
+        define('WEBP_SUPPORT', true);
+        $bucketPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'pm_query_webp_' . uniqid('', true);
+        mkdir($bucketPath, 0755, true);
+        $bucket = new Bucket(['provider' => 'filesystem', 'bucket' => $bucketPath]);
+        $this->writeValidWebpFile($bucket, 'image_teaser.webp');
+        Registry::getInstance()->add('config', $this->createMockConfig([
+            'image_handling' => [
+                'storage' => ['provider' => 'filesystem', 'bucket' => $bucketPath],
+                'http_src' => 'https://cdn-a.example/images',
+            ],
+        ]));
+
+        $description = $this->transformImageUrlsToWebp([
+            'teaser' => ['url' => 'https://cdn-b.example/images/image_teaser.jpg', 'size' => 'teaser'],
+        ]);
+
+        $this->assertSame('https://cdn-b.example/images/image_teaser.jpg', $description['teaser']['url']);
+    }
+
+    private function transformImageUrlsToWebp(array $description): array
+    {
+        $method = new \ReflectionMethod(Query::class, 'transformImageUrlsToWebp');
+        $method->setAccessible(true);
+        return $method->invoke(null, $description);
+    }
+
+    private function writeStorageFile(Bucket $bucket, string $name, string $content): void
+    {
+        $file = new File($bucket);
+        $file->name = $name;
+        $file->content = $content;
+        $file->save();
+    }
+
+    private function writeValidWebpFile(Bucket $bucket, string $name): void
+    {
+        $image = imagecreatetruecolor(2, 2);
+        ob_start();
+        imagewebp($image);
+        $content = ob_get_clean();
+        imagedestroy($image);
+
+        $this->writeStorageFile($bucket, $name, $content);
     }
 
     // =========================================================================

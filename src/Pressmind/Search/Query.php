@@ -2,14 +2,18 @@
 
 namespace Pressmind\Search;
 
+use Pressmind\HelperFunctions;
+use Pressmind\Image\WebpSidecar;
 use Pressmind\Registry;
 use Pressmind\Search\Query\Filter;
+use Pressmind\Storage\Bucket;
 
 class Query
 {
     private static $_run_time_cache_full = [];
     private static $_run_time_cache_filter = [];
     private static $_run_time_cache_search = [];
+    private static array $missingWebpFileCache = [];
     public static $group_keys = null;
     public static $language_code = null;
     public static $agency_id_price_index = null;
@@ -1106,10 +1110,65 @@ class Query
         }
         foreach ($description as $key => $value) {
             if (is_array($value) && isset($value['url']) && isset($value['size'])) {
-                $description[$key]['url'] = preg_replace('/\.(jpe?g|png|gif)$/i', '.webp', $value['url']);
+                $webpUrl = preg_replace('/\.(jpe?g|png|gif)$/i', '.webp', $value['url']);
+                if ($webpUrl !== $value['url'] && self::webpImageUrlExists($webpUrl)) {
+                    $description[$key]['url'] = $webpUrl;
+                }
             }
         }
         return $description;
+    }
+
+    private static function webpImageUrlExists(string $webpUrl): bool
+    {
+        $fileName = self::getStorageFileNameFromImageUrl($webpUrl);
+        if ($fileName === null) {
+            return false;
+        }
+        $config = Registry::getInstance()->get('config');
+        $cacheKey = md5(json_encode($config['image_handling']['storage'])) . ':' . $fileName;
+        if (array_key_exists($cacheKey, self::$missingWebpFileCache)) {
+            return false;
+        }
+        try {
+            $exists = WebpSidecar::isValid(new Bucket($config['image_handling']['storage']), $fileName);
+            if (!$exists) {
+                self::$missingWebpFileCache[$cacheKey] = true;
+            }
+            return $exists;
+        } catch (\Exception $e) {
+            self::$missingWebpFileCache[$cacheKey] = true;
+            return false;
+        }
+    }
+
+    private static function getStorageFileNameFromImageUrl(string $imageUrl): ?string
+    {
+        $config = Registry::getInstance()->get('config');
+        if (empty($config['image_handling']['storage']) || empty($config['image_handling']['http_src'])) {
+            return null;
+        }
+
+	        $httpSrc = rtrim(HelperFunctions::replaceConstantsFromConfig($config['image_handling']['http_src']), '/');
+	        $imageUrlWithoutQuery = strtok($imageUrl, '?') ?: $imageUrl;
+	        if (str_starts_with($imageUrlWithoutQuery, $httpSrc . '/')) {
+	            return ltrim(substr($imageUrlWithoutQuery, strlen($httpSrc)), '/');
+	        }
+	        if (parse_url($httpSrc, PHP_URL_HOST) !== null) {
+	            return null;
+	        }
+
+	        $httpPath = parse_url($httpSrc, PHP_URL_PATH);
+        $imagePath = parse_url($imageUrlWithoutQuery, PHP_URL_PATH);
+        if (empty($httpPath) || empty($imagePath)) {
+            return null;
+        }
+
+        $httpPath = rtrim($httpPath, '/');
+        if ($httpPath === '' || !str_starts_with($imagePath, $httpPath . '/')) {
+            return null;
+        }
+        return ltrim(substr($imagePath, strlen($httpPath)), '/');
     }
 
     /**

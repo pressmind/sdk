@@ -4,6 +4,7 @@ namespace Pressmind\Tests\Unit\Image\Processor\Adapter;
 
 use Pressmind\Image\Processor\Adapter\WebPicture;
 use Pressmind\Image\Processor\Config;
+use Pressmind\Image\WebpSidecar;
 use Pressmind\Storage\File;
 use Pressmind\Tests\Fixtures\Images\ImageFixtureTrait;
 use Pressmind\Tests\Unit\AbstractTestCase;
@@ -67,6 +68,23 @@ class WebPictureTest extends AbstractTestCase
     /**
      * @requires extension gd
      */
+    public function testProcessOutputFilenameKeepsSourceSubdirectory(): void
+    {
+        $bucket = $this->createTempBucket();
+        $file = $this->createTestImageFile($bucket);
+        $file->name = 'subdir/test-landscape.jpg';
+        $config = Config::create('webp', ['webp_create' => true, 'webp_quality' => 80]);
+        $adapter = new WebPicture();
+
+        $result = $adapter->process($config, $file, 'webp');
+
+        $this->assertSame('subdir/test-landscape.webp', $result->name);
+        $this->assertTrue($result->exists());
+    }
+
+    /**
+     * @requires extension gd
+     */
     public function testProcessConvertsPalettePngWithAlphaToWebp(): void
     {
         $bucket = $this->createTempBucket();
@@ -86,6 +104,92 @@ class WebPictureTest extends AbstractTestCase
 
         $this->assertSame(127, $corner['alpha']);
         $this->assertSame(0, $center['alpha']);
+    }
+
+    /**
+     * @requires extension gd
+     */
+    public function testProcessThrowsClearExceptionForInvalidImageContent(): void
+    {
+        $bucket = $this->createTempBucket();
+        $file = new File($bucket);
+        $file->name = 'broken.jpg';
+        $file->content = 'not an image';
+        $config = Config::create('webp', ['webp_create' => true, 'webp_quality' => 80]);
+        $adapter = new WebPicture();
+
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Could not create WebP source image');
+
+        $adapter->process($config, $file, 'webp');
+    }
+
+    /**
+     * @requires extension gd
+     */
+    public function testProcessRegeneratesEmptyExistingWebpFile(): void
+    {
+        $bucket = $this->createTempBucket();
+        $file = $this->createTestImageFile($bucket);
+        $existingWebp = new File($bucket);
+        $existingWebp->name = 'test-landscape.webp';
+        $existingWebp->content = '';
+        $existingWebp->save();
+        $config = Config::create('webp', ['webp_create' => true, 'webp_quality' => 80]);
+        $adapter = new WebPicture();
+
+        $result = $adapter->process($config, $file, 'webp');
+        $stored = new File($bucket);
+        $stored->name = 'test-landscape.webp';
+        $stored->read();
+
+        $this->assertNotEmpty($result->content);
+        $this->assertNotEmpty($stored->content);
+        $this->assertNotFalse(imagecreatefromstring($stored->content));
+    }
+
+    /**
+     * @requires extension gd
+     */
+    public function testProcessRegeneratesCorruptExistingWebpFile(): void
+    {
+        $bucket = $this->createTempBucket();
+        $file = $this->createTestImageFile($bucket);
+        $existingWebp = new File($bucket);
+        $existingWebp->name = 'test-landscape.webp';
+        $existingWebp->content = 'broken webp';
+        $existingWebp->save();
+        $config = Config::create('webp', ['webp_create' => true, 'webp_quality' => 80]);
+        $adapter = new WebPicture();
+
+        $adapter->process($config, $file, 'webp');
+        $stored = new File($bucket);
+        $stored->name = 'test-landscape.webp';
+        $stored->read();
+
+        $this->assertNotSame('broken webp', $stored->content);
+        $this->assertNotFalse(imagecreatefromstring($stored->content));
+    }
+
+    /**
+     * @requires extension gd
+     */
+    public function testProcessClearsInvalidWebpCacheAfterRegeneration(): void
+    {
+        $bucket = $this->createTempBucket();
+        $file = $this->createTestImageFile($bucket);
+        $existingWebp = new File($bucket);
+        $existingWebp->name = 'test-landscape.webp';
+        $existingWebp->content = 'broken webp';
+        $existingWebp->save();
+        $this->assertFalse(WebpSidecar::isValid($bucket, 'test-landscape.webp'));
+
+        $config = Config::create('webp', ['webp_create' => true, 'webp_quality' => 80]);
+        $adapter = new WebPicture();
+
+        $adapter->process($config, $file, 'webp');
+
+        $this->assertTrue(WebpSidecar::isValid($bucket, 'test-landscape.webp'));
     }
 
     public function testIsImageCorruptedReturnsFalse(): void

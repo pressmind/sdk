@@ -4,7 +4,9 @@ namespace Pressmind\Image;
 
 use Exception;
 use Pressmind\ORM\Object\Itinerary\Step\DocumentMediaObject;
+use Pressmind\ORM\Object\Itinerary\Step\DocumentMediaObject\Derivative as DocumentDerivative;
 use Pressmind\ORM\Object\MediaObject\DataType\Picture;
+use Pressmind\ORM\Object\MediaObject\DataType\Picture\Derivative;
 use Pressmind\ORM\Object\MediaObject\DataType\Picture\Section;
 use Pressmind\Storage\Bucket;
 use Pressmind\Storage\File;
@@ -49,6 +51,8 @@ class VerificationStats
         $chunkSize = isset($options['chunk_size']) ? (int) $options['chunk_size'] : 0;
         $maxMissingList = isset($options['max_missing_list']) ? (int) $options['max_missing_list'] : self::DEFAULT_MAX_MISSING_LIST;
         $storeDerivatives = ($chunkSize <= 0);
+        $mediaObjectIds = self::normalizeMediaObjectIds($options['media_object_ids'] ?? []);
+        $whereDownloaded = self::buildDownloadSuccessfulWhere(1, $mediaObjectIds);
 
         $verificationStats = [
             'pictures' => ['total' => 0, 'exists' => 0, 'missing' => 0, 'missing_list' => [], 'derivatives' => []],
@@ -63,13 +67,13 @@ class VerificationStats
             $bucket = new Bucket($config['image_handling']['storage']);
             if ($chunkSize > 0 && $bucket->supportsFullScan()) {
                 $progressCallback = $options['progress_callback'] ?? null;
-                self::collectStreaming($config, $verificationStats, $derivativeSummaryMap, $maxMissingList, $bucket, $progressCallback);
+                self::collectStreaming($config, $verificationStats, $derivativeSummaryMap, $maxMissingList, $bucket, $progressCallback, $mediaObjectIds);
             } elseif ($chunkSize > 0) {
-                self::collectChunked($config, $verificationStats, $derivativeSummaryMap, $chunkSize, $maxMissingList, $bucket);
+                self::collectChunked($config, $verificationStats, $derivativeSummaryMap, $chunkSize, $maxMissingList, $bucket, $mediaObjectIds);
             } else {
-                $pictures = Picture::listAll(['download_successful' => 1]);
-                $sections = Section::listAll(['download_successful' => 1]);
-                $documents = DocumentMediaObject::listAll(['download_successful' => 1]);
+                $pictures = Picture::listAll($whereDownloaded);
+                $sections = Section::listAll($whereDownloaded);
+                $documents = DocumentMediaObject::listAll($whereDownloaded);
                 self::verifyPictures($pictures, $config, $verificationStats, $storeDerivatives, $maxMissingList, $derivativeSummaryMap, $bucket);
                 self::verifySections($sections, $config, $verificationStats, $storeDerivatives, $maxMissingList, $derivativeSummaryMap, $bucket);
                 self::verifyDocuments($documents, $config, $verificationStats, $storeDerivatives, $maxMissingList, $derivativeSummaryMap, $bucket);
@@ -82,28 +86,56 @@ class VerificationStats
         return $verificationStats;
     }
 
+    private static function normalizeMediaObjectIds($mediaObjectIds): array
+    {
+        if (!is_array($mediaObjectIds)) {
+            $mediaObjectIds = [$mediaObjectIds];
+        }
+        $ids = [];
+        foreach ($mediaObjectIds as $id) {
+            $id = trim((string)$id);
+            if ($id !== '' && ctype_digit($id)) {
+                $id = (int)$id;
+                if ($id > 0) {
+                    $ids[$id] = $id;
+                }
+            }
+        }
+        return array_values($ids);
+    }
+
+    private static function buildDownloadSuccessfulWhere(int $downloadSuccessful, array $mediaObjectIds = []): array
+    {
+        $where = ['download_successful' => $downloadSuccessful];
+        if (!empty($mediaObjectIds)) {
+            $where['id_media_object'] = ['IN', implode(',', $mediaObjectIds)];
+        }
+        return $where;
+    }
+
     /**
      * Process all three types in chunks; only aggregate counts and capped missing_list, no per-entity derivatives.
      */
-    private static function collectChunked(array $config, array &$stats, array &$derivativeSummaryMap, int $chunkSize, int $maxMissingList, Bucket $bucket): void
+    private static function collectChunked(array $config, array &$stats, array &$derivativeSummaryMap, int $chunkSize, int $maxMissingList, Bucket $bucket, array $mediaObjectIds = []): void
     {
+        $whereDownloaded = self::buildDownloadSuccessfulWhere(1, $mediaObjectIds);
         $offset = 0;
         do {
-            $chunk = Picture::listAll(['download_successful' => 1], null, [$offset, $chunkSize]);
+            $chunk = Picture::listAll($whereDownloaded, null, [$offset, $chunkSize]);
             self::verifyPictures($chunk, $config, $stats, false, $maxMissingList, $derivativeSummaryMap, $bucket);
             $offset += count($chunk);
         } while (count($chunk) >= $chunkSize);
 
         $offset = 0;
         do {
-            $chunk = Section::listAll(['download_successful' => 1], null, [$offset, $chunkSize]);
+            $chunk = Section::listAll($whereDownloaded, null, [$offset, $chunkSize]);
             self::verifySections($chunk, $config, $stats, false, $maxMissingList, $derivativeSummaryMap, $bucket);
             $offset += count($chunk);
         } while (count($chunk) >= $chunkSize);
 
         $offset = 0;
         do {
-            $chunk = DocumentMediaObject::listAll(['download_successful' => 1], null, [$offset, $chunkSize]);
+            $chunk = DocumentMediaObject::listAll($whereDownloaded, null, [$offset, $chunkSize]);
             self::verifyDocuments($chunk, $config, $stats, false, $maxMissingList, $derivativeSummaryMap, $bucket);
             $offset += count($chunk);
         } while (count($chunk) >= $chunkSize);
@@ -126,23 +158,12 @@ class VerificationStats
         array &$derivativeSummaryMap,
         int $maxMissingList,
         Bucket $bucket,
-        ?callable $progressCallback = null
+        ?callable $progressCallback = null,
+        array $mediaObjectIds = []
     ): void {
         $derivativesConfig = $config['image_handling']['processor']['derivatives'] ?? [];
         $chunkSize = self::DEFAULT_CHUNK_SIZE;
-
-        // Build derivative suffix list: suffix => [name, extension] for matching
-        $suffixList = [];
-        foreach ($derivativesConfig as $derivativeName => $derivativeConfig) {
-            $extensions = ['jpg', 'png'];
-            if (!empty($derivativeConfig['webp_create'])) {
-                $extensions[] = 'webp';
-            }
-            foreach ($extensions as $extension) {
-                $suffix = $derivativeName . '.' . $extension;
-                $suffixList[$suffix] = ['name' => $derivativeName, 'extension' => $extension];
-            }
-        }
+        $whereDownloaded = self::buildDownloadSuccessfulWhere(1, $mediaObjectIds);
 
         // Phase 1: Build entity prefix map and counts from DB (chunked)
         $entityMap = [];
@@ -150,16 +171,20 @@ class VerificationStats
 
         $offset = 0;
         do {
-            $chunk = Picture::listAll(['download_successful' => 1], null, [$offset, $chunkSize]);
+            $chunk = Picture::listAll($whereDownloaded, null, [$offset, $chunkSize]);
+            self::preloadDerivatives($chunk, Derivative::class, 'id_image');
             foreach ($chunk as $picture) {
-                $prefix = pathinfo($picture->file_name, PATHINFO_FILENAME) . '_';
-                $entityMap[$prefix] = [
+	                $prefix = WebpSidecar::derivativePrefix($picture->file_name);
+                $mapKey = 'pictures:' . $picture->getId();
+                $entityMap[$mapKey] = [
                     'type' => 'pictures',
                     'id' => $picture->getId(),
                     'file_name' => $picture->file_name,
                     'id_media_object' => $picture->id_media_object ?? 'N/A',
                     'section_name' => null,
-                    'id_step' => null
+                    'id_step' => null,
+                    'prefix' => $prefix,
+                    'object' => self::createCompletenessEntitySnapshot($picture)
                 ];
                 $countByType['pictures']++;
             }
@@ -168,16 +193,20 @@ class VerificationStats
 
         $offset = 0;
         do {
-            $chunk = Section::listAll(['download_successful' => 1], null, [$offset, $chunkSize]);
+            $chunk = Section::listAll($whereDownloaded, null, [$offset, $chunkSize]);
+            self::preloadDerivatives($chunk, Derivative::class, 'id_image_section');
             foreach ($chunk as $section) {
-                $prefix = pathinfo($section->file_name, PATHINFO_FILENAME) . '_';
-                $entityMap[$prefix] = [
+	                $prefix = WebpSidecar::derivativePrefix($section->file_name);
+                $mapKey = 'sections:' . $section->getId();
+                $entityMap[$mapKey] = [
                     'type' => 'sections',
                     'id' => $section->getId(),
                     'file_name' => $section->file_name,
                     'id_media_object' => $section->id_media_object ?? 'N/A',
                     'section_name' => $section->section_name ?? 'N/A',
-                    'id_step' => null
+                    'id_step' => null,
+                    'prefix' => $prefix,
+                    'object' => self::createCompletenessEntitySnapshot($section)
                 ];
                 $countByType['sections']++;
             }
@@ -186,16 +215,20 @@ class VerificationStats
 
         $offset = 0;
         do {
-            $chunk = DocumentMediaObject::listAll(['download_successful' => 1], null, [$offset, $chunkSize]);
+            $chunk = DocumentMediaObject::listAll($whereDownloaded, null, [$offset, $chunkSize]);
+            self::preloadDerivatives($chunk, DocumentDerivative::class, 'id_document_media_object');
             foreach ($chunk as $document) {
-                $prefix = pathinfo($document->file_name, PATHINFO_FILENAME) . '_';
-                $entityMap[$prefix] = [
+	                $prefix = WebpSidecar::derivativePrefix($document->file_name);
+                $mapKey = 'documents:' . $document->getId();
+                $entityMap[$mapKey] = [
                     'type' => 'documents',
                     'id' => $document->getId(),
                     'file_name' => $document->file_name,
                     'id_media_object' => $document->id_media_object ?? 'N/A',
                     'section_name' => null,
-                    'id_step' => $document->id_step ?? 'N/A'
+                    'id_step' => $document->id_step ?? 'N/A',
+                    'prefix' => $prefix,
+                    'object' => self::createCompletenessEntitySnapshot($document)
                 ];
                 $countByType['documents']++;
             }
@@ -204,18 +237,27 @@ class VerificationStats
 
         $typeNames = ['pictures' => 'Pictures', 'sections' => 'Sections', 'documents' => 'Documents'];
 
-        // Init derivative summary with total_count per (name, extension, type)
-        foreach (['pictures', 'sections', 'documents'] as $type) {
-            foreach ($suffixList as $suffix => $info) {
-                $key = $info['name'] . '.' . $info['extension'] . '.' . $type;
-                $derivativeSummaryMap[$key] = [
-                    'name' => $info['name'],
-                    'extension' => $info['extension'],
-                    'total_count' => $countByType[$type],
-                    'exists_count' => 0,
-                    'total_size' => 0,
-                    'type' => $typeNames[$type]
-                ];
+	        $expectedFilesByKey = [];
+	        foreach ($entityMap as $mapKey => $entity) {
+	            foreach ($derivativesConfig as $derivativeName => $derivativeConfig) {
+	                foreach (self::buildExpectedDerivativeFiles($entity['object'], $derivativeName, $derivativeConfig) as $extension => $expectedKey) {
+                    $summaryKey = $derivativeName . '.' . $extension . '.' . $entity['type'];
+                    if (!isset($derivativeSummaryMap[$summaryKey])) {
+                        $derivativeSummaryMap[$summaryKey] = [
+                            'name' => $derivativeName,
+                            'extension' => $extension,
+                            'total_count' => 0,
+                            'exists_count' => 0,
+                            'total_size' => 0,
+                            'type' => $typeNames[$entity['type']]
+                        ];
+	                    }
+	                    $derivativeSummaryMap[$summaryKey]['total_count']++;
+	                    $expectedFilesByKey[$expectedKey][] = [
+	                        'map_key' => $mapKey,
+	                        'summary_key' => $summaryKey,
+	                    ];
+                }
             }
         }
 
@@ -223,16 +265,15 @@ class VerificationStats
         $stats['sections']['total'] = $countByType['sections'];
         $stats['documents']['total'] = $countByType['documents'];
 
-        $foundPrefixes = [];
+        $existingFilesByEntity = [];
         $keysProcessed = 0;
         $progressInterval = 100000;
 
-        $scanCallback = function (string $key, int $size) use (
-            $entityMap,
-            $suffixList,
-            &$derivativeSummaryMap,
-            $typeNames,
-            &$foundPrefixes,
+	        $scanCallback = function (string $key, int $size) use (
+	            $entityMap,
+	            $expectedFilesByKey,
+	            &$derivativeSummaryMap,
+	            &$existingFilesByEntity,
             &$keysProcessed,
             $progressInterval,
             $progressCallback
@@ -242,25 +283,15 @@ class VerificationStats
                 $progressCallback($keysProcessed, false);
             }
 
-            // Support keys with path (e.g. "subdir/abc123_thumb.jpg") by matching on the filename part
-            $keyBasename = strpos($key, '/') !== false ? basename($key) : $key;
-            foreach ($suffixList as $suffix => $info) {
-                if (strlen($keyBasename) >= strlen($suffix) && substr($keyBasename, -strlen($suffix)) === $suffix) {
-                    $candidatePrefix = substr($keyBasename, 0, -strlen($suffix));
-                    if (substr($candidatePrefix, -1) !== '_') {
-                        continue;
-                    }
-                    if (!isset($entityMap[$candidatePrefix])) {
-                        continue;
-                    }
-                    $entity = $entityMap[$candidatePrefix];
-                    $foundPrefixes[$candidatePrefix] = true;
-                    $summaryKey = $info['name'] . '.' . $info['extension'] . '.' . $entity['type'];
-                    if (isset($derivativeSummaryMap[$summaryKey])) {
-                        $derivativeSummaryMap[$summaryKey]['exists_count']++;
-                        $derivativeSummaryMap[$summaryKey]['total_size'] += $size;
-                    }
-                    break;
+	            foreach ($expectedFilesByKey[$key] ?? [] as $expectedFile) {
+	                $mapKey = $expectedFile['map_key'];
+	                $summaryKey = $expectedFile['summary_key'];
+	                if (isset($entityMap[$mapKey])) {
+	                    $existingFilesByEntity[$mapKey][$key] = $size;
+	                }
+                if ($size > 0 && isset($derivativeSummaryMap[$summaryKey])) {
+                    $derivativeSummaryMap[$summaryKey]['exists_count']++;
+                    $derivativeSummaryMap[$summaryKey]['total_size'] += $size;
                 }
             }
         };
@@ -275,11 +306,12 @@ class VerificationStats
         foreach (['pictures', 'sections', 'documents'] as $type) {
             $exists = 0;
             $missingListCount = 0;
-            foreach ($entityMap as $prefix => $entity) {
+            foreach ($entityMap as $mapKey => $entity) {
                 if ($entity['type'] !== $type) {
                     continue;
                 }
-                if (!empty($foundPrefixes[$prefix])) {
+                $completeness = DerivativeCompleteness::check($entity['object'], $config, $bucket, $existingFilesByEntity[$mapKey] ?? []);
+                if ($completeness->isComplete()) {
                     $exists++;
                 } else {
                     $stats[$type]['missing']++;
@@ -295,6 +327,8 @@ class VerificationStats
                         if ($type === 'documents' && $entity['id_step'] !== null) {
                             $entry['id_step'] = $entity['id_step'];
                         }
+                        $entry['missing_keys'] = $completeness->missingKeys;
+                        $entry['duplicate_derivative_names'] = $completeness->duplicateDerivativeNames;
                         $stats[$type]['missing_list'][] = $entry;
                         $missingListCount++;
                     }
@@ -335,6 +369,7 @@ class VerificationStats
      */
     private static function verifyPictures(array $pictures, array $config, array &$stats, bool $storeDerivatives, int $maxMissingList, array &$derivativeSummaryMap, Bucket $bucket): void
     {
+        self::preloadDerivatives($pictures, Derivative::class, 'id_image');
         $derivativesConfig = $config['image_handling']['processor']['derivatives'] ?? [];
         $type = 'pictures';
         $typeName = 'Pictures';
@@ -345,16 +380,11 @@ class VerificationStats
             $hasAnyDerivative = false;
             $pictureDerivatives = [];
 
-            $prefix = pathinfo($picture->file_name, PATHINFO_FILENAME) . '_';
+	            $prefix = WebpSidecar::derivativePrefix($picture->file_name);
             $existingFiles = $usePrefixListing ? $bucket->listByPrefix($prefix) : [];
 
             foreach ($derivativesConfig as $derivativeName => $derivativeConfig) {
-                $extensions = ['jpg', 'png'];
-                if (!empty($derivativeConfig['webp_create'])) {
-                    $extensions[] = 'webp';
-                }
-                foreach ($extensions as $extension) {
-                    $expectedKey = $prefix . $derivativeName . '.' . $extension;
+                foreach (self::buildExpectedDerivativeFiles($picture, $derivativeName, $derivativeConfig) as $extension => $expectedKey) {
                     $derivativeInfo = [
                         'name' => $derivativeName,
                         'extension' => $extension,
@@ -365,8 +395,8 @@ class VerificationStats
                     ];
 
                     if ($usePrefixListing) {
-                        $derivativeInfo['exists'] = isset($existingFiles[$expectedKey]);
                         $derivativeInfo['size'] = $existingFiles[$expectedKey] ?? 0;
+                        $derivativeInfo['exists'] = isset($existingFiles[$expectedKey]) && $derivativeInfo['size'] > 0;
                         if ($derivativeInfo['exists']) {
                             $hasAnyDerivative = true;
                             $derivativeInfo['size_formatted'] = self::formatBytes($derivativeInfo['size']);
@@ -375,15 +405,17 @@ class VerificationStats
                         $file = new File($bucket);
                         $file->name = $expectedKey;
                         if ($file->exists()) {
-                            $hasAnyDerivative = true;
                             try {
                                 $fileSize = $file->filesize();
-                                $derivativeInfo['exists'] = true;
                                 $derivativeInfo['size'] = $fileSize;
-                                $derivativeInfo['size_formatted'] = self::formatBytes($fileSize);
-                            } catch (Exception $e) {
-                                $derivativeInfo['size_formatted'] = 'Error: ' . $e->getMessage();
-                            }
+                                if ($fileSize > 0) {
+                                    $hasAnyDerivative = true;
+                                    $derivativeInfo['exists'] = true;
+                                    $derivativeInfo['size_formatted'] = self::formatBytes($fileSize);
+                                }
+	                            } catch (Exception $e) {
+	                                $derivativeInfo['size_formatted'] = 'Error: ' . $e->getMessage();
+	                            }
                         }
                     }
                     $pictureDerivatives[] = $derivativeInfo;
@@ -416,7 +448,8 @@ class VerificationStats
                 ];
             }
 
-            if ($hasAnyDerivative) {
+            $completeness = DerivativeCompleteness::check($picture, $config, $bucket, $usePrefixListing ? $existingFiles : null);
+            if ($completeness->isComplete()) {
                 $stats['pictures']['exists']++;
             } else {
                 $stats['pictures']['missing']++;
@@ -424,7 +457,9 @@ class VerificationStats
                     $stats['pictures']['missing_list'][] = [
                         'id' => $picture->getId(),
                         'file_name' => $picture->file_name,
-                        'id_media_object' => $picture->id_media_object ?? 'N/A'
+                        'id_media_object' => $picture->id_media_object ?? 'N/A',
+                        'missing_keys' => $completeness->missingKeys,
+                        'duplicate_derivative_names' => $completeness->duplicateDerivativeNames
                     ];
                 }
             }
@@ -439,6 +474,7 @@ class VerificationStats
      */
     private static function verifySections(array $sections, array $config, array &$stats, bool $storeDerivatives, int $maxMissingList, array &$derivativeSummaryMap, Bucket $bucket): void
     {
+        self::preloadDerivatives($sections, Derivative::class, 'id_image_section');
         $derivativesConfig = $config['image_handling']['processor']['derivatives'] ?? [];
         $type = 'sections';
         $typeName = 'Sections';
@@ -449,16 +485,11 @@ class VerificationStats
             $hasAnyDerivative = false;
             $sectionDerivatives = [];
 
-            $prefix = pathinfo($section->file_name, PATHINFO_FILENAME) . '_';
+	            $prefix = WebpSidecar::derivativePrefix($section->file_name);
             $existingFiles = $usePrefixListing ? $bucket->listByPrefix($prefix) : [];
 
             foreach ($derivativesConfig as $derivativeName => $derivativeConfig) {
-                $extensions = ['jpg', 'png'];
-                if (!empty($derivativeConfig['webp_create'])) {
-                    $extensions[] = 'webp';
-                }
-                foreach ($extensions as $extension) {
-                    $expectedKey = $prefix . $derivativeName . '.' . $extension;
+                foreach (self::buildExpectedDerivativeFiles($section, $derivativeName, $derivativeConfig) as $extension => $expectedKey) {
                     $derivativeInfo = [
                         'name' => $derivativeName,
                         'extension' => $extension,
@@ -469,8 +500,8 @@ class VerificationStats
                     ];
 
                     if ($usePrefixListing) {
-                        $derivativeInfo['exists'] = isset($existingFiles[$expectedKey]);
                         $derivativeInfo['size'] = $existingFiles[$expectedKey] ?? 0;
+                        $derivativeInfo['exists'] = isset($existingFiles[$expectedKey]) && $derivativeInfo['size'] > 0;
                         if ($derivativeInfo['exists']) {
                             $hasAnyDerivative = true;
                             $derivativeInfo['size_formatted'] = self::formatBytes($derivativeInfo['size']);
@@ -479,15 +510,17 @@ class VerificationStats
                         $file = new File($bucket);
                         $file->name = $expectedKey;
                         if ($file->exists()) {
-                            $hasAnyDerivative = true;
                             try {
                                 $fileSize = $file->filesize();
-                                $derivativeInfo['exists'] = true;
                                 $derivativeInfo['size'] = $fileSize;
-                                $derivativeInfo['size_formatted'] = self::formatBytes($fileSize);
-                            } catch (Exception $e) {
-                                $derivativeInfo['size_formatted'] = 'Error: ' . $e->getMessage();
-                            }
+                                if ($fileSize > 0) {
+                                    $hasAnyDerivative = true;
+                                    $derivativeInfo['exists'] = true;
+                                    $derivativeInfo['size_formatted'] = self::formatBytes($fileSize);
+                                }
+	                            } catch (Exception $e) {
+	                                $derivativeInfo['size_formatted'] = 'Error: ' . $e->getMessage();
+	                            }
                         }
                     }
                     $sectionDerivatives[] = $derivativeInfo;
@@ -521,7 +554,8 @@ class VerificationStats
                 ];
             }
 
-            if ($hasAnyDerivative) {
+            $completeness = DerivativeCompleteness::check($section, $config, $bucket, $usePrefixListing ? $existingFiles : null);
+            if ($completeness->isComplete()) {
                 $stats['sections']['exists']++;
             } else {
                 $stats['sections']['missing']++;
@@ -530,7 +564,9 @@ class VerificationStats
                         'id' => $section->getId(),
                         'file_name' => $section->file_name,
                         'id_media_object' => $section->id_media_object ?? 'N/A',
-                        'section_name' => $section->section_name ?? 'N/A'
+                        'section_name' => $section->section_name ?? 'N/A',
+                        'missing_keys' => $completeness->missingKeys,
+                        'duplicate_derivative_names' => $completeness->duplicateDerivativeNames
                     ];
                 }
             }
@@ -545,6 +581,7 @@ class VerificationStats
      */
     private static function verifyDocuments(array $documents, array $config, array &$stats, bool $storeDerivatives, int $maxMissingList, array &$derivativeSummaryMap, Bucket $bucket): void
     {
+        self::preloadDerivatives($documents, DocumentDerivative::class, 'id_document_media_object');
         $derivativesConfig = $config['image_handling']['processor']['derivatives'] ?? [];
         $type = 'documents';
         $typeName = 'Documents';
@@ -555,16 +592,11 @@ class VerificationStats
             $hasAnyDerivative = false;
             $documentDerivatives = [];
 
-            $prefix = pathinfo($document->file_name, PATHINFO_FILENAME) . '_';
+	            $prefix = WebpSidecar::derivativePrefix($document->file_name);
             $existingFiles = $usePrefixListing ? $bucket->listByPrefix($prefix) : [];
 
             foreach ($derivativesConfig as $derivativeName => $derivativeConfig) {
-                $extensions = ['jpg', 'png'];
-                if (!empty($derivativeConfig['webp_create'])) {
-                    $extensions[] = 'webp';
-                }
-                foreach ($extensions as $extension) {
-                    $expectedKey = $prefix . $derivativeName . '.' . $extension;
+                foreach (self::buildExpectedDerivativeFiles($document, $derivativeName, $derivativeConfig) as $extension => $expectedKey) {
                     $derivativeInfo = [
                         'name' => $derivativeName,
                         'extension' => $extension,
@@ -575,8 +607,8 @@ class VerificationStats
                     ];
 
                     if ($usePrefixListing) {
-                        $derivativeInfo['exists'] = isset($existingFiles[$expectedKey]);
                         $derivativeInfo['size'] = $existingFiles[$expectedKey] ?? 0;
+                        $derivativeInfo['exists'] = isset($existingFiles[$expectedKey]) && $derivativeInfo['size'] > 0;
                         if ($derivativeInfo['exists']) {
                             $hasAnyDerivative = true;
                             $derivativeInfo['size_formatted'] = self::formatBytes($derivativeInfo['size']);
@@ -585,15 +617,17 @@ class VerificationStats
                         $file = new File($bucket);
                         $file->name = $expectedKey;
                         if ($file->exists()) {
-                            $hasAnyDerivative = true;
                             try {
                                 $fileSize = $file->filesize();
-                                $derivativeInfo['exists'] = true;
                                 $derivativeInfo['size'] = $fileSize;
-                                $derivativeInfo['size_formatted'] = self::formatBytes($fileSize);
-                            } catch (Exception $e) {
-                                $derivativeInfo['size_formatted'] = 'Error: ' . $e->getMessage();
-                            }
+                                if ($fileSize > 0) {
+                                    $hasAnyDerivative = true;
+                                    $derivativeInfo['exists'] = true;
+                                    $derivativeInfo['size_formatted'] = self::formatBytes($fileSize);
+                                }
+	                            } catch (Exception $e) {
+	                                $derivativeInfo['size_formatted'] = 'Error: ' . $e->getMessage();
+	                            }
                         }
                     }
                     $documentDerivatives[] = $derivativeInfo;
@@ -627,7 +661,8 @@ class VerificationStats
                 ];
             }
 
-            if ($hasAnyDerivative) {
+            $completeness = DerivativeCompleteness::check($document, $config, $bucket, $usePrefixListing ? $existingFiles : null);
+            if ($completeness->isComplete()) {
                 $stats['documents']['exists']++;
             } else {
                 $stats['documents']['missing']++;
@@ -636,10 +671,102 @@ class VerificationStats
                         'id' => $document->getId(),
                         'file_name' => $document->file_name,
                         'id_media_object' => $document->id_media_object ?? 'N/A',
-                        'id_step' => $document->id_step ?? 'N/A'
+                        'id_step' => $document->id_step ?? 'N/A',
+                        'missing_keys' => $completeness->missingKeys,
+                        'duplicate_derivative_names' => $completeness->duplicateDerivativeNames
                     ];
                 }
             }
         }
+    }
+
+    private static function buildExpectedDerivativeFiles($entity, string $derivativeName, array $derivativeConfig): array
+    {
+	        $prefix = WebpSidecar::derivativePrefix($entity->file_name ?? '');
+        $mainFileName = self::getFirstDerivativeFileName($entity, $derivativeName);
+        if (!empty($mainFileName)) {
+            $extension = strtolower(pathinfo($mainFileName, PATHINFO_EXTENSION) ?: 'unknown');
+            $files = [$extension => $mainFileName];
+        } else {
+            $files = [
+                'jpg' => $prefix . $derivativeName . '.jpg',
+                'png' => $prefix . $derivativeName . '.png',
+            ];
+        }
+
+	        if (!empty($derivativeConfig['webp_create'])) {
+	            $files['webp'] = !empty($mainFileName)
+	                ? WebpSidecar::fileName($mainFileName)
+	                : $prefix . $derivativeName . '.webp';
+	        }
+
+        return $files;
+    }
+
+    private static function getFirstDerivativeFileName($entity, string $derivativeName): ?string
+    {
+        $properties = get_object_vars($entity);
+        foreach (($properties['derivatives'] ?? []) as $derivative) {
+            if (($derivative->name ?? null) === $derivativeName && !empty($derivative->file_name)) {
+                return $derivative->file_name;
+            }
+        }
+        return null;
+    }
+
+    private static function preloadDerivatives(array $entities, string $derivativeClass, string $ownerField): void
+    {
+        $idsToLoad = [];
+        foreach ($entities as $entity) {
+            if (self::hasLoadedDerivatives($entity)) {
+                continue;
+            }
+            $id = (int)$entity->getId();
+            if ($id > 0) {
+                $idsToLoad[$id] = $id;
+            }
+        }
+
+        if (empty($idsToLoad)) {
+            return;
+        }
+
+        $derivativesByOwner = [];
+        foreach ($derivativeClass::listAll([$ownerField => ['IN', implode(',', $idsToLoad)]]) as $derivative) {
+            $ownerId = (int)($derivative->$ownerField ?? 0);
+            if ($ownerId > 0) {
+                $derivativesByOwner[$ownerId][] = $derivative;
+            }
+        }
+
+        foreach ($entities as $entity) {
+            if (self::hasLoadedDerivatives($entity)) {
+                continue;
+            }
+            $entity->derivatives = $derivativesByOwner[(int)$entity->getId()] ?? [];
+        }
+    }
+
+    private static function createCompletenessEntitySnapshot($entity): \stdClass
+    {
+        $snapshot = new \stdClass();
+        $snapshot->file_name = $entity->file_name ?? '';
+        $snapshot->derivatives = [];
+
+        $properties = get_object_vars($entity);
+        foreach (($properties['derivatives'] ?? []) as $derivative) {
+            $derivativeSnapshot = new \stdClass();
+            $derivativeSnapshot->name = $derivative->name ?? null;
+            $derivativeSnapshot->file_name = $derivative->file_name ?? null;
+            $snapshot->derivatives[] = $derivativeSnapshot;
+        }
+
+        return $snapshot;
+    }
+
+    private static function hasLoadedDerivatives($entity): bool
+    {
+        $properties = get_object_vars($entity);
+        return array_key_exists('derivatives', $properties) && is_array($properties['derivatives']);
     }
 }

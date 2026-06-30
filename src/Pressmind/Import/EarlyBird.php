@@ -110,10 +110,11 @@ class EarlyBird extends AbstractImport implements ImportInterface
                 WHERE NOT EXISTS (
                 SELECT 1 FROM '.$EarlyBirdGroup->getDbTableName().' WHERE '.$EarlyBirdGroupItem->getDbTableName().'.id_early_bird_discount_group = '.$EarlyBirdGroup->getDbTableName().'.id)';
         $db->execute($sql);
-        if(!empty($earlybird_group_item_ids)){
+        if(!empty($earlybird_group_item_ids) && !empty($earlybird_group_ids)){
             $sql = 'DELETE FROM '.$EarlyBirdGroupItem->getDbTableName().' 
                     WHERE id NOT IN("'.implode('","', $earlybird_group_item_ids).'")
-                    AND (origin IS NULL OR origin != "manual_discount")';
+                    AND (origin IS NULL OR origin != "manual_discount")
+                    AND id_early_bird_discount_group IN("'.implode('","', $earlybird_group_ids).'")';
             $db->execute($sql);
         }
     }

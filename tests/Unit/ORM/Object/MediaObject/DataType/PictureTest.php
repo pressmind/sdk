@@ -186,6 +186,65 @@ class PictureTest extends AbstractTestCase
         $this->assertSame('/images/document_thumbnail.jpg', $document->getUri('thumbnail'));
     }
 
+    public function testGetUriTreatsNullForceWebpAsFalseForPictureDerivativeWithSectionName(): void
+    {
+        $picture = $this->createPictureWithImageConfig();
+        $picture->id = 1;
+        $picture->file_name = 'image.jpg';
+        $picture->tmp_url = 'https://remote.example/image.jpg?v=original';
+        $picture->download_successful = true;
+        $picture->sections = [];
+        $picture->derivatives = [$this->createPictureDerivative('thumbnail', 'image_thumbnail.jpg')];
+
+        $this->assertSame('/images/image_thumbnail.jpg', $picture->getUri('thumbnail', null, 'base'));
+    }
+
+    public function testGetUriTreatsNullForceWebpAsFalseWhenDelegatingToSection(): void
+    {
+        $picture = $this->createPictureWithImageConfig();
+        $picture->id = 1;
+        $picture->file_name = 'image.jpg';
+        $picture->tmp_url = 'https://remote.example/image.jpg?v=original';
+        $picture->download_successful = true;
+
+        $section = new Section();
+        $section->id = 2;
+        $section->section_name = 'base';
+        $section->file_name = 'section.jpg';
+        $section->tmp_url = 'https://remote.example/section.jpg?v=original';
+        $section->download_successful = true;
+        $section->derivatives = [$this->createSectionDerivative('thumbnail', 'section_thumbnail.jpg')];
+
+        $picture->sections = [$section];
+
+        $this->assertSame('/images/section_thumbnail.jpg', $picture->getUri('thumbnail', null, 'base'));
+    }
+
+    public function testGetUriTreatsNullForceWebpAsFalseForFallbackDerivative(): void
+    {
+        $picture = $this->createPictureWithImageConfig();
+        $picture->file_name = 'image.jpg';
+        $picture->tmp_url = 'https://remote.example/image.jpg?v=original';
+        $picture->download_successful = true;
+        $picture->sections = [];
+        $picture->derivatives = [$this->createPictureDerivative('fallback', 'image_fallback.jpg')];
+
+        $this->assertSame('/images/image_fallback.jpg', $picture->getUri('missing', null, null));
+    }
+
+    public function testGetUriTreatsNullForceWebpAsFalseForDocumentDerivative(): void
+    {
+        $document = new DocumentMediaObject();
+        Registry::getInstance()->add('config', $this->createMockConfig($this->getImageConfig()));
+        $document->id = 3;
+        $document->file_name = 'document.jpg';
+        $document->tmp_url = 'https://remote.example/document.jpg?v=original';
+        $document->download_successful = true;
+        $document->derivatives = [$this->createDocumentDerivative('thumbnail', 'document_thumbnail.jpg')];
+
+        $this->assertSame('/images/document_thumbnail.jpg', $document->getUri('thumbnail', null, null));
+    }
+
     #[RunInSeparateProcess]
     #[PreserveGlobalState(false)]
     public function testGetUriKeepsJpgWhenAutomaticWebpSidecarIsMissing(): void

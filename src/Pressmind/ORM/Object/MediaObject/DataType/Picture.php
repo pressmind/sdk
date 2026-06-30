@@ -305,6 +305,8 @@ class Picture extends AbstractObject
      */
     public function getUri($derivativeName = null, $force_webp = false, $sectionName = null, $debug = false) {
         $config = Registry::getInstance()->get('config');
+        $force_webp = (bool)$force_webp;
+        $debug = (bool)$debug;
         $is_section = ($this instanceof Section);
         if($debug) {
             $object_type = $is_section ? 'Section' : 'Picture';

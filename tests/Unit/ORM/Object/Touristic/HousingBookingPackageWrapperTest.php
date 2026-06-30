@@ -43,7 +43,7 @@ class HousingBookingPackageWrapperTest extends AbstractTestCase
         return $db;
     }
 
-    private function createCheapestPriceRow(int $id, float $priceTotal, string $idHousingPackage = null, string $idBookingPackage = null): stdClass
+    private function createCheapestPriceRow(int $id, float $priceTotal, ?string $idHousingPackage = null, ?string $idBookingPackage = null): stdClass
     {
         $futureDate = (new DateTime('+30 days'))->format('Y-m-d 00:00:00');
         $row = new stdClass();

@@ -915,7 +915,7 @@ class Indexer extends AbstractIndex
         $Filter = new $p[0]();
         $Filter->mediaObject = $this->mediaObject;
         $Filter->agency = $agency;
-        $ReflectionMethod = new \ReflectionMethod($method);
+        $ReflectionMethod = new \ReflectionMethod($p[0], $p[1]);
         $atts = [];
         if($first_param != 'undefined'){
             $atts = [$first_param];

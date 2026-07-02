@@ -413,6 +413,8 @@ Attachments imported from **pressmind File Storage** full sync (`synced_from_fil
 
 The SDK provides two hook points for custom import logic:
 
+> **Comprehensive guide for external integrators:** See [Custom Import Hooks Documentation](custom-import-hooks.md) for the full interface contract, feed structure with JSON examples, mapping strategies, and complete example implementations including BasicAuth authentication.
+
 ### Per-Object Hooks (during import)
 
 ```json

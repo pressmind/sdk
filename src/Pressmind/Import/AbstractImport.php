@@ -94,4 +94,42 @@ class AbstractImport
         }
         return $this->_client;
     }
+
+    /**
+     * Normalizes booking package feed data by setting id_media_object and
+     * structural parent FKs on all nested entities.
+     *
+     * @param array $bookingPackages Array of stdClass objects from external API
+     * @param int $idMediaObject The media object ID to propagate
+     * @return array Normalized stdClass objects ready for fromStdClass()
+     * @see FeedNormalizer::normalizeBookingPackages()
+     */
+    protected function normalizeBookingPackages(array $bookingPackages, int $idMediaObject): array
+    {
+        return FeedNormalizer::normalizeBookingPackages($bookingPackages, $idMediaObject);
+    }
+
+    /**
+     * Normalizes starting point feed data by setting structural parent FKs.
+     *
+     * @param array $startingPoints Array of stdClass objects from external API
+     * @return array Normalized stdClass objects ready for fromStdClass()
+     * @see FeedNormalizer::normalizeStartingPoints()
+     */
+    protected function normalizeStartingPoints(array $startingPoints): array
+    {
+        return FeedNormalizer::normalizeStartingPoints($startingPoints);
+    }
+
+    /**
+     * Normalizes early bird discount group feed data by setting structural parent FKs.
+     *
+     * @param array $groups Array of stdClass objects from external API
+     * @return array Normalized stdClass objects ready for fromStdClass()
+     * @see FeedNormalizer::normalizeEarlyBirdDiscountGroups()
+     */
+    protected function normalizeEarlyBirdDiscountGroups(array $groups): array
+    {
+        return FeedNormalizer::normalizeEarlyBirdDiscountGroups($groups);
+    }
 }

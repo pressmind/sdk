@@ -698,6 +698,8 @@ List of agency IDs for which options and prices are calculated. Only relevant wh
 
 ## Import Hooks (`data.media_type_custom_import_hooks`, `media_type_custom_post_import_hooks`)
 
+> **For external integrators:** See [Custom Import Hooks Documentation](custom-import-hooks.md) for the full interface contract, feed structure with JSON examples, touristic data model relationships, mapping strategies, and complete example implementations.
+
 ---
 
 ### `data.media_type_custom_import_hooks`

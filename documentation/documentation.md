@@ -68,6 +68,8 @@ Welcome to the pressmind SDK documentation. This documentation covers the comple
 | Document | Description |
 |---|---|
 | [Import Process](import-process.md) | Complete import pipeline from pressmind PIM to local database |
+| [Custom Import Hooks](custom-import-hooks.md) | Hook interface, feed structure, JSON examples, mapping strategies, and example implementations for external integrators |
+| [Custom Import API Specification](custom-import-api-specification.md) | Standalone API contract for external CRS integrators — endpoints, response formats, field references, season matching, states |
 | [Pressmind File Storage (full import)](file-storage-import.md) | `file_storage.import_enabled`, CLI (`filestorage`, `file-storage-import`), post-import downloads, orphan handling |
 | [Import Safety](import-safety.md) | Orphan removal thresholds and transaction safety |
 | [Schema Migration](schema-migration.md) | Automatic schema migration for new PIM fields |

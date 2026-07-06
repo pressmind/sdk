@@ -236,6 +236,23 @@ class MongoDB extends AbstractSearch
     }
 
     /**
+     * Build type-tolerant id_item match variants for the TermResolver category lookup.
+     * category id_item may be stored as string (e.g. virtual/hashed ids like "c_land_333")
+     * or as integer depending on the installation, so match against all plausible types.
+     *
+     * @param mixed $id
+     * @return array<int, mixed>
+     */
+    private function _buildTermResolverIdVariants($id): array
+    {
+        $variants = [$id, (string) $id];
+        if (is_numeric($id)) {
+            $variants[] = (int) $id;
+        }
+        return array_values(array_unique($variants, SORT_REGULAR));
+    }
+
+    /**
      * @return string[]
      */
     public function getLog()
@@ -480,7 +497,7 @@ class MongoDB extends AbstractSearch
                         $categoryIds = $db->{$this->_collection_name}->distinct('_id', [
                             'categories' => ['$elemMatch' => [
                                 'field_name' => $termResolverMatch['field'],
-                                'id_item' => (int) $termResolverMatch['id'],
+                                'id_item' => ['$in' => $this->_buildTermResolverIdVariants($termResolverMatch['id'])],
                             ]]
                         ]);
                         if (!empty($categoryIds)) {
@@ -499,7 +516,7 @@ class MongoDB extends AbstractSearch
                             $categoryIds = $db->{$this->_collection_name}->distinct('_id', [
                                 'categories' => ['$elemMatch' => [
                                     'field_name' => $termResolverMatch['field'],
-                                    'id_item' => (int) $termResolverMatch['id'],
+                                    'id_item' => ['$in' => $this->_buildTermResolverIdVariants($termResolverMatch['id'])],
                                 ]]
                             ]);
                             if (!empty($categoryIds)) {

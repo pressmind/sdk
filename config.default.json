@@ -236,7 +236,27 @@
           "db": ""
         },
         "term_resolver": {
-          "enabled": false
+          "enabled": false,
+          "fields": [
+            "EXAMPLE_schiff_default_ol"
+          ],
+          "ship_fields": [
+            "EXAMPLE_schiff_default_ol"
+          ],
+          "ship_prefixes": [
+            "ms",
+            "my",
+            "msy",
+            "ts",
+            "mps",
+            "ps",
+            "rms",
+            "mv",
+            "sy"
+          ],
+          "ambiguous_ship_names": [
+            "EXAMPLE_deutschland"
+          ]
         },
         "search": {
           "build_for": {
@@ -378,6 +398,8 @@
         "password": null,
         "number_of_shards": 1,
         "number_of_replicas": 0,
+        "fuzziness": 0,
+        "EXAMPLE_fuzziness_auto": "AUTO",
         "prefix_length": 5,
         "stopwords": null,
         "EXAMPLE_stopwords_custom_array": ["aber", "alle", "als", "am", "an"],

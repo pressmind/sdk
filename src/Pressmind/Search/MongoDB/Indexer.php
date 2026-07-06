@@ -169,6 +169,10 @@ class Indexer extends AbstractIndex
             return;
         }
 
+        $shipFields = \Pressmind\Search\TermResolver::getShipFields();
+        $shipPrefixes = \Pressmind\Search\TermResolver::getShipPrefixes();
+        $ambiguousShipNames = \Pressmind\Search\TermResolver::getAmbiguousShipNames();
+
         foreach ($this->_config['search']['build_for'] as $build_infos) {
             foreach ($build_infos as $build_info) {
                 foreach ($this->_agencies as $agency) {
@@ -180,23 +184,56 @@ class Indexer extends AbstractIndex
                         . 'origin_' . $build_info['origin']
                         . (!empty($agency) ? '_agency_' . $agency : '');
 
+                    // Group by field + name so each distinct category value is one source row.
+                    // Alias keys (bare ship name + configured prefix variants) are generated in PHP afterwards.
                     $pipeline = [
                         ['$unwind' => '$categories'],
                         ['$match' => ['categories.field_name' => ['$in' => $categoryFields]]],
                         ['$group' => [
-                            '_id' => ['$toLower' => '$categories.name'],
+                            '_id' => ['field' => '$categories.field_name', 'name' => '$categories.name'],
                             'field' => ['$first' => '$categories.field_name'],
                             'id_item' => ['$first' => '$categories.id_item'],
                             'name' => ['$first' => '$categories.name'],
                             'count' => ['$sum' => 1],
                         ]],
-                        ['$out' => $targetCollection],
                     ];
 
                     try {
-                        $this->db->{$sourceCollection}->aggregate($pipeline, ['allowDiskUse' => true]);
+                        $cursor = $this->db->{$sourceCollection}->aggregate($pipeline, ['allowDiskUse' => true]);
+                        $entries = [];
+                        foreach ($cursor as $doc) {
+                            if (empty($doc->name)) {
+                                continue;
+                            }
+                            $isShip = in_array($doc->field, $shipFields, true);
+                            $aliasKeys = \Pressmind\Search\TermResolver::buildAliasKeys(
+                                (string) $doc->name, $isShip, $shipPrefixes, $ambiguousShipNames
+                            );
+                            foreach ($aliasKeys as $key) {
+                                // First writer wins per key to keep resolution deterministic.
+                                if (!isset($entries[$key])) {
+                                    $entries[$key] = [
+                                        '_id' => $key,
+                                        'field' => $doc->field,
+                                        'id_item' => $doc->id_item,
+                                        'name' => $doc->name,
+                                        'count' => (int) $doc->count,
+                                    ];
+                                }
+                            }
+                        }
+
+                        // Replace the target collection: drop, then bulk insert the built dictionary.
+                        try {
+                            $this->db->{$targetCollection}->drop();
+                        } catch (\Exception $e) {
+                            // collection may not exist yet
+                        }
+                        if (!empty($entries)) {
+                            $this->db->{$targetCollection}->insertMany(array_values($entries));
+                        }
                         Writer::write(
-                            'TermResolver: rebuilt dictionary "' . $targetCollection . '" from "' . $sourceCollection . '"',
+                            'TermResolver: rebuilt dictionary "' . $targetCollection . '" from "' . $sourceCollection . '" (' . count($entries) . ' terms)',
                             Writer::OUTPUT_FILE, 'mongodb_indexer'
                         );
                     } catch (\Exception $e) {

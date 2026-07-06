@@ -223,16 +223,20 @@ class OpenSearch extends AbstractSearch
 
         $shouldClauses = [];
         if (!empty($textFields)) {
-            $shouldClauses[] = [
-                'multi_match' => [
-                    'query' => $this->_search_term,
-                    'fields' => $textFields,
-                    'type' => 'best_fields',
-                    'operator' => 'and',
-                    'fuzziness' => 'AUTO',
-                    'prefix_length' => $this->_config['data']['search_opensearch']['prefix_length'] ?? 7
-                ]
+            $multiMatch = [
+                'query' => $this->_search_term,
+                'fields' => $textFields,
+                'type' => 'best_fields',
+                'operator' => 'and',
             ];
+            // Fuzziness is configurable via search_opensearch.fuzziness (default AUTO).
+            // Setting it to 0/false/off/null disables fuzzy matching entirely (precision mode).
+            $fuzziness = $this->_config['data']['search_opensearch']['fuzziness'] ?? 'AUTO';
+            if ($this->isFuzzinessEnabled($fuzziness)) {
+                $multiMatch['fuzziness'] = $fuzziness;
+                $multiMatch['prefix_length'] = $this->_config['data']['search_opensearch']['prefix_length'] ?? 7;
+            }
+            $shouldClauses[] = ['multi_match' => $multiMatch];
         }
         if (!empty($keywordFields)) {
             $shouldClauses[] = [
@@ -257,6 +261,24 @@ class OpenSearch extends AbstractSearch
         }
 
         return $shouldClauses;
+    }
+
+    /**
+     * Whether fuzzy matching should be applied for the configured fuzziness value.
+     * Disabled for 0, false, null and the strings 'off'/'none'/'false'/''.
+     *
+     * @param mixed $fuzziness
+     * @return bool
+     */
+    private function isFuzzinessEnabled($fuzziness): bool
+    {
+        if ($fuzziness === null || $fuzziness === false || $fuzziness === 0 || $fuzziness === '0') {
+            return false;
+        }
+        if (is_string($fuzziness) && in_array(strtolower(trim($fuzziness)), ['off', 'none', 'false', ''], true)) {
+            return false;
+        }
+        return true;
     }
 
     /**

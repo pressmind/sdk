@@ -69,6 +69,7 @@ use Pressmind\ORM\Object\Touristic\Option\Discount;
  * @property int $id_media_object_option
  * @property string|null $deck_name deck/floor name for cruise or multi-level accommodations
  * @property string|null $code_ibe_deck IBE code for the deck assignment
+ * @property string|null $selected_unit the unit (cabin/room number) selected by the user at booking time
  */
 class Option extends AbstractObject
 {
@@ -855,6 +856,19 @@ class Option extends AbstractObject
                     [
                         'name' => 'csvlist',
                         'params' => null,
+                    ]
+                ],
+                'filters' => NULL,
+            ],
+            'selected_unit' => [
+                'title' => 'selected_unit',
+                'name' => 'selected_unit',
+                'type' => 'string',
+                'required' => false,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
                     ]
                 ],
                 'filters' => NULL,

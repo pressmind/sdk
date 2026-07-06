@@ -6,6 +6,7 @@ use \DateTime;
 use Exception;
 use \Pressmind\ORM\Object\AbstractObject;
 use Pressmind\ORM\Object\Touristic\Housing\Package;
+use Pressmind\ORM\Object\MediaObject\DataType\Picture;
 use Pressmind\ORM\Object\Touristic\Option\Discount;
 
 /**
@@ -67,6 +68,7 @@ use Pressmind\ORM\Object\Touristic\Option\Discount;
  * @property string $crs_meta_data
  * @property boolean $dont_use_for_offers
  * @property int $id_media_object_option
+ * @property Picture[] $option_images
  * @property string|null $deck_name deck/floor name for cruise or multi-level accommodations
  * @property string|null $code_ibe_deck IBE code for the deck assignment
  * @property string|null $selected_unit the unit (cabin/room number) selected by the user at booking time
@@ -830,6 +832,23 @@ class Option extends AbstractObject
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,
+            ],
+            'option_images' => [
+                'title' => 'Option Images',
+                'name' => 'option_images',
+                'type' => 'relation',
+                'relation' => [
+                    'type' => 'hasMany',
+                    'related_id' => 'id_media_object_option',
+                    'related_foreign_id' => 'id_media_object',
+                    'class' => Picture::class,
+                    'filters' => null,
+                    'order_columns' => ['sort' => 'ASC'],
+                    'prevent_auto_delete' => true,
+                ],
+                'required' => false,
+                'validators' => null,
+                'filters' => null,
             ],
             'deck_name' => [
                 'title' => 'deck_name',

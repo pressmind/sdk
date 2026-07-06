@@ -8,7 +8,6 @@ use Pressmind\MVC\AbstractController;
 use Pressmind\ORM\Object\CategoryTree\Item;
 use Pressmind\ORM\Object\Geodata;
 use Pressmind\ORM\Object\MediaObject;
-use Pressmind\ORM\Object\MediaObject\DataType\Picture;
 use Pressmind\ORM\Object\Touristic\Housing\Package;
 use Pressmind\ORM\Object\Touristic\Option\Discount;
 use Pressmind\ORM\Object\Touristic\Startingpoint;
@@ -258,7 +257,7 @@ class Ibe
         }
 
         $result['housing_packages'] = $this->filterValidHousingPackages($housing_packages, $date->departure);
-        $this->enrichHousingOptionImages($result['housing_packages']);
+        $result['housing_packages'] = $this->enrichHousingOptionImages($result['housing_packages']);
         $result['option_discounts'] = $this->getOptionDiscounts($housing_packages, $date->departure);
         $result['earlybird'] = $booking->getEarlyBird($ida);
         $result['extras'] = $booking->calculateExtras($extras, $booking->getBookingPackage()->duration, $housing_packages[0]->nights);
@@ -331,50 +330,44 @@ class Ibe
 
     /**
      * @param Package[] $housing_packages
+     * @return array
      */
-    private function enrichHousingOptionImages(&$housing_packages)
+    private function enrichHousingOptionImages($housing_packages)
     {
-        $optionMoIds = [];
-        foreach ($housing_packages as $package) {
-            foreach ($package->options as $option) {
-                $moId = is_object($option) ? ($option->id_media_object_option ?? null) : null;
-                if (!empty($moId)) {
-                    $optionMoIds[(int)$moId] = true;
-                }
-            }
-        }
-        if (empty($optionMoIds)) {
-            return;
-        }
-
-        $ids = array_keys($optionMoIds);
-        $pictures = Picture::listAll(
-            ['id_media_object' => ['IN', implode(',', $ids)]],
-            ['sort' => 'ASC']
-        );
-
         $imageMap = [];
-        foreach ($pictures as $pic) {
-            $uri = $pic->getUri('teaser');
-            if (!empty($uri) && substr($uri, 0, 4) !== 'http') {
-                $uri = WEBSERVER_HTTP . $uri;
-            }
-            $imageMap[$pic->id_media_object][] = [
-                'uri' => $uri,
-                'caption' => $pic->caption,
-                'alt' => $pic->alt,
-                'copyright' => $pic->copyright,
-            ];
-        }
-
         foreach ($housing_packages as $package) {
             foreach ($package->options as $option) {
-                $moId = is_object($option) ? ($option->id_media_object_option ?? null) : null;
-                if (is_object($option)) {
-                    $option->images = !empty($moId) && isset($imageMap[(int)$moId]) ? $imageMap[(int)$moId] : [];
+                if (empty($option->option_images) || !is_array($option->option_images)) {
+                    continue;
+                }
+                foreach ($option->option_images as $pic) {
+                    $uri = $pic->getUri('teaser');
+                    if (!empty($uri) && substr($uri, 0, 4) !== 'http') {
+                        $uri = WEBSERVER_HTTP . $uri;
+                    }
+                    $imageMap[$option->id][] = [
+                        'uri' => $uri,
+                        'caption' => $pic->caption ?? '',
+                        'alt' => $pic->alt ?? '',
+                        'copyright' => $pic->copyright ?? '',
+                    ];
                 }
             }
         }
+
+        $enriched = json_decode(json_encode($housing_packages));
+        if (is_array($enriched)) {
+            foreach ($enriched as $package) {
+                if (empty($package->options) || !is_array($package->options)) {
+                    continue;
+                }
+                foreach ($package->options as $option) {
+                    $option->images = $imageMap[$option->id] ?? [];
+                    unset($option->option_images);
+                }
+            }
+        }
+        return $enriched;
     }
 
     /**

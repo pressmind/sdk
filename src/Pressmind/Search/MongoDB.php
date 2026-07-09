@@ -456,6 +456,10 @@ class MongoDB extends AbstractSearch
             }
         }
 
+        // Populated when the fulltext search runs through OpenSearch, so the relevance score
+        // (all documents) and match highlights (only the returned result set) can be attached below.
+        $openSearchInstance = null;
+        $openSearchScoreMap = [];
         if($this->_use_opensearch && ($this->hasCondition('AtlasLuceneFulltext') || $this->hasCondition('Fulltext'))) {
             $searchString = '';
             $condition = $this->getConditionByType('AtlasLuceneFulltext');
@@ -490,6 +494,8 @@ class MongoDB extends AbstractSearch
                     } else {
                         $ids = $OpenSearch->getResult($search_type === SearchType::AUTOCOMPLETE);
                     }
+                    $openSearchInstance = $OpenSearch;
+                    $openSearchScoreMap = $OpenSearch->getLastScoreMap();
 
                     // TermResolver additive: merge category-matched IDs with OpenSearch results
                     if ($termResolverMatch !== null) {
@@ -584,6 +590,45 @@ class MongoDB extends AbstractSearch
             foreach ($result->documents as $key => $document) {
                 if(!empty($mapped_result[$document['_id']])) {
                     $document['description'] = !empty($mapped_result[$document['_id']]->description) ? $mapped_result[$document['_id']]->description : '';
+                    $result->documents[$key] = $document;
+                }
+            }
+            // Attach OpenSearch relevance score (cheap, for all documents) and match highlights
+            // (targeted, only for the returned result set) so the search result can render a
+            // snippet of the finding with the search term highlighted (Query.php -> item.meta).
+            if (!empty($result->documents) && !empty($openSearchScoreMap)) {
+                $highlightMap = [];
+                if ($openSearchInstance !== null) {
+                    $displayIds = [];
+                    foreach ($result->documents as $document) {
+                        $mid = $document['id_media_object'] ?? null;
+                        if ($mid !== null) {
+                            $displayIds[] = (string) $mid;
+                        }
+                    }
+                    // Safety cap: never highlight an unbounded result set (protects response time).
+                    if (!empty($displayIds) && count($displayIds) <= 300) {
+                        try {
+                            $highlightMap = $openSearchInstance->fetchHighlightsForIds($displayIds);
+                        } catch (\Throwable $e) {
+                            $highlightMap = [];
+                            $this->_addLog('getResult(): highlight fetch failed: ' . $e->getMessage());
+                        }
+                    }
+                }
+                foreach ($result->documents as $key => $document) {
+                    $mid = (string) ($document['id_media_object'] ?? '');
+                    if ($mid === '') {
+                        continue;
+                    }
+                    if (isset($openSearchScoreMap[$mid])) {
+                        $document['score'] = $openSearchScoreMap[$mid];
+                    }
+                    if (isset($highlightMap[$mid])) {
+                        $document['highlights'] = [
+                            ['score' => $openSearchScoreMap[$mid] ?? null, 'value' => $highlightMap[$mid]],
+                        ];
+                    }
                     $result->documents[$key] = $document;
                 }
             }

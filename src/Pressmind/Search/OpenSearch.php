@@ -52,6 +52,12 @@ class OpenSearch extends AbstractSearch
     private $_limit = 100;
 
     /**
+     * id => _score of the most recent getResult() call. Best-effort (empty on cache hits).
+     * @var array<string, float>
+     */
+    private $_last_score_map = [];
+
+    /**
      * @param string $search_term
      * @param string|null $language
      * @param int $limit
@@ -129,6 +135,13 @@ class OpenSearch extends AbstractSearch
         try {
             $hits = $auto_complete_query ? $this->fetchAutocompleteSuggestions() : $this->fetchAllOpenSearchHits();
             $result = array_map(fn($hit) => $hit['_id'], $hits);
+            // Keep the id => _score map so callers can expose the relevance score.
+            $this->_last_score_map = [];
+            foreach ($hits as $hit) {
+                if (isset($hit['_id'])) {
+                    $this->_last_score_map[(string) $hit['_id']] = (float) ($hit['_score'] ?? 0.0);
+                }
+            }
         } catch (\Exception $exception) {
             echo $exception->getMessage();
             exit;
@@ -144,6 +157,84 @@ class OpenSearch extends AbstractSearch
         }
         $this->_addLog('getResult(): query completed');
         return $result;
+    }
+
+    /**
+     * id => _score map of the most recent getResult() call.
+     *
+     * @return array<string, float>
+     */
+    public function getLastScoreMap(): array
+    {
+        return $this->_last_score_map;
+    }
+
+    /**
+     * Fetches highlight fragments (match snippets) for specific document ids.
+     *
+     * Runs a single targeted query so only the displayed results are highlighted;
+     * highlighting the full (potentially very large) result set would be too expensive.
+     *
+     * @param array<int|string> $ids
+     * @return array<string, string> id => highlight HTML (matched term wrapped in <b>)
+     */
+    public function fetchHighlightsForIds(array $ids, int $fragment_size = 200): array
+    {
+        if (empty($ids) || empty($this->_search_term)) {
+            return [];
+        }
+        $shouldClauses = $this->buildLexicalShouldClauses();
+        if ($shouldClauses === []) {
+            return [];
+        }
+        $highlightFields = [];
+        foreach ($this->_getFields('text') as $field) {
+            $name = explode('^', $field)[0];
+            $highlightFields[$name] = [
+                'fragment_size' => $fragment_size,
+                'number_of_fragments' => 1,
+            ];
+        }
+        if (empty($highlightFields)) {
+            return [];
+        }
+        $values = array_values(array_map('strval', $ids));
+        $body = [
+            '_source' => false,
+            'size' => count($values),
+            'query' => [
+                'bool' => [
+                    'should' => $shouldClauses,
+                    'minimum_should_match' => 1,
+                    'filter' => [
+                        ['ids' => ['values' => $values]],
+                    ],
+                ],
+            ],
+            'highlight' => [
+                'pre_tags' => ['<b>'],
+                'post_tags' => ['</b>'],
+                'fields' => $highlightFields,
+            ],
+        ];
+        $response = $this->_client->search([
+            'index' => $this->_index_name,
+            'body' => $body,
+        ]);
+        $map = [];
+        foreach (($response['hits']['hits'] ?? []) as $hit) {
+            $id = (string) ($hit['_id'] ?? '');
+            if ($id === '' || empty($hit['highlight'])) {
+                continue;
+            }
+            foreach ($hit['highlight'] as $fragments) {
+                if (!empty($fragments[0])) {
+                    $map[$id] = trim($fragments[0]);
+                    break;
+                }
+            }
+        }
+        return $map;
     }
 
     /**

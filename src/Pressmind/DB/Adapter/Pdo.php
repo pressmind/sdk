@@ -44,13 +44,41 @@ class Pdo implements AdapterInterface
 
     /**
      * Pdo constructor.
+     *
+     * The actual PDO connection is established lazily on first use (see connection()),
+     * not here, so a request that never touches the database opens no MySQL connection.
+     *
      * @param \Pressmind\DB\Config\Pdo $config
      */
     public function __construct($config)
     {
         $this->config = $config;
-        $this->databaseConnection = new \PDO('mysql:host=' . $config->host . ';port=' . $config->port . ';dbname=' . $config->dbname . ';charset=utf8', $config->username, $config->password);
         $this->table_prefix = $config->table_prefix;
+    }
+
+    /**
+     * Builds a new PDO connection from the stored config.
+     * @return \PDO
+     */
+    private function createConnection(): \PDO
+    {
+        return new \PDO(
+            'mysql:host=' . $this->config->host . ';port=' . $this->config->port . ';dbname=' . $this->config->dbname . ';charset=utf8',
+            $this->config->username,
+            $this->config->password
+        );
+    }
+
+    /**
+     * Returns the PDO connection, establishing it on first use (lazy connect).
+     * @return \PDO
+     */
+    private function connection(): \PDO
+    {
+        if ($this->databaseConnection === null) {
+            $this->databaseConnection = $this->createConnection();
+        }
+        return $this->databaseConnection;
     }
 
     /**
@@ -71,11 +99,7 @@ class Pdo implements AdapterInterface
             );
         }
         $this->statement = null;
-        $this->databaseConnection = new \PDO(
-            'mysql:host=' . $this->config->host . ';port=' . $this->config->port . ';dbname=' . $this->config->dbname . ';charset=utf8',
-            $this->config->username,
-            $this->config->password
-        );
+        $this->databaseConnection = $this->createConnection();
     }
 
     /**
@@ -100,6 +124,10 @@ class Pdo implements AdapterInterface
      */
     public function ensureConnected(): void
     {
+        if ($this->databaseConnection === null) {
+            // Not connected yet (lazy). Nothing to verify; the next real query connects.
+            return;
+        }
         try {
             $this->databaseConnection->query('SELECT 1');
         } catch (\Throwable $e) {
@@ -117,7 +145,7 @@ class Pdo implements AdapterInterface
      */
     public function prepare($query)
     {
-        $this->statement = $this->databaseConnection->prepare($query);
+        $this->statement = $this->connection()->prepare($query);
         return $this->statement;
     }
 
@@ -172,12 +200,12 @@ class Pdo implements AdapterInterface
         }
         if (!is_null($query)) {
             try {
-                $this->statement = $this->databaseConnection->prepare($query);
+                $this->statement = $this->connection()->prepare($query);
                 $this->statement->execute($parameters);
             } catch (\Throwable $e) {
                 if ($this->isGoneAway($e)) {
                     $this->reconnect();
-                    $this->statement = $this->databaseConnection->prepare($query);
+                    $this->statement = $this->connection()->prepare($query);
                     $this->statement->execute($parameters);
                 } else {
                     throw $e;
@@ -274,7 +302,7 @@ class Pdo implements AdapterInterface
             $debug_query = $insert_statement . " INTO " . $this->table_prefix . $tableName . "(`" . implode('`, `', $columns) . "`) VALUES(" . implode(', ', array_values($values)) . ")";
             #file_put_contents(HelperFunctions::replaceConstantsFromConfig($logfile), $now->format(DATE_ISO8601) . ' - ' . ($debug_end_time - $debug_start_time) . ': ' . $debug_query . "\n", FILE_APPEND);
         }
-        return $this->databaseConnection->lastInsertId();
+        return $this->connection()->lastInsertId();
     }
 
     /**
@@ -431,7 +459,7 @@ class Pdo implements AdapterInterface
     public function beginTransaction()
     {
         if ($this->transactionLevel === 0) {
-            $this->databaseConnection->beginTransaction();
+            $this->connection()->beginTransaction();
         }
         $this->transactionLevel++;
     }
@@ -448,7 +476,7 @@ class Pdo implements AdapterInterface
             return;
         }
         if ($this->transactionLevel === 1) {
-            $this->databaseConnection->commit();
+            $this->connection()->commit();
         }
         $this->transactionLevel--;
     }
@@ -463,14 +491,14 @@ class Pdo implements AdapterInterface
     public function rollback()
     {
         if ($this->transactionLevel <= 0) {
-            if ($this->databaseConnection->inTransaction()) {
+            if ($this->databaseConnection !== null && $this->databaseConnection->inTransaction()) {
                 try {
                     $this->databaseConnection->rollBack();
                 } catch (\Throwable $ignore) {}
             }
             return;
         }
-        if ($this->databaseConnection->inTransaction()) {
+        if ($this->databaseConnection !== null && $this->databaseConnection->inTransaction()) {
             $this->databaseConnection->rollBack();
         }
         $this->transactionLevel = 0;
@@ -482,6 +510,6 @@ class Pdo implements AdapterInterface
      */
     public function inTransaction()
     {
-        return $this->transactionLevel > 0 && $this->databaseConnection->inTransaction();
+        return $this->transactionLevel > 0 && $this->databaseConnection !== null && $this->databaseConnection->inTransaction();
     }
 }

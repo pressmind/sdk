@@ -210,6 +210,15 @@ class Query
                 $item['meta']['findings'] = [];
                 if(!empty($document['highlights']) && is_array($document['highlights'])){
                     foreach($document['highlights'] as $finding){
+                        // Pre-rendered fragment (e.g. OpenSearch highlight HTML): use as-is.
+                        if(isset($finding['value']) && !isset($finding['texts'])){
+                            $item['meta']['findings'][] = ['score' => $finding['score'] ?? null, 'value' => $finding['value']];
+                            continue;
+                        }
+                        // Atlas Lucene searchHighlights format: texts[] with type 'hit'/'text'.
+                        if(empty($finding['texts']) || !is_array($finding['texts'])){
+                            continue;
+                        }
                         $finding_str = '';
                         foreach($finding['texts'] as $str){
                             if($str['type'] == 'hit'){
@@ -218,7 +227,7 @@ class Query
                                 $finding_str .= $str['value'];
                             }
                         }
-                        $item['meta']['findings'][] = ['score' => $finding['score'], 'value' => $finding_str];
+                        $item['meta']['findings'][] = ['score' => $finding['score'] ?? null, 'value' => $finding_str];
                     }
                 }
                 $item['meta']['score'] = !empty($document['score']) ? $document['score'] : null;

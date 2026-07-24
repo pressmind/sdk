@@ -120,8 +120,17 @@ class Redis implements AdapterInterface
         Writer::write('Found ' . $total_keys . ' keys in cache', WRITER::OUTPUT_BOTH, 'redis', WRITER::TYPE_INFO);
         $error = false;
         $i = 0;
+        // keys() glob also matches these internal bookkeeping hashes, not just cache entries
+        $reserved_keys = [
+            'pm:' . $this->_prefix . ':info',
+            'pm:' . $this->_prefix . ':time',
+            'pm:' . $this->_prefix . ':idletime',
+        ];
         foreach ($keys as $key) {
             $i++;
+            if (in_array($key, $reserved_keys, true)) {
+                continue;
+            }
             Writer::write($i . ' of ' . $total_keys . ' Checking key ' . $key, WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_INFO);
             $idle_time = $this->_server->object('idletime', $key);
             $last_idle_time = $this->_server->hGet('pm:' . $this->_prefix.':idletime', $key);
@@ -129,6 +138,11 @@ class Redis implements AdapterInterface
             $now = new DateTime();
             $cache_date = $this->_server->hGet('pm:' . $this->_prefix.':time', $key);
             $date = DateTime::createFromFormat(DateTime::ISO8601, $cache_date);
+            if ($date === false) {
+                // orphaned key with no valid timestamp - skip, it expires via its own TTL
+                Writer::write('Key ' . $key . ' has no valid time entry, skipping', WRITER::OUTPUT_FILE, 'redis', WRITER::TYPE_WARNING);
+                continue;
+            }
             $age = $now->getTimestamp() - $date->getTimestamp();
             if($idle_time - $last_idle_time > 0) {
                 $idle_time = $idle_time + $age;

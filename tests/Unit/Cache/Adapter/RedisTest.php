@@ -49,7 +49,14 @@ class RedisTest extends AbstractTestCase
     {
         if ($this->adapter !== null) {
             try {
-                $this->adapter->remove('redis_unit_test_key');
+                $server = $this->getRedisServer();
+                foreach (['redis_unit_test_key', 'redis_orphan_test_key'] as $key) {
+                    $cacheKey = 'pm:pm_unit_test_:' . $key;
+                    $server->del($cacheKey);
+                    $server->hDel('pm:pm_unit_test_:info', $cacheKey);
+                    $server->hDel('pm:pm_unit_test_:time', $cacheKey);
+                    $server->hDel('pm:pm_unit_test_:idletime', $cacheKey);
+                }
             } catch (\Throwable $e) {
                 // ignore
             }
@@ -89,15 +96,33 @@ class RedisTest extends AbstractTestCase
         $this->assertSame(false, $this->adapter->get('nonexistent_key_xyz'));
     }
 
-    public function testCleanUpReturnsString(): void
+    public function testCleanUpIgnoresBookkeepingHashes(): void
     {
-        try {
-            $result = $this->adapter->cleanUp();
-            $this->assertIsString($result);
-            $this->assertSame('Task completed', $result);
-        } catch (\Throwable $e) {
-            // cleanUp can throw if keys have invalid metadata (e.g. from other prefixes)
-            $this->assertIsString($e->getMessage());
-        }
+        $key = 'redis_unit_test_key';
+        $value = 'unit-test-value-' . uniqid();
+        $this->assertTrue($this->adapter->add($key, $value, null, 60));
+
+        $cacheKey = 'pm:pm_unit_test_:' . $key;
+        $this->getRedisServer()->hSet('pm:pm_unit_test_:idletime', $cacheKey, 0);
+
+        $this->assertSame('Task completed', $this->adapter->cleanUp());
+        $this->assertSame($value, $this->adapter->get($key));
+    }
+
+    public function testCleanUpSkipsKeyWithoutTimestamp(): void
+    {
+        $key = 'redis_orphan_test_key';
+        $server = $this->getRedisServer();
+        $server->set('pm:pm_unit_test_:' . $key, 'orphaned', 60);
+
+        $this->assertSame('Task completed', $this->adapter->cleanUp());
+        $this->assertTrue((bool) $this->adapter->exists($key));
+    }
+
+    private function getRedisServer(): \Redis
+    {
+        $property = new \ReflectionProperty(Redis::class, '_server');
+        $property->setAccessible(true);
+        return $property->getValue($this->adapter);
     }
 }

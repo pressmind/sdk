@@ -160,6 +160,71 @@ class PictureTest extends AbstractTestCase
         $this->assertSame('/images/image_thumbnail.jpg', $picture->getUri('thumbnail'));
     }
 
+    public function testGetUriUsesTemporaryUriWhenRequestedDerivativeIsNotDownloaded(): void
+    {
+        $picture = $this->createPictureWithImageConfig();
+        $picture->id = 1;
+        $picture->file_name = 'image.jpg';
+        $picture->tmp_url = 'https://remote.example/image.jpg?v=original';
+        $picture->download_successful = false;
+        $picture->derivatives = [
+            $this->createPictureDerivative('thumbnail', 'image_thumbnail.jpg', false),
+        ];
+
+        $this->assertSame(
+            'https://remote.example/image.jpg?h=150',
+            $picture->getUri('thumbnail')
+        );
+    }
+
+    public function testGetUriPrefersDownloadedDuplicateDerivative(): void
+    {
+        $picture = $this->createPictureWithImageConfig();
+        $picture->id = 1;
+        $picture->file_name = 'image.jpg';
+        $picture->tmp_url = 'https://remote.example/image.jpg?v=original';
+        $picture->download_successful = false;
+        $picture->derivatives = [
+            $this->createPictureDerivative('thumbnail', 'image_thumbnail_missing.jpg', false),
+            $this->createPictureDerivative('thumbnail', 'image_thumbnail.jpg'),
+        ];
+
+        $this->assertSame('/images/image_thumbnail.jpg', $picture->getUri('thumbnail'));
+    }
+
+    public function testGetUriPrefersNonWebpPrimaryDerivativeWhenDuplicatesAreDownloaded(): void
+    {
+        $picture = $this->createPictureWithImageConfig();
+        $picture->id = 1;
+        $picture->file_name = 'image.jpg';
+        $picture->tmp_url = 'https://remote.example/image.jpg?v=original';
+        $picture->download_successful = false;
+        $picture->derivatives = [
+            $this->createPictureDerivative('thumbnail', 'image_thumbnail.webp'),
+            $this->createPictureDerivative('thumbnail', 'image_thumbnail.jpg'),
+        ];
+
+        $this->assertSame('/images/image_thumbnail.jpg', $picture->getUri('thumbnail'));
+    }
+
+    public function testGetUriDoesNotUseDifferentDerivativeWhileRequestedDerivativeIsPending(): void
+    {
+        $picture = $this->createPictureWithImageConfig();
+        $picture->id = 1;
+        $picture->file_name = 'image.jpg';
+        $picture->tmp_url = 'https://remote.example/image.jpg?v=original';
+        $picture->download_successful = false;
+        $picture->derivatives = [
+            $this->createPictureDerivative('thumbnail', 'image_thumbnail_missing.jpg', false),
+            $this->createPictureDerivative('large', 'image_large.jpg'),
+        ];
+
+        $this->assertSame(
+            'https://remote.example/image.jpg?h=150',
+            $picture->getUri('thumbnail')
+        );
+    }
+
     public function testGetUriUsesExistingSectionDerivativeWhileSectionIsMarkedForReprocessing(): void
     {
         $section = new Section();
@@ -171,6 +236,24 @@ class PictureTest extends AbstractTestCase
         $section->derivatives = [$this->createSectionDerivative('thumbnail', 'section_thumbnail.jpg')];
 
         $this->assertSame('/images/section_thumbnail.jpg', $section->getUri('thumbnail'));
+    }
+
+    public function testGetUriUsesTemporaryUriWhenRequestedSectionDerivativeIsNotDownloaded(): void
+    {
+        $section = new Section();
+        Registry::getInstance()->add('config', $this->createMockConfig($this->getImageConfig()));
+        $section->id = 2;
+        $section->file_name = 'section.jpg';
+        $section->tmp_url = 'https://remote.example/section.jpg?v=original';
+        $section->download_successful = false;
+        $section->derivatives = [
+            $this->createSectionDerivative('thumbnail', 'section_thumbnail.jpg', false),
+        ];
+
+        $this->assertSame(
+            'https://remote.example/section.jpg?h=150',
+            $section->getUri('thumbnail')
+        );
     }
 
     public function testGetUriUsesExistingDocumentDerivativeWhileDocumentIsMarkedForReprocessing(): void
@@ -440,25 +523,25 @@ class PictureTest extends AbstractTestCase
         $this->assertSame('/images/subdir/image_thumbnail.webp', $picture->getUri('thumbnail'));
     }
 
-    private function createPictureDerivative(string $name, string $fileName): Derivative
+    private function createPictureDerivative(string $name, string $fileName, bool $downloadSuccessful = true): Derivative
     {
         $derivative = new Derivative();
         $derivative->id = random_int(1, 999999);
         $derivative->id_image = 1;
         $derivative->name = $name;
         $derivative->file_name = $fileName;
-        $derivative->download_successful = true;
+        $derivative->download_successful = $downloadSuccessful;
         return $derivative;
     }
 
-    private function createSectionDerivative(string $name, string $fileName): Derivative
+    private function createSectionDerivative(string $name, string $fileName, bool $downloadSuccessful = true): Derivative
     {
         $derivative = new Derivative();
         $derivative->id = random_int(1, 999999);
         $derivative->id_image_section = 2;
         $derivative->name = $name;
         $derivative->file_name = $fileName;
-        $derivative->download_successful = true;
+        $derivative->download_successful = $downloadSuccessful;
         return $derivative;
     }
 

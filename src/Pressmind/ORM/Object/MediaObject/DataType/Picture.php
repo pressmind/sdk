@@ -366,7 +366,8 @@ class Picture extends AbstractObject
                 Writer::write('No derivatives in relation (will query database)', WRITER::OUTPUT_BOTH, 'picture_debug', Writer::TYPE_INFO);
             }
         }
-        if($derivative = $this->hasDerivative($derivativeName, $debug)) {
+        $derivative = $this->getRenderableDerivative($derivativeName, $debug);
+        if($derivative !== false) {
             if($debug) {
                 Writer::write('Derivative found: name=' . $derivative->name . ', file_name=' . $derivative->file_name . ', id=' . $derivative->getId(), WRITER::OUTPUT_BOTH, 'picture_debug', Writer::TYPE_INFO);
             }
@@ -379,8 +380,14 @@ class Picture extends AbstractObject
             if($debug) {
                 Writer::write('Derivative NOT found, checking for fallback...', WRITER::OUTPUT_BOTH, 'picture_debug', Writer::TYPE_INFO);
             }
-            if(!is_null($this->derivatives) && is_array($this->derivatives) && count($this->derivatives) > 0) {
-                $fallback_derivative = $this->derivatives[0];
+            if($this->download_successful == false && $this->derivativeDownloadStatusIsTracked()) {
+                if($debug) {
+                    Writer::write('Requested derivative is not downloaded while the image is incomplete, returning getTmpUri()', WRITER::OUTPUT_BOTH, 'picture_debug', Writer::TYPE_INFO);
+                }
+                return $this->getTmpUri($derivativeName, $sectionName);
+            }
+            $fallback_derivative = $this->getRenderableDerivative(null, $debug);
+            if($fallback_derivative !== false) {
                 if($debug) {
                     Writer::write('Using fallback derivative: name=' . $fallback_derivative->name . ', file_name=' . $fallback_derivative->file_name, WRITER::OUTPUT_BOTH, 'picture_debug', Writer::TYPE_INFO);
                 }
@@ -395,6 +402,51 @@ class Picture extends AbstractObject
             }
             return $this->getTmpUri($derivativeName, $sectionName);
         }
+    }
+
+    /**
+     * Resolve a derivative that is safe to render without changing hasDerivative()'s public contract.
+     *
+     * @param string|null $derivativeName
+     * @param boolean $debug
+     * @return bool|AbstractObject
+     */
+    private function getRenderableDerivative($derivativeName = null, $debug = false)
+    {
+        $derivatives = $this->derivatives;
+        if(!is_array($derivatives)) {
+            return false;
+        }
+
+        $candidates = [];
+        foreach($derivatives as $derivative) {
+            if(!is_null($derivativeName) && $derivative->name != $derivativeName) {
+                continue;
+            }
+            if($derivative->hasProperty('download_successful') && $derivative->download_successful != true) {
+                if($debug) {
+                    Writer::write('Ignoring derivative ID ' . $derivative->getId() . ' because download_successful is false', WRITER::OUTPUT_BOTH, 'picture_debug', Writer::TYPE_INFO);
+                }
+                continue;
+            }
+            $candidates[] = $derivative;
+        }
+
+        foreach($candidates as $candidate) {
+            if(strtolower(pathinfo($candidate->file_name, PATHINFO_EXTENSION)) !== 'webp') {
+                return $candidate;
+            }
+        }
+
+        return $candidates[0] ?? false;
+    }
+
+    private function derivativeDownloadStatusIsTracked(): bool
+    {
+        $propertyDefinition = $this->getPropertyDefinition('derivatives');
+        $derivativeClass = $propertyDefinition['relation']['class'] ?? null;
+        return $derivativeClass === Derivative::class
+            || (!is_null($derivativeClass) && is_subclass_of($derivativeClass, Derivative::class));
     }
 
     private function buildDerivativeUri(array $config, string $derivativeName, string $fileName, bool $force_webp, bool $debug): string

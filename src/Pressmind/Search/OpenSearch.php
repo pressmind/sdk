@@ -183,8 +183,11 @@ class OpenSearch extends AbstractSearch
         if (empty($ids) || empty($this->_search_term)) {
             return [];
         }
-        $shouldClauses = $this->buildLexicalShouldClauses();
-        if ($shouldClauses === []) {
+        $values = array_values(array_map('strval', $ids));
+        $query = $this->buildLexicalBoolQuery([
+            ['ids' => ['values' => $values]],
+        ]);
+        if (empty($query['should'])) {
             return [];
         }
         $highlightFields = [];
@@ -195,22 +198,19 @@ class OpenSearch extends AbstractSearch
                 'number_of_fragments' => 1,
             ];
         }
+        if (!empty($this->getFulltextQueryConfig())) {
+            $highlightFields['fulltext'] = [
+                'fragment_size' => $fragment_size,
+                'number_of_fragments' => 1,
+            ];
+        }
         if (empty($highlightFields)) {
             return [];
         }
-        $values = array_values(array_map('strval', $ids));
         $body = [
             '_source' => false,
             'size' => count($values),
-            'query' => [
-                'bool' => [
-                    'should' => $shouldClauses,
-                    'minimum_should_match' => 1,
-                    'filter' => [
-                        ['ids' => ['values' => $values]],
-                    ],
-                ],
-            ],
+            'query' => ['bool' => $query],
             'highlight' => [
                 'pre_tags' => ['<b>'],
                 'post_tags' => ['</b>'],
@@ -262,8 +262,8 @@ class OpenSearch extends AbstractSearch
     {
         $allHits = [];
         $searchAfter = null;
-        $shouldClauses = $this->buildLexicalShouldClauses();
-        if ($shouldClauses === []) {
+        $lexicalQuery = $this->buildLexicalBoolQuery();
+        if (empty($lexicalQuery['should'])) {
             return [];
         }
 
@@ -275,13 +275,7 @@ class OpenSearch extends AbstractSearch
                     ['_score' => 'desc'],
                     ['id' => 'asc']
                 ],
-                'query' => [
-                    'bool' => [
-                        'should' => $shouldClauses,
-                        'minimum_should_match' => 1,
-                        'filter' => []
-                    ]
-                ]
+                'query' => ['bool' => $lexicalQuery]
             ];
             if ($searchAfter) {
                 $body['search_after'] = $searchAfter;
@@ -352,6 +346,62 @@ class OpenSearch extends AbstractSearch
         }
 
         return $shouldClauses;
+    }
+
+    /**
+     * Build the lexical bool query. The optional fulltext field is query-only because it is
+     * always mapped and populated by the OpenSearch indexer independently of configured fields.
+     *
+     * @param array<int, array<string, mixed>> $filter
+     * @return array<string, mixed>
+     */
+    private function buildLexicalBoolQuery(array $filter = []): array
+    {
+        $query = [
+            'should' => $this->buildLexicalShouldClauses(),
+            'minimum_should_match' => 1,
+            'filter' => $filter,
+        ];
+        $fulltextConfig = $this->getFulltextQueryConfig();
+        if (empty($fulltextConfig)) {
+            return $query;
+        }
+
+        // Keep this fallback in filter context: documents that already match a configured
+        // field retain exactly the same score, while fulltext-only matches are appended at 0.
+        $query['should'][] = [
+            'bool' => [
+                'filter' => [[
+                    'match' => [
+                        'fulltext' => [
+                            'query' => $this->_search_term,
+                            'operator' => $fulltextConfig['operator'],
+                        ],
+                    ],
+                ]],
+            ],
+        ];
+
+        return $query;
+    }
+
+    /**
+     * @return array{operator: string}|array{}
+     */
+    private function getFulltextQueryConfig(): array
+    {
+        $config = $this->_config['data']['search_opensearch']['query']['fulltext'] ?? [];
+        if (empty($config['enabled'])) {
+            return [];
+        }
+        $operator = strtolower((string) ($config['operator'] ?? 'and'));
+        if (!in_array($operator, ['and', 'or'], true)) {
+            $operator = 'and';
+        }
+
+        return [
+            'operator' => $operator,
+        ];
     }
 
     /**
@@ -611,6 +661,17 @@ class OpenSearch extends AbstractSearch
      */
     public function generateCacheKey()
     {
-        return 'OPENSEARCH:' . md5(serialize([$this->_search_term, $this->_index_name, $this->_language, $this->_limit]));
+        $cacheParts = [
+            $this->_search_term,
+            $this->_index_name,
+            $this->_language,
+            $this->_limit,
+        ];
+        $fulltextConfig = $this->getFulltextQueryConfig();
+        if (!empty($fulltextConfig)) {
+            $cacheParts[] = ['fulltext' => $fulltextConfig];
+        }
+
+        return 'OPENSEARCH:' . md5(serialize($cacheParts));
     }
 }

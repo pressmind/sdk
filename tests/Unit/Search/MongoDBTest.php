@@ -169,8 +169,9 @@ class MongoDBTest extends AbstractTestCase
     {
         $search = new MongoDB([], ['price_total' => 'asc'], 'de', 0, null);
         $search->addCondition('MediaObject', new MediaObject([1]));
-        $key1 = $search->generateCacheKey('', null, null, [30]);
-        $key2 = $search->generateCacheKey('', null, null, [30]);
+        $previewDate = new \DateTime('2026-01-01T00:00:00+00:00');
+        $key1 = $search->generateCacheKey('', null, $previewDate, [30]);
+        $key2 = $search->generateCacheKey('', null, $previewDate, [30]);
         $this->assertStringStartsWith('MONGODB:', $key1);
         $this->assertSame($key1, $key2);
     }
@@ -180,6 +181,55 @@ class MongoDBTest extends AbstractTestCase
         $search = new MongoDB([], ['price_total' => 'asc'], 'de', 0, null);
         $key = $search->generateCacheKey('suffix', null, null, [30]);
         $this->assertStringContainsString('suffix', $key);
+    }
+
+    public function testDefaultConfigKeepsLegacyCacheKey(): void
+    {
+        $search = new MongoDB([], ['price_total' => 'asc'], 'de', 0, null);
+        $search->addCondition('MediaObject', new MediaObject([1]));
+        $previewDate = new \DateTime('2026-01-01T00:00:00+00:00');
+
+        $expected = 'MONGODB:' . md5(serialize($search->buildQuery(null, $previewDate, [30])));
+
+        $this->assertSame($expected, $search->generateCacheKey('', null, $previewDate, [30]));
+    }
+
+    public function testOpenSearchQueryConfigChangesCacheKey(): void
+    {
+        $previewDate = new \DateTime('2026-01-01T00:00:00+00:00');
+        $withoutQuery = new MongoDB([], ['price_total' => 'asc'], 'de', 0, null);
+        $keyWithoutQuery = $withoutQuery->generateCacheKey('', null, $previewDate, [30]);
+
+        $config = $this->getMongoDbConfig();
+        $config['data']['search_opensearch']['query'] = [
+            'fulltext' => ['enabled' => true, 'operator' => 'and'],
+        ];
+        Registry::getInstance()->add('config', $config);
+        $withQuery = new MongoDB([], ['price_total' => 'asc'], 'de', 0, null);
+
+        $this->assertNotSame(
+            $keyWithoutQuery,
+            $withQuery->generateCacheKey('', null, $previewDate, [30])
+        );
+    }
+
+    public function testDisabledOpenSearchQueryConfigKeepsLegacyCacheKey(): void
+    {
+        $previewDate = new \DateTime('2026-01-01T00:00:00+00:00');
+        $withoutQuery = new MongoDB([], ['price_total' => 'asc'], 'de', 0, null);
+        $keyWithoutQuery = $withoutQuery->generateCacheKey('', null, $previewDate, [30]);
+
+        $config = $this->getMongoDbConfig();
+        $config['data']['search_opensearch']['query'] = [
+            'fulltext' => ['enabled' => false, 'operator' => 'and'],
+        ];
+        Registry::getInstance()->add('config', $config);
+        $disabledQuery = new MongoDB([], ['price_total' => 'asc'], 'de', 0, null);
+
+        $this->assertSame(
+            $keyWithoutQuery,
+            $disabledQuery->generateCacheKey('', null, $previewDate, [30])
+        );
     }
 
     // --- getLog ---
@@ -343,6 +393,38 @@ class MongoDBTest extends AbstractTestCase
             }
         }
         $this->assertTrue($hasIndexOfArray);
+    }
+
+    public function testFulltextQueryConfigDoesNotOverrideScoreSort(): void
+    {
+        $config = $this->getMongoDbConfig();
+        $config['data']['search_opensearch']['query']['fulltext']['enabled'] = true;
+        Registry::getInstance()->add('config', $config);
+        $search = new MongoDB([], ['score' => 'desc'], 'de', 0, null);
+        $search->addCondition('MediaObject', new MediaObject(['30', '10', '20']));
+        $stages = $search->buildQuery();
+
+        $sort = $this->findSortInFacet($stages);
+        $this->assertSame(-1, $sort['$sort']['score']);
+        foreach ($stages as $stage) {
+            $this->assertArrayNotHasKey('sort', $stage['$addFields'] ?? []);
+        }
+    }
+
+    public function testFulltextQueryConfigDoesNotOverridePrioritySort(): void
+    {
+        $config = $this->getMongoDbConfig();
+        $config['data']['search_opensearch']['query']['fulltext']['enabled'] = true;
+        Registry::getInstance()->add('config', $config);
+        $search = new MongoDB([], ['priority' => ''], 'de', 0, null);
+        $search->addCondition('MediaObject', new MediaObject(['30', '10', '20']));
+        $stages = $search->buildQuery();
+
+        $sort = $this->findSortInFacet($stages);
+        $this->assertSame(1, $sort['$sort']['sales_priority']);
+        foreach ($stages as $stage) {
+            $this->assertArrayNotHasKey('sort', $stage['$addFields'] ?? []);
+        }
     }
 
     public function testBuildQuerySortListByCode(): void

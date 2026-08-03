@@ -714,6 +714,25 @@ class MongoDB extends AbstractSearch
     }
 
     /**
+     * Return only the effective fulltext option so disabled defaults keep legacy caches.
+     *
+     * @return array{operator: string}|array{}
+     */
+    private function getActiveOpenSearchFulltextQueryConfig(): array
+    {
+        $queryConfig = Registry::getInstance()->get('config')['data']['search_opensearch']['query'] ?? [];
+        if (empty($queryConfig['fulltext']['enabled'])) {
+            return [];
+        }
+        $operator = strtolower((string) ($queryConfig['fulltext']['operator'] ?? 'and'));
+        if (!in_array($operator, ['and', 'or'], true)) {
+            $operator = 'and';
+        }
+
+        return ['operator' => $operator];
+    }
+
+    /**
      * @return array
      */
     public function prepareQuery(){
@@ -1508,6 +1527,12 @@ class MongoDB extends AbstractSearch
      */
     public function generateCacheKey($add, $output, $preview_date, $allowed_visibilities)
     {
-        return 'MONGODB:' . $add . md5(serialize($this->buildQuery($output, $preview_date, $allowed_visibilities)));
+        $query = $this->buildQuery($output, $preview_date, $allowed_visibilities);
+        $fulltextConfig = $this->getActiveOpenSearchFulltextQueryConfig();
+        if (empty($fulltextConfig)) {
+            return 'MONGODB:' . $add . md5(serialize($query));
+        }
+
+        return 'MONGODB:' . $add . md5(serialize([$query, ['fulltext' => $fulltextConfig]]));
     }
 }

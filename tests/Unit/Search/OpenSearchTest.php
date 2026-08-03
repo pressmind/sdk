@@ -33,7 +33,12 @@ class OpenSearchTest extends AbstractTestCase
     /**
      * Create OpenSearch stub with config/language/limit set; no real client built.
      */
-    private function createOpenSearchStub(string $searchTerm = 'test', ?string $language = 'de', int $limit = 100): OpenSearch
+    private function createOpenSearchStub(
+        string $searchTerm = 'test',
+        ?string $language = 'de',
+        int $limit = 100,
+        ?array $config = null
+    ): OpenSearch
     {
         $stub = $this->getMockBuilder(OpenSearch::class)
             ->disableOriginalConstructor()
@@ -41,11 +46,22 @@ class OpenSearchTest extends AbstractTestCase
             ->getMock();
 
         $ref = new \ReflectionClass(OpenSearch::class);
-        $config = $this->getOpenSearchConfig();
-        $configHash = md5(serialize(array_diff_key(
-            $config['data']['search_opensearch'],
-            array_flip(['uri', 'username', 'password'])
-        )));
+        $config = $config ?? $this->getOpenSearchConfig();
+        $indexConfig = $config['data']['search_opensearch'];
+        unset(
+            $indexConfig['uri'],
+            $indexConfig['username'],
+            $indexConfig['password'],
+            $indexConfig['fuzziness'],
+            $indexConfig['prefix_length']
+        );
+        if (isset($indexConfig['query']) && is_array($indexConfig['query'])) {
+            unset($indexConfig['query']['fulltext']);
+            if (empty($indexConfig['query'])) {
+                unset($indexConfig['query']);
+            }
+        }
+        $configHash = md5(serialize($indexConfig));
         $indexName = 'index_' . $configHash . ($language ? '_' . strtolower($language) : '');
 
         foreach (['_config', '_search_term', '_language', '_index_name', '_limit'] as $propName) {
@@ -148,5 +164,135 @@ class OpenSearchTest extends AbstractTestCase
         $this->assertIsArray($log);
         $this->assertNotEmpty($log);
         $this->assertStringContainsString('__construct', $log[0]);
+    }
+
+    public function testFulltextFallbackIsUnscoredAndKeepsConfiguredFields(): void
+    {
+        $config = $this->getOpenSearchConfig();
+        $config['data']['search_opensearch']['index'] = [
+            'headline' => ['type' => 'text', 'boost' => 5],
+            'code' => ['type' => 'keyword', 'boost' => 10],
+        ];
+        $config['data']['search_opensearch']['query']['fulltext'] = [
+            'enabled' => true,
+            'operator' => 'and',
+        ];
+        $search = $this->createOpenSearchStub('basel', 'de', 100, $config);
+
+        $method = new \ReflectionMethod(OpenSearch::class, 'buildLexicalBoolQuery');
+        $method->setAccessible(true);
+        $query = $method->invoke($search);
+
+        $this->assertArrayNotHasKey('must', $query);
+        $this->assertSame(1, $query['minimum_should_match']);
+        $this->assertSame(['headline^5'], $query['should'][0]['multi_match']['fields']);
+        $this->assertSame(['code^10'], $query['should'][1]['multi_match']['fields']);
+        $this->assertSame(
+            [
+                'bool' => [
+                    'filter' => [[
+                        'match' => [
+                            'fulltext' => [
+                                'query' => 'basel',
+                                'operator' => 'and',
+                            ],
+                        ],
+                    ]],
+                ],
+            ],
+            $query['should'][2]
+        );
+    }
+
+    public function testDefaultLexicalQueryRemainsUnchangedWithoutFallbackConfig(): void
+    {
+        $search = $this->createOpenSearchStub('basel');
+        $method = new \ReflectionMethod(OpenSearch::class, 'buildLexicalBoolQuery');
+        $method->setAccessible(true);
+        $query = $method->invoke($search);
+
+        $disabledConfig = $this->getOpenSearchConfig();
+        $disabledConfig['data']['search_opensearch']['query']['fulltext']['enabled'] = false;
+        $disabledSearch = $this->createOpenSearchStub('basel', 'de', 100, $disabledConfig);
+        $disabledQuery = $method->invoke($disabledSearch);
+
+        $this->assertCount(2, $query['should']);
+        $this->assertSame(1, $query['minimum_should_match']);
+        $this->assertSame([], $query['filter']);
+        $this->assertArrayNotHasKey('must', $query);
+        $this->assertSame($query, $disabledQuery);
+    }
+
+    public function testQueryOnlyConfigDoesNotChangeIndexHash(): void
+    {
+        $withoutQuery = $this->getOpenSearchConfig();
+        $withQuery = $withoutQuery;
+        $withQuery['data']['search_opensearch']['query']['fulltext'] = [
+            'enabled' => true,
+            'operator' => 'and',
+        ];
+
+        $searchWithoutQuery = $this->createOpenSearchStub('basel', 'de', 100, $withoutQuery);
+        $searchWithQuery = $this->createOpenSearchStub('basel', 'de', 100, $withQuery);
+
+        $this->assertSame($searchWithoutQuery->getConfigHash(), $searchWithQuery->getConfigHash());
+    }
+
+    public function testUnrelatedQueryConfigKeepsItsLegacyIndexHashEffect(): void
+    {
+        $withoutQuery = $this->getOpenSearchConfig();
+        $withUnrelatedQuery = $withoutQuery;
+        $withUnrelatedQuery['data']['search_opensearch']['query']['existing_option'] = true;
+
+        $searchWithoutQuery = $this->createOpenSearchStub('basel', 'de', 100, $withoutQuery);
+        $searchWithUnrelatedQuery = $this->createOpenSearchStub('basel', 'de', 100, $withUnrelatedQuery);
+
+        $this->assertNotSame($searchWithoutQuery->getConfigHash(), $searchWithUnrelatedQuery->getConfigHash());
+    }
+
+    public function testQueryOnlyConfigChangesCacheKey(): void
+    {
+        $withoutQuery = $this->getOpenSearchConfig();
+        $withQuery = $withoutQuery;
+        $withQuery['data']['search_opensearch']['query']['fulltext'] = [
+            'enabled' => true,
+            'operator' => 'and',
+        ];
+
+        $searchWithoutQuery = $this->createOpenSearchStub('basel', 'de', 100, $withoutQuery);
+        $searchWithQuery = $this->createOpenSearchStub('basel', 'de', 100, $withQuery);
+
+        $this->assertNotSame($searchWithoutQuery->generateCacheKey(), $searchWithQuery->generateCacheKey());
+    }
+
+    public function testDisabledFulltextConfigKeepsLegacyCacheKey(): void
+    {
+        $withoutQuery = $this->getOpenSearchConfig();
+        $disabledQuery = $withoutQuery;
+        $disabledQuery['data']['search_opensearch']['query'] = [
+            'fulltext' => ['enabled' => false, 'operator' => 'and'],
+        ];
+
+        $searchWithoutQuery = $this->createOpenSearchStub('basel', 'de', 100, $withoutQuery);
+        $searchDisabledQuery = $this->createOpenSearchStub('basel', 'de', 100, $disabledQuery);
+
+        $this->assertSame($searchWithoutQuery->generateCacheKey(), $searchDisabledQuery->generateCacheKey());
+    }
+
+    public function testDefaultConfigKeepsLegacyCacheKey(): void
+    {
+        $search = $this->createOpenSearchStub('basel', 'de', 100);
+        $reflection = new \ReflectionClass(OpenSearch::class);
+        $indexName = $reflection->getProperty('_index_name');
+        $indexName->setAccessible(true);
+
+        $expected = 'OPENSEARCH:' . md5(serialize([
+            'basel',
+            $indexName->getValue($search),
+            'de',
+            100,
+        ]));
+
+        $this->assertSame($expected, $search->generateCacheKey());
     }
 }

@@ -15,13 +15,19 @@ trait IndexNameTrait
     public function getConfigHash()
     {
         $config = $this->getOpenSearchConfig();
-        // Connection credentials and query-time parameters (fuzziness/prefix_length) must
+        // Connection credentials and query-time parameters must
         // not influence the index name, otherwise changing them would point the search to a
         // non-existent index and require a full reindex.
         unset(
             $config['uri'], $config['username'], $config['password'],
             $config['fuzziness'], $config['prefix_length']
         );
+        if (isset($config['query']) && is_array($config['query'])) {
+            unset($config['query']['fulltext']);
+            if (empty($config['query'])) {
+                unset($config['query']);
+            }
+        }
         $hash = md5(serialize($config));
         $prefix = $config['index_prefix'] ?? substr(md5(realpath(__DIR__)), 0, 8);
         return $prefix . '_' . $hash;

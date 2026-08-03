@@ -204,6 +204,71 @@ class OpenSearchTest extends AbstractTestCase
         );
     }
 
+    public function testAtlasPhraseStrategyMirrorsProductionQueryShape(): void
+    {
+        $config = $this->getOpenSearchConfig();
+        $config['data']['search_opensearch']['index'] = [
+            'headline' => ['type' => 'text', 'boost' => 5],
+            'code' => ['type' => 'keyword', 'boost' => 10],
+        ];
+        $config['data']['search_opensearch']['query']['fulltext'] = [
+            'enabled' => true,
+            'operator' => 'and',
+            'strategy' => 'atlas_phrase',
+            'mirror_atlas_default_sort' => true,
+        ];
+        $search = $this->createOpenSearchStub('basel', 'de', 100, $config);
+
+        $method = new \ReflectionMethod(OpenSearch::class, 'buildLexicalBoolQuery');
+        $method->setAccessible(true);
+        $query = $method->invoke($search);
+
+        $this->assertSame([], $query['filter']);
+        $this->assertArrayNotHasKey('minimum_should_match', $query);
+        $this->assertSame(
+            [[
+                'match_phrase' => [
+                    'fulltext' => [
+                        'query' => 'basel',
+                        'slop' => 0,
+                    ],
+                ],
+            ]],
+            $query['must']
+        );
+        $this->assertSame(
+            [
+                [
+                    'match' => [
+                        'fulltext' => [
+                            'query' => 'basel',
+                            'fuzziness' => 1,
+                            'prefix_length' => 3,
+                        ],
+                    ],
+                ],
+                [
+                    'match_phrase' => [
+                        'fulltext' => [
+                            'query' => 'basel',
+                            'slop' => 0,
+                            'boost' => 5,
+                        ],
+                    ],
+                ],
+                [
+                    'wildcard' => [
+                        'code' => [
+                            'value' => 'basel*',
+                            'boost' => 10,
+                        ],
+                    ],
+                ],
+            ],
+            $query['should']
+        );
+    }
+
     public function testDefaultLexicalQueryRemainsUnchangedWithoutFallbackConfig(): void
     {
         $search = $this->createOpenSearchStub('basel');
@@ -263,6 +328,24 @@ class OpenSearchTest extends AbstractTestCase
         $searchWithQuery = $this->createOpenSearchStub('basel', 'de', 100, $withQuery);
 
         $this->assertNotSame($searchWithoutQuery->generateCacheKey(), $searchWithQuery->generateCacheKey());
+    }
+
+    public function testAtlasPhraseStrategyChangesCacheKeyWithoutChangingIndexHash(): void
+    {
+        $fallbackConfig = $this->getOpenSearchConfig();
+        $fallbackConfig['data']['search_opensearch']['query']['fulltext'] = [
+            'enabled' => true,
+            'operator' => 'and',
+        ];
+        $atlasConfig = $fallbackConfig;
+        $atlasConfig['data']['search_opensearch']['query']['fulltext']['strategy'] = 'atlas_phrase';
+        $atlasConfig['data']['search_opensearch']['query']['fulltext']['mirror_atlas_default_sort'] = true;
+
+        $fallbackSearch = $this->createOpenSearchStub('basel', 'de', 100, $fallbackConfig);
+        $atlasSearch = $this->createOpenSearchStub('basel', 'de', 100, $atlasConfig);
+
+        $this->assertSame($fallbackSearch->getConfigHash(), $atlasSearch->getConfigHash());
+        $this->assertNotSame($fallbackSearch->generateCacheKey(), $atlasSearch->generateCacheKey());
     }
 
     public function testDisabledFulltextConfigKeepsLegacyCacheKey(): void

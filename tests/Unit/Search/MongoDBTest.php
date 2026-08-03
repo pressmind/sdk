@@ -427,6 +427,163 @@ class MongoDBTest extends AbstractTestCase
         }
     }
 
+    public function testAtlasPhraseParityCanMirrorAtlasDefaultScoreSort(): void
+    {
+        $config = $this->getMongoDbConfig();
+        $config['data']['search_opensearch']['query']['fulltext'] = [
+            'enabled' => true,
+            'operator' => 'and',
+            'strategy' => 'atlas_phrase',
+            'mirror_atlas_default_sort' => true,
+        ];
+        Registry::getInstance()->add('config', $config);
+        $search = new MongoDB([], ['score' => 'desc'], 'de', 0, null);
+        $search->addCondition('MediaObject', new MediaObject([30, 10, 20]));
+
+        $method = new \ReflectionMethod(MongoDB::class, 'applyAtlasDefaultSort');
+        $method->setAccessible(true);
+        $method->invoke($search, true);
+        $stages = $search->buildQuery();
+
+        $sort = $this->findSortInFacet($stages);
+        $this->assertSame(['_id' => 1], $sort['$sort']);
+        foreach ($stages as $stage) {
+            if (isset($stage['$addFields']['sort']['$indexOfArray'])) {
+                $this->fail('Atlas parity must not depend on OpenSearch relevance order.');
+            }
+        }
+    }
+
+    public function testAtlasPhraseParityCanMirrorAtlasDefaultPrioritySort(): void
+    {
+        $config = $this->getMongoDbConfig();
+        $config['data']['search_opensearch']['query']['fulltext'] = [
+            'enabled' => true,
+            'operator' => 'and',
+            'strategy' => 'atlas_phrase',
+            'mirror_atlas_default_sort' => true,
+        ];
+        Registry::getInstance()->add('config', $config);
+        $search = new MongoDB([], ['priority' => ''], 'de', 0, null);
+        $search->addCondition('MediaObject', new MediaObject(['30', '10', '20']));
+
+        $method = new \ReflectionMethod(MongoDB::class, 'applyAtlasDefaultSort');
+        $method->setAccessible(true);
+        $method->invoke($search, true);
+        $stages = $search->buildQuery();
+
+        $sort = $this->findSortInFacet($stages);
+        $this->assertSame(['_id' => 1], $sort['$sort']);
+    }
+
+    public function testDefaultFulltextStrategyDoesNotMirrorAtlasDefaultSort(): void
+    {
+        $config = $this->getMongoDbConfig();
+        $config['data']['search_opensearch']['query']['fulltext'] = [
+            'enabled' => true,
+            'operator' => 'and',
+        ];
+        Registry::getInstance()->add('config', $config);
+        $search = new MongoDB([], ['priority' => ''], 'de', 0, null);
+        $search->addCondition('MediaObject', new MediaObject(['30', '10', '20']));
+
+        $method = new \ReflectionMethod(MongoDB::class, 'applyAtlasDefaultSort');
+        $method->setAccessible(true);
+        $method->invoke($search, true);
+        $stages = $search->buildQuery();
+
+        $sort = $this->findSortInFacet($stages);
+        $this->assertSame(1, $sort['$sort']['sales_priority']);
+    }
+
+    public function testAtlasPhraseDoesNotMirrorDefaultSortWithoutExplicitOption(): void
+    {
+        $config = $this->getMongoDbConfig();
+        $config['data']['search_opensearch']['query']['fulltext'] = [
+            'enabled' => true,
+            'operator' => 'and',
+            'strategy' => 'atlas_phrase',
+        ];
+        Registry::getInstance()->add('config', $config);
+        $search = new MongoDB([], ['priority' => ''], 'de', 0, null);
+
+        $method = new \ReflectionMethod(MongoDB::class, 'applyAtlasDefaultSort');
+        $method->setAccessible(true);
+        $method->invoke($search, true);
+        $stages = $search->buildQuery();
+
+        $sort = $this->findSortInFacet($stages);
+        $this->assertSame(1, $sort['$sort']['sales_priority']);
+    }
+
+    public function testAtlasDefaultSortMirrorLeavesExplicitPriceSortUnchanged(): void
+    {
+        $config = $this->getMongoDbConfig();
+        $config['data']['search_opensearch']['query']['fulltext'] = [
+            'enabled' => true,
+            'operator' => 'and',
+            'strategy' => 'atlas_phrase',
+            'mirror_atlas_default_sort' => true,
+        ];
+        Registry::getInstance()->add('config', $config);
+        $search = new MongoDB([], ['price_total' => 'asc'], 'de', 0, null);
+
+        $method = new \ReflectionMethod(MongoDB::class, 'applyAtlasDefaultSort');
+        $method->setAccessible(true);
+        $method->invoke($search, true);
+        $stages = $search->buildQuery();
+
+        $sort = $this->findSortInFacet($stages);
+        $this->assertSame(1, $sort['$sort']['prices.price_total']);
+        $this->assertSame(1, $sort['$sort']['sales_priority']);
+    }
+
+    public function testAtlasDefaultSortMirrorDoesNotApplyOutsideLexicalPath(): void
+    {
+        $config = $this->getMongoDbConfig();
+        $config['data']['search_opensearch']['query']['fulltext'] = [
+            'enabled' => true,
+            'operator' => 'and',
+            'strategy' => 'atlas_phrase',
+            'mirror_atlas_default_sort' => true,
+        ];
+        Registry::getInstance()->add('config', $config);
+        $search = new MongoDB([], ['score' => 'desc'], 'de', 0, null);
+        $search->addCondition('MediaObject', new MediaObject([30, 10, 20]));
+
+        $method = new \ReflectionMethod(MongoDB::class, 'applyAtlasDefaultSort');
+        $method->setAccessible(true);
+        $method->invoke($search, false);
+        $stages = $search->buildQuery();
+
+        $sort = $this->findSortInFacet($stages);
+        $this->assertSame(-1, $sort['$sort']['score']);
+        $this->assertSame(1, $sort['$sort']['sales_priority']);
+    }
+
+    public function testAtlasDefaultSortMirrorIgnoresObjectTypePriorityLostByAtlasProjection(): void
+    {
+        $config = $this->getMongoDbConfig();
+        $config['data']['search_mongodb']['search']['order_by_primary_object_type_priority'] = true;
+        $config['data']['search_opensearch']['query']['fulltext'] = [
+            'enabled' => true,
+            'operator' => 'and',
+            'strategy' => 'atlas_phrase',
+            'mirror_atlas_default_sort' => true,
+        ];
+        Registry::getInstance()->add('config', $config);
+        $search = new MongoDB([], ['score' => 'desc'], 'de', 0, null);
+        $search->addCondition('MediaObject', new MediaObject([30, 10, 20]));
+
+        $method = new \ReflectionMethod(MongoDB::class, 'applyAtlasDefaultSort');
+        $method->setAccessible(true);
+        $method->invoke($search, true);
+        $stages = $search->buildQuery();
+
+        $sort = $this->findSortInFacet($stages);
+        $this->assertSame(['_id' => 1], $sort['$sort']);
+    }
+
     public function testBuildQuerySortListByCode(): void
     {
         $search = new MongoDB([], ['list' => ''], 'de', 0, null);

@@ -479,6 +479,8 @@ class MongoDB extends AbstractSearch
                 try{
                     $OpenSearch = new OpenSearch($searchString, $this->_language, 10000);
                     $vecCfg = $config['data']['search_opensearch']['vector'] ?? [];
+                    $usesAtlasLexicalQuery = $search_type !== SearchType::AUTOCOMPLETE
+                        && (empty($vecCfg['enabled']) || empty($vecCfg['enabled_in_search']));
                     if ($search_type !== SearchType::AUTOCOMPLETE
                         && ! empty($vecCfg['enabled'])
                         && ! empty($vecCfg['enabled_in_search'])
@@ -538,6 +540,7 @@ class MongoDB extends AbstractSearch
                             $this->addCondition('MediaObject', $ConditionMediaObject);
                         }
                     }
+                    $this->applyAtlasDefaultSort($usesAtlasLexicalQuery);
                 }catch (\Exception $e) {
                     $this->_addLog('getResult(): OpenSearch error: ' . $e->getMessage());
                     if(!empty($_GET['debug']) || (defined('PM_SDK_DEBUG') && PM_SDK_DEBUG)) {
@@ -716,7 +719,7 @@ class MongoDB extends AbstractSearch
     /**
      * Return only the effective fulltext option so disabled defaults keep legacy caches.
      *
-     * @return array{operator: string}|array{}
+     * @return array{operator: string, strategy?: string, mirror_atlas_default_sort?: bool}|array{}
      */
     private function getActiveOpenSearchFulltextQueryConfig(): array
     {
@@ -729,7 +732,45 @@ class MongoDB extends AbstractSearch
             $operator = 'and';
         }
 
-        return ['operator' => $operator];
+        $result = ['operator' => $operator];
+        $strategy = strtolower(trim((string) ($queryConfig['fulltext']['strategy'] ?? '')));
+        if ($strategy === 'atlas_phrase') {
+            $result['strategy'] = $strategy;
+            if (!empty($queryConfig['fulltext']['mirror_atlas_default_sort'])) {
+                $result['mirror_atlas_default_sort'] = true;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * The legacy Atlas projection omits score and sales_priority before the
+     * final default sort, so Production keeps Atlas' internal input order.
+     * OpenSearch cannot reproduce that stale index order; sorting by MongoDB
+     * _id is the deterministic opt-in approximation closest to it.
+     */
+    private function applyAtlasDefaultSort(bool $usesAtlasLexicalQuery): void
+    {
+        if (!$usesAtlasLexicalQuery
+            || !$this->shouldMirrorAtlasDefaultSort()
+            || !$this->hasCondition('MediaObject')
+        ) {
+            return;
+        }
+
+        $sortField = array_key_first($this->_sort);
+        if (in_array($sortField, ['score', 'priority'], true)) {
+            $this->_sort = ['atlas_legacy' => ''];
+        }
+    }
+
+    private function shouldMirrorAtlasDefaultSort(): bool
+    {
+        $fulltextConfig = $this->getActiveOpenSearchFulltextQueryConfig();
+
+        return ($fulltextConfig['strategy'] ?? null) === 'atlas_phrase'
+            && !empty($fulltextConfig['mirror_atlas_default_sort']);
     }
 
     /**
@@ -1436,6 +1477,11 @@ class MongoDB extends AbstractSearch
                         '_id' => 1
                 ]
             ];
+        }elseif(array_key_first($this->_sort) == 'atlas_legacy'){
+            $sort = ['$sort' => [
+                        '_id' => 1
+                ]
+            ];
         }elseif(array_key_first($this->_sort) == 'priority'){
             $sort = ['$sort' => [
                         'sales_priority' => 1,
@@ -1472,7 +1518,9 @@ class MongoDB extends AbstractSearch
         if($allow_invalid_offers && isset($sort['$sort'])){
             $sort['$sort'] = array_merge(['has_price' => -1], $sort['$sort']);
         }
-        if(!empty($config['data']['search_mongodb']['search']['order_by_primary_object_type_priority'])){
+        if(!empty($config['data']['search_mongodb']['search']['order_by_primary_object_type_priority'])
+            && array_key_first($this->_sort) !== 'atlas_legacy'
+        ) {
             if(isset($sort['$sort']) && is_array($sort['$sort'])){
                 $sort['$sort'] = array_merge(['object_type_order' => 1], $sort['$sort']);
             }else{

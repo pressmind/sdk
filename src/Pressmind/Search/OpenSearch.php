@@ -357,12 +357,16 @@ class OpenSearch extends AbstractSearch
      */
     private function buildLexicalBoolQuery(array $filter = []): array
     {
+        $fulltextConfig = $this->getFulltextQueryConfig();
+        if (($fulltextConfig['strategy'] ?? null) === 'atlas_phrase') {
+            return $this->buildAtlasPhraseBoolQuery($filter);
+        }
+
         $query = [
             'should' => $this->buildLexicalShouldClauses(),
             'minimum_should_match' => 1,
             'filter' => $filter,
         ];
-        $fulltextConfig = $this->getFulltextQueryConfig();
         if (empty($fulltextConfig)) {
             return $query;
         }
@@ -386,7 +390,58 @@ class OpenSearch extends AbstractSearch
     }
 
     /**
-     * @return array{operator: string}|array{}
+     * Mirror the MongoDB Atlas fulltext definition used by legacy Travelshops:
+     * an exact phrase in fulltext is mandatory; fuzzy text, phrase and code
+     * prefix clauses only influence relevance.
+     *
+     * @param array<int, array<string, mixed>> $filter
+     * @return array<string, mixed>
+     */
+    private function buildAtlasPhraseBoolQuery(array $filter = []): array
+    {
+        return [
+            'must' => [[
+                'match_phrase' => [
+                    'fulltext' => [
+                        'query' => $this->_search_term,
+                        'slop' => 0,
+                    ],
+                ],
+            ]],
+            'should' => [
+                [
+                    'match' => [
+                        'fulltext' => [
+                            'query' => $this->_search_term,
+                            'fuzziness' => 1,
+                            'prefix_length' => 3,
+                        ],
+                    ],
+                ],
+                [
+                    'match_phrase' => [
+                        'fulltext' => [
+                            'query' => $this->_search_term,
+                            'slop' => 0,
+                            'boost' => 5,
+                        ],
+                    ],
+                ],
+                [
+                    'wildcard' => [
+                        'code' => [
+                            'value' => $this->_search_term . '*',
+                            'boost' => 10,
+                        ],
+                    ],
+                ],
+            ],
+            'filter' => $filter,
+        ];
+    }
+
+    /**
+     * @return array{operator: string, strategy?: string}|array{}
      */
     private function getFulltextQueryConfig(): array
     {
@@ -399,9 +454,15 @@ class OpenSearch extends AbstractSearch
             $operator = 'and';
         }
 
-        return [
+        $result = [
             'operator' => $operator,
         ];
+        $strategy = strtolower(trim((string) ($config['strategy'] ?? '')));
+        if ($strategy === 'atlas_phrase') {
+            $result['strategy'] = $strategy;
+        }
+
+        return $result;
     }
 
     /**

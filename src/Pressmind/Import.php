@@ -407,6 +407,22 @@ class Import
     }
 
     /**
+     * Rebuild all search indexes from the committed database state.
+     *
+     * The MediaObject instance used during import may still contain relations that were
+     * loaded before MediaObjectData was imported. A fresh, cache-free instance prevents
+     * incomplete fulltext rows from being generated from that stale relation state.
+     *
+     * @param int|string $id_media_object
+     */
+    private function _indexMediaObjectFromDatabase($id_media_object)
+    {
+        $media_object = new MediaObject($id_media_object, false, true);
+        $media_object->createSearchIndex();
+        $this->_indexMediaObject($id_media_object, $media_object->id_object_type);
+    }
+
+    /**
      * @param $id_pool
      * @param $allowed_object_types
      * @param $allowed_visibilities
@@ -1156,9 +1172,7 @@ class Import
                 $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $id_media_object . '):  Cache has been updated', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
             }
 
-            // Lazy-loading via __get is sufficient for createSearchIndex(); no need to load all relations.
-            $media_object->createSearchIndex();
-            $this->_indexMediaObject($id_media_object, $media_object->id_object_type);
+            $this->_indexMediaObjectFromDatabase($id_media_object);
 
             unset($response);
             unset($media_object);

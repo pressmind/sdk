@@ -4,6 +4,7 @@ namespace Pressmind\Tests\Unit\ORM\Object\Itinerary;
 
 use Pressmind\ORM\Object\Itinerary\Step;
 use Pressmind\ORM\Object\Itinerary\Step\Board;
+use Pressmind\ORM\Object\Itinerary\Step\DocumentMediaObject;
 use Pressmind\ORM\Object\Itinerary\Step\Section;
 use Pressmind\Registry;
 use Pressmind\Tests\Unit\AbstractTestCase;
@@ -75,6 +76,41 @@ class StepTest extends AbstractTestCase
         $this->assertTrue($section->hasProperty('tags'));
         $this->assertSame('string', $section->getPropertyDefinition('tags')['type']);
         $this->assertContains('tags', $section->getPropertyNames());
+    }
+
+    public function testDocumentMediaObjectDefinesAndRoundTripsAiDisclosureFields(): void
+    {
+        $document = new DocumentMediaObject();
+
+        $this->assertTrue($document->hasProperty('is_ai'));
+        $this->assertSame('boolean', $document->getPropertyDefinition('is_ai')['type']);
+        $this->assertFalse($document->getPropertyDefinition('is_ai')['required']);
+        $this->assertTrue($document->hasProperty('ai_disclosure'));
+        $this->assertSame('string', $document->getPropertyDefinition('ai_disclosure')['type']);
+        $this->assertFalse($document->getPropertyDefinition('ai_disclosure')['required']);
+
+        $document->fromStdClass((object) [
+            'is_ai' => true,
+            'ai_disclosure' => 'modified',
+        ]);
+        $serialized = $document->toStdClass(false);
+
+        $this->assertTrue($serialized->is_ai);
+        $this->assertSame('modified', $serialized->ai_disclosure);
+
+        $hiddenDocument = new DocumentMediaObject();
+        $hiddenDocument->fromStdClass((object) [
+            'is_ai' => false,
+            'ai_disclosure' => 'hidden',
+        ]);
+        $hiddenSerialized = $hiddenDocument->toStdClass(false);
+        $this->assertFalse($hiddenSerialized->is_ai);
+        $this->assertSame('hidden', $hiddenSerialized->ai_disclosure);
+
+        $legacyDocument = new DocumentMediaObject();
+        $legacySerialized = $legacyDocument->toStdClass(false);
+        $this->assertNull($legacySerialized->is_ai);
+        $this->assertNull($legacySerialized->ai_disclosure);
     }
 
     private function createSection(string $language, string $content): stdClass

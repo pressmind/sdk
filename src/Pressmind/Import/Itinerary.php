@@ -165,6 +165,8 @@ class Itinerary extends AbstractImport implements ImportInterface
                 $mapped_object->alt = $document_media_object->alt;
                 $mapped_object->uri = $document_media_object->uri;
                 $mapped_object->title = $document_media_object->title;
+                $mapped_object->is_ai = $document_media_object->is_ai ?? null;
+                $mapped_object->ai_disclosure = $document_media_object->ai_disclosure ?? null;
                 $mapped_object->download_successful = false;
                 $mapped_object->tmp_url = $document_media_object->links->web->url;
                 $mapped_object->mime_type = $document_media_object->links->web->mime_type;

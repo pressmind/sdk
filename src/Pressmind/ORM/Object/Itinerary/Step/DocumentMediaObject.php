@@ -31,6 +31,8 @@ use Pressmind\Storage\File;
  * @property string $alt
  * @property string $uri
  * @property string $title
+ * @property boolean|null $is_ai
+ * @property string|null $ai_disclosure
  * @property string $file_name
  * @property integer $sort
  * @property string $tmp_url
@@ -142,6 +144,27 @@ class DocumentMediaObject extends Picture
                 'required' => false,
                 'validators' => null,
                 'filters' => null
+            ],
+            'is_ai' => [
+                'title' => 'is_ai',
+                'name' => 'is_ai',
+                'type' => 'boolean',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+            ],
+            'ai_disclosure' => [
+                'title' => 'ai_disclosure',
+                'name' => 'ai_disclosure',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ],
+                ],
             ],
             'file_name' => [
                 'title' => 'file_name',

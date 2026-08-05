@@ -188,6 +188,23 @@ class InstallSchemaTest extends AbstractImportTestCase
         $this->assertContains('description', $names);
     }
 
+    public function testItineraryDocumentMediaObjectTableHasAiDisclosureColumns(): void
+    {
+        self::assertNotNull($this->db);
+        $cols = $this->db->fetchAll('DESCRIBE pmt2core_itinerary_step_document_media_objects');
+        $columns = [];
+        foreach ($cols as $column) {
+            $columns[$column->Field] = $column;
+        }
+
+        $this->assertArrayHasKey('is_ai', $columns);
+        $this->assertSame('YES', $columns['is_ai']->Null);
+        $this->assertMatchesRegularExpression('/tinyint\(1\)/i', $columns['is_ai']->Type);
+        $this->assertArrayHasKey('ai_disclosure', $columns);
+        $this->assertSame('YES', $columns['ai_disclosure']->Null);
+        $this->assertMatchesRegularExpression('/varchar\(32\)/i', $columns['ai_disclosure']->Type);
+    }
+
     public function testImportQueueTableExists(): void
     {
         self::assertNotNull($this->db);

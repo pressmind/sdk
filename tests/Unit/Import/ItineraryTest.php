@@ -136,7 +136,50 @@ class ItineraryTest extends AbstractTestCase
                                 'description' => 'Hafen Bezeichnung',
                             ],
                         ],
-                        'document_media_objects' => [],
+                        'document_media_objects' => [
+                            (object) [
+                                'id_media_object' => 3916225,
+                                'copyright' => 'Copyright',
+                                'caption' => 'Etappenbild',
+                                'alt' => 'Etappenbild mit KI-Kennzeichnung',
+                                'uri' => 'https://pm.remote/image/3916225.jpg',
+                                'title' => 'Etappenbild',
+                                'links' => (object) [
+                                    'web' => (object) [
+                                        'url' => 'https://pm.remote/image/3916225.jpg?v=web',
+                                        'mime_type' => 'image/jpeg',
+                                    ],
+                                ],
+                                'code' => 'ITINERARY-IMAGE',
+                                'name' => 'Etappenbild',
+                                'tags' => 'Prag',
+                                'width' => 1600,
+                                'height' => 900,
+                                'filesize' => 123456,
+                                'is_ai' => true,
+                                'ai_disclosure' => 'modified',
+                            ],
+                            (object) [
+                                'id_media_object' => 3916226,
+                                'copyright' => null,
+                                'caption' => null,
+                                'alt' => 'Legacy-Etappenbild',
+                                'uri' => 'https://pm.remote/image/3916226.jpg',
+                                'title' => 'Legacy-Etappenbild',
+                                'links' => (object) [
+                                    'web' => (object) [
+                                        'url' => 'https://pm.remote/image/3916226.jpg?v=web',
+                                        'mime_type' => 'image/jpeg',
+                                    ],
+                                ],
+                                'code' => 'LEGACY-ITINERARY-IMAGE',
+                                'name' => 'Legacy-Etappenbild',
+                                'tags' => '',
+                                'width' => 1600,
+                                'height' => 900,
+                                'filesize' => 123456,
+                            ],
+                        ],
                         'text_media_objects' => [],
                     ],
                 ],
@@ -150,6 +193,90 @@ class ItineraryTest extends AbstractTestCase
         $this->assertSame('456', $inserted['pmt2core_itinerary_step_boards'][0]['distance']);
         $this->assertSame('Hafen,Anreise', $inserted['pmt2core_itinerary_step_sections'][0]['tags']);
         $this->assertSame('Hafen Bezeichnung', $inserted['pmt2core_itinerary_step_ports'][0]['description']);
+        $this->assertSame(1, $inserted['pmt2core_itinerary_step_document_media_objects'][0]['is_ai']);
+        $this->assertSame('modified', $inserted['pmt2core_itinerary_step_document_media_objects'][0]['ai_disclosure']);
+        $this->assertSame(0, $inserted['pmt2core_itinerary_step_document_media_objects'][1]['is_ai']);
+        $this->assertNull($inserted['pmt2core_itinerary_step_document_media_objects'][1]['ai_disclosure']);
+    }
+
+    public function testVariantImportPersistsAiDisclosureForItineraryImages(): void
+    {
+        $inserted = [];
+        $db = $this->createMock(AdapterInterface::class);
+        $db->method('fetchAll')->willReturn([]);
+        $db->method('fetchRow')->willReturn(null);
+        $db->method('fetchOne')->willReturn(null);
+        $db->method('getAffectedRows')->willReturn(0);
+        $db->method('getTablePrefix')->willReturn('');
+        $db->method('inTransaction')->willReturn(false);
+        $db->method('execute')->willReturn(null);
+        $db->method('insert')->willReturnCallback(function (string $tableName, array $data) use (&$inserted) {
+            $inserted[$tableName][] = $data;
+            return $data['id'] ?? 1;
+        });
+        $db->method('delete')->willReturn(null);
+        $db->method('update')->willReturn(null);
+        $db->method('replace')->willReturn(null);
+        $db->method('truncate')->willReturn(null);
+        $db->method('batchInsert')->willReturn(1);
+        $db->method('beginTransaction')->willReturn(null);
+        $db->method('commit')->willReturn(null);
+        $db->method('rollback')->willReturn(null);
+        Registry::getInstance()->add('db', $db);
+
+        $client = $this->createMock(Client::class);
+        $client->method('sendRequest')->willReturn((object) [
+            'error' => false,
+            'result' => (object) [
+                'type' => 'itinerary_to_touristic',
+                'variants' => [
+                    (object) [
+                        'id' => 701,
+                        'id_booking_packages' => 801,
+                        'steps' => [
+                            (object) [
+                                'id' => 901,
+                                'type' => 'course_port',
+                                'sections' => [],
+                                'document_media_objects' => [
+                                    (object) [
+                                        'id' => 1001,
+                                        'id_media_object' => 3916225,
+                                        'copyright' => 'Copyright',
+                                        'caption' => 'Etappenbild',
+                                        'alt' => 'KI-generiertes Etappenbild',
+                                        'uri' => 'https://pm.remote/image/3916225.jpg',
+                                        'title' => 'Etappenbild',
+                                        'file_name' => 'itinerary_901_3916225.jpg',
+                                        'urls' => (object) [
+                                            'web' => 'https://pm.remote/image/3916225.jpg?v=web',
+                                        ],
+                                        'mime_type' => 'image/jpeg',
+                                        'code' => 'ITINERARY-IMAGE',
+                                        'name' => 'Etappenbild',
+                                        'tags' => 'Prag',
+                                        'width' => 1600,
+                                        'height' => 900,
+                                        'filesize' => 123456,
+                                        'is_ai' => true,
+                                        'ai_disclosure' => 'generated',
+                                    ],
+                                ],
+                                'text_media_objects' => [],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+        Registry::getInstance()->add('rest_client', $client);
+
+        $import = new Itinerary(3916225);
+        $import->import();
+
+        $this->assertCount(0, $import->getErrors());
+        $this->assertSame(1, $inserted['pmt2core_itinerary_step_document_media_objects'][0]['is_ai']);
+        $this->assertSame('generated', $inserted['pmt2core_itinerary_step_document_media_objects'][0]['ai_disclosure']);
     }
 
     public function testDatelessImportDeletesStaleItineraryImageFilesBeforeReplacingSteps(): void

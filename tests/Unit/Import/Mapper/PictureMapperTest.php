@@ -90,6 +90,8 @@ class PictureMapperTest extends AbstractTestCase
                 'image' => (object) [
                     'filename' => 'img.jpg',
                     'visibility' => 0,
+                    'is_ai' => true,
+                    'ai_disclosure' => 'modified',
                     'width' => 800,
                     'height' => 600,
                     'filesize' => 1024,
@@ -110,7 +112,44 @@ class PictureMapperTest extends AbstractTestCase
         $this->assertSame('de', $mapped->language);
         $this->assertSame('Caption', $mapped->caption);
         $this->assertSame('Title', $mapped->title);
+        $this->assertTrue($mapped->is_ai);
+        $this->assertSame('modified', $mapped->ai_disclosure);
         $this->assertSame('image/jpeg', $mapped->mime_type);
+    }
+
+    public function testMapDefaultsMissingAiDisclosureFieldsToNull(): void
+    {
+        $mapper = new Picture();
+        $input = [
+            (object) [
+                'id_media_object' => 101,
+                'caption' => '',
+                'title' => '',
+                'alt' => '',
+                'uri' => null,
+                'copyright' => '',
+                'image' => (object) [
+                    'filename' => 'img.jpg',
+                    'visibility' => 0,
+                    'width' => 800,
+                    'height' => 600,
+                    'filesize' => 1024,
+                    'links' => (object) [
+                        'web' => (object) [
+                            'url' => 'https://example.com/img.jpg',
+                            'mime_type' => 'image/jpeg',
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $mapped = $mapper->map(42, 'de', 'gallery', $input)[0];
+
+        $this->assertObjectHasProperty('is_ai', $mapped);
+        $this->assertNull($mapped->is_ai);
+        $this->assertObjectHasProperty('ai_disclosure', $mapped);
+        $this->assertNull($mapped->ai_disclosure);
     }
 
     public function testMapAddsPictureSectionsWhenPresent(): void

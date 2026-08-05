@@ -40,6 +40,8 @@ class Picture implements MapperInterface
                 $mapped_object->alt = $object->alt;
                 $mapped_object->uri = !empty($object->uri) ? $object->uri : null;
                 $mapped_object->copyright = $object->copyright;
+                $mapped_object->is_ai = $object->image->is_ai ?? null;
+                $mapped_object->ai_disclosure = $object->image->ai_disclosure ?? null;
                 $mapped_object->disabled = isset($object->disabled) ? $object->disabled : false;
                 $mapped_object->tmp_url = $object->image->links->web->url;
                 $mapped_object->mime_type = $object->image->links->web->mime_type;

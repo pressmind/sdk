@@ -32,6 +32,8 @@ use Pressmind\Storage\File;
  * @property string $title
  * @property string $alt
  * @property string $copyright
+ * @property boolean|null $is_ai
+ * @property string|null $ai_disclosure
  * @property boolean $disabled
  * @property integer $sort
  * @property string $tmp_url
@@ -222,6 +224,27 @@ class Picture extends AbstractObject
                 'required' => false,
                 'filters' => null,
                 'validators' => null,
+            ],
+            'is_ai' => [
+                'title' => 'is_ai',
+                'name' => 'is_ai',
+                'type' => 'boolean',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+            ],
+            'ai_disclosure' => [
+                'title' => 'ai_disclosure',
+                'name' => 'ai_disclosure',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 32,
+                    ],
+                ],
             ],
             'sort' => [
                 'title' => 'sort',

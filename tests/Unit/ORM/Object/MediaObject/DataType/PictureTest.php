@@ -40,6 +40,17 @@ class PictureTest extends AbstractTestCase
         return new Picture();
     }
 
+    public function testAiDisclosurePropertiesCanBeAssigned(): void
+    {
+        $picture = new Picture();
+
+        $picture->is_ai = true;
+        $picture->ai_disclosure = 'generated';
+
+        $this->assertTrue($picture->is_ai);
+        $this->assertSame('generated', $picture->ai_disclosure);
+    }
+
     public function testGetSizesReturnsHtmlAttributesWithWidthAndHeight(): void
     {
         $picture = $this->createPictureWithImageConfig();

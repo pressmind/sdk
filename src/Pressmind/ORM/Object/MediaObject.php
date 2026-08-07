@@ -1820,7 +1820,6 @@ class MediaObject extends AbstractObject
                             continue(2);
                         }
                     }
-                    $quotas = [];
                     foreach ($options as $option) {
                         $housing_package = $option->getHousingPackage();
                         $included_options_price = 0;
@@ -1830,7 +1829,8 @@ class MediaObject extends AbstractObject
                         $id_included_options = [];
                         $code_ibe_included_options = [];
                         $nights = empty($housing_package) ? 0 : $housing_package->nights;
-                        $quotas[] = (is_null($option->quota) ? 999 : $option->quota) * $option->occupancy;
+                        $option_quotas = [];
+                        $option_quotas[] = (is_null($option->quota) ? 999 : $option->quota) * $option->occupancy;
                         foreach ($cheapest_options as $cheapest_option) {
                             $cheapest_option_price = $cheapest_option->calculatePrice($booking_package->duration, $nights);
                             if ($include_negative_option_in_cheapest_price === false && $cheapest_option_price < 0) {
@@ -1848,9 +1848,10 @@ class MediaObject extends AbstractObject
                             $included_options_description[] = $cheapest_option->name;
                             $id_included_options[] = $cheapest_option->getId();
                             $code_ibe_included_options[] = $cheapest_option->code_ibe;
-                            $quotas[] = is_null($cheapest_option->quota) ? 999 : $cheapest_option->quota;
+                            $option_quotas[] = is_null($cheapest_option->quota) ? 999 : $cheapest_option->quota;
                         }
                         foreach ($transport_pairs as $transport_pair) {
+                            $quotas = $option_quotas;
                             $is_bookable = in_array($date->state, [1, 4, 0]);
                             $is_request = in_array($date->state, [2]);
                             $is_bookable = $is_bookable && in_array($option->state, [3, 2]);

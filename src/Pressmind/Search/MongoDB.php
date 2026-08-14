@@ -856,7 +856,21 @@ class MongoDB extends AbstractSearch
         }
 
         // stage 1.5 only valid objects if it's not a preview
-        $current_date = empty($preview_date) ? new \DateTime() : $preview_date;
+        // Truncated to the full minute: validity periods are not maintained at
+        // second precision, while an unrounded value makes the cache key built
+        // in generateCacheKey() unique on every request, so the MONGODB result
+        // cache can never produce a hit. A caller supplied preview date is left
+        // untouched, it is stable by definition.
+        $current_date = $preview_date;
+        if (empty($current_date)) {
+            $current_date = new \DateTime();
+            $current_date->setTime(
+                (int) $current_date->format('H'),
+                (int) $current_date->format('i'),
+                0,
+                0
+            );
+        }
         $stages[] = [
             '$match' => [
                 '$and' => [

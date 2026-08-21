@@ -96,7 +96,7 @@ class Calendar extends AbstractIndex
           foreach($this->_agencies as $agency) {
             $collection_name = $this->getCollectionName($build_info['origin'], $build_info['language'], $agency);
             $collection = $this->db->$collection_name;
-            $collection->deleteMany(['id_media_object' => $mediaObject->id]);
+            $collection->deleteMany(['id_media_object' => $id_media_object]);
           }
         }
       }

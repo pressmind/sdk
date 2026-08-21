@@ -615,6 +615,17 @@ class Ibe
         if (!empty($config['data']['search_mongodb']['enabled'])) {
             $indexer = new \Pressmind\Search\MongoDB\Indexer();
             $indexer->updatePriceAndStateFields($id_media_object);
+            try {
+                // insertCheapestPrice() regenerates all MySQL rows with new auto-increment ids;
+                // the calendar_* collections snapshot these ids, so they must be rebuilt as well
+                $calendar = new \Pressmind\Search\MongoDB\Calendar();
+                $calendar->upsertMediaObject($id_media_object);
+            } catch (Exception $e) {
+                \Pressmind\Log\Writer::write(
+                    'syncAvailabilityState: calendar rebuild failed for media object ' . $id_media_object . ': ' . $e->getMessage(),
+                    \Pressmind\Log\Writer::OUTPUT_FILE, 'mongodb_indexer', \Pressmind\Log\Writer::TYPE_ERROR
+                );
+            }
         }
 
         return ['success' => true, 'changed' => true, 'changes_applied' => count($appliedChanges), 'applied_changes' => $appliedChanges];

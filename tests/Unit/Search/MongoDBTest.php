@@ -932,6 +932,60 @@ class MongoDBTest extends AbstractTestCase
         $this->assertArrayHasKey('startingPointsGrouped', $facet['$facet']);
         $this->assertArrayHasKey('sold_out', $facet['$facet']);
         $this->assertArrayHasKey('is_running', $facet['$facet']);
+        $this->assertArrayHasKey('departureBounds', $facet['$facet']);
+    }
+
+    public function testBuildQueryFilterDepartureBoundsComeFromAllPrices(): void
+    {
+        $search = $this->createSearchWithSort(['price_total' => 'asc']);
+        $search->setGetFilters(true);
+        $stages = $search->buildQuery();
+
+        $projectWithBounds = null;
+        $addFields = null;
+        foreach ($stages as $stage) {
+            if (isset($stage['$project']['filter_min_departure'])) {
+                $projectWithBounds = $stage['$project'];
+            }
+            if (isset($stage['$addFields']['minDeparture'])) {
+                $addFields = $stage['$addFields'];
+            }
+        }
+
+        $this->assertNotNull($projectWithBounds);
+        $this->assertArrayHasKey('$reduce', $projectWithBounds['prices']);
+        $this->assertArrayHasKey('filter_min_departure', $projectWithBounds);
+        $this->assertArrayHasKey('filter_max_departure', $projectWithBounds);
+        $this->assertSame('$prices', $projectWithBounds['filter_min_departure']['$min']['$reduce']['input']['$ifNull'][0]);
+
+        $facet = $this->findFacetStage($stages);
+        $this->assertNotNull($facet);
+        $this->assertSame('$filter_min_departure', $facet['$facet']['departureBounds'][0]['$group']['minDeparture']['$min']);
+        $this->assertSame('$filter_max_departure', $facet['$facet']['departureBounds'][0]['$group']['maxDeparture']['$max']);
+
+        $this->assertNotNull($addFields);
+        $this->assertSame('$departureBounds.minDeparture', $addFields['minDeparture']['$arrayElemAt'][0]);
+        $this->assertSame('$departureBounds.maxDeparture', $addFields['maxDeparture']['$arrayElemAt'][0]);
+    }
+
+    public function testBuildQueryDateListFilterMinMaxStayOnUnwoundPrices(): void
+    {
+        $search = $this->createSearchWithSort(['price_total' => 'asc']);
+        $search->setGetFilters(true);
+        $stages = $search->buildQuery('date_list');
+        $json = json_encode($stages);
+        $this->assertStringNotContainsString('filter_min_departure', $json);
+        $this->assertStringNotContainsString('departureBounds', $json);
+
+        $addFields = null;
+        foreach ($stages as $stage) {
+            if (isset($stage['$addFields']['minDeparture'])) {
+                $addFields = $stage['$addFields'];
+            }
+        }
+        $this->assertNotNull($addFields);
+        $this->assertSame('$prices.prices.date_departures', $addFields['minDeparture']['$min']);
+        $this->assertSame('$prices.prices.date_departures', $addFields['maxDeparture']['$max']);
     }
 
     public function testBuildQueryFiltersDisabledNoFacetFields(): void

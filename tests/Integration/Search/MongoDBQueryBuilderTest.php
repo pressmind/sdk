@@ -202,6 +202,102 @@ class MongoDBQueryBuilderTest extends AbstractIntegrationTestCase
         $descColl->insertMany($descDocs);
     }
 
+    /**
+     * One media object: cheapest occupancy-2 price only in December,
+     * a more expensive occupancy-2 price in June. Filter min/max must span both.
+     */
+    private function seedCheapestPriceVsAllDeparturesDocument(): void
+    {
+        $now = new \DateTime();
+        $june = '2026-06-15T00:00:00.000+00:00';
+        $december = '2026-12-02T00:00:00.000+00:00';
+        $basePrice = [
+            'duration' => 8,
+            'occupancy' => 2,
+            'transport_type' => 'BUS',
+            'option_board_type' => 'HP',
+            'state' => 100,
+            'guaranteed_departures' => [],
+            'earlybird_discount' => 0,
+            'earlybird_discount_f' => 0,
+            'earlybird_name' => null,
+            'earlybird_discount_date_to' => null,
+            'option_name' => 'Standard',
+            'housing_package_name' => null,
+            'housing_package_id_name' => null,
+            'price_mix' => 'date_housing',
+            'quota_pax' => 10,
+        ];
+
+        $docs = [
+            [
+                '_id' => 2001,
+                'id_media_object' => 2001,
+                'id_object_type' => 100,
+                'code' => ['TEST-CHEAPEST-DATES'],
+                'url' => '/test/2001',
+                'valid_from' => null,
+                'valid_to' => null,
+                'visibility' => 30,
+                'recommendation_rate' => 80,
+                'sales_priority' => 'A000001',
+                'sold_out' => false,
+                'is_running' => false,
+                'has_price' => true,
+                'has_guaranteed_departures' => false,
+                'departure_date_count' => 2,
+                'groups' => ['grimm_reisen'],
+                'categories' => [],
+                'prices' => [
+                    array_merge($basePrice, [
+                        'price_total' => 400.0,
+                        'price_regular_before_discount' => 400.0,
+                        'date_departures' => [$december],
+                    ]),
+                    array_merge($basePrice, [
+                        'price_total' => 900.0,
+                        'price_regular_before_discount' => 900.0,
+                        'date_departures' => [$june],
+                    ]),
+                ],
+                'best_price_meta' => ['price_total' => 400.0, 'duration' => 8],
+                'last_modified_date' => $now->format(DATE_RFC3339_EXTENDED),
+                'fulltext' => 'Hotel Flora Kurreise',
+                'object_type_order' => 0,
+            ],
+        ];
+
+        $coll = $this->mongoDb->selectCollection(self::TEST_COLLECTION);
+        $coll->drop();
+        $coll->insertMany($docs);
+
+        $descColl = $this->mongoDb->selectCollection(self::DESC_COLLECTION);
+        $descColl->drop();
+        $descColl->insertMany([
+            ['_id' => 2001, 'description' => ['title' => 'Hotel Flora', 'teaser' => 'Marienbad']],
+        ]);
+    }
+
+    private function toDateString($value): string
+    {
+        if ($value instanceof \MongoDB\BSON\UTCDateTime) {
+            return $value->toDateTime()->format('Y-m-d');
+        }
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+        if (is_array($value) && isset($value['$date'])) {
+            return (new \DateTime($value['$date']))->format('Y-m-d');
+        }
+        if (is_object($value) && isset($value->{'$date'})) {
+            return (new \DateTime($value->{'$date'}))->format('Y-m-d');
+        }
+        if (is_string($value)) {
+            return (new \DateTime($value))->format('Y-m-d');
+        }
+        $this->fail('Unexpected date type: ' . get_debug_type($value));
+    }
+
     // --- Condition management ---
 
     public function testAddAndListConditions(): void
@@ -401,6 +497,67 @@ class MongoDBQueryBuilderTest extends AbstractIntegrationTestCase
         $this->assertStringContainsString('pages', $json);
     }
 
+    public function testBuildQueryFilterDepartureBoundsUseAllPricesNotCheapestReduce(): void
+    {
+        $this->requireMongo();
+        $search = new MongoDB([], ['price_total' => 'asc'], 'de', 0);
+        $search->setPaginator(Paginator::create(10, 1));
+        $search->setGetFilters(true);
+        $pipeline = $search->buildQuery();
+        $json = json_encode($pipeline);
+
+        $this->assertStringContainsString('filter_min_departure', $json);
+        $this->assertStringContainsString('filter_max_departure', $json);
+        $this->assertStringContainsString('departureBounds', $json);
+        $this->assertStringContainsString('$departureBounds.minDeparture', $json);
+        $this->assertStringNotContainsString('$prices.prices.date_departures', $json);
+
+        $projectWithBounds = null;
+        $facet = null;
+        $addFields = null;
+        foreach ($pipeline as $stage) {
+            $key = array_key_first($stage);
+            if ($key === '$project' && isset($stage['$project']['filter_min_departure'])) {
+                $projectWithBounds = $stage['$project'];
+            }
+            if ($key === '$facet') {
+                $facet = $stage['$facet'];
+            }
+            if ($key === '$addFields' && isset($stage['$addFields']['minDeparture'])) {
+                $addFields = $stage['$addFields'];
+            }
+        }
+
+        $this->assertNotNull($projectWithBounds, 'Filter $project must keep departure bounds before cheapest-price $reduce');
+        $this->assertArrayHasKey('prices', $projectWithBounds);
+        $this->assertArrayHasKey('$reduce', $projectWithBounds['prices']);
+        $this->assertArrayHasKey('filter_min_departure', $projectWithBounds);
+        $this->assertArrayHasKey('filter_max_departure', $projectWithBounds);
+
+        $this->assertIsArray($facet);
+        $this->assertArrayHasKey('departureBounds', $facet);
+        $this->assertSame('$filter_min_departure', $facet['departureBounds'][0]['$group']['minDeparture']['$min']);
+        $this->assertSame('$filter_max_departure', $facet['departureBounds'][0]['$group']['maxDeparture']['$max']);
+
+        $this->assertIsArray($addFields);
+        $this->assertSame('$departureBounds.minDeparture', $addFields['minDeparture']['$arrayElemAt'][0]);
+        $this->assertSame('$departureBounds.maxDeparture', $addFields['maxDeparture']['$arrayElemAt'][0]);
+    }
+
+    public function testBuildQueryDateListKeepsDepartureMinMaxFromUnwoundPrices(): void
+    {
+        $this->requireMongo();
+        $search = new MongoDB([], ['price_total' => 'asc'], 'de', 0);
+        $search->setPaginator(Paginator::create(10, 1));
+        $search->setGetFilters(true);
+        $pipeline = $search->buildQuery('date_list');
+        $json = json_encode($pipeline);
+
+        $this->assertStringNotContainsString('filter_min_departure', $json);
+        $this->assertStringNotContainsString('departureBounds', $json);
+        $this->assertStringContainsString('$prices.prices.date_departures', $json);
+    }
+
     // --- getResult() with seeded data ---
 
     public function testGetResultEmptyCollection(): void
@@ -520,6 +677,29 @@ class MongoDBQueryBuilderTest extends AbstractIntegrationTestCase
         $this->assertObjectHasProperty('maxPrice', $result);
         $this->assertObjectHasProperty('minDuration', $result);
         $this->assertObjectHasProperty('maxDuration', $result);
+        $this->assertObjectHasProperty('minDeparture', $result);
+        $this->assertObjectHasProperty('maxDeparture', $result);
+    }
+
+    public function testFilterMinDepartureUsesAllPricesNotOnlyCheapest(): void
+    {
+        $this->requireMongo();
+        $this->seedCheapestPriceVsAllDeparturesDocument();
+
+        $search = new MongoDB([], ['price_total' => 'asc'], 'de', 0);
+        $search->setPaginator(Paginator::create(10, 1));
+        $options = ['skip_search_hooks' => true];
+        $result = $search->getResult(true, true, 0, null, null, [30], SearchType::DEFAULT, $options);
+
+        $this->assertSame('2026-06-15', $this->toDateString($result->minDeparture));
+        $this->assertSame('2026-12-02', $this->toDateString($result->maxDeparture));
+
+        $searchItems = new MongoDB([], ['price_total' => 'asc'], 'de', 0);
+        $searchItems->setPaginator(Paginator::create(10, 1));
+        $items = $searchItems->getResult(false, false, 0, null, null, [30], SearchType::DEFAULT, $options);
+        $doc = json_decode(json_encode($items->documents[0]), true);
+        $this->assertSame(400.0, $doc['prices']['price_total']);
+        $this->assertSame('2026-12-02', $this->toDateString($doc['prices']['date_departures'][0]));
     }
 
     public function testGetResultPagination(): void

@@ -1104,6 +1104,12 @@ class MongoDB extends AbstractSearch
             ]
         ];
 
+        if ($this->shouldComputeFilterDepartureBounds($output)) {
+            $flattenedDepartures = $this->flattenPriceDateDeparturesExpression();
+            $projectStage['$project']['filter_min_departure'] = ['$min' => $flattenedDepartures];
+            $projectStage['$project']['filter_max_departure'] = ['$max' => $flattenedDepartures];
+        }
+
         if($output == 'date_list'){
             $stages[] = ['$unwind' => ['path' => '$prices', 'preserveNullAndEmptyArrays' => false]];
             $stages[] = ['$unwind' => ['path' => '$prices.date_departures', 'preserveNullAndEmptyArrays' => false]];
@@ -1215,6 +1221,23 @@ class MongoDB extends AbstractSearch
                             ]
                         ],
                     ],
+                ];
+            }
+            if ($this->shouldComputeFilterDepartureBounds($output)) {
+                $facetStage['$facet']['departureBounds'] = [
+                    [
+                        '$group' => [
+                            '_id' => null,
+                            'minDeparture' => ['$min' => '$filter_min_departure'],
+                            'maxDeparture' => ['$max' => '$filter_max_departure'],
+                        ],
+                    ],
+                ];
+                if (!isset($facetStage['$facet']['documents'])) {
+                    $facetStage['$facet']['documents'] = [];
+                }
+                $facetStage['$facet']['documents'][] = [
+                    '$unset' => ['filter_min_departure', 'filter_max_departure'],
                 ];
             }
             $facetStage['$facet']['categoriesGrouped'] = [
@@ -1352,26 +1375,10 @@ class MongoDB extends AbstractSearch
                 ];
             }else{
                 $addFieldsStage['$addFields']['minDeparture'] = [
-                    '$min' => [
-                        '$reduce' => [
-                            'input' => '$prices.prices.date_departures',
-                            'initialValue' => [],
-                            'in' => [
-                                '$concatArrays' => ['$$value', '$$this']
-                            ]
-                        ]
-                    ]
+                    '$arrayElemAt' => ['$departureBounds.minDeparture', 0]
                 ];
                 $addFieldsStage['$addFields']['maxDeparture'] = [
-                    '$max' => [
-                        '$reduce' => [
-                            'input' => '$prices.prices.date_departures',
-                            'initialValue' => [],
-                            'in' => [
-                              '$concatArrays' => ['$$value', '$$this']
-                            ]
-                        ]
-                    ]
+                    '$arrayElemAt' => ['$departureBounds.maxDeparture', 0]
                 ];
             }
 
@@ -1568,6 +1575,35 @@ class MongoDB extends AbstractSearch
         $stages[] = $addFieldsStage;
         $stages[] = $project;
         return $stages;
+    }
+
+    /**
+     * Filter min/max departure must be taken from all remaining price rows,
+     * not from the cheapest-price $reduce that follows in $project.
+     */
+    private function shouldComputeFilterDepartureBounds($output): bool
+    {
+        return $output != 'date_list'
+            && ($this->_get_filters === true || $this->_return_filters_only === true);
+    }
+
+    /**
+     * Concatenate date_departures of every price still on the document.
+     */
+    private function flattenPriceDateDeparturesExpression(): array
+    {
+        return [
+            '$reduce' => [
+                'input' => ['$ifNull' => ['$prices', []]],
+                'initialValue' => [],
+                'in' => [
+                    '$concatArrays' => [
+                        '$$value',
+                        ['$ifNull' => ['$$this.date_departures', []]],
+                    ],
+                ],
+            ],
+        ];
     }
 
 

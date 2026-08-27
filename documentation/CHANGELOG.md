@@ -12,6 +12,7 @@ Changes are categorized as:
 
 ## Table of Contents
 
+- [August 2026](#august-2026)
 - [June 2026](#june-2026)
 - [May 2026](#may-2026)
 - [April 2026](#april-2026)
@@ -30,6 +31,16 @@ Changes are categorized as:
 - [March 2025](#march-2025)
 - [February 2025](#february-2025)
 - [Summary of Breaking Changes](#summary-of-breaking-changes)
+
+---
+
+## August 2026
+
+### BUG: MongoDB filter min/max departure used cheapest-price dates only (#442529)
+
+`minDeparture` / `maxDeparture` in the search filter aggregation were taken from the cheapest price row after the `$project` `$reduce`. Month pickers therefore showed only the cheapest-price window (e.g. Nov/Dec) even when other months were bookable at higher prices.
+
+Filter bounds are now computed from **all remaining price rows** (after occupancy/duration/price filters, before cheapest-price reduction). Search result prices are unchanged. The `date_list` output path was already correct and is untouched.
 
 ---
 

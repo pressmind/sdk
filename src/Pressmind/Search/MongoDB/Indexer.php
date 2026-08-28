@@ -1381,7 +1381,7 @@ class Indexer extends AbstractIndex
         $sold_out = true;
         if(!is_null($results)) {
             foreach($results as $result) {
-                if($result->state === CheapestPrice::STATE_BOOKABLE || $result->state === CheapestPrice::STATE_REQUEST){
+                if((int)$result->state === CheapestPrice::STATE_BOOKABLE || (int)$result->state === CheapestPrice::STATE_REQUEST){
                     $sold_out = false;
                 }
             }

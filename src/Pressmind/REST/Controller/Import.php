@@ -14,6 +14,28 @@ use Pressmind\Registry;
 class Import
 {
     /**
+     * Return the number of pending entries in the import queue.
+     *
+     * @param $parameters
+     * @return array
+     */
+    public function status($parameters)
+    {
+        try {
+            return [
+                'success' => true,
+                'pending' => Queue::count()
+            ];
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'msg' => 'Error: ' . $e->getMessage(),
+                'data' => null
+            ];
+        }
+    }
+
+    /**
      * Add a media object to the import queue.
      *
      * @param $parameters

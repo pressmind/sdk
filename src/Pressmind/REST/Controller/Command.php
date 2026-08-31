@@ -79,6 +79,26 @@ class Command
     }
 
     /**
+     * Deployment probe for the command runner: reports whether the
+     * configured cli_runner script actually exists on this server (direct
+     * HTTP access to /cli/ is blocked by the webservers).
+     *
+     * @param array $parameters Request parameters (must include valid API key and Basic Auth)
+     * @return array
+     * @throws \Exception When API key or Basic Auth is not configured or not provided/valid
+     */
+    public function status($parameters)
+    {
+        $this->requireApiKeyAndBasicAuth($parameters);
+        $path = $this->getCliRunnerPath();
+        return [
+            'success' => true,
+            'cli_runner_configured' => !($path === null || $path === ''),
+            'cli_runner_exists' => $path !== null && $path !== '' && file_exists($path),
+        ];
+    }
+
+    /**
      * Build command args from request parameters, excluding REST/auth keys.
      *
      * @param array $parameters

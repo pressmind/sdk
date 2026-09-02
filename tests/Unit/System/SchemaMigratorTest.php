@@ -53,6 +53,7 @@ class SchemaMigratorTest extends AbstractTestCase
         $this->assertEquals('LONGTEXT', SchemaMigrator::mapFieldType('key_value'));
         $this->assertEquals('LONGTEXT', SchemaMigrator::mapFieldType('repeated_form'));
         $this->assertEquals('LONGTEXT', SchemaMigrator::mapFieldType('table'));
+        $this->assertEquals('LONGTEXT', SchemaMigrator::mapFieldType('icon'));
     }
 
     public function testAddDatabaseColumnsSkipsRelationFieldTypes(): void
@@ -71,6 +72,7 @@ class SchemaMigratorTest extends AbstractTestCase
             'headline_default' => 'text',
             'auflistung_default' => 'repeated_form',
             'key_value_default' => 'key_value',
+            'icon_default' => 'icon',
         ]);
     }
 

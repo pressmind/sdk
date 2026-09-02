@@ -52,6 +52,7 @@ class ObjectTypeScaffolder
         'link' => 'relation',
         'key_value' => 'relation',
         'repeated_form' => 'relation',
+        'icon' => 'relation',
     ];
 
     /**

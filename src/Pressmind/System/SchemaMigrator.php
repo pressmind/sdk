@@ -51,6 +51,7 @@ class SchemaMigrator
         'link' => 'LONGTEXT',  // relation type
         'key_value' => 'LONGTEXT',  // relation type
         'repeated_form' => 'LONGTEXT',  // relation type
+        'icon' => 'LONGTEXT',  // relation type
     ];
 
     private static array $_relation_field_types = [
@@ -63,6 +64,7 @@ class SchemaMigrator
         'link',
         'key_value',
         'repeated_form',
+        'icon',
     ];
 
     /**
@@ -473,6 +475,7 @@ class SchemaMigrator
             'link' => 'relation',
             'key_value' => 'relation',
             'repeated_form' => 'relation',
+            'icon' => 'relation',
         ];
 
         $definitionFields = [

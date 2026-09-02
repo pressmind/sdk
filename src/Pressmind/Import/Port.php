@@ -28,6 +28,14 @@ class Port extends AbstractImport implements ImportInterface
                         $port->active = $result->active;
                         $port->name = $result->name;
                         $port->description = $result->description;
+                        try {
+                            $coordinates = CoordinateNormalizer::normalize($result->coordinates ?? null);
+                        } catch (Exception $e) {
+                            $this->_errors[] = 'Invalid coordinates for port ' . $result->id . ': ' . $e->getMessage();
+                            $coordinates = null;
+                        }
+                        $port->lat = $coordinates['lat'] ?? null;
+                        $port->lng = $coordinates['lng'] ?? null;
                         $ports[] = $port;
                     } catch (Exception $e) {
                         $this->_errors[] = $e->getMessage();

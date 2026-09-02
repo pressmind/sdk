@@ -97,6 +97,7 @@ class CategoryTree extends AbstractImport implements ImportInterface
                 $tree = new \Pressmind\ORM\Object\CategoryTree();
                 $tree->id = $tree_info->id;
                 $tree->name = $tree_info->name;
+                $tree->icon = IconNormalizer::normalize($tree_info->tree->icon ?? null);
                 try {
                     $tree->replace();
                 } catch (Exception $e) {
@@ -184,6 +185,7 @@ class CategoryTree extends AbstractImport implements ImportInterface
                 null,
                 null,
                 $links,
+                $this->_encodeIcon($item->icon ?? null),
                 $sort,
             ];
             if (!empty($allowed_languages) && is_array($allowed_languages)) {
@@ -214,7 +216,7 @@ class CategoryTree extends AbstractImport implements ImportInterface
     private function _batchInsertTreeItems(array $items_rows, array $translations_rows, $chunk_size = 500)
     {
         $db = Registry::getInstance()->get('db');
-        $items_columns = ['id', 'id_parent', 'id_tree', 'name', 'code', 'id_media_object', 'dynamic_values', 'links', 'sort'];
+        $items_columns = ['id', 'id_parent', 'id_tree', 'name', 'code', 'id_media_object', 'dynamic_values', 'links', 'icon', 'sort'];
         $trans_columns = ['id', 'id_tree', 'name', 'language'];
         foreach (array_chunk($items_rows, $chunk_size) as $chunk) {
             $db->batchInsert('pmt2core_category_tree_items', $items_columns, $chunk, true);
@@ -222,6 +224,20 @@ class CategoryTree extends AbstractImport implements ImportInterface
         foreach (array_chunk($translations_rows, $chunk_size) as $chunk) {
             $db->batchInsert('pmt2core_category_tree_item_translation', $trans_columns, $chunk, true);
         }
+    }
+
+    private function _encodeIcon($icon): ?string
+    {
+        $icon = IconNormalizer::normalize($icon);
+        if ($icon === null) {
+            return null;
+        }
+        $encoded = json_encode($icon);
+        if ($encoded === false) {
+            $this->_errors[] = 'Importer::_iterateCategoryTreeItems(): Could not encode icon: ' . json_last_error_msg();
+            return null;
+        }
+        return $encoded;
     }
 
     /**

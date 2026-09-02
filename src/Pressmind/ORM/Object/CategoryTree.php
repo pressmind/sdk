@@ -11,6 +11,7 @@ use Pressmind\Registry;
  * Class CategoryTree
  * @property integer $id
  * @property string $name
+ * @property array|null $icon
  * @property Item[] $items
  */
 class CategoryTree extends AbstractObject
@@ -55,6 +56,14 @@ class CategoryTree extends AbstractObject
                     ]
                 ],
                 'filters' => NULL,
+            ],
+            'icon' => [
+                'title' => 'icon',
+                'name' => 'icon',
+                'type' => 'json',
+                'required' => false,
+                'validators' => null,
+                'filters' => null,
             ],
             'items' => [
                 'title' => 'items',

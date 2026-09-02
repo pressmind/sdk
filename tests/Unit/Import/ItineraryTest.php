@@ -134,6 +134,10 @@ class ItineraryTest extends AbstractTestCase
                                 'arrival_time' => '10:00',
                                 'day' => 0,
                                 'description' => 'Hafen Bezeichnung',
+                                'coordinates' => (object) [
+                                    'lat' => 53.5439,
+                                    'lng' => 9.9666,
+                                ],
                             ],
                         ],
                         'document_media_objects' => [
@@ -193,6 +197,8 @@ class ItineraryTest extends AbstractTestCase
         $this->assertSame('456', $inserted['pmt2core_itinerary_step_boards'][0]['distance']);
         $this->assertSame('Hafen,Anreise', $inserted['pmt2core_itinerary_step_sections'][0]['tags']);
         $this->assertSame('Hafen Bezeichnung', $inserted['pmt2core_itinerary_step_ports'][0]['description']);
+        $this->assertSame(53.5439, $inserted['pmt2core_itinerary_step_ports'][0]['lat']);
+        $this->assertSame(9.9666, $inserted['pmt2core_itinerary_step_ports'][0]['lng']);
         $this->assertSame(1, $inserted['pmt2core_itinerary_step_document_media_objects'][0]['is_ai']);
         $this->assertSame('modified', $inserted['pmt2core_itinerary_step_document_media_objects'][0]['ai_disclosure']);
         $this->assertSame(0, $inserted['pmt2core_itinerary_step_document_media_objects'][1]['is_ai']);
@@ -238,6 +244,16 @@ class ItineraryTest extends AbstractTestCase
                                 'id' => 901,
                                 'type' => 'course_port',
                                 'sections' => [],
+                                'ports' => [
+                                    (object) [
+                                        'id' => 902,
+                                        'id_port' => 251,
+                                        'coordinates' => (object) [
+                                            'lat' => '53.5439',
+                                            'lng' => '9.9666',
+                                        ],
+                                    ],
+                                ],
                                 'document_media_objects' => [
                                     (object) [
                                         'id' => 1001,
@@ -277,6 +293,8 @@ class ItineraryTest extends AbstractTestCase
         $this->assertCount(0, $import->getErrors());
         $this->assertSame(1, $inserted['pmt2core_itinerary_step_document_media_objects'][0]['is_ai']);
         $this->assertSame('generated', $inserted['pmt2core_itinerary_step_document_media_objects'][0]['ai_disclosure']);
+        $this->assertSame(53.5439, $inserted['pmt2core_itinerary_step_ports'][0]['lat']);
+        $this->assertSame(9.9666, $inserted['pmt2core_itinerary_step_ports'][0]['lng']);
     }
 
     public function testDatelessImportDeletesStaleItineraryImageFilesBeforeReplacingSteps(): void

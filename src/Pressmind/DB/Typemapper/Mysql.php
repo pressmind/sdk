@@ -22,6 +22,7 @@ class Mysql
         'text' => 'TEXT',
         'string' => 'TEXT',
         'longtext' => 'LONGTEXT',
+        'json' => 'LONGTEXT',
         'blob' => 'BLOB',
         'longblob' => 'LONGBLOB',
         'encrypted' => 'BLOB',
@@ -48,6 +49,7 @@ class Mysql
         'link' => 'relation',
         'key_value' => 'relation',
         'repeated_form' => 'relation',
+        'icon' => 'relation',
         'qrcode' => 'text',
     );
 

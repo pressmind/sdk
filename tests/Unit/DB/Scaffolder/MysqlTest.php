@@ -138,6 +138,26 @@ class MysqlTest extends AbstractTestCase
         $this->assertStringContainsString("ENUM('active','inactive','pending')", $executed[0]);
     }
 
+    public function testRunWithJsonFieldUsesLongtext(): void
+    {
+        $definitions = [
+            'id' => ['type' => 'integer', 'required' => true, 'name' => 'id'],
+            'payload' => ['type' => 'json', 'required' => false, 'name' => 'payload'],
+        ];
+        $orm = $this->createOrmMock('json_test', 'id', $definitions);
+        $executed = [];
+        $db = $this->createMock(AdapterInterface::class);
+        $db->method('execute')->willReturnCallback(function ($sql) use (&$executed) {
+            $executed[] = $sql;
+        });
+        $db->method('fetchAll')->willReturn([]);
+        Registry::getInstance()->add('db', $db);
+
+        (new Mysql($orm))->run(false);
+
+        $this->assertStringContainsString('`payload` LONGTEXT NULL', $executed[0]);
+    }
+
     public function testRunWithEncryptedFieldBecomesBlobInSql(): void
     {
         $definitions = [

@@ -96,6 +96,7 @@ class Itinerary extends AbstractImport implements ImportInterface
                     $step->document_media_objects = [$step->document_media_objects];
                 }
                 $this->_mapSections($step);
+                $this->_mapPorts($step, $id_media_object);
                 $img_sort = 0;
                 foreach ($step->document_media_objects as &$document_media_object) {
                     foreach($document_media_object->urls as $key => $url) {
@@ -155,6 +156,7 @@ class Itinerary extends AbstractImport implements ImportInterface
                 $step->document_media_objects = [$step->document_media_objects];
             }
             $this->_mapSections($step);
+            $this->_mapPorts($step, $id_media_object);
             $img_sort = 0;
             foreach ($step->document_media_objects as &$document_media_object) {
                 $mapped_object = new \stdClass();
@@ -200,6 +202,31 @@ class Itinerary extends AbstractImport implements ImportInterface
             if (isset($section->tags) && is_array($section->tags)) {
                 $section->tags = implode(',', $section->tags);
             }
+        }
+    }
+
+    private function _mapPorts($step, $id_media_object)
+    {
+        if (!isset($step->ports)) {
+            return;
+        }
+        if ($step->ports instanceof \stdClass) {
+            $step->ports = [$step->ports];
+        }
+        if (!is_array($step->ports)) {
+            return;
+        }
+        foreach ($step->ports as $port) {
+            try {
+                $coordinates = CoordinateNormalizer::normalize($port->coordinates ?? null);
+            } catch (Exception $e) {
+                $this->_errors[] = 'Invalid itinerary port coordinates for media object ' . $id_media_object
+                    . ', step ' . ($step->id ?? 'unknown') . ': ' . $e->getMessage();
+                $coordinates = null;
+            }
+            $port->lat = $coordinates['lat'] ?? null;
+            $port->lng = $coordinates['lng'] ?? null;
+            unset($port->coordinates);
         }
     }
 

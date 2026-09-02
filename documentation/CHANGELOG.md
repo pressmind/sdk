@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the pressmind SDK from February 2025 to May 2026.
+All notable changes to the pressmind SDK from February 2025 to September 2026.
 
 Changes are categorized as:
 - **FEATURE** – New functionality
@@ -12,6 +12,7 @@ Changes are categorized as:
 
 ## Table of Contents
 
+- [September 2026](#september-2026)
 - [August 2026](#august-2026)
 - [June 2026](#june-2026)
 - [May 2026](#may-2026)
@@ -31,6 +32,28 @@ Changes are categorized as:
 - [March 2025](#march-2025)
 - [February 2025](#february-2025)
 - [Summary of Breaking Changes](#summary-of-breaking-changes)
+
+---
+
+## September 2026
+
+### BREAKING: Webcore API v2-33 and schema alignment
+
+- The default Webcore REST API version changes from `v2-32` to `v2-33`.
+- Media Object fields of type `icon` are imported as `MediaObject\DataType\Icon` relations. The complete API payload (`id`, `name`, `slug`, `url`, `mime`, `style`, `variants`) is retained in `pmt2core_media_object_icons`.
+- Category tree roots and items retain their optional icon payload in the new nullable `icon` columns on `pmt2core_category_trees` and `pmt2core_category_tree_items`.
+- Global ports and itinerary step ports retain optional coordinates as nullable `lat` / `lng` columns. Malformed or out-of-range coordinates are reported as importer errors and stored as `null`; the affected port itself is still imported.
+- The v2-33 `Channels/all` controller is intentionally not imported by this SDK.
+
+Before the first v2-33 import on an existing environment:
+
+1. Back up the database and keep the previous SDK revision available for rollback.
+2. Run `php bin/database-integrity-check --non-interactive --static-only`.
+3. Regenerate/import configured ObjectTypes so `icon` fields are scaffolded as relations.
+4. Run `php bin/database-integrity-check --non-interactive` and resolve all reported differences.
+5. Run a DEV full import and verify icon fields, category trees, global ports, and both dated and dateless itineraries before any production rollout.
+
+Rollback consists of restoring the pre-upgrade database backup and the previous SDK revision together. Do not deploy this SDK update or its schema changes directly to production without the normal release approval.
 
 ---
 

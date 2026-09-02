@@ -18,6 +18,7 @@ class InfoTest extends AbstractTestCase
     {
         $this->assertIsArray(Info::STATIC_MODELS);
         $this->assertContains('\MediaObject', Info::STATIC_MODELS);
+        $this->assertContains('\MediaObject\DataType\Icon', Info::STATIC_MODELS);
         $this->assertContains('\Brand', Info::STATIC_MODELS);
         $this->assertContains('\CheapestPriceSpeed', Info::STATIC_MODELS);
         $this->assertContains('\Touristic\Booking\Package', Info::STATIC_MODELS);

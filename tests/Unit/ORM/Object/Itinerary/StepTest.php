@@ -5,6 +5,7 @@ namespace Pressmind\Tests\Unit\ORM\Object\Itinerary;
 use Pressmind\ORM\Object\Itinerary\Step;
 use Pressmind\ORM\Object\Itinerary\Step\Board;
 use Pressmind\ORM\Object\Itinerary\Step\DocumentMediaObject;
+use Pressmind\ORM\Object\Itinerary\Step\Port;
 use Pressmind\ORM\Object\Itinerary\Step\Section;
 use Pressmind\Registry;
 use Pressmind\Tests\Unit\AbstractTestCase;
@@ -111,6 +112,20 @@ class StepTest extends AbstractTestCase
         $legacySerialized = $legacyDocument->toStdClass(false);
         $this->assertNull($legacySerialized->is_ai);
         $this->assertNull($legacySerialized->ai_disclosure);
+    }
+
+    public function testPortDefinesAndReturnsCoordinates(): void
+    {
+        $port = new Port();
+
+        $this->assertTrue($port->hasProperty('lat'));
+        $this->assertTrue($port->hasProperty('lng'));
+        $this->assertNull($port->getCoordinates());
+
+        $port->lat = 53.5439;
+        $port->lng = 9.9666;
+
+        $this->assertSame(['lat' => 53.5439, 'lng' => 9.9666], $port->getCoordinates());
     }
 
     private function createSection(string $language, string $content): stdClass

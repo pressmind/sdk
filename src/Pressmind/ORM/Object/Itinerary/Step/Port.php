@@ -16,6 +16,8 @@ use Pressmind\ORM\Object\AbstractObject;
  * @property string $arrival_time
  * @property integer $day
  * @property string $description
+ * @property float|null $lat
+ * @property float|null $lng
  */
 class Port extends AbstractObject
 {
@@ -107,7 +109,46 @@ class Port extends AbstractObject
                 'required' => false,
                 'validators' => null,
                 'filters' => null
-            ]
+            ],
+            'lat' => [
+                'title' => 'lat',
+                'name' => 'lat',
+                'type' => 'float',
+                'required' => false,
+                'validators' => [
+                    ['name' => 'precision', 'params' => [8, 6]],
+                ],
+                'filters' => null,
+            ],
+            'lng' => [
+                'title' => 'lng',
+                'name' => 'lng',
+                'type' => 'float',
+                'required' => false,
+                'validators' => [
+                    ['name' => 'precision', 'params' => [9, 6]],
+                ],
+                'filters' => null,
+            ],
         ]
     ];
+
+    /**
+     * @return array{lat: float, lng: float}|null
+     */
+    public function getCoordinates(): ?array
+    {
+        if ($this->lat === null || $this->lng === null) {
+            return null;
+        }
+        return ['lat' => $this->lat, 'lng' => $this->lng];
+    }
+
+    protected function parsePropertyValue($name, $value, $direction = 'input')
+    {
+        if ($direction === 'output' && ($name === 'lat' || $name === 'lng') && $value === null) {
+            return null;
+        }
+        return parent::parsePropertyValue($name, $value, $direction);
+    }
 }

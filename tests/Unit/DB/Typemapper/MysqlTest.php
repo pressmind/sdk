@@ -27,6 +27,7 @@ class MysqlTest extends AbstractTestCase
         $this->assertSame('datetime', $this->mapper->mapTypeFromPressmindToORM('date'));
         $this->assertSame('relation', $this->mapper->mapTypeFromPressmindToORM('picture'));
         $this->assertSame('relation', $this->mapper->mapTypeFromPressmindToORM('objectlink'));
+        $this->assertSame('relation', $this->mapper->mapTypeFromPressmindToORM('icon'));
         $this->assertSame('text', $this->mapper->mapTypeFromPressmindToORM('qrcode'));
     }
 
@@ -44,6 +45,7 @@ class MysqlTest extends AbstractTestCase
         $this->assertSame('VARCHAR', $this->mapper->mapTypeFromORMToMysql('varchar'));
         $this->assertSame('TEXT', $this->mapper->mapTypeFromORMToMysql('text'));
         $this->assertSame('LONGTEXT', $this->mapper->mapTypeFromORMToMysql('longtext'));
+        $this->assertSame('LONGTEXT', $this->mapper->mapTypeFromORMToMysql('json'));
         $this->assertSame('DATETIME', $this->mapper->mapTypeFromORMToMysql('datetime'));
         $this->assertSame('TINYINT(1)', $this->mapper->mapTypeFromORMToMysql('boolean'));
     }

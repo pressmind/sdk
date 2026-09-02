@@ -225,6 +225,7 @@ Delete existing media object (cascade)
 - `Brand::import()` – Brand definitions
 - `Season::import()` – Season/time period definitions
 - `Port::import()` – Ports (for cruise itineraries)
+  - v2-33 coordinates are normalized into nullable `lat` / `lng` columns
 - `Import\Powerfilter::import()` – Powerfilter result sets
 - `EarlyBird::import()` – Early bird discount definitions
 
@@ -232,6 +233,7 @@ These are flagged and only executed once per import session.
 
 **3.11 – Import Itinerary** (`Itinerary::import()`)
 - Route itineraries with steps, ports, documents
+- Dated and dateless itinerary ports retain v2-33 coordinates
 
 **3.12 – Calculate Cheapest Price**
 ```php
@@ -245,12 +247,12 @@ Generates optimized price index entries in `pmt2core_cheapest_price_speed`.
 
 **3.14 – Import Content Data** (`MediaObjectData::import()`)
 - All content fields per section/language
-- Pictures, files, links, tables, category trees, locations, object links
+- Pictures, files, links, tables, category trees, locations, object links, icons
 - Each field type has its own data type handler
 - Collects linked media object IDs and category tree IDs
 
 **3.15 – Import Category Trees** (`CategoryTree::import()`)
-- Hierarchical category structures with items, parents, paths
+- Hierarchical category structures with items, parents, paths, and optional v2-33 icons
 
 **3.16 – Import Linked Content Objects**
 - Media objects referenced via object links in content data

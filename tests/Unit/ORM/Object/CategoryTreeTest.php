@@ -36,9 +36,14 @@ class CategoryTreeTest extends AbstractTestCase
         $tree->fromArray([
             'id' => 1,
             'name' => 'Categories',
+            'icon' => [
+                'id' => 'tree-icon',
+                'style' => 'regular',
+            ],
         ]);
         $this->assertSame(1, $tree->id);
         $this->assertSame('Categories', $tree->name);
+        $this->assertSame('tree-icon', $tree->icon['id']);
     }
 
     public function testToStdClassWithoutRelations(): void
@@ -50,6 +55,23 @@ class CategoryTreeTest extends AbstractTestCase
         $this->assertInstanceOf(\stdClass::class, $std);
         $this->assertSame(2, $std->id);
         $this->assertSame('Tree Name', $std->name);
+    }
+
+    public function testTreeItemRoundTripsIconPayload(): void
+    {
+        $item = new Item(null, false);
+        $item->icon = [
+            'id' => 'item-icon',
+            'name' => 'Ship',
+            'variants' => [
+                ['style' => 'solid', 'url' => 'https://example.test/ship.svg', 'mime' => 'image/svg+xml'],
+            ],
+        ];
+
+        $serialized = $item->toStdClass(false);
+
+        $this->assertSame('item-icon', $serialized->icon['id']);
+        $this->assertSame('solid', $serialized->icon['variants'][0]['style']);
     }
 
     public function testItemsToTaxonomyWithEmptyItems(): void

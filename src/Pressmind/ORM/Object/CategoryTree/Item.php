@@ -15,6 +15,7 @@ use Pressmind\ORM\Object\MediaObject;
  * @property string $id_media_object
  * @property string $dynamic_values
  * @property string $links
+ * @property array|null $icon
  * @property integer $sort
  * @property Item[] $children
  */
@@ -143,6 +144,14 @@ class Item extends AbstractObject
                 'required' => false,
                 'validators' => NULL,
                 'filters' => NULL,
+            ],
+            'icon' => [
+                'title' => 'icon',
+                'name' => 'icon',
+                'type' => 'json',
+                'required' => false,
+                'validators' => null,
+                'filters' => null,
             ],
             'sort' => [
                 'title' => 'Sort',

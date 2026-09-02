@@ -121,6 +121,25 @@ class InstallSchemaTest extends AbstractImportTestCase
         $cols = $this->db->fetchAll('DESCRIBE pmt2core_category_trees');
         $names = array_map(fn($c) => $c->Field, $cols);
         $this->assertContains('id', $names);
+        $this->assertContains('icon', $names);
+    }
+
+    public function testCategoryTreeItemsTableHasIconColumn(): void
+    {
+        self::assertNotNull($this->db);
+        $cols = $this->db->fetchAll('DESCRIBE pmt2core_category_tree_items');
+        $names = array_map(fn($c) => $c->Field, $cols);
+        $this->assertContains('icon', $names);
+    }
+
+    public function testMediaObjectIconsTableHasContractColumns(): void
+    {
+        self::assertNotNull($this->db);
+        $cols = $this->db->fetchAll('DESCRIBE pmt2core_media_object_icons');
+        $names = array_map(fn($c) => $c->Field, $cols);
+        foreach (['id_media_object', 'section_name', 'language', 'var_name', 'id_icon', 'name', 'slug', 'url', 'mime', 'style', 'variants'] as $name) {
+            $this->assertContains($name, $names);
+        }
     }
 
     public function testNoDuplicateTables(): void
@@ -186,6 +205,17 @@ class InstallSchemaTest extends AbstractImportTestCase
         $cols = $this->db->fetchAll('DESCRIBE pmt2core_itinerary_step_ports');
         $names = array_map(fn($c) => $c->Field, $cols);
         $this->assertContains('description', $names);
+        $this->assertContains('lat', $names);
+        $this->assertContains('lng', $names);
+    }
+
+    public function testPortsTableHasCoordinateColumns(): void
+    {
+        self::assertNotNull($this->db);
+        $cols = $this->db->fetchAll('DESCRIBE pmt2core_ports');
+        $names = array_map(fn($c) => $c->Field, $cols);
+        $this->assertContains('lat', $names);
+        $this->assertContains('lng', $names);
     }
 
     public function testItineraryDocumentMediaObjectTableHasAiDisclosureColumns(): void

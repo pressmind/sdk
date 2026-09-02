@@ -232,6 +232,7 @@ class Mysql
             'text' => 'TEXT',
             'string' => 'TEXT',
             'longtext' => 'LONGTEXT',
+            'json' => 'LONGTEXT',
             'blob' => 'BLOB',
             'longblob' => 'LONGBLOB',
             'encrypted' => 'BLOB',

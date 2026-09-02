@@ -14,6 +14,13 @@ class FactoryMapperTest extends TestCase
         $this->assertInstanceOf(\Pressmind\Import\Mapper\File::class, $mapper);
     }
 
+    public function testCreateReturnsIconMapper(): void
+    {
+        $mapper = Factory::create('Icon');
+
+        $this->assertInstanceOf(\Pressmind\Import\Mapper\Icon::class, $mapper);
+    }
+
     public function testCreateReturnsFalseWhenFileDoesNotExist(): void
     {
         $result = Factory::create('NonExistentMapper');

@@ -30,6 +30,7 @@ class Info
         '\MediaObject',
         '\MediaObject\DataType\Categorytree',
         '\MediaObject\DataType\File',
+        '\MediaObject\DataType\Icon',
         '\MediaObject\DataType\Link',
         '\MediaObject\DataType\Location',
         '\MediaObject\DataType\Objectlink',

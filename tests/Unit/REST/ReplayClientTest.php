@@ -144,9 +144,7 @@ class ReplayClientTest extends AbstractTestCase
 
     public function testGetDateOffsetDays(): void
     {
-        if (!is_dir($this->realFixturePath) || !is_file($this->realFixturePath . '/snapshot_meta.json')) {
-            $this->markTestSkipped('Real API fixtures not present');
-        }
+        $this->skipIfRealFixturesAreUnavailableOrStale();
         $replay = new ReplayClient($this->realFixturePath);
         $days = $replay->getDateOffsetDays();
         $this->assertIsInt($days);
@@ -154,9 +152,7 @@ class ReplayClientTest extends AbstractTestCase
 
     public function testSendRequestFromRealFixturesReturnsArrayResponse(): void
     {
-        if (!is_dir($this->realFixturePath)) {
-            $this->markTestSkipped('Real API fixtures not present');
-        }
+        $this->skipIfRealFixturesAreUnavailableOrStale();
         $replay = new ReplayClient($this->realFixturePath);
         $params = [
             'byTouristicOrigin' => '0',
@@ -225,6 +221,18 @@ class ReplayClientTest extends AbstractTestCase
         $filename = $controller . '_' . $action . '_' . $hash . '.json';
         file_put_contents($dir . '/' . $filename, $fixtureContent);
         return $dir;
+    }
+
+    private function skipIfRealFixturesAreUnavailableOrStale(): void
+    {
+        $metaPath = $this->realFixturePath . '/snapshot_meta.json';
+        if (!is_dir($this->realFixturePath) || !is_file($metaPath)) {
+            $this->markTestSkipped('Real API fixtures not present');
+        }
+        $meta = json_decode((string) file_get_contents($metaPath));
+        if (($meta->api_version ?? null) !== Client::WEBCORE_API_VERSION) {
+            $this->markTestSkipped('Real API fixtures must be re-recorded for ' . Client::WEBCORE_API_VERSION);
+        }
     }
 
     private function cleanupTempDir(string $dir): void

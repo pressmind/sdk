@@ -134,6 +134,11 @@ class Catalog
             $product = new stdClass();
             $product->id = $item['id_media_object'];
             $product->preline = !empty($item['cheapest_price']->date_departures[0]) ? $item['cheapest_price']->date_departures[0]->format('d.m.Y') : null;
+            $product->duration = null;
+            if(!empty($item['cheapest_price']->duration)){
+                $days = (int)$item['cheapest_price']->duration;
+                $product->duration = $days == 1 ? '1 Tag' : $days.' Tage';
+            }
             $product->name = html_entity_decode(strip_tags($item['headline']));
             $product->image = !empty($item['image']['url']) ? $item['image']['url'] : null;
             $product->priceBefore = null;
@@ -177,6 +182,11 @@ class Catalog
                     $product = new stdClass();
                     $product->id = $item['id_media_object'];
                     $product->preline = !empty($item['cheapest_price']->date_departures[0]) ? $item['cheapest_price']->date_departures[0]->format('d.m.Y') : null;
+                    $product->duration = null;
+                    if(!empty($item['cheapest_price']->duration)){
+                        $days = (int)$item['cheapest_price']->duration;
+                        $product->duration = $days == 1 ? '1 Tag' : $days.' Tage';
+                    }
                     $product->name = html_entity_decode(strip_tags($item['headline']));
                     $product->image = !empty($item['image']['url']) ? $item['image']['url'] : null;
                     $product->priceBefore = null;

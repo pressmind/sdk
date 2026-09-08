@@ -52,7 +52,10 @@ class Ibe
             foreach ($destinations as $destination_array) {
                 $destination = new Item($destination_array->id_item);
                 $path[] = $destination->name;
-                $destination_code = $destination->code;
+                // only country items carry a code, city items would reset it to null
+                if (!empty($destination->code)) {
+                    $destination_code = $destination->code;
+                }
             }
             $destination_name = implode(' » ', $path);;
         }

@@ -373,6 +373,23 @@ class Import
     }
 
     /**
+     * Load a media object from the database for cheapest-price rebuild and object-cache refresh.
+     * Object cache must be skipped: a stale Redis OBJECT snapshot can still contain booking
+     * packages that custom import hooks have already replaced in MySQL.
+     *
+     * @param int|string $id_media_object
+     * @return MediaObject
+     * @throws Exception
+     */
+    private function loadMediaObjectForCheapestPrice($id_media_object)
+    {
+        $media_object = new MediaObject($id_media_object, false, true);
+        $media_object->setReadRelations(true);
+        $media_object->readRelations(self::READ_RELATIONS_EXCLUDE_FOR_CHEAPEST_PRICE);
+        return $media_object;
+    }
+
+    /**
      * Run MongoDB, Calendar, and OpenSearch indexers immediately for one media object.
      * When $id_object_type is set, skips all indexers if that type is not in search_mongodb.search.build_for.
      *
@@ -676,9 +693,7 @@ class Import
             }
         }
         $this->_log[] = Writer::write($this->_getElapsedTimeAndHeap() . ' Importer::importTouristicDataOnly(' . $id_media_object . '): recalculating cheapest price', Writer::OUTPUT_BOTH, 'import', Writer::TYPE_INFO);
-        $media_object = new MediaObject($id_media_object);
-        $media_object->setReadRelations(true);
-        $media_object->readRelations(self::READ_RELATIONS_EXCLUDE_FOR_CHEAPEST_PRICE);
+        $media_object = $this->loadMediaObjectForCheapestPrice($id_media_object);
         $media_object->insertCheapestPrice();
         $this->_db->commit();
         } catch (Exception $e) {
@@ -819,7 +834,7 @@ class Import
                                 }
                             }
                         }
-                        $media_object = new MediaObject($id_media_object);
+                        $media_object = $this->loadMediaObjectForCheapestPrice($id_media_object);
                         $media_object->insertCheapestPrice();
                         $this->_db->commit();
                     } catch (Exception $e) {
@@ -828,7 +843,7 @@ class Import
                         $this->_errors[] = '[TransactionRollback] ' . $e->getMessage();
                         return false;
                     }
-                    $media_object = new MediaObject($id_media_object);
+                    $media_object = $this->loadMediaObjectForCheapestPrice($id_media_object);
                     if ($config['cache']['enabled'] == true && in_array('OBJECT', $config['cache']['types'])) {
                         $media_object->updateCache($id_media_object);
                     }
@@ -837,7 +852,7 @@ class Import
                 } else {
                     // No custom hooks, but time-dependent data (cheapest prices, early-bird expiry,
                     // is_running) must be recalculated on every import run.
-                    $media_object = new MediaObject($id_media_object);
+                    $media_object = $this->loadMediaObjectForCheapestPrice($id_media_object);
                     $media_object->insertCheapestPrice();
                     if ($config['cache']['enabled'] == true && in_array('OBJECT', $config['cache']['types'])) {
                         $media_object->updateCache($id_media_object);
@@ -1135,8 +1150,8 @@ class Import
                         }
                     }
                 }
-                // reinitialize
-                $media_object = new MediaObject($id_media_object);
+                // reinitialize from DB, never from a stale OBJECT cache snapshot
+                $media_object = $this->loadMediaObjectForCheapestPrice($id_media_object);
                 $media_object->insertCheapestPrice();
             }
 

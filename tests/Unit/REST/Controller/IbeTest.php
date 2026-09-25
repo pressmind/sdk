@@ -672,6 +672,107 @@ class IbeTest extends AbstractTestCase
         $this->assertTrue($result['success']);
     }
 
+    /**
+     * @return string[] captured starting point option queries
+     */
+    private function captureStartingPointOptionQueries(array $data, ?array &$result = null): array
+    {
+        $queries = [];
+        $db = $this->createCustomMockDb([
+            'fetchAllCallback' => function ($query) use (&$queries) {
+                if (strpos($query, 'distance_in_km') !== false) {
+                    return [
+                        (object)['postleitzahl' => '10115', 'distance_in_km' => 1.2],
+                        (object)['postleitzahl' => '10117', 'distance_in_km' => 2.345],
+                    ];
+                }
+                if (strpos($query, 'pmt2core_geodata') !== false) {
+                    return [(object)['id' => 1, 'postleitzahl' => '10115', 'gemeinde_lat' => 52.53, 'gemeinde_lon' => 13.38]];
+                }
+                if (strpos($query, 'pmt2core_touristic_startingpoint_options') !== false) {
+                    $queries[] = $query;
+                }
+                return [];
+            },
+        ]);
+        Registry::getInstance()->add('db', $db);
+        $controller = new Ibe();
+        $result = $controller->pressmind_ib3_v2_get_starting_point_options(['data' => $data]);
+        $this->assertTrue($result['success']);
+        return $queries;
+    }
+
+    public function testPressmindIb3V2GetStartingPointOptionsWithoutRadiusReturnsNoZipDistances(): void
+    {
+        $result = null;
+        $this->captureStartingPointOptionQueries([
+            'id_starting_point' => 'sp_1',
+            'limit' => 10,
+            'zip' => '10115',
+        ], $result);
+        $this->assertEquals(new \stdClass(), $result['data']['zip_distances']);
+    }
+
+    public function testPressmindIb3V2GetStartingPointOptionsDefaultSortsByTimeFirst(): void
+    {
+        $queries = $this->captureStartingPointOptionQueries([
+            'id_starting_point' => 'sp_1',
+            'limit' => 10,
+            'zip' => '10115',
+            'radius' => 30,
+        ]);
+        $this->assertStringContainsString('ORDER BY start_time ASC, FIELD(zip,', end($queries));
+    }
+
+    public function testPressmindIb3V2GetStartingPointOptionsSortByDistance(): void
+    {
+        $queries = $this->captureStartingPointOptionQueries([
+            'id_starting_point' => 'sp_1',
+            'limit' => 10,
+            'zip' => '10115',
+            'radius' => 30,
+            'sort_by' => 'distance',
+        ]);
+        $this->assertStringContainsString('ORDER BY FIELD(zip, ?,?), start_time ASC', end($queries));
+    }
+
+    public function testPressmindIb3V2GetStartingPointOptionsInvalidSortByFallsBackToTime(): void
+    {
+        $queries = $this->captureStartingPointOptionQueries([
+            'id_starting_point' => 'sp_1',
+            'limit' => 10,
+            'zip' => '10115',
+            'radius' => 30,
+            'sort_by' => 'price; DROP TABLE x',
+        ]);
+        $this->assertStringContainsString('ORDER BY start_time ASC, FIELD(zip,', end($queries));
+    }
+
+    public function testPressmindIb3V2GetStartingPointOptionsSortByDistanceWithoutZipKeepsTimeOrder(): void
+    {
+        $result = null;
+        $queries = $this->captureStartingPointOptionQueries([
+            'id_starting_point' => 'sp_1',
+            'limit' => 10,
+            'sort_by' => 'distance',
+        ], $result);
+        $this->assertStringContainsString('ORDER BY start_time ASC, price ASC, zip ASC', end($queries));
+        $this->assertEquals(new \stdClass(), $result['data']['zip_distances']);
+    }
+
+    public function testPressmindIb3V2GetStartingPointOptionsReturnsZipDistances(): void
+    {
+        $result = null;
+        $this->captureStartingPointOptionQueries([
+            'id_starting_point' => 'sp_1',
+            'limit' => 10,
+            'zip' => '10115',
+            'radius' => 30,
+        ], $result);
+        $this->assertEquals((object)['10115' => 0.0, '10117' => 2.3], $result['data']['zip_distances']);
+        $this->assertSame('{"10115":0,"10117":2.3}', json_encode($result['data']['zip_distances']));
+    }
+
     public function testPressmindIb3V2GetStartingPointOptionsWithNullLimitUsesDefault(): void
     {
         $controller = new Ibe();

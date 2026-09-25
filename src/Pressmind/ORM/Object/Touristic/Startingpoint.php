@@ -149,11 +149,12 @@ class Startingpoint extends AbstractObject
      * @param int $start
      * @param int $limit
      * @param array $order_by_code_list
+     * @param string $order_by time | distance (distance only applies if a zip is given)
      * @return Option[]
      * @throws \Exception
      */
-    public static function getOptionsByZipRadius($id_starting_point, $ibe_client = null, $zip = null, $radius = 20, $start = 0, $limit = 10, $order_by_code_list = []){
-        return self::getOptions($id_starting_point, $start, $limit, $ibe_client, $zip, $radius, false, false, 'radius', $order_by_code_list);
+    public static function getOptionsByZipRadius($id_starting_point, $ibe_client = null, $zip = null, $radius = 20, $start = 0, $limit = 10, $order_by_code_list = [], $order_by = 'time'){
+        return self::getOptions($id_starting_point, $start, $limit, $ibe_client, $zip, $radius, false, false, 'radius', $order_by_code_list, $order_by);
     }
 
     /**
@@ -208,10 +209,11 @@ class Startingpoint extends AbstractObject
      * @param boolean $list_pickup_service
      * @param string $zip_search radius | range
      * @param array $order_by_code_list
+     * @param string $order_by time | distance (distance only applies if a zip radius search is active)
      * @return Option[]
      * @throws \Exception
      */
-    public static function getOptions($id_starting_point, $start = 0, $limit = 10, $ibe_client = null, $zip = null, $radius = 20, $list_exits = false, $list_pickup_service = false, $zip_search = 'radius', $order_by_code_list = []){
+    public static function getOptions($id_starting_point, $start = 0, $limit = 10, $ibe_client = null, $zip = null, $radius = 20, $list_exits = false, $list_pickup_service = false, $zip_search = 'radius', $order_by_code_list = [], $order_by = 'time'){
         $values = [];
         $id_starting_point = (array)$id_starting_point;
         $placeholders = implode(',', array_fill(0, count($id_starting_point), '?'));
@@ -265,7 +267,11 @@ class Startingpoint extends AbstractObject
         }
         if(!empty($zips)){
             $zipOrderPlaceholders = implode(',', array_fill(0, count($zips), '?'));
-            $query .= ' ORDER BY' . $order_by_field_list . 'start_time ASC, FIELD(zip, ' . $zipOrderPlaceholders . '), price ASC';
+            if($order_by === 'distance'){
+                $query .= ' ORDER BY' . $order_by_field_list . 'FIELD(zip, ' . $zipOrderPlaceholders . '), start_time ASC, price ASC';
+            }else{
+                $query .= ' ORDER BY' . $order_by_field_list . 'start_time ASC, FIELD(zip, ' . $zipOrderPlaceholders . '), price ASC';
+            }
             $values = array_merge($values, $zips);
         }else{
             $query .= ' ORDER BY' . $order_by_field_list . 'start_time ASC, price ASC, zip ASC';

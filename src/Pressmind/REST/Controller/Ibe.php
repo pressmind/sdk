@@ -417,10 +417,34 @@ class Ibe
         $ibe_client = isset($this->parameters['iic']) ? $this->parameters['iic'] : null;
         //$list_exits = !empty($this->parameters['list_exits']);
         $order_by_code_list = !empty($this->parameters['order_by_code_list']) && is_array($this->parameters['order_by_code_list']) ? $this->parameters['order_by_code_list'] : [];
+        $sort_by = isset($this->parameters['sort_by']) && $this->parameters['sort_by'] === 'distance' ? 'distance' : 'time';
         $data = [];
         $data['total'] = count(Startingpoint::getOptionsByZipRadius($id_starting_point, $ibe_client, $zip, $radius, 0, null));
-        $data['starting_point_options'] = Startingpoint::getOptionsByZipRadius($id_starting_point, $ibe_client, $zip, $radius, $start, $limit, $order_by_code_list);
+        $data['starting_point_options'] = Startingpoint::getOptionsByZipRadius($id_starting_point, $ibe_client, $zip, $radius, $start, $limit, $order_by_code_list, $sort_by);
+        $data['zip_distances'] = $this->_getZipDistances($zip, $radius);
         return ['success' => true, 'data' => $data];
+    }
+
+    /**
+     * Distances are measured between zip centers, not between the exact stop coordinates.
+     * @param string|null $zip
+     * @param int|null $radius
+     * @return object zip => distance in km
+     */
+    private function _getZipDistances($zip, $radius)
+    {
+        $distances = [];
+        if (!empty($zip) && !empty($radius)) {
+            $Geodata = new Geodata();
+            foreach ($Geodata->getZipsAroundZip($zip, $radius) as $item) {
+                $distances[(string)$item->postleitzahl] = round((float)$item->distance_in_km, 1);
+            }
+            // the zip center and the municipality center differ, so the searched zip itself is not 0 km
+            if (isset($distances[(string)$zip])) {
+                $distances[(string)$zip] = 0.0;
+            }
+        }
+        return (object)$distances;
     }
 
     public function pressmind_ib3_v2_get_starting_point_option_by_id($params) {

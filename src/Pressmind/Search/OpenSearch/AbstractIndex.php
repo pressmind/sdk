@@ -26,6 +26,16 @@ class AbstractIndex
     public $client;
 
     /**
+     * @var \OpenSearch\Client|null
+     */
+    private static $_clientCache = null;
+
+    /**
+     * @var string|null
+     */
+    private static $_clientCacheKey = null;
+
+    /**
      * @var \MongoDB\Collection
      */
     public $collection;
@@ -71,6 +81,13 @@ class AbstractIndex
         $this->_languages = $this->getLanguages();
     }
 
+    /**
+     * Build the OpenSearch client, reusing the cached one for identical options.
+     *
+     * The import creates a new indexer per media object, and every client carries its own
+     * curl handle. Without the cache a long import run opens one connection per media object
+     * and exhausts the file descriptor limit.
+     */
     protected function createOpenSearchClient(): \OpenSearch\Client
     {
         $options = [
@@ -82,7 +99,12 @@ class AbstractIndex
             $options['auth_basic'] = [$this->_config['username'], $this->_config['password']];
         }
         $maxRetries = (int)($this->_config['max_retries'] ?? 2);
-        return (new SymfonyClientFactory($maxRetries))->create($options);
+        $clientKey = md5(json_encode($options) . '|' . $maxRetries);
+        if (self::$_clientCache === null || self::$_clientCacheKey !== $clientKey) {
+            self::$_clientCache = (new SymfonyClientFactory($maxRetries))->create($options);
+            self::$_clientCacheKey = $clientKey;
+        }
+        return self::$_clientCache;
     }
 
     /**
@@ -90,6 +112,8 @@ class AbstractIndex
      */
     protected function reconnectOpenSearchClient(): void
     {
+        self::$_clientCache = null;
+        self::$_clientCacheKey = null;
         $this->client = $this->createOpenSearchClient();
     }
 

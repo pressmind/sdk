@@ -409,7 +409,7 @@ class Import
                 $indexer->upsertMediaObject($id_media_object);
                 $calendar = new \Pressmind\Search\MongoDB\Calendar($config['data']['search_mongodb']);
                 $calendar->upsertMediaObject($id_media_object);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 $this->_errors[] = '[MongoDB] ' . $e->getMessage();
             }
         }
@@ -417,7 +417,7 @@ class Import
             try {
                 $indexer = new \Pressmind\Search\OpenSearch\Indexer($config['data']['search_opensearch']);
                 $indexer->upsertMediaObject($id_media_object);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 $this->_errors[] = '[OpenSearch] ' . $e->getMessage();
             }
         }

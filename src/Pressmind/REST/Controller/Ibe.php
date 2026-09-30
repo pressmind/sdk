@@ -49,13 +49,28 @@ class Ibe
         $destinations = $mediaObject->getValueByTagName('pressmind-ib3.destinations');
         if (!is_null($destinations)) {
             $path = [];
+            $destination_code_fallback = null;
             foreach ($destinations as $destination_array) {
                 $destination = new Item($destination_array->id_item);
                 $path[] = $destination->name;
-                // only country items carry a code, city items would reset it to null
-                if (!empty($destination->code)) {
-                    $destination_code = $destination->code;
+                if (empty($destination->code)) {
+                    continue;
                 }
+                // The only consumer of this code is the Passolution entry regulations lookup in
+                // ib3, which expects an ISO 3166-1 alpha-2 country code. The destination chain
+                // mixes levels (continent » country » region » city) and clients code it
+                // differently: some carry a code on country items only, others give regions and
+                // cities their own numeric ids. Taking the last non-empty code therefore returns
+                // a city id for those clients. Prefer an ISO-2 code and keep the previous
+                // behaviour as a fallback for chains that carry no ISO-2 code at all.
+                if (preg_match('/^[A-Za-z]{2}$/', $destination->code)) {
+                    $destination_code = $destination->code;
+                } else {
+                    $destination_code_fallback = $destination->code;
+                }
+            }
+            if (empty($destination_code)) {
+                $destination_code = $destination_code_fallback;
             }
             $destination_name = implode(' » ', $path);;
         }

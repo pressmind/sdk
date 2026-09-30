@@ -14,6 +14,11 @@ use Pressmind\Search\Embedding\ProviderFactory;
 class Indexer extends AbstractIndex
 {
     /**
+     * @var bool Whether the index templates were already verified in this process
+     */
+    private static $_templatesVerified = false;
+
+    /**
      * @param string|int|array<int|string> $id_media_objects
      * @throws \Exception
      */
@@ -168,8 +173,11 @@ class Indexer extends AbstractIndex
 
     public function upsertMediaObject($id_media_objects)
     {
-        if ($this->allIndexTemplatesExist() === false) {
-            $this->createIndexTemplates();
+        if (self::$_templatesVerified === false) {
+            if ($this->allIndexTemplatesExist() === false) {
+                $this->createIndexTemplates();
+            }
+            self::$_templatesVerified = true;
         }
         if (!is_array($id_media_objects)) {
             $id_media_objects = [$id_media_objects];

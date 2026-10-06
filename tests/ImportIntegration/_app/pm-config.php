@@ -121,6 +121,7 @@ $config = [
                 'generate_offer_for_each_option_board_type' => false,
                 'ibe_client' => NULL,
                 'include_negative_option_in_cheapest_price' => true,
+                'include_standalone_required_option_in_cheapest_price' => true,
                 'label_price_mix_date_transport' => 'Teilnahmegebühr',
                 'date_filter' => [
                     'active' => true,

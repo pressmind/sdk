@@ -1688,6 +1688,7 @@ class MediaObject extends AbstractObject
         $max_rows = empty(Registry::getInstance()->get('config')['data']['touristic']['max_offers_per_product']) ? 5000 : Registry::getInstance()->get('config')['data']['touristic']['max_offers_per_product'];
         $ibe_client = empty(Registry::getInstance()->get('config')['data']['touristic']['ibe_client']) ? null : Registry::getInstance()->get('config')['data']['touristic']['ibe_client'];
         $include_negative_option_in_cheapest_price = !isset(Registry::getInstance()->get('config')['data']['touristic']['include_negative_option_in_cheapest_price']) ? true : Registry::getInstance()->get('config')['data']['touristic']['include_negative_option_in_cheapest_price'];
+        $include_standalone_required_option_in_cheapest_price = !isset(Registry::getInstance()->get('config')['data']['touristic']['include_standalone_required_option_in_cheapest_price']) ? true : Registry::getInstance()->get('config')['data']['touristic']['include_standalone_required_option_in_cheapest_price'];
         $agency_based_option_and_prices_enabled = !isset(Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['enabled']) ? false : Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['enabled'];
         $agencies = empty(Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['allowed_agencies']) || $agency_based_option_and_prices_enabled === false ? [null] : Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['allowed_agencies'];
         $offer_for_each_startingpoint_option = !empty(Registry::getInstance()->get('config')['data']['touristic']['generate_offer_for_each_startingpoint_option']);
@@ -1806,9 +1807,16 @@ class MediaObject extends AbstractObject
                             }
                         }
                     }
-                    foreach ($option_list as $option) {
-                        if (!empty($option->required) && empty($option->required_group) && in_array($option->state, [1, 2, 3])) {
-                            $cheapest_options['standalone-' . $option->getId()] = $option;
+                    // A required option without a required_group is not an alternative to
+                    // pick from, it always applies. It is therefore part of the cheapest
+                    // price. Installations that advertise their cheapest price without
+                    // such mandatory surcharges and list them separately instead can opt
+                    // out via include_standalone_required_option_in_cheapest_price.
+                    if ($include_standalone_required_option_in_cheapest_price !== false) {
+                        foreach ($option_list as $option) {
+                            if (!empty($option->required) && empty($option->required_group) && in_array($option->state, [1, 2, 3])) {
+                                $cheapest_options['standalone-' . $option->getId()] = $option;
+                            }
                         }
                     }
                     /**

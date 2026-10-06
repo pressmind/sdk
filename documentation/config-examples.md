@@ -202,6 +202,7 @@ Controls how the CheapestPrice matrix is expanded:
     'generate_offer_for_each_option_board_type'     => false,  // separate entry per board type
     'generate_offer_for_each_startingpoint_option'  => false,  // separate entry per departure city
     'include_negative_option_in_cheapest_price'     => true,   // include discount options
+    'include_standalone_required_option_in_cheapest_price' => true, // include surcharges without a required_group
     'label_price_mix_date_transport'                => null,   // custom label for transport price_mix
 ],
 ```

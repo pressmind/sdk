@@ -401,12 +401,16 @@ For each primary option, the **cheapest required secondary options** are calcula
 $option_list = $date->getAllOptionsButExcludePriceMixOptions($price_mix, true, $agency);
 ```
 
-This returns the cheapest option per `required_group` (excluding the primary price_mix type). Only options with valid states (`1`, `2`, `3`) are considered.
+This returns the required secondary options (excluding the primary price_mix type). Only options with valid states (`1`, `2`, `3`) are considered. Two kinds are collected:
+
+1. **Per `required_group`:** the cheapest member of each group. Exactly one of the group has to be booked, so its price is part of the cheapest price.
+2. **Without a `required_group`:** every such option. It is not an alternative to pick from but always applies, for example a tourist tax or a fuel surcharge. Can be switched off via `data.touristic.include_standalone_required_option_in_cheapest_price`, see [config-touristic-data.md](config-touristic-data.md).
 
 The included options' prices are summed:
 
 ```php
 $included_options_price = sum(cheapest option per required_group)
+                        + sum(required options without a required_group)
 ```
 
 For periodic prices (`nightly`, `daily`, `weekly`), `calculatePrice()` converts them to a one-time amount.
@@ -1043,6 +1047,7 @@ This behavior can be disabled per object type:
 | `data.touristic.max_offers_per_product` | `5000` | Maximum CheapestPriceSpeed entries per product |
 | `data.touristic.ibe_client` | `null` | IBE client identifier |
 | `data.touristic.include_negative_option_in_cheapest_price` | `true` | Include options with negative prices |
+| `data.touristic.include_standalone_required_option_in_cheapest_price` | `true` | Include required options that have no `required_group` |
 | `data.touristic.generate_single_room_index` | `false` | Calculate single room supplement |
 | `data.touristic.generate_offer_for_each_startingpoint_option` | `false` | Create entry per starting point |
 | `data.touristic.generate_offer_for_each_transport_type` | `false` | Create entry per transport type |

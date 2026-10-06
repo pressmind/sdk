@@ -29,6 +29,7 @@ The `data.touristic` section controls the import and processing of touristic dat
     "generate_offer_for_each_option_board_type": false,
     "ibe_client": null,
     "include_negative_option_in_cheapest_price": true,
+    "include_standalone_required_option_in_cheapest_price": true,
     "label_price_mix_date_transport": "Teilnahmegebühr"
   }
 }
@@ -450,6 +451,50 @@ Controls whether options with negative prices (discounts, deductions) are includ
 
 // Conservative: Ignore negative options
 "include_negative_option_in_cheapest_price": false
+```
+
+---
+
+### `data.touristic.include_standalone_required_option_in_cheapest_price`
+
+| Property | Value |
+|---|---|
+| **Type** | `boolean` |
+| **Default** | `true` |
+| **Required** | No |
+| **Used in** | `ORM\Object\MediaObject.php` |
+
+#### Description
+
+Controls whether required options without a `required_group` are included in the
+CheapestPrice calculation.
+
+Such an option is not an alternative to pick from — it always applies, for example a
+tourist tax or a fuel surcharge. It is therefore part of the price a customer has to pay.
+Options inside a `required_group` are not affected by this setting: there the cheapest
+member is always included, because exactly one of the group has to be booked.
+
+#### Behavior
+
+- `true` (default): The option is added to `included_options_price` and raises
+  `price_regular_before_discount` and `price_total`. Its name appears in
+  `included_options_description`, its id and IBE code in `id_included_options` and
+  `code_ibe_included_options`, and its quota and state are taken into account.
+- `false`: The option is ignored for the cheapest price. The advertised price then shows
+  the room or primary option only, and the surcharge has to be listed separately by the
+  frontend. The booking engine still charges it.
+
+Switching this setting changes `price_total` and therefore the `fingerprint` of the
+affected offers. It only takes effect on the next import.
+
+#### Example
+
+```json
+// Default: Mandatory surcharges are part of the advertised price
+"include_standalone_required_option_in_cheapest_price": true
+
+// Advertise the primary option price only and list surcharges separately
+"include_standalone_required_option_in_cheapest_price": false
 ```
 
 ---

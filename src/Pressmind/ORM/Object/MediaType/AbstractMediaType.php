@@ -53,6 +53,13 @@ class AbstractMediaType extends AbstractObject
     public function __get($name)
     {
         if (isset($this->_definitions['properties'][$name])) {
+            $property = $this->_definitions['properties'][$name];
+            if ($property['type'] === 'relation' && in_array(ltrim($property['relation']['class'], '\\'), [
+                \Pressmind\ORM\Object\MediaObject\DataType\Icon::class,
+                \Pressmind\ORM\Object\MediaObject\DataType\Repeated_form::class,
+            ], true) && !empty($this->language)) {
+                $this->_definitions['properties'][$name]['relation']['filters']['language'] = $this->language;
+            }
             // Known property - let parent handle it (includes relation loading)
             return parent::__get($name);
         }

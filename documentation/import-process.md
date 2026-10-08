@@ -248,6 +248,8 @@ Generates optimized price index entries in `pmt2core_cheapest_price_speed`.
 **3.14 – Import Content Data** (`MediaObjectData::import()`)
 - All content fields per section/language
 - Pictures, files, links, tables, category trees, locations, object links, icons
+- Repeated-form icon cells retain the API payload and variants in `value_icon`
+  (`datatype = 'icon'`); standalone icons use `DataType\Icon` relations.
 - Each field type has its own data type handler
 - Collects linked media object IDs and category tree IDs
 

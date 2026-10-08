@@ -119,6 +119,49 @@ Since v2-33, fields whose ObjectType is `icon` return either `null` or this payl
 
 The SDK stores these values through `Pressmind\ORM\Object\MediaObject\DataType\Icon`.
 
+The technical field type is `icon` (one selected icon per field and section).
+Standalone fields are exposed as a relation array, for example
+`$data->symbol_default[0]->url`; the API `id` is stored as `id_icon`.
+`variants` retains every style/URL/MIME entry returned by the API.
+
+Icons inside `repeated_form` fields use the same payload. The SDK exposes these
+cells with `datatype = 'icon'`, `value_string = null`, and the structured payload
+in `value_icon` (including the original `id` key):
+
+```php
+$column = $data->leistungen_default[0]->rows[0]->columns[1];
+$url = $column->value_icon['url'] ?? null;
+$variants = $column->value_icon['variants'] ?? [];
+```
+
+An empty icon has `value_icon = null`. Icon assets remain at their API URLs;
+the SDK does not download them or select a different variant. `Repeated_form::asHTML()`
+renders the selected URL as an image with the icon name as alternative text,
+escapes both attributes, and omits images with missing or non-HTTP(S) URLs.
+Existing text, HTML, and IBE teaser cells retain their previous behavior.
+Loading and deleting standalone icon and repeated-form relations is scoped to the
+media data object's language; field/section separation continues to use `var_name`.
+The language correction also applies to repeated forms without icon cells.
+
+**Upgrade for repeated-form icons:**
+
+1. Back up the database and retain the previous SDK revision.
+2. Update the SDK, then run `php bin/database-integrity-check --non-interactive --static-only`
+   in the bootstrapped application. This adds nullable `value_icon` (`LONGTEXT`,
+   ORM type `json`) to `pmt2core_media_object_repeated_form_row_columns`.
+3. Regenerate affected ObjectTypes and check their schema using the existing
+   application import/integrity commands.
+4. Reimport affected media objects using `mediaobject <ID> --force` in the application's
+   import CLI, or run a full import. Previously
+   discarded icons can only be recovered from the API. Refresh application caches
+   through the normal import workflow.
+5. Verify standalone icons and repeated-form icons on DEV, including replacement,
+   removal, language/section separation, variants, and HTML output.
+
+The schema extension and changed HTML output require a coordinated release.
+Rollback restores the previous SDK revision and database backup together;
+do not run the old SDK's schema repair against the upgraded database.
+
 ---
 
 ### Text/getByFilterId

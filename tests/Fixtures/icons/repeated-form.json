@@ -1,0 +1,27 @@
+{
+  "columns": [
+    {"type": "input_text", "label": "Titel", "varName": "title", "sort": 1},
+    {"type": "icon", "label": "Symbol", "varName": "symbol", "sort": 2}
+  ],
+  "values": [
+    {
+      "sorting": 1,
+      "validFrom": "2026-06-15",
+      "validTo": "2029-05-15",
+      "values": {
+        "title": "Schiffsreise",
+        "symbol": {
+          "id": "ship",
+          "name": "Schiff",
+          "slug": "ship",
+          "url": "https://example.test/ship.svg",
+          "mime": "image/svg+xml",
+          "style": "regular",
+          "variants": [
+            {"style": "solid", "url": "https://example.test/ship-solid.svg", "mime": "image/svg+xml"}
+          ]
+        }
+      }
+    }
+  ]
+}

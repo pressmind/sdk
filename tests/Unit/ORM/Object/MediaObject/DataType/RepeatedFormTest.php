@@ -7,6 +7,40 @@ use Pressmind\Tests\Unit\AbstractTestCase;
 
 class RepeatedFormTest extends AbstractTestCase
 {
+    public function testIconColumnRoundTripsStructuredJson(): void
+    {
+        $column = new Repeated_form\Row\Column();
+        $column->datatype = 'icon';
+        $column->value_icon = ['id' => 'ship', 'variants' => [['style' => 'solid', 'url' => 'https://example.test/ship.svg']]];
+        $copy = new Repeated_form\Row\Column();
+        $copy->fromJson($column->toJson());
+        $this->assertSame($column->value_icon, $copy->value_icon);
+        $this->assertNull($copy->value_string);
+    }
+
+    public function testAsHtmlRendersIconsWithEscapedAttributes(): void
+    {
+        $form = new Repeated_form();
+        $form->fromJson(json_encode(['rows' => [['columns' => [
+            ['datatype' => 'string', 'value_string' => '<strong>Reise</strong>'],
+            ['datatype' => 'icon', 'value_icon' => ['url' => 'https://example.test/ship.svg?q="&x=1', 'name' => 'Schiff "A" <B>']],
+        ]]]]));
+        $html = $form->asHTML('table', false);
+        $this->assertStringContainsString('<strong>Reise</strong>', $html);
+        $this->assertStringContainsString('<img src="https://example.test/ship.svg?q=&quot;&amp;x=1" alt="Schiff &quot;A&quot; &lt;B&gt;">', $html);
+    }
+
+    public function testAsHtmlOmitsMissingAndUnsafeIconUrls(): void
+    {
+        foreach ([null, '', 'javascript:alert(1)', 'data:image/svg+xml,test', '//example.test/icon.svg'] as $url) {
+            $form = new Repeated_form();
+            $form->fromJson(json_encode(['rows' => [['columns' => [
+                ['datatype' => 'icon', 'value_icon' => ['url' => $url, 'name' => 'Symbol']],
+            ]]]]));
+            $this->assertStringNotContainsString('<img', $form->asHTML('table', false));
+        }
+    }
+
     public function testAsHtmlReturnsTableWithTextRows(): void
     {
         $col1 = new \stdClass();

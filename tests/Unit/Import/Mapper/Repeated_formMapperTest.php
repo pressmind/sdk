@@ -7,6 +7,37 @@ use Pressmind\Tests\Unit\AbstractTestCase;
 
 class Repeated_formMapperTest extends AbstractTestCase
 {
+    public function testMapPreservesIconPayloadAlongsideText(): void
+    {
+        $fixture = json_decode(file_get_contents(__DIR__ . '/../../../Fixtures/icons/repeated-form.json'));
+        $result = (new Repeated_form())->map(42, 'de', 'leistungen_default', (array) $fixture);
+        $row = $result[0]->rows[0];
+        $this->assertSame('Schiffsreise', $row->columns[0]->value_string);
+        $this->assertSame('string', $row->columns[0]->datatype);
+        $this->assertSame('icon', $row->columns[1]->datatype);
+        $this->assertSame('symbol', $row->columns[1]->var_name);
+        $this->assertSame(2, $row->columns[1]->sort);
+        $this->assertNull($row->columns[1]->value_string);
+        $this->assertSame(json_decode(json_encode($fixture->values[0]->values->symbol), true), $row->columns[1]->value_icon);
+        $this->assertSame('de', $result[0]->language);
+        $this->assertSame('leistungen_default', $result[0]->var_name);
+        $this->assertSame('2026-06-15', $row->valid_from->format('Y-m-d'));
+    }
+
+    public function testMapKeepsEmptyIconCellsTypedAndEmpty(): void
+    {
+        foreach ([null, 'invalid', 42] as $value) {
+            $result = (new Repeated_form())->map(42, 'en', 'leistungen_sidebar', [
+                'columns' => [(object) ['type' => 'icon', 'varName' => 'symbol']],
+                'values' => [(object) ['values' => (object) ['symbol' => $value]]],
+            ]);
+            $column = $result[0]->rows[0]->columns[0];
+            $this->assertSame('icon', $column->datatype);
+            $this->assertNull($column->value_icon);
+            $this->assertNull($column->value_string);
+        }
+    }
+
     public function testMapReturnsEmptyWhenObjectNull(): void
     {
         $mapper = new Repeated_form();

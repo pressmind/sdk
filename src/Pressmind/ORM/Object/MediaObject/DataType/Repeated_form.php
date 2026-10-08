@@ -168,7 +168,16 @@ class Repeated_form extends AbstractObject
                     $html .= ' class="' . implode(" ", $classes) . '"';
                 }
                 $html .= '>';
-                $html .= $col['value_string'] ?? ($col['value'] ?? '');
+                if (($col['datatype'] ?? '') === 'icon') {
+                    $icon = $col['value_icon'] ?? [];
+                    $url = $icon['url'] ?? '';
+                    if (is_string($url) && preg_match('~^https?://~i', $url) && parse_url($url, PHP_URL_HOST)) {
+                        $html .= '<img src="' . htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '" alt="' .
+                            htmlspecialchars((string) ($icon['name'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">';
+                    }
+                } else {
+                    $html .= $col['value_string'] ?? ($col['value'] ?? '');
+                }
                 $html .= $fst_row_is_thead && $row == 0 ? '</th>' : '</td>';
             }
             $html .= '</tr>';

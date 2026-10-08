@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the pressmind SDK from February 2025 to September 2026.
+All notable changes to the pressmind SDK from February 2025 to October 2026.
 
 Changes are categorized as:
 - **FEATURE** – New functionality
@@ -12,6 +12,7 @@ Changes are categorized as:
 
 ## Table of Contents
 
+- [October 2026](#october-2026)
 - [September 2026](#september-2026)
 - [August 2026](#august-2026)
 - [June 2026](#june-2026)
@@ -32,6 +33,26 @@ Changes are categorized as:
 - [March 2025](#march-2025)
 - [February 2025](#february-2025)
 - [Summary of Breaking Changes](#summary-of-breaking-changes)
+
+---
+
+## October 2026
+
+### BREAKING: Preserve icons in repeated-form fields
+
+- Icon subfields previously lost their structured API payload during text normalization.
+  They now retain the complete payload, including style variants, in nullable JSON
+  property `Repeated_form\Row\Column::value_icon`, with `datatype = 'icon'`.
+- `Repeated_form::asHTML()` renders these cells as images using the selected HTTP(S)
+  API URL and escaped attributes. Text, HTML, and IBE teaser cells are unchanged.
+- Before importing, back up the database and apply the static schema integrity check
+  to add nullable `value_icon` (`LONGTEXT`) to `pmt2core_media_object_repeated_form_row_columns`.
+  Reimport affected objects without response-hash skipping to recover discarded icons.
+- Standalone `icon` fields continue to use `DataType\Icon` relations and `id_icon`.
+  API version remains v2-33. See [icon payload and upgrade steps](pressmind-api-endpoints.md#textgetbyid).
+- Loading and deleting `Icon` and `Repeated_form` relations now respects the media
+  data object's language. Previously, these operations could mix or delete relations
+  belonging to other languages. This applies to all repeated forms, including text-only forms.
 
 ---
 

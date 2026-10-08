@@ -5,6 +5,7 @@ namespace Pressmind\Import\Mapper;
 
 
 use Exception;
+use Pressmind\Import\IconNormalizer;
 use Pressmind\ORM\Object\MediaObject\DataType\Repeated_form\Row;
 use stdClass;
 
@@ -232,6 +233,18 @@ class Repeated_form implements MapperInterface
                 }
 
                 $var_name = $this->getColumnVarName($column);
+                if (($column->type ?? '') === 'icon') {
+                    $icon_column = new Row\Column();
+                    $icon_column->sort = $column_sort++;
+                    $icon_column->title = $this->getColumnTitle($column);
+                    $icon_column->var_name = $var_name;
+                    $icon_column->datatype = 'icon';
+                    $icon_column->value_icon = IconNormalizer::normalize(
+                        $var_name === null ? null : $this->getConfiguredRowValue($row, $var_name)
+                    );
+                    $repeated_form_row_columns[] = $icon_column->toStdClass();
+                    continue;
+                }
                 $repeated_form_row_columns[] = $this->createRowColumn(
                     $column_sort,
                     $this->getColumnTitle($column),

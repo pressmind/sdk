@@ -17,6 +17,7 @@ use Pressmind\ORM\Object\AbstractObject;
  * @property string $title
  * @property string $datatype
  * @property string $value_string
+ * @property array|null $value_icon
  */
 class Column extends AbstractObject
 {
@@ -115,6 +116,14 @@ class Column extends AbstractObject
                 'title' => 'datatype',
                 'name' => 'datatype',
                 'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+            ],
+            'value_icon' => [
+                'title' => 'value_icon',
+                'name' => 'value_icon',
+                'type' => 'json',
                 'required' => false,
                 'filters' => null,
                 'validators' => null,

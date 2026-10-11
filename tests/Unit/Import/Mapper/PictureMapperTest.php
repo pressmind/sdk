@@ -234,4 +234,100 @@ class PictureMapperTest extends AbstractTestCase
         $this->assertCount(1, $result);
         $this->assertCount(0, $result[0]->sections);
     }
+
+    private const CLIP_URL = 'https://image-archive.pressmind.io/clip/video.mp4';
+
+    private function motionClipInput(bool $withVideoKey, $video = null): array
+    {
+        $image = (object) [
+            'filename' => 'clip.mp4',
+            'visibility' => 30,
+            'width' => 1280,
+            'height' => 720,
+            'filesize' => 4718592,
+            'links' => (object) [
+                'web' => (object) [
+                    'url' => 'https://images.pressmind.io/getImages?api=key&id=4052278&v=web',
+                    'mime_type' => 'image/jpeg',
+                ],
+            ],
+        ];
+        if ($withVideoKey) {
+            $image->video = $video;
+        }
+        return [
+            (object) [
+                'id_media_object' => 4052278,
+                'caption' => '',
+                'title' => '',
+                'alt' => '',
+                'uri' => null,
+                'copyright' => '',
+                'disabled' => false,
+                'image' => $image,
+            ],
+        ];
+    }
+
+    private function clipVideo(string $url = self::CLIP_URL): \stdClass
+    {
+        return (object) [
+            'url' => $url,
+            'mime_type' => 'video/mp4',
+            'width' => 1280,
+            'height' => 720,
+            'duration' => 6.04,
+            'filesize' => 4718592,
+        ];
+    }
+
+    public function testMapTakesOverMotionClipVideo(): void
+    {
+        $mapped = (new Picture())->map(42, 'de', 'gallery', $this->motionClipInput(true, $this->clipVideo()))[0];
+
+        $this->assertSame(self::CLIP_URL, $mapped->video_tmp_url);
+        $this->assertSame('42_4052278_' . md5(self::CLIP_URL) . '.mp4', $mapped->video_file_name);
+        $this->assertSame('video/mp4', $mapped->video_mime_type);
+        $this->assertSame(1280, $mapped->video_width);
+        $this->assertSame(720, $mapped->video_height);
+        $this->assertSame(6.04, $mapped->video_duration);
+        $this->assertSame(4718592, $mapped->video_file_size);
+        $this->assertFalse($mapped->video_download_successful);
+        // the still image is still imported as regular picture (poster)
+        $this->assertSame('https://images.pressmind.io/getImages?api=key&id=4052278&v=web', $mapped->tmp_url);
+        $this->assertSame('image/jpeg', $mapped->mime_type);
+    }
+
+    public function testReplacedClipGetsNewVideoFileName(): void
+    {
+        $old = (new Picture())->map(42, 'de', 'gallery', $this->motionClipInput(true, $this->clipVideo()))[0];
+        $new = (new Picture())->map(42, 'de', 'gallery', $this->motionClipInput(true, $this->clipVideo('https://image-archive.pressmind.io/clip-v2/video.mp4')))[0];
+
+        $this->assertNotSame($old->video_file_name, $new->video_file_name);
+    }
+
+    /**
+     * @return array<string, array{0: bool, 1: mixed}>
+     */
+    public static function noVideoProvider(): array
+    {
+        return [
+            'key missing' => [false, null],
+            'video null' => [true, null],
+            'empty url' => [true, (object) ['url' => '', 'mime_type' => 'video/mp4']],
+            'url not a string' => [true, (object) ['url' => ['x'], 'mime_type' => 'video/mp4']],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('noVideoProvider')]
+    public function testMapLeavesVideoFieldsNullWithoutVideo(bool $withVideoKey, $video): void
+    {
+        $mapped = (new Picture())->map(42, 'de', 'gallery', $this->motionClipInput($withVideoKey, $video))[0];
+
+        foreach (['video_tmp_url', 'video_file_name', 'video_mime_type', 'video_width', 'video_height', 'video_duration', 'video_file_size', 'video_download_successful'] as $property) {
+            $this->assertObjectHasProperty($property, $mapped);
+            $this->assertNull($mapped->$property, $property);
+        }
+        $this->assertSame('42_4052278.' . \Pressmind\HelperFunctions::getExtensionFromMimeType('image/jpeg'), $mapped->file_name);
+    }
 }

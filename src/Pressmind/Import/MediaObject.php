@@ -6,6 +6,7 @@ namespace Pressmind\Import;
 
 use Exception;
 use Pressmind\DB\Adapter\Pdo;
+use Pressmind\HelperFunctions;
 use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\Route;
 use Pressmind\Registry;
@@ -45,6 +46,7 @@ class MediaObject extends AbstractImport
         $media_object->sales_priority = $data->sales_prio;
         $media_object->sales_position = $data->position;
         $media_object->recommendation_rate = $data->recommendation_rate;
+        $media_object->section_control = self::extractSectionControl($data->data ?? null);
         /*try {
             $old_media_object = new \Pressmind\ORM\Object\MediaObject();
             $old_media_object->read($data->id_media_object);
@@ -72,5 +74,28 @@ class MediaObject extends AbstractImport
         $this->_log[] = $this->_getElapsedTimeAndHeap() . ' Importer::importMediaObject(' . $media_object->getId() . '):  CheapestPriceSpeed table updated';
 
         return $media_object;
+    }
+
+    /**
+     * Section control flags (Webcore v2-34) of all controlled fields: [var_name => ['possibly_outdated' => bool]].
+     * Returns null if no field is controlled or the response has no section control information.
+     * @param mixed $fields data[] of the Text/getById response
+     * @return array|null
+     */
+    public static function extractSectionControl($fields): ?array
+    {
+        if (!is_array($fields)) {
+            return null;
+        }
+        $result = [];
+        foreach ($fields as $field) {
+            if (!is_object($field) || ($field->section_control ?? false) !== true || empty($field->var_name)) {
+                continue;
+            }
+            $result[HelperFunctions::human_to_machine($field->var_name)] = [
+                'possibly_outdated' => ($field->possibly_outdated ?? false) === true,
+            ];
+        }
+        return $result === [] ? null : $result;
     }
 }

@@ -5,6 +5,7 @@ namespace Pressmind\Tests\Integration\CLI;
 use Pressmind\CLI\FileDownloaderCommand;
 use Pressmind\DB\Scaffolder\Mysql as ScaffolderMysql;
 use Pressmind\ORM\Object\MediaObject\DataType\File;
+use Pressmind\ORM\Object\MediaObject\DataType\Picture;
 use Pressmind\Registry;
 use Pressmind\Tests\Integration\AbstractIntegrationTestCase;
 
@@ -17,6 +18,7 @@ class FileDownloaderCommandIntegrationTest extends AbstractIntegrationTestCase
     private string $logDir;
     private string $bucketDir;
     private ?int $e2eFileId = null;
+    private array $e2ePictureIds = [];
 
     /** @var resource|null */
     private $httpServerProcess = null;
@@ -73,6 +75,17 @@ class FileDownloaderCommandIntegrationTest extends AbstractIntegrationTestCase
                 // ignore cleanup errors
             }
         }
+        foreach ($this->e2ePictureIds as $pictureId) {
+            try {
+                $picture = new Picture();
+                $picture->read($pictureId);
+                if ($picture->id) {
+                    $picture->delete();
+                }
+            } catch (\Throwable $e) {
+                // ignore cleanup errors
+            }
+        }
         if (isset($this->bucketDir) && is_dir($this->bucketDir)) {
             $files = glob($this->bucketDir . '/*') ?: [];
             foreach ($files as $f) {
@@ -94,7 +107,7 @@ class FileDownloaderCommandIntegrationTest extends AbstractIntegrationTestCase
         parent::tearDown();
     }
 
-    private function startHttpServer(): string
+    private function startHttpServer(string $stub = 'file-stub.php'): string
     {
         $sock = stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
         if ($sock === false) {
@@ -104,7 +117,7 @@ class FileDownloaderCommandIntegrationTest extends AbstractIntegrationTestCase
         fclose($sock);
         $this->httpServerPort = (int)substr($addr, strrpos($addr, ':') + 1);
 
-        $stubScript = dirname(__DIR__, 2) . '/Fixtures/http/file-stub.php';
+        $stubScript = dirname(__DIR__, 2) . '/Fixtures/http/' . $stub;
         $cmd = sprintf(
             'php -S 127.0.0.1:%d %s',
             $this->httpServerPort,
@@ -121,7 +134,16 @@ class FileDownloaderCommandIntegrationTest extends AbstractIntegrationTestCase
             $this->fail('Could not start PHP built-in HTTP server');
         }
 
-        usleep(200000);
+        // wait until the server accepts connections (a fixed sleep was flaky)
+        $deadline = microtime(true) + 5;
+        do {
+            usleep(50000);
+            $probe = @fsockopen('127.0.0.1', $this->httpServerPort, $errno, $errstr, 0.2);
+        } while ($probe === false && microtime(true) < $deadline);
+        if ($probe === false) {
+            $this->fail('PHP built-in HTTP server did not start on port ' . $this->httpServerPort);
+        }
+        fclose($probe);
 
         return sprintf('http://127.0.0.1:%d', $this->httpServerPort);
     }
@@ -142,6 +164,14 @@ class FileDownloaderCommandIntegrationTest extends AbstractIntegrationTestCase
             $scaffolder->run(false);
         } catch (\Throwable $e) {
             // table may already exist
+        }
+        // Picture::create()/read() also touch the derivative and section relation tables
+        foreach ([new Picture(), new Picture\Derivative(), new Picture\Section()] as $object) {
+            try {
+                (new ScaffolderMysql($object))->run(false);
+            } catch (\Throwable $e) {
+                // table may already exist
+            }
         }
     }
 
@@ -193,5 +223,104 @@ class FileDownloaderCommandIntegrationTest extends AbstractIntegrationTestCase
 
         $storageFile = $file->getFile();
         $this->assertTrue($storageFile->exists(), 'Downloaded file should exist in bucket');
+    }
+
+    private function createPicture(?string $videoUrl): Picture
+    {
+        $picture = new Picture();
+        $picture->id_picture = random_int(100000, 999999);
+        $picture->id_media_object = 1;
+        $picture->section_name = '';
+        $picture->language = 'de';
+        $picture->var_name = 'e2e_video';
+        $picture->file_name = 'e2e-poster-' . uniqid() . '.jpg';
+        $picture->download_successful = false;
+        if ($videoUrl !== null) {
+            $picture->video_tmp_url = $videoUrl;
+            $picture->video_file_name = 'e2e-video-' . uniqid() . '.mp4';
+            $picture->video_mime_type = 'video/mp4';
+            $picture->video_download_successful = false;
+        }
+        $picture->create();
+        $this->e2ePictureIds[] = $picture->id;
+        return $picture;
+    }
+
+    public function testE2EDownloadsPendingVideoAndSkipsPicturesWithoutVideo(): void
+    {
+        $baseUrl = $this->startHttpServer('mp4-stub.php');
+        $withVideo = $this->createPicture($baseUrl . '/clip.mp4');
+        $withoutVideo = $this->createPicture(null);
+
+        $this->assertSame(0, $this->runCommand(['file-downloader']));
+
+        $withVideo->read($withVideo->id);
+        $this->assertTrue((bool) $withVideo->video_download_successful);
+        $this->assertGreaterThan(0, $withVideo->video_file_size);
+        $this->assertTrue($withVideo->getVideoFile()->exists());
+
+        $withoutVideo->read($withoutVideo->id);
+        $this->assertNull($withoutVideo->video_tmp_url);
+        $this->assertNull($withoutVideo->video_file_name);
+        $logContent = file_get_contents($this->logDir . DIRECTORY_SEPARATOR . 'file_downloader.log');
+        $this->assertStringContainsString('Downloading 1 videos', $logContent);
+    }
+
+    public function testE2EFailedVideoDownloadDoesNotStopOthersAndIsRetried(): void
+    {
+        $baseUrl = $this->startHttpServer('mp4-stub.php');
+        $broken = $this->createPicture($baseUrl . '/clip.mp4?status=404');
+        $working = $this->createPicture($baseUrl . '/clip.mp4');
+
+        $this->assertSame(0, $this->runCommand(['file-downloader']));
+
+        $broken->read($broken->id);
+        $working->read($working->id);
+        $this->assertFalse((bool) $broken->video_download_successful);
+        $this->assertFalse($broken->getVideoFile()->exists());
+        $this->assertTrue((bool) $working->video_download_successful);
+        // Writer routes non-INFO entries to <process>_<type>.log
+        $errorLogContent = file_get_contents($this->logDir . DIRECTORY_SEPARATOR . 'file_downloader_error.log');
+        $this->assertStringContainsString('HTTP error: 404', $errorLogContent);
+
+        // still pending, therefore picked up again by the next run
+        $pending = Picture::listAll(['video_tmp_url' => 'IS NOT NULL', 'video_download_successful' => 0, 'var_name' => 'e2e_video']);
+        $this->assertCount(1, $pending);
+        $this->assertSame($broken->id, $pending[0]->id);
+    }
+
+    public function testDownloadVideoDoesNotOverwriteStateWrittenConcurrently(): void
+    {
+        $baseUrl = $this->startHttpServer('mp4-stub.php');
+        $created = $this->createPicture($baseUrl . '/clip.mp4');
+        $copyA = new Picture();
+        $copyA->read($created->id);
+        $staleCopyB = new Picture();
+        $staleCopyB->read($created->id);
+
+        // image_processor finishes the poster while file_downloader still holds the stale row
+        $copyA->download_successful = true;
+        $copyA->update();
+        $staleCopyB->downloadVideo();
+
+        $fresh = new Picture();
+        $fresh->read($created->id);
+        $this->assertTrue((bool) $fresh->download_successful);
+        $this->assertTrue((bool) $fresh->video_download_successful);
+        $this->assertGreaterThan(0, $fresh->video_file_size);
+    }
+
+    public function testE2EInvalidExistingVideoFileIsReplacedByForcedRedownload(): void
+    {
+        $baseUrl = $this->startHttpServer('mp4-stub.php');
+        $picture = $this->createPicture($baseUrl . '/clip.mp4');
+        file_put_contents($this->bucketDir . '/' . $picture->video_file_name, '<html>not a video</html>');
+
+        $this->assertSame(0, $this->runCommand(['file-downloader']));
+
+        $picture->read($picture->id);
+        $this->assertTrue((bool) $picture->video_download_successful);
+        $this->assertSame(filesize(dirname(__DIR__, 2) . '/Fixtures/video/motion-clip.mp4'), (int) $picture->video_file_size);
+        $this->assertSame('video/mp4', (new \finfo(FILEINFO_MIME_TYPE))->file($this->bucketDir . '/' . $picture->video_file_name));
     }
 }

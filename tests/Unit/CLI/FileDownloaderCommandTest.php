@@ -75,4 +75,14 @@ class FileDownloaderCommandTest extends AbstractTestCase
         $logContent = file_get_contents($logFile);
         $this->assertStringContainsString('Downloading 0 files', $logContent);
     }
+
+    public function testRunLogsVideoCountWhenNoVideosToDownload(): void
+    {
+        $cmd = new FileDownloaderCommand();
+        $exitCode = $cmd->run(['file-downloader']);
+
+        $this->assertSame(0, $exitCode);
+        $logContent = file_get_contents($this->logDir . DIRECTORY_SEPARATOR . 'file_downloader.log');
+        $this->assertStringContainsString('Downloading 0 videos', $logContent);
+    }
 }

@@ -39,6 +39,14 @@ use Pressmind\Storage\File;
  * @property string $tmp_url
  * @property boolean $download_successful
  * @property string $mime_type
+ * @property string|null $video_tmp_url
+ * @property string|null $video_file_name
+ * @property string|null $video_mime_type
+ * @property integer|null $video_width
+ * @property integer|null $video_height
+ * @property float|null $video_duration
+ * @property integer|null $video_file_size
+ * @property boolean|null $video_download_successful
  * @property Derivative[] $derivatives
  * @property Section[] $sections
  */
@@ -283,6 +291,70 @@ class Picture extends AbstractObject
                 'title' => 'mime_type',
                 'name' => 'mime_type',
                 'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+            ],
+            'video_tmp_url' => [
+                'title' => 'video_tmp_url',
+                'name' => 'video_tmp_url',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+            ],
+            'video_file_name' => [
+                'title' => 'video_file_name',
+                'name' => 'video_file_name',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+            ],
+            'video_mime_type' => [
+                'title' => 'video_mime_type',
+                'name' => 'video_mime_type',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+            ],
+            'video_width' => [
+                'title' => 'video_width',
+                'name' => 'video_width',
+                'type' => 'integer',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+            ],
+            'video_height' => [
+                'title' => 'video_height',
+                'name' => 'video_height',
+                'type' => 'integer',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+            ],
+            'video_duration' => [
+                'title' => 'video_duration',
+                'name' => 'video_duration',
+                'type' => 'float',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+            ],
+            'video_file_size' => [
+                'title' => 'video_file_size',
+                'name' => 'video_file_size',
+                'type' => 'integer',
+                'required' => false,
+                'filters' => null,
+                'validators' => null,
+            ],
+            'video_download_successful' => [
+                'title' => 'video_download_successful',
+                'name' => 'video_download_successful',
+                'type' => 'boolean',
                 'required' => false,
                 'filters' => null,
                 'validators' => null,
@@ -1039,6 +1111,7 @@ class Picture extends AbstractObject
      */
     public function create()
     {
+        $this->_syncVideoDownloadState();
         parent::create();
         $this->_ensureDerivativesAfterSave();
         return true;
@@ -1049,6 +1122,7 @@ class Picture extends AbstractObject
      */
     public function update()
     {
+        $this->_syncVideoDownloadState();
         parent::update();
         $this->_ensureDerivativesAfterSave();
         return true;
@@ -1104,5 +1178,111 @@ class Picture extends AbstractObject
         $file = new File(new Bucket($config['image_handling']['storage']));
         $file->name = $this->file_name;
         return $file->exists();
+    }
+
+    /**
+     * True if the picture media object carries a video (e.g. a pressmind Motion Clip).
+     * @return bool
+     */
+    public function hasVideo(): bool
+    {
+        return $this->hasProperty('video_file_name') && !empty($this->video_file_name);
+    }
+
+    /**
+     * Local URL of the downloaded video, null as long as it is not downloaded.
+     * @return string|null
+     */
+    public function getVideoUri(): ?string
+    {
+        if (!$this->hasVideo() || empty($this->video_download_successful)) {
+            return null;
+        }
+        $config = Registry::getInstance()->get('config');
+        return HelperFunctions::replaceConstantsFromConfig($config['file_handling']['http_src']) . '/' . $this->video_file_name;
+    }
+
+    /**
+     * @return File
+     */
+    public function getVideoFile(): File
+    {
+        $config = Registry::getInstance()->get('config');
+        $file = new File(new Bucket($config['file_handling']['storage']));
+        $file->name = $this->video_file_name;
+        return $file;
+    }
+
+    /**
+     * Downloads the video into the file_handling storage. Only video/mp4 is accepted.
+     * An invalid file already stored under the target name is removed and downloaded again once.
+     * Only video_file_size and video_download_successful are persisted, so concurrent writers
+     * (e.g. image_processor) are not overwritten with stale values.
+     * @throws Exception
+     */
+    public function downloadVideo(): void
+    {
+        if (!$this->hasVideo() || empty($this->video_tmp_url)) {
+            throw new Exception('Picture ID ' . $this->getId() . ' has no video to download');
+        }
+        if ($this->video_mime_type !== 'video/mp4') {
+            throw new Exception('Mimetype ' . $this->video_mime_type . ' is not allowed for videos');
+        }
+        $downloader = new \Pressmind\File\Downloader();
+        $file_existed = $this->getVideoFile()->exists();
+        $storage_file = $downloader->download($this->video_tmp_url, $this->video_file_name);
+        $error = $this->_validateVideoContent($storage_file);
+        if ($error !== null && $file_existed) {
+            Writer::write('Stored video for Picture ID ' . $this->getId() . ' is invalid (' . $error . '), downloading it again', WRITER::OUTPUT_FILE, 'file_downloader', Writer::TYPE_WARNING);
+            $storage_file->delete();
+            try {
+                $storage_file = $downloader->download($this->video_tmp_url, $this->video_file_name, true);
+            } catch (Exception $e) {
+                throw new Exception($error . '; re-download failed: ' . $e->getMessage(), 0, $e);
+            }
+            $error = $this->_validateVideoContent($storage_file);
+        }
+        if ($error !== null) {
+            throw new Exception($error);
+        }
+        $storage_file->save();
+        $file_size = strlen((string)$storage_file->content);
+        $this->video_file_size = $file_size;
+        $this->video_download_successful = true;
+        $this->_db->update($this->getDbTableName(), ['video_file_size' => $file_size, 'video_download_successful' => 1], ['id = ?', $this->getId()]);
+    }
+
+    /**
+     * @param File $storage_file
+     * @return string|null error message, null if the content is a non-empty mp4
+     */
+    private function _validateVideoContent(File $storage_file): ?string
+    {
+        if (strlen((string)$storage_file->content) === 0) {
+            return 'Download of video ' . $this->video_file_name . ' failed, filesize is 0';
+        }
+        $mime_type = $storage_file->getMimetype();
+        if ($mime_type !== 'video/mp4') {
+            return 'Downloaded video ' . $this->video_file_name . ' has mimetype ' . $mime_type . ', expected video/mp4';
+        }
+        return null;
+    }
+
+    /**
+     * Marks the video as downloaded if a non-empty file already exists (e.g. after a reimport), so it is not fetched again.
+     */
+    private function _syncVideoDownloadState(): void
+    {
+        if (!$this->hasVideo() || !empty($this->video_download_successful)) {
+            return;
+        }
+        try {
+            $file = $this->getVideoFile();
+            if ($file->exists() && $file->filesize() > 0) {
+                $this->video_download_successful = true;
+            }
+        } catch (Exception $e) {
+            Writer::write('Failed to check video file for Picture ID ' . $this->getId() . ': ' . $e->getMessage(), WRITER::OUTPUT_FILE, 'import', Writer::TYPE_WARNING);
+        }
     }
 }

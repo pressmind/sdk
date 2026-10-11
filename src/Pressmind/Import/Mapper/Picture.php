@@ -50,6 +50,16 @@ class Picture implements MapperInterface
                 $mapped_object->width = $object->image->width;
                 $mapped_object->height = $object->image->height;
                 $mapped_object->file_size = $object->image->filesize;
+                $video = $object->image->video ?? null;
+                $video_url = (is_object($video) && !empty($video->url) && is_string($video->url)) ? $video->url : null;
+                $mapped_object->video_tmp_url = $video_url;
+                $mapped_object->video_file_name = $video_url !== null ? $pIdMediaObject . '_' . $object->id_media_object . '_' . md5($video_url) . '.mp4' : null;
+                $mapped_object->video_mime_type = $video_url !== null ? ($video->mime_type ?? null) : null;
+                $mapped_object->video_width = $video_url !== null ? ($video->width ?? null) : null;
+                $mapped_object->video_height = $video_url !== null ? ($video->height ?? null) : null;
+                $mapped_object->video_duration = $video_url !== null ? ($video->duration ?? null) : null;
+                $mapped_object->video_file_size = $video_url !== null ? ($video->filesize ?? null) : null;
+                $mapped_object->video_download_successful = $video_url !== null ? false : null;
                 if (isset($object->picture_sections) && is_a($object->picture_sections, 'stdClass')) {
                     foreach ($object->picture_sections as $picture_section_id => $picture_section) {
                         if(empty($picture_section->name)){

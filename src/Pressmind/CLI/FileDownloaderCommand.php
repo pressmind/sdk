@@ -6,12 +6,14 @@ use Exception;
 use Pressmind\HelperFunctions;
 use Pressmind\Log\Writer;
 use Pressmind\ORM\Object\MediaObject\DataType\File;
+use Pressmind\ORM\Object\MediaObject\DataType\Picture;
 use Pressmind\Registry;
 
 /**
  * File Downloader Command
  *
  * Downloads files with download_successful=0 from Media Object File data type.
+ * Also downloads pending Motion Clip videos of Media Object pictures (video_download_successful=0).
  *
  * Usage:
  *   php cli/file_downloader.php
@@ -44,6 +46,26 @@ class FileDownloaderCommand extends AbstractCommand
                 );
             } catch (Exception $e) {
                 Writer::write($e->getMessage(), Writer::OUTPUT_FILE, self::PROCESS_NAME, Writer::TYPE_ERROR);
+            }
+        }
+
+        $videos = Picture::listAll(['video_tmp_url' => 'IS NOT NULL', 'video_download_successful' => 0]);
+
+        Writer::write('Downloading ' . count($videos) . ' videos', Writer::OUTPUT_FILE, self::PROCESS_NAME, Writer::TYPE_INFO);
+
+        /** @var Picture $picture */
+        foreach ($videos as $picture) {
+            try {
+                Writer::write('Downloading video from ' . $picture->video_tmp_url, Writer::OUTPUT_FILE, self::PROCESS_NAME, Writer::TYPE_INFO);
+                $picture->downloadVideo();
+                Writer::write(
+                    'Video downloaded to ' . HelperFunctions::replaceConstantsFromConfig($config['file_handling']['storage']['bucket']) . '/' . $picture->video_file_name,
+                    Writer::OUTPUT_FILE,
+                    self::PROCESS_NAME,
+                    Writer::TYPE_INFO
+                );
+            } catch (Exception $e) {
+                Writer::write('Video download for picture ID ' . $picture->getId() . ' failed: ' . $e->getMessage(), Writer::OUTPUT_FILE, self::PROCESS_NAME, Writer::TYPE_ERROR);
             }
         }
 

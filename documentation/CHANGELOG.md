@@ -38,6 +38,23 @@ Changes are categorized as:
 
 ## October 2026
 
+### BREAKING: Webcore API v2-34 – section control and Motion Clip videos
+
+- The default Webcore REST API version changes from `v2-33` to `v2-34`.
+- **Section control:** fields maintained via pressmind section control arrive with a single section `default` and are imported into `<var_name>_default`. Their flags are stored in the new nullable JSON column `pmt2core_media_objects.section_control` and can be read with `MediaObject::isSectionControlled()` / `MediaObject::isPossiblyOutdated()` (e.g. to show "This description will be updated shortly"). The period is resolved by pressmind at request time; after a period change the website is updated by the next import of the object (full import or save in pressmind).
+- If a field previously used other type sections (e.g. `text_sommer`), switching it to section control creates the new column `text_default`; the old columns remain and are reported as obsolete. Themes must read `<var_name>_default` for those fields.
+- **Motion Clip videos:** picture assignments may contain `image.video`. The SDK stores it in the new nullable columns `video_tmp_url`, `video_file_name`, `video_mime_type`, `video_width`, `video_height`, `video_duration`, `video_file_size`, `video_download_successful` of `pmt2core_media_object_images`. `cli/file_downloader.php` downloads the MP4 (`video/mp4` only) into the `file_handling` storage; `Picture::getVideoUri()` returns its URL once downloaded. The still image is still imported as regular picture. Old MP4 files are not removed automatically (same as images). Videos are not part of the search index.
+
+Before the first v2-34 import on an existing environment:
+
+1. Pause all imports (cron and webhook) until step 2 has been applied: before the schema step, inserts into `pmt2core_media_objects` / `pmt2core_media_object_images` fail. Back up the database and keep the previous SDK revision available for rollback.
+2. Run `php bin/database-integrity-check --non-interactive --static-only` (adds the new nullable columns).
+3. Re-import the ObjectTypes if fields were switched to section control, so `<var_name>_default` exists.
+4. Run a DEV full import (if an import ran before step 2, run it without response-hash skipping or clear `pmt2core_import_hashes` for `scope='media_object'`, so the affected objects are re-imported), then `cli/image_processor.php` and `cli/file_downloader.php`.
+5. Verify on DEV: an object with a section-controlled field (content in `<var_name>_default`, `isPossiblyOutdated()` as expected) and an object with a Motion Clip (MP4 in the `file_handling` storage, `getVideoUri()` reachable, still image present).
+
+Rollback consists of restoring the pre-upgrade database backup and the previous SDK revision together. Do not deploy this SDK update or its schema changes directly to production without the normal release approval.
+
 ### BREAKING: Preserve icons in repeated-form fields
 
 - Icon subfields previously lost their structured API payload during text normalization.

@@ -58,6 +58,7 @@ use stdClass;
  * @property DateTime $different_season_from
  * @property DateTime $different_season_to
  * @property float $recommendation_rate
+ * @property array|null $section_control
  * @property string $booking_type
  * @property string $booking_link
  * @property string $sales_priority
@@ -439,6 +440,14 @@ class MediaObject extends AbstractObject
                 'validators' => NULL,
                 'filters' => NULL,
             ],
+            'section_control' => [
+                'title' => 'section_control',
+                'name' => 'section_control',
+                'type' => 'json',
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
             'cheapest_price_total' => [
                 'title' => 'cheapest_price_total',
                 'name' => 'cheapest_price_total',
@@ -646,6 +655,45 @@ class MediaObject extends AbstractObject
             $language = $config['data']['languages']['default'];
         }
         return HelperFunctions::findObjectInArray($this->data, 'language', $language);
+    }
+
+    /**
+     * True if the field is maintained via pressmind section control (Webcore v2-34).
+     * @param string $varName
+     * @return bool
+     */
+    public function isSectionControlled(string $varName): bool
+    {
+        return $this->getSectionControlState($varName) !== null;
+    }
+
+    /**
+     * True if no section control period with content is valid anymore and the last valid one was delivered.
+     * Themes can show a notice like "This description will be updated shortly".
+     * @param string $varName
+     * @return bool
+     */
+    public function isPossiblyOutdated(string $varName): bool
+    {
+        $state = $this->getSectionControlState($varName);
+        return $state !== null && ($state['possibly_outdated'] ?? false) === true;
+    }
+
+    /**
+     * @param string $varName
+     * @return array|null
+     */
+    private function getSectionControlState(string $varName): ?array
+    {
+        $section_control = $this->section_control;
+        if (is_string($section_control)) {
+            $section_control = json_decode($section_control, true);
+        }
+        if (!is_array($section_control)) {
+            return null;
+        }
+        $state = $section_control[HelperFunctions::human_to_machine($varName)] ?? null;
+        return is_array($state) ? $state : null;
     }
 
     /**

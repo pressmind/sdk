@@ -141,4 +141,61 @@ class IndexerTest extends AbstractTestCase
         $this->assertCount(1, $params);
         $this->assertSame('idMediaObject', $params[0]->getName());
     }
+    public function testCreateIndexCombinesStoredItineraryWithConfiguredHotelLocationsAndClearsOldGeo(): void
+    {
+        $hasGeometry = true;
+        $db = $this->createMock(\Pressmind\DB\Adapter\AdapterInterface::class);
+        $db->method('fetchAll')->willReturn([]);
+        $db->method('fetchRow')->willReturnCallback(static function ($sql) use (&$hasGeometry) {
+            if ($hasGeometry && strpos($sql, 'pmt2core_itinerary_maps') !== false) {
+                return (object) ['id' => 100, 'search_geometry' => json_encode([
+                    'type' => 'GeometryCollection', 'geometries' => [
+                        ['type' => 'LineString', 'coordinates' => [[13, 52.5], [14, 52.5]]],
+                    ],
+                ])];
+            }
+            return null;
+        });
+        \Pressmind\Registry::getInstance()->add('db', $db);
+        $searchConfig = ['search' => [
+            'build_for' => [100 => [['language' => 'de', 'origin' => 0]]],
+            'locations' => [100 => ['hotel' => null]],
+            'touristic' => ['occupancies' => [2], 'duration_ranges' => [[1, 7]]],
+        ]];
+        $config = $this->createMockConfig(['data' => [
+            'primary_media_type_ids' => [100], 'touristic' => [],
+            'search_mongodb' => $searchConfig,
+        ]]);
+        \Pressmind\Registry::getInstance()->add('config', $config);
+        $indexer = $this->createIndexerStub();
+        foreach (['_config' => $searchConfig, '_use_opensearch' => true] as $name => $value) {
+            $property = new \ReflectionProperty(Indexer::class, $name);
+            $property->setAccessible(true);
+            $property->setValue($indexer, $value);
+        }
+        $data = new class {
+            public array $points = [];
+            public function toStdClass() { return (object) ['hotel' => $this->points]; }
+        };
+        $data->points = [(object) ['lng' => 13.4, 'lat' => 52.5]];
+        $mediaObject = $this->getMockBuilder(\Pressmind\ORM\Object\MediaObject::class)
+            ->onlyMethods(['getDataForLanguage', 'getPrettyUrl'])->getMock();
+        $mediaObject->method('getDataForLanguage')->willReturn($data);
+        $mediaObject->method('getPrettyUrl')->willReturn('/geo-test');
+        $mediaObject->id = 100;
+        $mediaObject->id_object_type = 100;
+        $mediaObject->code = 'GEO';
+        $mediaObject->sales_priority = 'A';
+        $mediaObject->sales_position = 1;
+        $document = $indexer->createIndex(100, 'de', 0, null, true, $mediaObject);
+        $this->assertCount(2, $document->geo->geometries);
+        $this->assertSame('LineString', $document->geo->geometries[0]->type);
+        $this->assertSame([13.4, 52.5], $document->geo->geometries[1]->coordinates);
+        $hasGeometry = false;
+        $data->points = [];
+        $document = $indexer->createIndex(100, 'de', 0, null, true, $mediaObject);
+        $this->assertObjectHasProperty('geo', $document);
+        $this->assertNull($document->geo);
+    }
+
 }

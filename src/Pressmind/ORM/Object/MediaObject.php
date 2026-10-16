@@ -2551,6 +2551,12 @@ class MediaObject extends AbstractObject
         return Step::listAll($filters, ['order' => 'asc']);
     }
 
+    /** Complete overview GeoJSON, including presentation metadata and elevation. */
+    public function getItineraryMap(): ?array
+    {
+        return (new \Pressmind\ORM\Object\Itinerary\Map($this->getId()))->geojson;
+    }
+
     /**
      * @param $date_code_ibe
      * @return MediaObject[]
@@ -2638,6 +2644,7 @@ class MediaObject extends AbstractObject
      */
     private static function _deleteItineraryDataForMediaObject(AdapterInterface $db, int $id_media_object)
     {
+        $db->delete('pmt2core_itinerary_maps', ['id = ?', $id_media_object]);
         $stepRows = $db->fetchAll(
             'SELECT s.id FROM pmt2core_itinerary_steps s
             LEFT JOIN pmt2core_itinerary_variants v ON s.id_variant = v.id

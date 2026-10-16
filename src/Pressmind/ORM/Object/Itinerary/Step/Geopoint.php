@@ -14,6 +14,7 @@ use Pressmind\ORM\Object\AbstractObject;
  * @property float $lat
  * @property float $lng
  * @property string $address
+ * @property string $pointType
  * @property string $title
  */
 class Geopoint extends AbstractObject
@@ -74,6 +75,14 @@ class Geopoint extends AbstractObject
             'address' => [
                 'title' => 'address',
                 'name' => 'address',
+                'type' => 'string',
+                'required' => false,
+                'validators' => null,
+                'filters' => null
+            ],
+            'pointType' => [
+                'title' => 'pointType',
+                'name' => 'pointType',
                 'type' => 'string',
                 'required' => false,
                 'validators' => null,

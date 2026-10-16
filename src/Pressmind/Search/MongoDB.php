@@ -799,6 +799,10 @@ class MongoDB extends AbstractSearch
         $allow_invalid_offers = !empty($config['data']['search_mongodb']['search']['allow_invalid_offers']);
         $has_startingpoint_index = !empty($config['data']['touristic']['generate_offer_for_each_startingpoint_option']);
         $stages = [];
+        $geoDistance = $this->getConditionByType('GeoDistance');
+        if ($geoDistance !== false && !$this->hasCondition('AtlasLuceneFulltext')) {
+            $stages[] = $geoDistance->getQuery('geo_near');
+        }
 
         if($this->hasCondition('Powerfilter')){
             $condition = $this->getConditionByType('Powerfilter');
@@ -846,6 +850,21 @@ class MongoDB extends AbstractSearch
                 $condition = $this->getConditionByType('Fulltext');
                 $stages[] = $condition->getQuery('project');
             }
+        }
+
+        if ($geoDistance !== false && $this->hasCondition('AtlasLuceneFulltext')) {
+            // Atlas $search and $geoNear both require the first stage. Intersect via
+            // a correlated lookup so Atlas ranking/candidates are retained without an ID limit.
+            $near = $geoDistance->getQuery('geo_near');
+            $stages[] = ['$lookup' => [
+                'from' => $this->_collection_name,
+                'let' => ['geo_id' => '$_id'],
+                'pipeline' => [$near, ['$match' => ['$expr' => ['$eq' => ['$_id', '$$geo_id']]]], ['$project' => ['geo_distance_meters' => 1]]],
+                'as' => '_geo_match',
+            ]];
+            $stages[] = ['$match' => ['_geo_match.0' => ['$exists' => true]]];
+            $stages[] = ['$set' => ['geo_distance_meters' => ['$arrayElemAt' => ['$_geo_match.geo_distance_meters', 0]]]];
+            $stages[] = ['$unset' => '_geo_match'];
         }
 
         // stage 1.1 dynamic stages from conditions
@@ -991,6 +1010,7 @@ class MongoDB extends AbstractSearch
                 'possible_durations' => 1,
                 'startingpoint_options' => 1,
                 'locations' => 1,
+                'geo_distance_meters' => 1,
                 'url' => 1,
                 'valid_from' => 1,
                 'valid_to' => 1,

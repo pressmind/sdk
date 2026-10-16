@@ -6,7 +6,7 @@ This documentation describes all external Pressmind Webcore API endpoints used b
 
 | Property | Value                                                |
 |----------|------------------------------------------------------|
-| **Base URL** | `https://webcore.pressmind.io/v2-34/rest/`           |
+| **Base URL** | `https://webcore.pressmind.io/v2-35/rest/`           |
 | **URL Format** | `{base_url}{api_key}/{controller}/{action}?{params}` |
 | **Authentication** | HTTP Basic Auth with `api_user` and `api_password`   |
 | **Content-Type** | `application/json; charset=utf-8`                    |
@@ -15,7 +15,7 @@ This documentation describes all external Pressmind Webcore API endpoints used b
 ### Example URL
 
 ```
-https://webcore.pressmind.io/v2-34/rest/abc123xyz/Text/getById?ids[]=123456&cache=0
+https://webcore.pressmind.io/v2-35/rest/abc123xyz/Text/getById?ids[]=123456&cache=0
 ```
 
 ## Configuration
@@ -48,7 +48,7 @@ Retrieves ObjectType schema definitions by ID(s).
 
 ```bash
 curl -X GET \
-  "https://webcore.pressmind.io/v2-34/rest/{API_KEY}/ObjectType/getById?ids[]=169&cache=0" \
+  "https://webcore.pressmind.io/v2-35/rest/{API_KEY}/ObjectType/getById?ids[]=169&cache=0" \
   -H "Content-Type: application/json; charset=utf-8" \
   -u "{API_USER}:{API_PASSWORD}"
 ```
@@ -67,7 +67,7 @@ Searches for Media Objects by various criteria.
 
 ```bash
 curl -X GET \
-  "https://webcore.pressmind.io/v2-34/rest/{API_KEY}/Text/search?id_object_type=169&cache=0" \
+  "https://webcore.pressmind.io/v2-35/rest/{API_KEY}/Text/search?id_object_type=169&cache=0" \
   -H "Content-Type: application/json; charset=utf-8" \
   -u "{API_USER}:{API_PASSWORD}"
 ```
@@ -89,7 +89,7 @@ Retrieves detailed Media Object data by ID(s).
 
 ```bash
 curl -X GET \
-  "https://webcore.pressmind.io/v2-34/rest/{API_KEY}/Text/getById?ids[]=123456&cache=0" \
+  "https://webcore.pressmind.io/v2-35/rest/{API_KEY}/Text/getById?ids[]=123456&cache=0" \
   -H "Content-Type: application/json; charset=utf-8" \
   -u "{API_USER}:{API_PASSWORD}"
 ```
@@ -162,7 +162,7 @@ The schema extension and changed HTML output require a coordinated release.
 Rollback restores the previous SDK revision and database backup together;
 do not run the old SDK's schema repair against the upgraded database.
 
-#### Section control (since v2-34)
+#### Section control (since v2-35)
 
 Every field contains `section_control` and `possibly_outdated` (booleans). Fields maintained via section control always have exactly one section `default` (`sections: [{"id": "default", "name": "default"}]`, `value.default`) holding the content of the period that was valid when the response was generated. If no period with content is valid anymore, the last valid one is delivered and `possibly_outdated` is `true`.
 
@@ -174,7 +174,7 @@ The SDK keeps importing the content into `<var_name>_default` and stores the fla
 
 Read them with `MediaObject::isSectionControlled('beschreibung')` and `MediaObject::isPossiblyOutdated('beschreibung')`. The resolution happens in pressmind at request time: after a period change, content and flag are only updated by the next import of the object (full import or save in pressmind).
 
-#### Picture videos / Motion Clips (since v2-34)
+#### Picture videos / Motion Clips (since v2-35)
 
 Picture assignments contain `image.video` if the picture media object has a video (e.g. a pressmind Motion Clip); otherwise the key is missing. `image.links` still delivers the still image, which the SDK imports as regular picture (poster).
 
@@ -198,7 +198,7 @@ Retrieves Media Objects matching a Powerfilter.
 
 ```bash
 curl -X GET \
-  "https://webcore.pressmind.io/v2-34/rest/{API_KEY}/Text/getByFilterId?id_filter=42&cache=0" \
+  "https://webcore.pressmind.io/v2-35/rest/{API_KEY}/Text/getByFilterId?id_filter=42&cache=0" \
   -H "Content-Type: application/json; charset=utf-8" \
   -u "{API_USER}:{API_PASSWORD}"
 ```
@@ -220,7 +220,7 @@ Retrieves all category trees or specific categories by ID.
 
 ```bash
 curl -X GET \
-  "https://webcore.pressmind.io/v2-34/rest/{API_KEY}/Category/all?cache=0" \
+  "https://webcore.pressmind.io/v2-35/rest/{API_KEY}/Category/all?cache=0" \
   -H "Content-Type: application/json; charset=utf-8" \
   -u "{API_USER}:{API_PASSWORD}"
 ```
@@ -244,7 +244,7 @@ Retrieves itinerary data for a Media Object.
 
 ```bash
 curl -X GET \
-  "https://webcore.pressmind.io/v2-34/rest/{API_KEY}/Itinerary/get?id_media_object=123456&cache=0" \
+  "https://webcore.pressmind.io/v2-35/rest/{API_KEY}/Itinerary/get?id_media_object=123456&cache=0" \
   -H "Content-Type: application/json; charset=utf-8" \
   -u "{API_USER}:{API_PASSWORD}"
 ```
@@ -268,7 +268,7 @@ Retrieves starting point options by ID(s).
 
 ```bash
 curl -X GET \
-  "https://webcore.pressmind.io/v2-34/rest/{API_KEY}/StartingPoint/getById?ids[]=1&ids[]=2&cache=0" \
+  "https://webcore.pressmind.io/v2-35/rest/{API_KEY}/StartingPoint/getById?ids[]=1&ids[]=2&cache=0" \
   -H "Content-Type: application/json; charset=utf-8" \
   -u "{API_USER}:{API_PASSWORD}"
 ```
@@ -290,7 +290,7 @@ Searches for early bird discount configurations.
 
 ```bash
 curl -X GET \
-  "https://webcore.pressmind.io/v2-34/rest/{API_KEY}/EarlyBird/search?cache=0" \
+  "https://webcore.pressmind.io/v2-35/rest/{API_KEY}/EarlyBird/search?cache=0" \
   -H "Content-Type: application/json; charset=utf-8" \
   -u "{API_USER}:{API_PASSWORD}"
 ```
@@ -309,7 +309,7 @@ Searches for filter definitions (Powerfilters, DataViews).
 
 ```bash
 curl -X GET \
-  "https://webcore.pressmind.io/v2-34/rest/{API_KEY}/Filter/search?cache=0" \
+  "https://webcore.pressmind.io/v2-35/rest/{API_KEY}/Filter/search?cache=0" \
   -H "Content-Type: application/json; charset=utf-8" \
   -u "{API_USER}:{API_PASSWORD}"
 ```
@@ -330,7 +330,7 @@ Since v2-33, a port may contain `coordinates` as `{ "lat": 53.5439, "lng": 9.966
 
 ```bash
 curl -X GET \
-  "https://webcore.pressmind.io/v2-34/rest/{API_KEY}/Ports/getAll?cache=0" \
+  "https://webcore.pressmind.io/v2-35/rest/{API_KEY}/Ports/getAll?cache=0" \
   -H "Content-Type: application/json; charset=utf-8" \
   -u "{API_USER}:{API_PASSWORD}"
 ```
@@ -349,7 +349,7 @@ Searches for brand definitions.
 
 ```bash
 curl -X GET \
-  "https://webcore.pressmind.io/v2-34/rest/{API_KEY}/Brand/search?cache=0" \
+  "https://webcore.pressmind.io/v2-35/rest/{API_KEY}/Brand/search?cache=0" \
   -H "Content-Type: application/json; charset=utf-8" \
   -u "{API_USER}:{API_PASSWORD}"
 ```
@@ -368,7 +368,7 @@ Searches for season definitions.
 
 ```bash
 curl -X GET \
-  "https://webcore.pressmind.io/v2-34/rest/{API_KEY}/Saison/search?cache=0" \
+  "https://webcore.pressmind.io/v2-35/rest/{API_KEY}/Saison/search?cache=0" \
   -H "Content-Type: application/json; charset=utf-8" \
   -u "{API_USER}:{API_PASSWORD}"
 ```

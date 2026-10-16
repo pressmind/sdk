@@ -14,6 +14,8 @@ use Pressmind\ORM\Object\Itinerary\Step\DocumentMediaObject;
 use Pressmind\ORM\Object\Itinerary\Step\TextMediaObject;
 use Pressmind\ORM\Object\Itinerary\Variant;
 use Pressmind\Registry;
+use Pressmind\ORM\Object\Itinerary\Map;
+use Pressmind\Search\Geo\Geometry;
 use Pressmind\Storage\Bucket;
 use Pressmind\Storage\File;
 
@@ -46,15 +48,32 @@ class Itinerary extends AbstractImport implements ImportInterface
             $this->_errors[] = $e->getMessage();
             return;
         }
+        // Build before the step mapper mutates the API response.
+        $searchGeometry = Geometry::fromItinerary($response->result);
         if(!empty($response->result)) {
             switch ($response->result->type) {
                 case 'itinerary_to_touristic':
+                    $this->_importSteps([], $id_media_object);
                     $this->_importVariants($response->result->variants, $id_media_object);
                     break;
                 case 'itinerary_dateless':
+                    $this->_importVariants([], $id_media_object);
                     $this->_importSteps($response->result->steps, $id_media_object);
                     break;
             }
+        }
+        // A successful empty/legacy response must remove stale map data as well.
+        // API errors return above and leave the previous snapshot intact.
+        if (empty($response->result)) {
+            $this->_importVariants([], $id_media_object);
+            $this->_importSteps([], $id_media_object);
+            Registry::getInstance()->get('db')->delete('pmt2core_itinerary_maps', ['id = ?', $id_media_object]);
+        } elseif (empty($this->_errors)) {
+            $map = new Map();
+            $map->id = $id_media_object;
+            $map->geojson = $response->result->map ?? null;
+            $map->search_geometry = $searchGeometry;
+            $map->create();
         }
     }
 

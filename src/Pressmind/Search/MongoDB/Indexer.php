@@ -71,6 +71,7 @@ class Indexer extends AbstractIndex
             return;
         }
 
+        $this->createCollectionIndexIfNotExists($collection_name, ['geo' => '2dsphere'], ['name' => 'geo_2dsphere']);
         $this->createCollectionIndexIfNotExists($collection_name, ['groups' => 1], ['name' => 'groups_1']);
         $this->createCollectionIndexIfNotExists($collection_name, ['prices.price_total' => 1], ['name' => 'prices.price_total_1']);
         $this->createCollectionIndexIfNotExists($collection_name, ['prices.price_total' => -1], ['name' => 'prices.price_total_-1']);
@@ -512,6 +513,9 @@ class Indexer extends AbstractIndex
         $searchObject->categories = $this->_mapCategories($language);
         $searchObject->groups = $this->_mapGroups($language);
         $searchObject->locations = $this->_mapLocations($language);
+        $itineraryMap = new \Pressmind\ORM\Object\Itinerary\Map($this->mediaObject->id);
+        // Explicit null clears old geometry on $set upserts; 2dsphere indexes omit null values.
+        $searchObject->geo = \Pressmind\Search\Geo\Geometry::forSearch($itineraryMap->search_geometry, $searchObject->locations);
         $searchObject->prices = $this->_aggregatePrices($origin, $agency);
         $searchObject->has_price = !empty($searchObject->prices);
 

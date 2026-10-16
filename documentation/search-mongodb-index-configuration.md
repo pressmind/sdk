@@ -690,7 +690,9 @@ The key is the location field name from the content data. The indexer reads lati
 }
 ```
 
-Requires Atlas Search with a geo index for `pm-loc` queries.
+Requires Atlas Search with a geo index for existing `pm-loc` queries.
+
+Webcore v2-35 additionally combines these locations with itinerary points and GPX tracks in the native MongoDB `geo` / `2dsphere` index. The SDK conditions `GeoDistance` and `GeoBounds` support radius and viewport searches without Atlas. See [GPX import and geospatial search](geospatial-search.md).
 
 ---
 

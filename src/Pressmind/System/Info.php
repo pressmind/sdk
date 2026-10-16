@@ -89,6 +89,7 @@ class Info
         '\Touristic\Startingpoint\Option',
         '\Touristic\Startingpoint\Option\ZipRange',
         '\Touristic\Transport',
+        '\Itinerary\Map',
         '\Itinerary\Variant',
         '\Itinerary\Step',
         '\Itinerary\Step\Geopoint',

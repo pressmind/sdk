@@ -63,6 +63,8 @@ class Fulltext
                     'departure_date_count' => 1,
                     'description' => 1,
                     'groups' => 1,
+                        'geo' => 1,
+                        'geo_distance_meters' => 1,
                     'id_media_object' => 1,
                     'id_object_type' => 1,
                     'last_modified_date' => 1,

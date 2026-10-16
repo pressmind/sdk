@@ -72,7 +72,7 @@ class MediaObjectStaticQueryTest extends AbstractTestCase
         $db->method('insert')->willReturn(null);
         $db->method('replace')->willReturn(null);
         $db->method('update')->willReturn(null);
-        $db->expects($this->exactly(9))
+        $db->expects($this->exactly(10))
             ->method('delete')
             ->willReturnCallback(function ($table) use (&$deletedTables) {
                 $deletedTables[] = $table;
@@ -89,6 +89,7 @@ class MediaObjectStaticQueryTest extends AbstractTestCase
 
         $expectedTables = [
             'pmt2core_cheapest_price_speed',
+            'pmt2core_itinerary_maps',
             'pmt2core_touristic_date_attributes',
             'pmt2core_touristic_transports',
             'pmt2core_touristic_dates',

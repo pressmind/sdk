@@ -19,6 +19,7 @@ use Pressmind\Registry;
  * @property integer $id
  * @property integer $id_variant
  * @property integer $id_media_object
+ * @property array|null $gpx_tracks GeoJSON FeatureCollection, including elevation and track metadata
  * @property string $type
  * @property int $order
  * @property Section[] $sections
@@ -118,6 +119,14 @@ class Step extends AbstractObject
                         'params' => 22,
                     ]
                 ],
+                'filters' => null
+            ],
+            'gpx_tracks' => [
+                'title' => 'gpx_tracks',
+                'name' => 'gpx_tracks',
+                'type' => 'json',
+                'required' => false,
+                'validators' => null,
                 'filters' => null
             ],
             'sections' => [

@@ -378,4 +378,14 @@ class OpenSearchTest extends AbstractTestCase
 
         $this->assertSame($expected, $search->generateCacheKey());
     }
+    public function testGeoActivationDoesNotChangeIndexName(): void
+    {
+        $config = $this->getOpenSearchConfig();
+        $search = $this->createOpenSearchStub('', 'de', 100, $config);
+        $name = $search->getIndexTemplateName('de');
+        $config['data']['search_opensearch']['query']['geo']['enabled'] = true;
+        (new \ReflectionProperty(OpenSearch::class, '_config'))->setValue($search, $config);
+        $this->assertSame($name, $search->getIndexTemplateName('de'));
+    }
+
 }

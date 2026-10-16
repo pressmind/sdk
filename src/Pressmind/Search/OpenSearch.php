@@ -57,6 +57,29 @@ class OpenSearch extends AbstractSearch
      */
     private $_last_score_map = [];
 
+    private ?Geo\Filter $geoFilter = null;
+    private array $geoDistances = [];
+
+    public function getGeoDistanceMap(): array { return $this->geoDistances; }
+
+    public function setGeoFilter(?Geo\Filter $filter): void
+    {
+        $this->geoFilter = $filter === null ? null : clone $filter;
+        $this->geoDistances = [];
+    }
+
+    /** Apply geo restrictions to additive term-resolver IDs without changing this search. */
+    public function filterGeoIds(array $ids): array
+    {
+        if ($this->geoFilter === null || $this->geoFilter->isEmpty()) { return $ids; }
+        $result = [];
+        foreach (array_chunk($ids, 5000) as $chunk) {
+            $query = ['bool' => ['filter' => array_merge($this->geoFilter->queries(), [['ids' => ['values' => array_map('strval', $chunk)]]])]];
+            foreach ($this->fetchPagedHits($query) as $hit) { $result[] = $hit['_id']; }
+        }
+        return $result;
+    }
+
     /**
      * @param string $search_term
      * @param string|null $language
@@ -121,7 +144,7 @@ class OpenSearch extends AbstractSearch
     public function getResult($auto_complete_query = false, $ttl = 0)
     {
         $this->_addLog('getResult(): starting query');
-        $key = $this->generateCacheKey();
+        $key = $this->generateCacheKey($auto_complete_query);
         if (!empty($ttl) && Registry::getInstance()->get('config')['cache']['enabled'] && in_array('OPENSEARCH', Registry::getInstance()->get('config')['cache']['types']) && $this->_skip_cache == false) {
             $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
             if ($cache_adapter->exists($key)) {
@@ -143,8 +166,7 @@ class OpenSearch extends AbstractSearch
                 }
             }
         } catch (\Exception $exception) {
-            echo $exception->getMessage();
-            exit;
+            throw new \RuntimeException('OpenSearch search failed: ' . $exception->getMessage(), 0, $exception);
         }
         if (!empty($ttl) && Registry::getInstance()->get('config')['cache']['enabled'] && in_array('OPENSEARCH', Registry::getInstance()->get('config')['cache']['types']) && $this->_skip_cache == false) {
             Writer::write(get_class($this) . ' exec() writing to cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
@@ -152,7 +174,7 @@ class OpenSearch extends AbstractSearch
             $info->type = 'OPENSEARCH';
             $info->classname = self::class;
             $info->method = 'updateCache';
-            $info->parameters = ['term' => $this->_search_term, 'limit' => $this->_limit];
+            $info->parameters = ['term' => $this->_search_term, 'limit' => $this->_limit, 'language' => $this->_language, 'index' => $this->_index_name, 'geo' => $this->geoFilter, 'autocomplete' => $auto_complete_query];
             $cache_adapter->add($key, json_encode($result), $info, $ttl);
         }
         $this->_addLog('getResult(): query completed');
@@ -260,22 +282,22 @@ class OpenSearch extends AbstractSearch
      */
     private function fetchAllOpenSearchHitsWithScores(): array
     {
+        return $this->fetchPagedHits(['bool' => $this->buildLexicalBoolQuery()]);
+    }
+
+    private function fetchPagedHits(array $query): array
+    {
         $allHits = [];
         $searchAfter = null;
-        $lexicalQuery = $this->buildLexicalBoolQuery();
-        if (empty($lexicalQuery['should'])) {
-            return [];
-        }
-
         while (true) {
             $body = [
-                '_source' => false,
-                'size' => $this->_limit,
+                '_source' => $this->geoFilter === null ? false : ['geo', 'location_points'],
+                'size' => max(1, min(10000, $this->_limit)),
                 'sort' => [
                     ['_score' => 'desc'],
                     ['id' => 'asc']
                 ],
-                'query' => ['bool' => $lexicalQuery]
+                'query' => $query
             ];
             if ($searchAfter) {
                 $body['search_after'] = $searchAfter;
@@ -292,8 +314,17 @@ class OpenSearch extends AbstractSearch
             if (empty($hits)) {
                 break;
             }
-            $allHits = array_merge($allHits, $hits);
+            foreach ($hits as $hit) {
+                if ($this->geoFilter === null || $this->geoFilter->matches($hit['_source'] ?? [])) {
+                    if ($this->geoFilter !== null && $this->geoFilter->radius !== null) {
+                        $this->geoDistances[(string) $hit['_id']] = Geo\Spatial::distance(array_slice($this->geoFilter->radius, 0, 2), $hit['_source']['geo'] ?? null);
+                    }
+                    unset($hit['_source']);
+                    $allHits[] = $hit;
+                }
+            }
             $searchAfter = end($hits)['sort'] ?? null;
+            if ($searchAfter === null) { throw new \RuntimeException('OpenSearch did not return a search_after cursor.'); }
         }
         return $allHits;
     }
@@ -338,7 +369,7 @@ class OpenSearch extends AbstractSearch
             $shouldClauses[] = [
                 'multi_match' => [
                     'query' => $this->_search_term,
-                    'fields' => $this->_getFields(),
+                    'fields' => $this->_getFields() ?: ['fulltext'],
                     'type' => 'best_fields',
                     'operator' => 'and'
                 ]
@@ -357,6 +388,10 @@ class OpenSearch extends AbstractSearch
      */
     private function buildLexicalBoolQuery(array $filter = []): array
     {
+        $filter = array_merge($filter, $this->geoFilter === null ? [] : $this->geoFilter->queries());
+        if ($this->_search_term === '') {
+            return ['must' => [[empty($filter) ? 'match_none' : 'match_all' => (object) []]], 'filter' => $filter];
+        }
         $fulltextConfig = $this->getFulltextQueryConfig();
         if (($fulltextConfig['strategy'] ?? null) === 'atlas_phrase') {
             return $this->buildAtlasPhraseBoolQuery($filter);
@@ -575,6 +610,23 @@ class OpenSearch extends AbstractSearch
      */
     private function fetchVectorHitsWithScores(array $queryVector, string $field, int $k, float $minScore = 0.0): array
     {
+        if ($this->geoFilter !== null && !$this->geoFilter->isEmpty()) {
+            // Score all spatial candidates before taking k, so exact track checks cannot
+            // consume the k slots with false positives from conservative envelopes.
+            $query = ['script_score' => [
+                'query' => ['bool' => ['filter' => array_merge($this->geoFilter->queries(), [['exists' => ['field' => $field]]])]],
+                'script' => ['lang' => 'knn', 'source' => 'knn_score', 'params' => [
+                    'field' => $field, 'query_value' => $queryVector,
+                    'space_type' => $this->_config['data']['search_opensearch']['vector']['space_type'] ?? 'cosinesimil',
+                ]],
+            ]];
+            $map = [];
+            foreach ($this->fetchPagedHits($query) as $hit) {
+                if (($hit['_score'] ?? 0) >= $minScore) { $map[(string) $hit['_id']] = (float) $hit['_score']; }
+                if (count($map) >= $k) { break; }
+            }
+            return $map;
+        }
         $body = [
             '_source' => false,
             'size' => $k,
@@ -614,6 +666,9 @@ class OpenSearch extends AbstractSearch
      */
     public function fetchAutocompleteSuggestions(): array
     {
+        if ($this->geoFilter !== null && !$this->geoFilter->isEmpty()) {
+            return array_slice($this->fetchAllOpenSearchHitsWithScores(), 0, 10);
+        }
         $textFields = $this->_getFields('text');
         $keywordFields = $this->_getFields('keyword');
         $shouldClauses = [];
@@ -690,37 +745,30 @@ class OpenSearch extends AbstractSearch
      */
     public function updateCache($key = null, $output = null, $preview_date = null, $allowed_visibilities = [30])
     {
-        $cache_adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
-        if (is_null($key)) {
-            $key = $this->generateCacheKey('', $output, $preview_date, $allowed_visibilities);
+        $adapter = Factory::create(Registry::getInstance()->get('config')['cache']['adapter']['name']);
+        $key = $key ?? $this->generateCacheKey();
+        $info = $adapter->getInfo($key);
+        $params = $info['info']->parameters ?? null;
+        if ($params === null) { return null; }
+        $search = new self($params->term, $params->language ?? null, $params->limit);
+        $search->_index_name = $params->index ?? $search->_index_name;
+        if (!empty($params->geo)) {
+            $search->setGeoFilter(new Geo\Filter(
+                isset($params->geo->radius) ? (array) $params->geo->radius : null,
+                isset($params->geo->bounds) ? (array) $params->geo->bounds : null,
+                isset($params->geo->location) ? (array) $params->geo->location : null
+            ));
         }
-        $info = $this->getCacheInfo($key);
-        $params = isset($info['info']) && !empty($info['info']->parameters) ? $info['info']->parameters : null;
-        if (!is_null($params)) {
-            try {
-                $db = MongoDB::getDatabase($this->_db_uri, $this->_db_name);
-                $collection = $db->{$this->_collection_name};
-                $result = $collection->aggregate($params->aggregate)->toArray()[0];
-                $info = new \stdClass();
-                $info->type = 'MONGODB';
-                $info->classname = self::class;
-                $info->method = 'updateCache';
-                $info->parameters = ['aggregate' => $params->aggregate];
-                Writer::write(get_class($this) . ' exec() writing to cache. KEY: ' . $key, Writer::OUTPUT_FILE, strtolower(Registry::getInstance()->get('config')['cache']['adapter']['name']), Writer::TYPE_DEBUG);
-                $cache_adapter->add($key, json_encode($result), $info);
-                return $key . ': ' . $params->aggregate;
-            } catch (Exception $e) {
-                return $e->getMessage();
-            }
-        }
-        return null;
+        $result = $search->getResult($params->autocomplete ?? false);
+        $adapter->add($key, json_encode($result), $info['info']);
+        return $key;
     }
 
     /**
      * @param string $add
      * @return string
      */
-    public function generateCacheKey()
+    public function generateCacheKey($auto_complete_query = false)
     {
         $cacheParts = [
             $this->_search_term,
@@ -728,6 +776,8 @@ class OpenSearch extends AbstractSearch
             $this->_language,
             $this->_limit,
         ];
+        if ($this->geoFilter !== null) { $cacheParts[] = ['geo' => $this->geoFilter]; }
+        if ($auto_complete_query) { $cacheParts[] = ['autocomplete' => true]; }
         $fulltextConfig = $this->getFulltextQueryConfig();
         if (!empty($fulltextConfig)) {
             $cacheParts[] = ['fulltext' => $fulltextConfig];

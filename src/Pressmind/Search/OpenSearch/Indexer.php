@@ -17,6 +17,15 @@ class Indexer extends AbstractIndex
      * @var bool Whether the index templates were already verified in this process
      */
     private static $_templatesVerified = false;
+    private static array $geoMappingsVerified = [];
+
+    public function __construct()
+    {
+        parent::__construct();
+        // Geo-only object types need indexes even without language-specific text fields.
+        $this->_languages = array_values(array_unique(array_merge($this->_languages,
+            Registry::getInstance()->get('config')['data']['languages']['allowed'] ?? [])));
+    }
 
     /**
      * @param string|int|array<int|string> $id_media_objects
@@ -61,7 +70,13 @@ class Indexer extends AbstractIndex
                 $ids[] = $mediaObject->id;
             }
         }
-        $this->upsertMediaObject($ids);
+        $config = Registry::getInstance()->get('config');
+        foreach (array_keys($config['data']['search_mongodb']['search']['locations'] ?? []) as $objectType) {
+            foreach (MediaObject::listAll(['id_object_type' => $objectType]) as $object) { $ids[] = $object->id; }
+        }
+        $mapTable = (new \Pressmind\ORM\Object\Itinerary\Map())->getDbTableName();
+        foreach (Registry::getInstance()->get('db')->fetchAll('SELECT id FROM `' . $mapTable . '`') as $map) { $ids[] = $map->id; }
+        $this->upsertMediaObject(array_values(array_unique($ids)));
     }
 
     public function createIndexTemplates()
@@ -142,11 +157,14 @@ class Indexer extends AbstractIndex
                     }
                 }
             }
+            $params['body']['mappings']['properties'] = array_replace($params['body']['mappings']['properties'], $this->geoMapping());
             $response = $this->client->indices()->putTemplate($params);
             if(empty($response['acknowledged'])){
                 throw new \Exception("Failed to create index template: " . $indexTemplateName . ". Response: " . json_encode($response));
             }
-            if (!$this->indexExists($indexTemplateName)) {
+            if ($this->indexExists($indexTemplateName)) {
+                $this->client->indices()->putMapping(['index' => $indexTemplateName, 'body' => ['properties' => $this->geoMapping()]]);
+            } else {
                 $response = $this->client->indices()->create([
                     'index' => $indexTemplateName
                 ]);
@@ -155,7 +173,35 @@ class Indexer extends AbstractIndex
                 }
             }
         }
-        $this->deleteAllIndexesThatNotMatchConfigHash();
+    }
+
+    /** Additive mappings also apply to already existing indexes; conflicts fail explicitly. */
+    public function ensureGeoMappings(): void
+    {
+        foreach ($this->_languages as $language) {
+            $name = $this->getIndexTemplateName($language);
+            if ($this->indexExists($name)) {
+                $this->client->indices()->putMapping(['index' => $name, 'body' => ['properties' => $this->geoMapping()]]);
+            }
+        }
+    }
+
+    public function geoMapping(): array
+    {
+        $fields = [];
+        $config = Registry::getInstance()->get('config');
+        foreach ($config['data']['search_mongodb']['search']['locations'] ?? [] as $locations) {
+            foreach (array_keys($locations) as $field) {
+                if (!preg_match('/^[a-zA-Z0-9_-]+$/', $field)) { throw new \InvalidArgumentException('Invalid geo location field: ' . $field); }
+                $fields[$field] = ['type' => 'geo_point'];
+            }
+        }
+        return [
+            'id' => ['type' => 'integer'],
+            'geo' => ['type' => 'geo_shape'],
+            'geo_radius_cover' => ['type' => 'geo_shape'],
+            'location_points' => ['type' => 'object', 'dynamic' => false, 'properties' => (object) $fields],
+        ];
     }
 
     public function allIndexTemplatesExist(): bool
@@ -178,6 +224,12 @@ class Indexer extends AbstractIndex
                 $this->createIndexTemplates();
             }
             self::$_templatesVerified = true;
+        }
+        $mappingKey = md5(serialize([$this->_config['uri'], $this->getConfigHash(), $this->_languages, $this->geoMapping()]));
+        if (empty(self::$geoMappingsVerified[$mappingKey])) {
+            if (!$this->allIndexTemplatesExist()) { $this->createIndexTemplates(); }
+            $this->ensureGeoMappings();
+            self::$geoMappingsVerified[$mappingKey] = true;
         }
         if (!is_array($id_media_objects)) {
             $id_media_objects = [$id_media_objects];
@@ -242,8 +294,7 @@ class Indexer extends AbstractIndex
             } catch (\Exception $e) {
                 echo "OpenSearch error for media object ID {$id} in language {$language}: " . $e->getMessage() . "\n";
                 if ($attempt >= $maxRetries) {
-                    echo "Skipping media object ID {$id} after " . ($maxRetries + 1) . " attempts.\n";
-                    return null;
+                    throw new \RuntimeException("OpenSearch indexing failed for media object {$id} ({$language}) after " . ($maxRetries + 1) . " attempts.", 0, $e);
                 }
             }
         }
@@ -255,16 +306,22 @@ class Indexer extends AbstractIndex
     {
         // Base row only; `data` is loaded lazily via getDataForLanguage (avoids insurance_group / full ORM graph).
         $mediaObject = new MediaObject($idMediaObject, false, true);
-        $mediaObjectData = $mediaObject->getDataForLanguage($language);
         $searchObject = new \stdClass();
+        $searchObject->id = (int) $mediaObject->id;
         $searchObject->id_object_type = $mediaObject->id_object_type;
+        $locations = \Pressmind\Search\Geo\Provider::locations($mediaObject, $language);
+        $geometry = \Pressmind\Search\Geo\Provider::geometry($mediaObject->id, $locations);
+        $searchObject->geo = \Pressmind\Search\Geo\Spatial::forOpenSearch($geometry);
+        $searchObject->geo_radius_cover = \Pressmind\Search\Geo\Spatial::cover($geometry);
+        $searchObject->location_points = new \stdClass();
+        foreach ($locations as $field => $location) { $searchObject->location_points->{$field} = $location->coordinates; }
         $searchObject->fulltext = FulltextSearch::getFullTextWords($mediaObject->id, $mediaObject->id_object_type, $language);
         $fields = $this->getFields($language, $mediaObject->id_object_type);
-        if (empty($fields)) {
-            echo "No fields found for media object ID {$idMediaObject} in language {$language}.\n";
-            return false;
-        }
+        $mediaObjectData = empty($fields) ? null : $mediaObject->getDataForLanguage($language);
         foreach ($fields as $property_name => $property) {
+            if (in_array($property_name, ['geo', 'geo_radius_cover', 'location_points'], true)) {
+                throw new \InvalidArgumentException('Reserved OpenSearch geo field: ' . $property_name);
+            }
             $string = '';
             $field_name = $property['name'];
             if ($field_name === 'id') {

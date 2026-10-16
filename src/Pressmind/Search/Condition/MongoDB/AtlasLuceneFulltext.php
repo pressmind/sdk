@@ -92,11 +92,11 @@ class AtlasLuceneFulltext
                     $is_valid = true;
                 }
              }
-            if(!empty($this->_gson_property) && !empty($this->_lat) && !empty($this->_lon) && !empty($this->_maxDistanceKm)){
+            if(!empty($this->_gson_property) && $this->_maxDistanceKm >= 0){
                 $is_valid = true;
             }
         } else {
-            if(!empty($this->_searchString) || (!empty($this->_lon) && !empty($this->_lat) && !empty($this->_maxDistanceKm) && !empty($this->_gson_property))){
+            if(!empty($this->_searchString) || (!empty($this->_gson_property) && $this->_maxDistanceKm >= 0)){
                 $is_valid = true;
             }
         }
@@ -106,6 +106,14 @@ class AtlasLuceneFulltext
     /**
      * @return string
      */
+    public function getGeoParameters(): ?array
+    {
+        if (empty($this->_gson_property) || $this->_locationCondition !== 'must') {
+            return null;
+        }
+        return [$this->_gson_property, $this->_lon, $this->_lat, $this->_maxDistanceKm * 1000];
+    }
+
     public function getSearchStringRaw()
     {
         return $this->_searchStringRaw;
@@ -207,7 +215,7 @@ class AtlasLuceneFulltext
             } else {
                 $q = ['$search' => $this->_searchDefinition];
             }
-            if(!empty($this->_gson_property) && !empty($this->_lat) && !empty($this->_lon) && !empty($this->_maxDistanceKm)){
+            if(!empty($this->_gson_property) && $this->_maxDistanceKm >= 0){
                 $q['$search']['compound'][$this->_locationCondition][] = [
                     'geoWithin' => [
                         'circle' => [

@@ -356,6 +356,16 @@ class MongoDB extends AbstractSearch
      */
     public function getResult($getFilters = false, $returnFiltersOnly = false, $ttl = 0, $output = null, $preview_date = null, $allowed_visibilities = [30], SearchType $search_type = SearchType::DEFAULT, array $options = [])
     {
+        $geo = $this->getGeoFilter();
+        if (!$geo->isEmpty() && empty($options['_geo_execution'])) {
+            $execution = clone $this;
+            $options['_geo_execution'] = true;
+            // Cached aggregates contain concrete candidate IDs. Recompute geo candidates on
+            // every request so imported/removed tracks also affect facets and totals immediately.
+            return $execution->getResult($getFilters, $returnFiltersOnly, 0, $output, $preview_date, $allowed_visibilities, $search_type, $options);
+        }
+        $geoInOpenSearch = $this->_use_opensearch && !empty(Registry::getInstance()->get('config')['data']['search_opensearch']['query']['geo']['enabled']);
+
         $this->_addLog('getResult(): starting query');
         if (!empty($ttl) && Registry::getInstance()->get('config')['cache']['enabled'] && in_array('MONGODB', Registry::getInstance()->get('config')['cache']['types']) && $this->_skip_cache == false) {
             $key = $this->generateCacheKey('', $output, $preview_date, $allowed_visibilities);
@@ -449,7 +459,7 @@ class MongoDB extends AbstractSearch
             $fulltextCondition = $this->getConditionByType('Fulltext') ?: $this->getConditionByType('AtlasLuceneFulltext');
             if ($fulltextCondition) {
                 $searchTerm = $fulltextCondition->getSearchStringRaw();
-                $termResolverMatch = TermResolver::resolve($searchTerm, $this->_language, $this->_origin);
+                $termResolverMatch = TermResolver::resolve((string) $searchTerm, $this->_language, $this->_origin);
                 if ($termResolverMatch !== null) {
                     $this->_addLog('getResult(): TermResolver matched "' . $searchTerm . '" → ' . $termResolverMatch['field'] . ':' . $termResolverMatch['id'] . ' (additive mode)');
                 }
@@ -460,7 +470,15 @@ class MongoDB extends AbstractSearch
         // (all documents) and match highlights (only the returned result set) can be attached below.
         $openSearchInstance = null;
         $openSearchScoreMap = [];
-        if($this->_use_opensearch && ($this->hasCondition('AtlasLuceneFulltext') || $this->hasCondition('Fulltext'))) {
+        if($this->_use_opensearch && ($this->hasCondition('AtlasLuceneFulltext') || $this->hasCondition('Fulltext') || ($geoInOpenSearch && !$geo->isEmpty()))) {
+            if ($geoInOpenSearch) {
+                $this->removeCondition('GeoDistance');
+                $this->removeCondition('GeoBounds');
+                $this->removeCondition('GeoLocation');
+            } elseif (($atlas = $this->getConditionByType('AtlasLuceneFulltext')) && $atlas->getGeoParameters() !== null) {
+                // Explicit MongoDB backend still retains the legacy location restriction.
+                $this->addCondition('GeoLocation', new Condition\MongoDB\GeoLocation(...$atlas->getGeoParameters()));
+            }
             $searchString = '';
             $condition = $this->getConditionByType('AtlasLuceneFulltext');
             if($condition) {
@@ -474,14 +492,15 @@ class MongoDB extends AbstractSearch
                 $this->_addLog('getResult(): removing Fulltext condition');
                 $this->removeCondition('Fulltext');
             }
-            if(!empty($searchString)) {
+            if(!empty($searchString) || ($geoInOpenSearch && !$geo->isEmpty())) {
                 $this->_addLog('getResult(): adding OpenSearch and MediaObject (ids in) condition');
                 try{
-                    $OpenSearch = new OpenSearch($searchString, $this->_language, 10000);
+                    $OpenSearch = new OpenSearch((string) $searchString, $this->_language, 10000);
+                    if ($geoInOpenSearch && !$geo->isEmpty()) { $OpenSearch->setGeoFilter($geo); }
                     $vecCfg = $config['data']['search_opensearch']['vector'] ?? [];
                     $usesAtlasLexicalQuery = $search_type !== SearchType::AUTOCOMPLETE
                         && (empty($vecCfg['enabled']) || empty($vecCfg['enabled_in_search']));
-                    if ($search_type !== SearchType::AUTOCOMPLETE
+                    if (!empty($searchString) && $search_type !== SearchType::AUTOCOMPLETE
                         && ! empty($vecCfg['enabled'])
                         && ! empty($vecCfg['enabled_in_search'])
                     ) {
@@ -508,38 +527,24 @@ class MongoDB extends AbstractSearch
                                 'id_item' => ['$in' => $this->_buildTermResolverIdVariants($termResolverMatch['id'])],
                             ]]
                         ]);
+                        if ($geoInOpenSearch) { $categoryIds = $OpenSearch->filterGeoIds($categoryIds); }
                         if (!empty($categoryIds)) {
                             $ids = array_values(array_unique(array_merge($ids ?? [], $categoryIds)));
                             $this->_addLog('getResult(): TermResolver added ' . count($categoryIds) . ' category IDs, total: ' . count($ids));
                         }
                     }
 
-                    if(!empty($ids)){
-                        $ConditionMediaObject = new Condition\MongoDB\MediaObject($ids);
-                        $this->addCondition('MediaObject', $ConditionMediaObject);
-                    } else {
-                        // OpenSearch returned no results - but TermResolver might still have matches
-                        if ($termResolverMatch !== null) {
-                            $db = $this->_getDatabase();
-                            $categoryIds = $db->{$this->_collection_name}->distinct('_id', [
-                                'categories' => ['$elemMatch' => [
-                                    'field_name' => $termResolverMatch['field'],
-                                    'id_item' => ['$in' => $this->_buildTermResolverIdVariants($termResolverMatch['id'])],
-                                ]]
-                            ]);
-                            if (!empty($categoryIds)) {
-                                $ConditionMediaObject = new Condition\MongoDB\MediaObject($categoryIds);
-                                $this->addCondition('MediaObject', $ConditionMediaObject);
-                                $this->_addLog('getResult(): OpenSearch empty, TermResolver provided ' . count($categoryIds) . ' category IDs');
-                            } else {
-                                $ConditionMediaObject = new Condition\MongoDB\MediaObject([0]);
-                                $this->addCondition('MediaObject', $ConditionMediaObject);
-                            }
-                        } else {
-                            $ConditionMediaObject = new Condition\MongoDB\MediaObject([0]);
-                            $this->addCondition('MediaObject', $ConditionMediaObject);
-                        }
+                    // Intersect explicit media-object restrictions rather than overwriting them.
+                    $existingIds = $this->getConditionByType('MediaObject');
+                    if ($existingIds) {
+                        $requestedIds = array_map('intval', (array) $existingIds->getValue());
+                        $included = array_filter($requestedIds, static fn($id) => $id > 0);
+                        $excluded = array_map('abs', array_filter($requestedIds, static fn($id) => $id < 0));
+                        $ids = empty($included) ? $ids : array_intersect($ids, $included);
+                        $ids = array_values(array_diff($ids, $excluded));
+                        if (empty($included) && empty($excluded)) { $ids = []; }
                     }
+                    $this->addCondition('MediaObject', new Condition\MongoDB\MediaObject(empty($ids) ? [0] : $ids));
                     $this->applyAtlasDefaultSort($usesAtlasLexicalQuery);
                 }catch (\Exception $e) {
                     $this->_addLog('getResult(): OpenSearch error: ' . $e->getMessage());
@@ -594,6 +599,13 @@ class MongoDB extends AbstractSearch
                 if(!empty($mapped_result[$document['_id']])) {
                     $document['description'] = !empty($mapped_result[$document['_id']]->description) ? $mapped_result[$document['_id']]->description : '';
                     $result->documents[$key] = $document;
+                }
+            }
+            if ($openSearchInstance !== null) {
+                $distances = $openSearchInstance->getGeoDistanceMap();
+                foreach ($result->documents as $document) {
+                    $id = (string) $document['id_media_object'];
+                    if (isset($distances[$id])) { $document['geo_distance_meters'] = $distances[$id]; }
                 }
             }
             // Attach OpenSearch relevance score (cheap, for all documents) and match highlights
@@ -1643,9 +1655,25 @@ class MongoDB extends AbstractSearch
      * @param string $add
      * @return string
      */
+    private function getGeoFilter(): Geo\Filter
+    {
+        $distance = $this->getConditionByType('GeoDistance');
+        $bounds = $this->getConditionByType('GeoBounds');
+        $location = $this->getConditionByType('GeoLocation');
+        $atlas = $this->getConditionByType('AtlasLuceneFulltext');
+        return new Geo\Filter($distance ? $distance->getParameters() : null,
+            $bounds ? $bounds->getParameters() : null,
+            $location ? $location->getParameters() : ($atlas ? $atlas->getGeoParameters() : null));
+    }
+
     public function generateCacheKey($add, $output, $preview_date, $allowed_visibilities)
     {
         $query = $this->buildQuery($output, $preview_date, $allowed_visibilities);
+        $geo = $this->getGeoFilter();
+        if (!$geo->isEmpty()) {
+            $query = [$query, ['geo' => $geo, 'opensearch' => $this->_use_opensearch,
+                'geo_enabled' => !empty(Registry::getInstance()->get('config')['data']['search_opensearch']['query']['geo']['enabled'])]];
+        }
         $fulltextConfig = $this->getActiveOpenSearchFulltextQueryConfig();
         if (empty($fulltextConfig)) {
             return 'MONGODB:' . $add . md5(serialize($query));

@@ -774,11 +774,22 @@ pm-pf=42     // Apply powerfilter ID 42
 | **Type** | String: `{longitude},{latitude},{radius_km}` |
 | **Condition Class** | `Search\Condition\MongoDB\AtlasLuceneFulltext` |
 
-Geographic proximity search (requires Atlas Search with geo index).
+Geographic proximity search restricted to the selected location field (Atlas, native MongoDB or OpenSearch). OpenSearch requires `data.search_opensearch.query.geo.enabled` after mapping migration/reindex. The optional radius defaults to 100 km. Negative coordinates and zero are valid.
 
 ```
 pm-loc[destination]=13.4050,52.5200,50    // Within 50km of Berlin
 ```
+
+#### `pm-geo` and `pm-bounds` – Locations, itinerary points and GPX tracks
+
+`pm-geo=longitude,latitude,radius_km` matches any location, itinerary point or complete GPX segment within the radius. `pm-bounds=west,south,east,north` matches points or tracks intersecting the map viewport. West > east crosses the antimeridian. Both parameters work without text and combine with the existing travel filters; multiple geo constraints use AND. Invalid values raise `InvalidArgumentException`.
+
+```
+pm-geo=13.4050,52.5200,10
+pm-bounds=13.2,52.4,13.6,52.6
+```
+
+PHP conditions `GeoDistance` and `GeoBounds` remain supported; PHP distances use **meters**. See [Geo search: backends, accuracy and rollout](geospatial-search.md).
 
 ---
 

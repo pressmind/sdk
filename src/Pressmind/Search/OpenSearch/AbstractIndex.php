@@ -365,7 +365,7 @@ class AbstractIndex
     {
         $languages = [];
         foreach ($this->_config['index'] as $property) {
-            foreach ($property['object_type_mapping'] as $id_object_type => $fields) {
+            foreach (($property['object_type_mapping'] ?? []) as $id_object_type => $fields) {
                 foreach ($fields as $field) {
                     if (!empty($field['language'])) {
                         $languages[] = strtolower($field['language']);
@@ -395,7 +395,7 @@ class AbstractIndex
     {
         $object_types = [];
         foreach ($this->_config['index'] as $property) {
-            foreach ($property['object_type_mapping'] as $id_object_type => $fields) {
+            foreach (($property['object_type_mapping'] ?? []) as $id_object_type => $fields) {
                 $object_types[] = $id_object_type;
             }
         }

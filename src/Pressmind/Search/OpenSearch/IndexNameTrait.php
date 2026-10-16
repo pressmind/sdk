@@ -23,7 +23,7 @@ trait IndexNameTrait
             $config['fuzziness'], $config['prefix_length']
         );
         if (isset($config['query']) && is_array($config['query'])) {
-            unset($config['query']['fulltext']);
+            unset($config['query']['fulltext'], $config['query']['geo']);
             if (empty($config['query'])) {
                 unset($config['query']);
             }

@@ -9,7 +9,7 @@
 The SDK supports multiple search backends that can be operated in parallel or individually:
 
 - **MongoDB** – Full-featured search with touristic data, categories, and descriptions
-- **OpenSearch** – Full-text search with boost weighting
+- **OpenSearch** – Full-text search with boost weighting and optional spatial filtering
 - **Search Hooks** – Extensible search providers for external APIs
 
 > **See also:** [Configuration Examples & Best Practices](config-examples.md#mongodb-search-configuration) for real-world MongoDB search configurations from ~40 production installations.
@@ -604,6 +604,14 @@ $this->_use_opensearch = !empty($config['data']['search_opensearch']['enabled'])
 "enabled": true,
 "enabled_in_mongo_search": false
 ```
+
+---
+
+### `data.search_opensearch.query.geo.enabled`
+
+Optional boolean, default `false`. With both OpenSearch switches enabled, routes `GeoDistance`, `GeoBounds`, `pm-geo`, `pm-bounds` and legacy `pm-loc` through OpenSearch. Points, itinerary steps and complete GPX segments are eligible. MongoDB still handles travel filters, facets and pagination. No automatic fallback on OpenSearch failure.
+
+Before enabling, migrate mappings with `index_opensearch.php create_index_templates` and rebuild documents with `index_opensearch.php all`. Changing this query option does not change the index name. Disabling it selects native MongoDB spatial filtering. Geo result aggregates currently bypass the MongoDB cache to avoid refreshing stale candidate IDs. See [geospatial search](geospatial-search.md) for coordinate conventions, geometry semantics, cache behavior and rollout/rollback steps.
 
 ---
 

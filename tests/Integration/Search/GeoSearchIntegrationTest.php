@@ -14,7 +14,7 @@ use Pressmind\Tests\Integration\AbstractIntegrationTestCase;
 class GeoSearchIntegrationTest extends AbstractIntegrationTestCase
 {
     private const ORIGIN = 990235;
-    private $collection;
+    protected $collection;
 
     protected function setUp(): void
     {
@@ -74,14 +74,14 @@ class GeoSearchIntegrationTest extends AbstractIntegrationTestCase
         parent::tearDown();
     }
 
-    private function search(array $conditions)
+    protected function search(array $conditions)
     {
         $search = new MongoDB($conditions, ['price_total' => 'asc'], 'de', self::ORIGIN);
         $search->setPaginator(Paginator::create(20, 1));
         return $search;
     }
 
-    private function ids($result): array
+    protected function ids($result): array
     {
         $ids = array_map(static fn($row) => (int) $row->id_media_object, (array) $result->documents);
         sort($ids);
@@ -141,6 +141,15 @@ class GeoSearchIntegrationTest extends AbstractIntegrationTestCase
         $this->assertSame(7, $this->collection->countDocuments((new GeoBounds(-180, -90, 180, 90))->getQuery()));
         $this->assertSame(7, $this->collection->countDocuments((new GeoBounds(-180, -90, 180, 80))->getQuery()));
         $this->assertSame(7, $this->collection->countDocuments((new GeoBounds(-180, -80, 180, 90))->getQuery()));
+    }
+
+    public function testLegacyLocationMatchesAnyPointInField(): void
+    {
+        $this->collection->updateOne(['_id' => 1], ['$set' => ['locations.hotel' => [
+            'type' => 'MultiPoint', 'coordinates' => [[0, 0], [10, 10]],
+        ]]]);
+        $condition = new \Pressmind\Search\Condition\MongoDB\GeoLocation('hotel', 0, 0, 1000);
+        $this->assertSame(1, $this->collection->countDocuments($condition->getQuery()));
     }
 
 }

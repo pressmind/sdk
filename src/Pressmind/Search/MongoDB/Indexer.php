@@ -513,9 +513,8 @@ class Indexer extends AbstractIndex
         $searchObject->categories = $this->_mapCategories($language);
         $searchObject->groups = $this->_mapGroups($language);
         $searchObject->locations = $this->_mapLocations($language);
-        $itineraryMap = new \Pressmind\ORM\Object\Itinerary\Map($this->mediaObject->id);
         // Explicit null clears old geometry on $set upserts; 2dsphere indexes omit null values.
-        $searchObject->geo = \Pressmind\Search\Geo\Geometry::forSearch($itineraryMap->search_geometry, $searchObject->locations);
+        $searchObject->geo = \Pressmind\Search\Geo\Provider::geometry($this->mediaObject->id, $searchObject->locations);
         $searchObject->prices = $this->_aggregatePrices($origin, $agency);
         $searchObject->has_price = !empty($searchObject->prices);
 
@@ -1063,26 +1062,7 @@ class Indexer extends AbstractIndex
      */
     private function _mapLocations($language)
     {
-        $moc = $this->mediaObject->getDataForLanguage($language);
-        $locations = new \stdClass();
-        if(empty($moc) || empty($this->_config['search']['locations'][$this->mediaObject->id_object_type])){
-            return $locations;
-        }
-        $data = $moc->toStdClass();
-        $location_fields = array_keys($this->_config['search']['locations'][$this->mediaObject->id_object_type]);
-        foreach($location_fields as $field){
-            $geojson = new \stdClass();
-            $geojson->type = 'MultiPoint';
-            $geojson->coordinates = [];
-            if(empty($data->$field) || !is_array($data->$field) ){
-                continue;
-            }
-            foreach($data->$field as $location){
-                $geojson->coordinates[] = [$location->lng, $location->lat];
-            }
-            $locations->$field = $geojson;
-        }
-        return $locations;
+        return \Pressmind\Search\Geo\Provider::locations($this->mediaObject, $language);
     }
 
     /**

@@ -21,6 +21,11 @@ class GeoDistance
         $this->radiusMeters = $radiusMeters;
     }
 
+    public function getParameters(): array
+    {
+        return [$this->position[0], $this->position[1], $this->radiusMeters];
+    }
+
     public function getType(): string
     {
         return 'GeoDistance';

@@ -19,6 +19,11 @@ class GeoBounds
         $this->bounds = [$west, $south, $east, $north];
     }
 
+    public function getParameters(): array
+    {
+        return $this->bounds;
+    }
+
     public function getType(): string
     {
         return 'GeoBounds';

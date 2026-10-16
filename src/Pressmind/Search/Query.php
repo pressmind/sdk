@@ -577,43 +577,39 @@ class Query
                 $validated_search_parameters[$prefix.'-ot'] = is_array($id_object_type) ? implode(',', $id_object_type) : $id_object_type;
             }
         }
-        if (empty($request[$prefix.'-t']) === false || empty($request[$prefix.'-loc']) === false){
-            $term = !empty($request[$prefix.'-t']) ? self::sanitizeStr($request[$prefix.'-t']) : null;
-            $order = array('score' => 'desc');
-            if(self::$atlas_active === true){
-                $gson_property = null;
-                $lat = null;
-                $lon = null;
-                $radius = null;
-                if (isset($request[$prefix.'-loc']) === true && is_array($request[$prefix.'-loc']) === true) {
-                    $search_items = $request[$prefix.'-loc'];
-                    foreach($search_items as $gson_property => $location){
-                        if(preg_match('/^[0-9a-zA-Z\-\_]+$/', $gson_property) > 0){
-                            if(preg_match('/^([0-9\.0-9]+),([0-9\.0-9]+)(,([0-9\.0-9]+))?$/', $location, $matches) > 0){
-                                $lat = (float)$matches[1];
-                                if($lat >= 90 || $lat <= -90){
-                                    continue;
-                                }
-                                $lon = (float)$matches[2];
-                                if($lon >= 180 || $lon <= -180){
-                                    continue;
-                                }
-                                $radius = isset($matches[4]) ? (float)$matches[4] : 100;
-                                $validated_search_parameters[$prefix.'-loc'][$gson_property] = $location;
-                            }
-                        }
-                        break;
-                    }
-                }
-                $conditions[] = new \Pressmind\Search\Condition\MongoDB\AtlasLuceneFulltext($term, !empty(self::$atlas_definition) ? self::$atlas_definition : [] ,$gson_property, $lat, $lon, $radius);
-            }else{
-                if(empty($term) === false){
-                    $conditions[] = new \Pressmind\Search\Condition\MongoDB\Fulltext($term);
-                }
+        $location = null;
+        if (isset($request[$prefix.'-loc'])) {
+            if (!is_array($request[$prefix.'-loc']) || count($request[$prefix.'-loc']) !== 1) {
+                throw new \InvalidArgumentException('pm-loc requires exactly one location field.');
             }
-            if(empty($term) === false){
-                $validated_search_parameters[$prefix.'-t'] = $request[$prefix.'-t'];
+            $field = array_key_first($request[$prefix.'-loc']);
+            $values = self::extractGeoNumbers($request[$prefix.'-loc'][$field], 2, 3);
+            $location = new \Pressmind\Search\Condition\MongoDB\GeoLocation($field, $values[0], $values[1], ($values[2] ?? 100) * 1000);
+            $validated_search_parameters[$prefix.'-loc'] = $request[$prefix.'-loc'];
+        }
+        foreach (['geo' => 3, 'bounds' => 4] as $parameter => $count) {
+            if (isset($request[$prefix.'-'.$parameter])) {
+                $values = self::extractGeoNumbers($request[$prefix.'-'.$parameter], $count, $count);
+                $conditions[] = $parameter === 'geo'
+                    ? new \Pressmind\Search\Condition\MongoDB\GeoDistance($values[0], $values[1], $values[2] * 1000)
+                    : new \Pressmind\Search\Condition\MongoDB\GeoBounds(...$values);
+                $validated_search_parameters[$prefix.'-'.$parameter] = $request[$prefix.'-'.$parameter];
             }
+        }
+        $term = !empty($request[$prefix.'-t']) ? self::sanitizeStr($request[$prefix.'-t']) : null;
+        if ($term !== null || $location !== null) {
+            if ($term !== null) { $order = ['score' => 'desc']; }
+            if (self::$atlas_active === true) {
+                $parameters = $location === null ? [null, null, null, null] : $location->getParameters();
+                $conditions[] = new \Pressmind\Search\Condition\MongoDB\AtlasLuceneFulltext(
+                    $term, !empty(self::$atlas_definition) ? self::$atlas_definition : [],
+                    $parameters[0], $parameters[1], $parameters[2], $parameters[3] === null ? 100 : $parameters[3] / 1000
+                );
+            } else {
+                if ($term !== null) { $conditions[] = new \Pressmind\Search\Condition\MongoDB\Fulltext($term); }
+                if ($location !== null) { $conditions[] = $location; }
+            }
+            if ($term !== null) { $validated_search_parameters[$prefix.'-t'] = $request[$prefix.'-t']; }
         }
         if (empty($request[$prefix.'-co']) === false && preg_match('/^([0-9\-_A-Za-z\,]+)$/', $request[$prefix.'-co']) > 0){
             $codes = explode(',', $request[$prefix.'-co']);
@@ -823,6 +819,17 @@ class Query
     /**
      * @return int
      */
+    private static function extractGeoNumbers($value, int $minimum, int $maximum): array
+    {
+        if (!is_string($value)) { throw new \InvalidArgumentException('Geo parameters must be comma-separated numbers.'); }
+        $parts = explode(',', $value);
+        if (count($parts) < $minimum || count($parts) > $maximum) { throw new \InvalidArgumentException('Invalid number of geo coordinates.'); }
+        foreach ($parts as $part) {
+            if (!is_numeric($part) || !is_finite((float) $part)) { throw new \InvalidArgumentException('Invalid geo coordinate.'); }
+        }
+        return array_map('floatval', $parts);
+    }
+
     public static function getCurrentPage(){
         return self::$page;
     }

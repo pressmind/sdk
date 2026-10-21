@@ -342,6 +342,55 @@ class ItineraryTest extends AbstractTestCase
         }
     }
 
+    public function testStaleItineraryImageCleanupDoesNotScanImageDirectoryPerImage(): void
+    {
+        require_once __DIR__ . '/Fixtures/CountingFilesystem.php';
+        \Pressmind\Storage\Provider\CountingFilesystem::$listByPrefixCalls = 0;
+
+        $bucketDir = $this->createTempImageBucket();
+        $this->configureImageStorage($bucketDir, 'countingFilesystem');
+
+        $fileNames = [
+            'itinerary_42029_3916225.jpg',
+            'itinerary_42029_3916225_detail.jpg',
+            'itinerary_42029_3916225_detail.webp',
+        ];
+        foreach ($fileNames as $fileName) {
+            file_put_contents($bucketDir . DIRECTORY_SEPARATOR . $fileName, 'stale');
+        }
+
+        $document = new DocumentMediaObject();
+        $document->id = 77;
+        $document->id_step = 42029;
+        $document->id_media_object = 3916225;
+        $document->file_name = 'itinerary_42029_3916225.jpg';
+
+        $oldStep = new Step();
+        $oldStep->id = 42029;
+        $oldStep->id_media_object = 3916225;
+        $oldStep->document_media_objects = [$document];
+
+        Registry::getInstance()->add('db', $this->createItineraryDbMock([$oldStep]));
+
+        $client = $this->createMock(Client::class);
+        $client->method('sendRequest')->willReturn((object) [
+            'error' => false,
+            'result' => (object) [
+                'type' => 'itinerary_dateless',
+                'steps' => [],
+            ],
+        ]);
+        Registry::getInstance()->add('rest_client', $client);
+
+        $import = new Itinerary(3916225);
+        $import->import();
+
+        $this->assertSame(0, \Pressmind\Storage\Provider\CountingFilesystem::$listByPrefixCalls);
+        foreach ($fileNames as $fileName) {
+            $this->assertFileDoesNotExist($bucketDir . DIRECTORY_SEPARATOR . $fileName);
+        }
+    }
+
     public function testVariantImportDeletesStaleItineraryImageFilesBeforeReplacingVariants(): void
     {
         $bucketDir = $this->createTempImageBucket();
@@ -462,12 +511,12 @@ class ItineraryTest extends AbstractTestCase
         return $tempDir;
     }
 
-    private function configureImageStorage(string $bucketDir): void
+    private function configureImageStorage(string $bucketDir, string $provider = 'filesystem'): void
     {
         $config = $this->createMockConfig([
             'image_handling' => [
                 'storage' => [
-                    'provider' => 'filesystem',
+                    'provider' => $provider,
                     'bucket' => $bucketDir,
                 ],
                 'http_src' => '/local-images',

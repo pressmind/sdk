@@ -297,10 +297,6 @@ class Itinerary extends AbstractImport implements ImportInterface
         $file_names = [$document_media_object->file_name];
 	        $prefix = WebpSidecar::derivativePrefix($document_media_object->file_name);
 
-        if ($bucket->supportsPrefixListing()) {
-            $file_names = array_merge($file_names, array_keys($bucket->listByPrefix($prefix)));
-        }
-
         if (!empty($document_media_object->derivatives) && is_array($document_media_object->derivatives)) {
             foreach ($document_media_object->derivatives as $derivative) {
                 if (empty($derivative->file_name)) {

@@ -30,6 +30,7 @@ The `data.touristic` section controls the import and processing of touristic dat
     "ibe_client": null,
     "include_negative_option_in_cheapest_price": true,
     "include_standalone_required_option_in_cheapest_price": true,
+    "allow_zero_prices": false,
     "label_price_mix_date_transport": "Teilnahmegebühr"
   }
 }
@@ -495,6 +496,46 @@ affected offers. It only takes effect on the next import.
 
 // Advertise the primary option price only and list surcharges separately
 "include_standalone_required_option_in_cheapest_price": false
+```
+
+---
+
+### `data.touristic.allow_zero_prices`
+
+| Property | Value |
+|---|---|
+| **Type** | `boolean` |
+| **Default** | `false` |
+| **Required** | No |
+| **Used in** | `ORM\Object\MediaObject.php` |
+
+#### Description
+
+Controls whether offers with a total price of 0 are part of the CheapestPrice index, for
+example free shuttle trips. Many data sources deliver 0 for a price that is simply missing,
+so zero prices are excluded by default.
+
+#### Behavior
+
+- `false` (default): `insertCheapestPrice()` skips primary options (or transports for
+  `price_mix = date_transport`) without a price and every offer with `price_total <= 0`.
+  `getCheapestPrices()`, `getCheapestPrice()` and `getCheapestPricesOptions()` only return
+  offers with `price_total > 0`.
+- `true`: Offers with `price_total = 0` are written and returned. Offers with a negative
+  `price_total` stay excluded.
+
+Import hooks can read the same setting to request zero-priced packages from their data
+source, so a single switch controls import and display. The setting only takes effect on
+the next import.
+
+#### Example
+
+```json
+// Default: Zero prices are treated as missing prices
+"allow_zero_prices": false
+
+// Free offers are bookable and shown with their dates
+"allow_zero_prices": true
 ```
 
 ---

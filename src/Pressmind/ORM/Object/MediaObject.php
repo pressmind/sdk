@@ -773,7 +773,7 @@ class MediaObject extends AbstractObject
             return [];
         }
         $now = new DateTime();
-        $where = "id_media_object = " . $id . " AND price_total > 0";
+        $where = "id_media_object = " . $id . " AND price_total " . (self::_allowZeroPrices() ? '>=' : '>') . " 0";
         $occupancy_filter_is_set = false;
         $state_filter_is_set = false;
         if(!is_null($filters)) {
@@ -876,6 +876,17 @@ class MediaObject extends AbstractObject
     }
 
     /**
+     * data.touristic.allow_zero_prices: offers with a total price of 0 (e.g. free shuttles) are written
+     * to the cheapest price index and returned by the cheapest price queries. Negative prices stay excluded.
+     *
+     * @return bool
+     */
+    private static function _allowZeroPrices()
+    {
+        return !empty(Registry::getInstance()->get('config')['data']['touristic']['allow_zero_prices']);
+    }
+
+    /**
      * Sort cheapest price list by state priority (bookable > request > stop) then price_total ASC, duration DESC, date_departure ASC.
      * State order: 3 (bookable), 1 (request), 5 (stop), 0 (other).
      *
@@ -945,7 +956,7 @@ class MediaObject extends AbstractObject
                 count(*) AS count
                 FROM pmt2core_cheapest_price_speed
                 WHERE id_media_object = " . $this->getId() . "
-                AND price_total > 0
+                AND price_total " . (self::_allowZeroPrices() ? '>=' : '>') . " 0
                 AND date_departure > '" . $now->format('Y-m-d 00:00:00') . "'
                 " . (!empty($origin) ? ' AND origin = ' . $origin : '') . "
                 " . (!empty($agency) ? ' AND agency = "' . $agency .'"': '') . "
@@ -1737,6 +1748,7 @@ class MediaObject extends AbstractObject
         $ibe_client = empty(Registry::getInstance()->get('config')['data']['touristic']['ibe_client']) ? null : Registry::getInstance()->get('config')['data']['touristic']['ibe_client'];
         $include_negative_option_in_cheapest_price = !isset(Registry::getInstance()->get('config')['data']['touristic']['include_negative_option_in_cheapest_price']) ? true : Registry::getInstance()->get('config')['data']['touristic']['include_negative_option_in_cheapest_price'];
         $include_standalone_required_option_in_cheapest_price = !isset(Registry::getInstance()->get('config')['data']['touristic']['include_standalone_required_option_in_cheapest_price']) ? true : Registry::getInstance()->get('config')['data']['touristic']['include_standalone_required_option_in_cheapest_price'];
+        $allow_zero_prices = self::_allowZeroPrices();
         $agency_based_option_and_prices_enabled = !isset(Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['enabled']) ? false : Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['enabled'];
         $agencies = empty(Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['allowed_agencies']) || $agency_based_option_and_prices_enabled === false ? [null] : Registry::getInstance()->get('config')['data']['touristic']['agency_based_option_and_prices']['allowed_agencies'];
         $offer_for_each_startingpoint_option = !empty(Registry::getInstance()->get('config')['data']['touristic']['generate_offer_for_each_startingpoint_option']);
@@ -1981,16 +1993,16 @@ class MediaObject extends AbstractObject
                                     } else {
                                         $transport_price = 0;
                                     }
-                                    // zero prices are not allowed in primary options
-                                    if (($booking_package->price_mix == 'date_transport' && empty($transport_price)) ||
+                                    // zero prices are not allowed in primary options, unless data.touristic.allow_zero_prices is set
+                                    if ($allow_zero_prices === false && (($booking_package->price_mix == 'date_transport' && empty($transport_price)) ||
                                         ($booking_package->price_mix != 'date_transport' && empty($option->price))
-                                    ) {
+                                    )) {
                                         self::$_insert_cheapest_price_log[$this->id][] = 'Skipping primary option ' . $option->name . ' because of zero price';
                                         continue;
                                     }
                                     $price = $option->price + $transport_price + $starting_point_price + $included_options_price;
                                     $price_base_early_bird = ($option->use_earlybird ? $option->price : 0) + $transport_earlybird_price_base + $starting_point_earlybird_price_base + $included_options_earlybird_price_base;
-                                    if ($price <= 0) {
+                                    if ($price < 0 || ($price == 0 && $allow_zero_prices === false)) {
                                         self::$_insert_cheapest_price_log[$this->id][] = 'Skipping option ' . $option->name . ' because of zero price';
                                         continue;
                                     }

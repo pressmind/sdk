@@ -485,14 +485,16 @@ class MongoDBQueryBuilderTest extends AbstractIntegrationTestCase
 
     // --- Pagination in pipeline ---
 
-    public function testBuildQueryWithPaginationIncludesSlice(): void
+    public function testBuildQueryWithPaginationIncludesSkipAndLimit(): void
     {
         $this->requireMongo();
         $search = new MongoDB([], ['price_total' => 'asc'], 'de', 0);
         $search->setPaginator(Paginator::create(5, 2));
         $json = json_encode($search->buildQuery());
 
-        $this->assertStringContainsString('$slice', $json);
+        $this->assertStringContainsString('{"$skip":5}', $json);
+        $this->assertStringContainsString('{"$limit":5}', $json);
+        $this->assertStringContainsString('documentCount', $json);
         $this->assertStringContainsString('currentPage', $json);
         $this->assertStringContainsString('pages', $json);
     }

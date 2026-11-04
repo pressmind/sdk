@@ -1012,21 +1012,82 @@ class MongoDBTest extends AbstractTestCase
         $this->assertArrayHasKey('categoriesGrouped', $facet['$facet']);
     }
 
-    public function testBuildQueryPaginatorSlice(): void
+    public function testBuildQueryPaginatorSkipLimitInsideFacet(): void
     {
         $search = new MongoDB([], ['price_total' => 'asc'], 'de', 0, null);
         $search->addCondition('MediaObject', new MediaObject([1]));
         $search->setPaginator(new Paginator(10, 3));
         $stages = $search->buildQuery();
+        $documents = $this->findFacetStage($stages)['$facet']['documents'];
+        $count = count($documents);
+        $this->assertArrayHasKey('$sort', $documents[$count - 3]);
+        $this->assertSame(['$skip' => 20], $documents[$count - 2]);
+        $this->assertSame(['$limit' => 10], $documents[$count - 1]);
         $lastStage = end($stages);
         $this->assertArrayHasKey('$project', $lastStage);
-        if (isset($lastStage['$project']['documents']['$slice'])) {
-            $slice = $lastStage['$project']['documents']['$slice'];
-            $this->assertSame(20, $slice[1]);
-            $this->assertSame(10, $slice[2]);
-        }
+        $this->assertSame(1, $lastStage['$project']['documents']);
         $this->assertArrayHasKey('pages', $lastStage['$project']);
         $this->assertArrayHasKey('currentPage', $lastStage['$project']);
+        $this->assertStringNotContainsString('$slice', json_encode($stages));
+    }
+
+    public function testBuildQueryPaginatorFirstPageHasNoSkip(): void
+    {
+        $stages = $this->createSearchWithSort(['price_total' => 'asc'])->buildQuery();
+        $documents = $this->findFacetStage($stages)['$facet']['documents'];
+        $this->assertSame(['$limit' => 10], end($documents));
+        $this->assertStringNotContainsString('$skip', json_encode($documents));
+    }
+
+    public function testBuildQueryTotalIsCountedInSeparateFacet(): void
+    {
+        foreach ([true, false] as $getFilters) {
+            $search = $this->createSearchWithSort(['price_total' => 'asc']);
+            $search->setGetFilters($getFilters);
+            $stages = $search->buildQuery();
+            $facet = $this->findFacetStage($stages)['$facet'];
+            $this->assertSame(
+                [['$match' => ['prices' => ['$exists' => true]]], ['$count' => 'count']],
+                $facet['documentCount']
+            );
+            $addFields = $stages[count($stages) - 2]['$addFields'];
+            $this->assertSame(['$ifNull' => [['$arrayElemAt' => ['$documentCount.count', 0]], 0]], $addFields['total']);
+        }
+    }
+
+    public function testBuildQueryPricesFacetOnlyKeepsMinMaxFields(): void
+    {
+        foreach ([null, 'date_list'] as $output) {
+            $search = $this->createSearchWithSort(['price_total' => 'asc']);
+            $search->setGetFilters(true);
+            $prices = $this->findFacetStage($search->buildQuery($output))['$facet']['prices'];
+            $this->assertSame(['$unwind' => '$prices'], $prices[0]);
+            $this->assertSame(
+                ['_id' => 0, 'prices.duration' => 1, 'prices.price_total' => 1, 'prices.date_departures' => 1],
+                $prices[1]['$project']
+            );
+        }
+    }
+
+    public function testBuildQueryWithoutFiltersHasNoPricesFacet(): void
+    {
+        $search = $this->createSearchWithSort(['price_total' => 'asc']);
+        $search->setGetFilters(false);
+        $facet = $this->findFacetStage($search->buildQuery('date_list'))['$facet'];
+        $this->assertArrayNotHasKey('prices', $facet);
+        $this->assertArrayHasKey('documents', $facet);
+        $this->assertArrayHasKey('documentCount', $facet);
+    }
+
+    public function testBuildQueryReturnFiltersOnlyHasNoDocumentsFacet(): void
+    {
+        $search = $this->createSearchWithSort(['price_total' => 'asc']);
+        $search->setReturnFiltersOnly(true);
+        $stages = $search->buildQuery();
+        $facet = $this->findFacetStage($stages)['$facet'];
+        $this->assertArrayNotHasKey('documents', $facet);
+        $this->assertArrayHasKey('documentCount', $facet);
+        $this->assertArrayNotHasKey('documents', end($stages)['$project']);
     }
 
     // =========================================================================

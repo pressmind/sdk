@@ -1233,6 +1233,17 @@ class MongoDB extends AbstractSearch
             }
         }
 
+        $documentsMatch = [];
+        if($allow_invalid_offers === false){
+            $documentsMatch[] = [
+                '$match' => [
+                    'prices' => [
+                        '$exists' => true
+                    ]
+                ],
+            ];
+        }
+
         // stage n, build the filter stages
         if($this->_get_filters === true || $this->_return_filters_only === true) {
             $facetStage = [
@@ -1240,20 +1251,21 @@ class MongoDB extends AbstractSearch
                     'prices' => [
                         [
                             '$unwind' => '$prices'
+                        ],
+                        // keep only the fields read by the min/max expressions below, the $facet result is limited to 100 MB
+                        [
+                            '$project' => [
+                                '_id' => 0,
+                                'prices.duration' => 1,
+                                'prices.price_total' => 1,
+                                'prices.date_departures' => 1
+                            ]
                         ]
                     ]
                 ]
             ];
-            if($allow_invalid_offers === false){
-                $facetStage['$facet']['documents'] =  [
-                    [
-                        '$match' => [
-                            'prices' => [
-                                '$exists' => true
-                            ]
-                        ],
-                    ],
-                ];
+            if(!empty($documentsMatch)){
+                $facetStage['$facet']['documents'] = $documentsMatch;
             }
             if ($this->shouldComputeFilterDepartureBounds($output)) {
                 $facetStage['$facet']['departureBounds'] = [
@@ -1391,9 +1403,6 @@ class MongoDB extends AbstractSearch
                     ],
                     'maxPrice' => [
                         '$max' => '$prices.prices.price_total'
-                    ],
-                    'total' => [
-                        '$size' => '$documents'
                     ]
                 ]
             ];
@@ -1437,31 +1446,13 @@ class MongoDB extends AbstractSearch
             }
         } else { // stage n, if we don't need the filter, we use just the required methods
             $facetStage = [
-                '$facet' => [
-                    'prices' => [
-                        [
-                            '$unwind' => '$prices'
-                        ]
-                    ],
-                ]
+                '$facet' => []
             ];
-            if($allow_invalid_offers === false){
-                $facetStage['$facet']['documents'] =  [
-                    [
-                        '$match' => [
-                            'prices' => [
-                                '$exists' => true
-                            ]
-                        ],
-                    ],
-                ];
+            if(!empty($documentsMatch)){
+                $facetStage['$facet']['documents'] = $documentsMatch;
             }
             $addFieldsStage = [
-                '$addFields' => [
-                    'total' => [
-                        '$size' => '$documents'
-                    ]
-                ]
+                '$addFields' => []
             ];
             $project = [
                 '$project' => [
@@ -1580,19 +1571,30 @@ class MongoDB extends AbstractSearch
                 $sort = ['$sort' => ['object_type_order' => 1]];
             }
         }
-        $facetStage['$facet']['documents'][] = $sort;
+        $hasPaginator = !is_null($this->_paginator) && is_a($this->_paginator, \Pressmind\Search\Paginator::class);
+        if ($this->_return_filters_only === true) {
+            unset($facetStage['$facet']['documents']);
+        } else {
+            $facetStage['$facet']['documents'][] = $sort;
+            // paginate inside the $facet, the $facet result is limited to 100 MB
+            if ($hasPaginator) {
+                $skip = max(0, ($this->_paginator->getCurrentPage() - 1) * $this->_paginator->getPageSize());
+                if ($skip > 0) {
+                    $facetStage['$facet']['documents'][] = ['$skip' => $skip];
+                }
+                $facetStage['$facet']['documents'][] = ['$limit' => $this->_paginator->getPageSize()];
+            }
+        }
+        $facetStage['$facet']['documentCount'] = array_merge($documentsMatch, [['$count' => 'count']]);
+        $addFieldsStage['$addFields']['total'] = [
+            '$ifNull' => [['$arrayElemAt' => ['$documentCount.count', 0]], 0]
+        ];
         $stages[] = $facetStage;
 
-        if(!is_null($this->_paginator) && is_a($this->_paginator, \Pressmind\Search\Paginator::class)) {
+        if($hasPaginator) {
             $addFieldsStage['$addFields']['currentPage'] = $this->_paginator->getCurrentPage();
             if ($this->_return_filters_only !== true) {
-                $project['$project']['documents'] = [
-                    '$slice' => [
-                        '$documents',
-                        ($this->_paginator->getCurrentPage() -1) * $this->_paginator->getPageSize(),
-                        $this->_paginator->getPageSize()
-                    ]
-                ];
+                $project['$project']['documents'] = 1;
             }
             $project['$project']['currentPage'] = 1;
             $project['$project']['pages'] = [

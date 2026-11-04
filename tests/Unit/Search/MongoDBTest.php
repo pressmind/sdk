@@ -1039,6 +1039,23 @@ class MongoDBTest extends AbstractTestCase
         $this->assertStringNotContainsString('$skip', json_encode($documents));
     }
 
+    public function testBuildQueryPaginatorFallsBackToSliceForNonPositiveOrNonIntegerValues(): void
+    {
+        foreach ([[null, 1], [0, 1], ['12', 2], [12, -1], [12, '2']] as [$pageSize, $currentPage]) {
+            $search = new MongoDB([], ['price_total' => 'asc'], 'de', 0, null);
+            $search->setPaginator(new Paginator($pageSize, $currentPage));
+            $stages = $search->buildQuery();
+            $documents = $this->findFacetStage($stages)['$facet']['documents'];
+            $json = json_encode($documents);
+            $this->assertStringNotContainsString('$skip', $json);
+            $this->assertStringNotContainsString('$limit', $json);
+            $this->assertSame(
+                ['$documents', ($currentPage - 1) * $pageSize, $pageSize],
+                end($stages)['$project']['documents']['$slice']
+            );
+        }
+    }
+
     public function testBuildQueryTotalIsCountedInSeparateFacet(): void
     {
         foreach ([true, false] as $getFilters) {

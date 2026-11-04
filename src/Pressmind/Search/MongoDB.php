@@ -1572,13 +1572,17 @@ class MongoDB extends AbstractSearch
             }
         }
         $hasPaginator = !is_null($this->_paginator) && is_a($this->_paginator, \Pressmind\Search\Paginator::class);
+        // other values keep the legacy $slice semantics (e.g. a null page size returns null documents instead of failing)
+        $paginateInFacet = $hasPaginator
+            && is_int($this->_paginator->getPageSize()) && $this->_paginator->getPageSize() > 0
+            && is_int($this->_paginator->getCurrentPage()) && $this->_paginator->getCurrentPage() > 0;
         if ($this->_return_filters_only === true) {
             unset($facetStage['$facet']['documents']);
         } else {
             $facetStage['$facet']['documents'][] = $sort;
             // paginate inside the $facet, the $facet result is limited to 100 MB
-            if ($hasPaginator) {
-                $skip = max(0, ($this->_paginator->getCurrentPage() - 1) * $this->_paginator->getPageSize());
+            if ($paginateInFacet) {
+                $skip = ($this->_paginator->getCurrentPage() - 1) * $this->_paginator->getPageSize();
                 if ($skip > 0) {
                     $facetStage['$facet']['documents'][] = ['$skip' => $skip];
                 }
@@ -1594,7 +1598,13 @@ class MongoDB extends AbstractSearch
         if($hasPaginator) {
             $addFieldsStage['$addFields']['currentPage'] = $this->_paginator->getCurrentPage();
             if ($this->_return_filters_only !== true) {
-                $project['$project']['documents'] = 1;
+                $project['$project']['documents'] = $paginateInFacet ? 1 : [
+                    '$slice' => [
+                        '$documents',
+                        ($this->_paginator->getCurrentPage() -1) * $this->_paginator->getPageSize(),
+                        $this->_paginator->getPageSize()
+                    ]
+                ];
             }
             $project['$project']['currentPage'] = 1;
             $project['$project']['pages'] = [

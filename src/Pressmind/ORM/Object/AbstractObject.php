@@ -836,7 +836,7 @@ abstract class AbstractObject
         foreach ($first->_definitions['properties'] as $property) {
             if ($property['type'] === 'relation') {
                 $hasRelations = true;
-                if (isset($property['relation']['type']) && $property['relation']['type'] === 'hasMany') {
+                if (isset($property['relation']['type']) && $property['relation']['type'] === 'hasMany' && !self::_isReadOnlyHasManyRelation($property)) {
                     $hasManyRelations[] = $property;
                 }
             }
@@ -939,12 +939,27 @@ abstract class AbstractObject
     }
 
     /**
+     * A hasMany relation with related_foreign_id is resolved via a foreign column
+     * (not via this object's id), so it is read-only and must not be written back.
+     *
+     * @param array $property
+     * @return bool
+     */
+    private static function _isReadOnlyHasManyRelation($property)
+    {
+        return isset($property['relation']['related_foreign_id']);
+    }
+
+    /**
      * @throws Exception
      */
     protected function _createHasManyRelations()
     {
         foreach ($this->_definitions['properties'] as $property) {
             if($property['type'] == 'relation' && isset($property['relation']) && $property['relation']['type'] == 'hasMany') {
+                if(self::_isReadOnlyHasManyRelation($property)) {
+                    continue;
+                }
                 $key = $property['name'];
                 $related_key = $property['relation']['related_id'];
                 if(!empty($this->$key)) {

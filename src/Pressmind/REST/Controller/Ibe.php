@@ -227,6 +227,9 @@ class Ibe
             $option->id = uniqid();
             $option->name = !empty($config['data']['touristic']['label_price_mix_date_transport']) ? $config['data']['touristic']['label_price_mix_date_transport'] : 'Teilnahmegebühr';
             $option->type = 'dummy';
+            // Transport states: 0/3 bookable, 2 on request. Option states: 3 bookable, 1 on request.
+            $transport_states = [(int)$result['transport_pairs'][0]['way1']->state, (int)$result['transport_pairs'][0]['way2']->state];
+            $option->state = count(array_diff($transport_states, [0, 2, 3])) > 0 ? 0 : (in_array(2, $transport_states, true) ? 1 : 3);
             $option->occupancy_max = 1;
             $option->occupancy_min = 1;
             $option->occupancy = 1;

@@ -36,7 +36,7 @@ class IbeTest extends AbstractTestCase
 
         $adapter->method('fetchOne')->willReturn($overrides['fetchOne'] ?? null);
         $adapter->method('getAffectedRows')->willReturn(0);
-        $adapter->method('getTablePrefix')->willReturn('pmt2core_');
+        $adapter->method('getTablePrefix')->willReturn($overrides['tablePrefix'] ?? 'pmt2core_');
         $adapter->method('inTransaction')->willReturn(false);
         $adapter->method('execute')->willReturn(null);
         $adapter->method('insert')->willReturn(null);
@@ -86,6 +86,67 @@ class IbeTest extends AbstractTestCase
     // ---------------------------------------------------------------
     // pressmind_ib3_v2_get_touristic_object
     // ---------------------------------------------------------------
+
+    /** @dataProvider transportParticipationProvider */
+    public function testTransportParticipationKeepsItsPriceAndBookableState(int $outwardState, int $returnState, float $price, int $expectedState): void
+    {
+        $rows = [
+            'pmt2core_media_objects' => [(object)['id' => 100, 'name' => 'Day trip', 'id_object_type' => 1]],
+            'pmt2core_touristic_booking_packages' => [(object)[
+                'id' => 'bp-1', 'id_media_object' => 100, 'name' => 'Day trip',
+                'duration' => 1, 'price_mix' => 'date_transport', 'ibe_type' => 1,
+            ]],
+            'pmt2core_touristic_dates' => [(object)[
+                'id' => 'date-1', 'id_media_object' => 100, 'id_booking_package' => 'bp-1',
+                'departure' => '2027-02-03 00:00:00', 'arrival' => '2027-02-03 00:00:00',
+                'season' => 'S1', 'state' => 1,
+            ]],
+            'pmt2core_touristic_transports' => [
+                (object)['id' => 'out', 'id_date' => 'date-1', 'id_media_object' => 100, 'id_booking_package' => 'bp-1', 'way' => 1, 'type' => 'BUS', 'state' => $outwardState, 'price' => $price, 'transport_group' => 'bus'],
+                (object)['id' => 'back', 'id_date' => 'date-1', 'id_media_object' => 100, 'id_booking_package' => 'bp-1', 'way' => 2, 'type' => 'BUS', 'state' => $returnState, 'price' => 0, 'transport_group' => 'bus'],
+            ],
+        ];
+        $lookup = static function ($query) use ($rows): array {
+            preg_match('/\\bFROM\\s+`?([^`\\s]+)/i', $query, $match);
+            return $rows[$match[1] ?? ''] ?? [];
+        };
+        Registry::getInstance()->add('db', $this->createCustomMockDb([
+            'tablePrefix' => '',
+            'fetchAllCallback' => static function ($query, $values = [], $class = null) use ($lookup) {
+                return array_map(static function ($row) use ($class) {
+                    if ($class === null || $class === 'stdClass') return clone $row;
+                    return new $class($row->id, true);
+                }, $lookup($query));
+            },
+            'fetchRowCallback' => static function ($query, $values = []) use ($lookup) {
+                foreach ($lookup($query) as $row) {
+                    if ((string)$row->id === (string)($values[0] ?? '')) return clone $row;
+                }
+                return null;
+            },
+        ]));
+        $result = (new Ibe())->pressmind_ib3_v2_get_touristic_object([
+            'data' => ['params' => ['imo' => 100, 'idbp' => 'bp-1', 'idd' => 'date-1', 'tt' => 'BUS']],
+        ]);
+        $this->assertTrue($result['success']);
+        $option = $result['data']['housing_packages'][0]->options[0];
+        $this->assertSame('dummy', $option->type);
+        $this->assertSame($expectedState, $option->state, 'IB3 must not discard a valid transport participation as sold out.');
+        $this->assertEquals($price, $option->price);
+        $this->assertSame(1, $option->occupancy);
+        $this->assertEquals(0, $result['data']['transport_pairs'][0]['way1']->price);
+        $this->assertEquals(0, $result['data']['transport_pairs'][0]['way2']->price);
+    }
+
+    public static function transportParticipationProvider(): array
+    {
+        return [
+            'free transport, price at starting point' => [3, 3, 0.0, 3],
+            'outward on request' => [2, 3, 0.0, 1],
+            'return on request with transport price' => [3, 2, 12.5, 1],
+            'transport without explicit state' => [0, 3, 20.0, 3],
+        ];
+    }
 
     public function testPressmindIb3V2GetTouristicObjectWithMissingParamsReturnsError(): void
     {

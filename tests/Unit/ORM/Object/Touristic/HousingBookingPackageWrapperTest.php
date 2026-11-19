@@ -128,17 +128,11 @@ class HousingBookingPackageWrapperTest extends AbstractTestCase
         $rowRequest = $this->createCheapestPriceRow(1, 3200, 'hp-1', null);
         $rowRequest->state = 1;
         $db = $this->createMock(\Pressmind\DB\Adapter\AdapterInterface::class);
-        $db->method('fetchAll')->willReturnCallback(function ($query) use ($rowRequest) {
-            if (strpos($query, 'cheapest_price_speed') === false) {
-                return [];
-            }
-            if (strpos($query, 'state = 3') !== false) {
-                return [];
-            }
-            if (strpos($query, 'state = 1') !== false && strpos($query, 'id_housing_package') !== false) {
-                return [$rowRequest];
-            }
-            return [];
+        $db->method('fetchAll')->willReturnCallback(function ($query, $values) use ($rowRequest) {
+            $this->assertStringContainsString('id_housing_package = ?', $query);
+            $this->assertStringContainsString('state = ?', $query);
+            $this->assertContains('hp-1', $values);
+            return end($values) === 1 ? [$rowRequest] : [];
         });
         $db->method('fetchRow')->willReturn(null);
         $db->method('fetchOne')->willReturn(null);

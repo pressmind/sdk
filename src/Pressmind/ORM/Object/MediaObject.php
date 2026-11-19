@@ -747,14 +747,15 @@ class MediaObject extends AbstractObject
     }
 
     /**
+     * Returns the best offer: bookable before request before stop, then price_total ASC, duration DESC,
+     * date_departure ASC. The database picks the one row, so large media objects are not loaded completely.
      * @param null|CheapestPrice $filters
      * @return CheapestPriceSpeed
      * @throws Exception
      */
     public function getCheapestPrice($filters = null)
     {
-        $CheapestPrices = $this->getCheapestPrices($filters, ['price_total' => 'ASC', 'duration' => 'DESC', 'date_departure' => 'ASC']);
-        $CheapestPrices = $this->_sortCheapestPricesByStateAndPrice($CheapestPrices);
+        $CheapestPrices = $this->getCheapestPrices($filters, ['price_total' => 'ASC', 'duration' => 'DESC', 'date_departure' => 'ASC'], [0, 1], true);
         if(!empty($CheapestPrices[0])){
             return $CheapestPrices[0];
         }
@@ -763,10 +764,13 @@ class MediaObject extends AbstractObject
 
     /**
      * @param null|CheapestPrice $filters
+     * @param array $order column => direction
+     * @param array|null $limit [offset, count]
+     * @param bool $order_by_state_priority order by CheapestPrice::STATE_ORDER_BY_PRIO before $order
      * @return CheapestPriceSpeed[]
      * @throws Exception
      */
-    public function getCheapestPrices($filters = null, $order = ['price_total' => 'ASC', 'date_departure' => 'ASC'], $limit = null)
+    public function getCheapestPrices($filters = null, $order = ['price_total' => 'ASC', 'date_departure' => 'ASC'], $limit = null, $order_by_state_priority = false)
     {
         $id = $this->getId();
         if ($id === null || $id === '' || $id === false) {
@@ -832,23 +836,22 @@ class MediaObject extends AbstractObject
                 $values[] = '%' . $filters->startingpoint_option_name . '%';
             }
         }
-        $price = new CheapestPriceSpeed();
         $cheapest_prices = [];
         if(empty($filters->occupancies) && isset($filters->occupancies_disable_fallback) && $filters->occupancies_disable_fallback === false) {
-            $cheapest_prices = $price->loadAllWithBindings($where . ' AND option_occupancy = 2', $values, $order, $limit);
+            $cheapest_prices = $this->_listCheapestPrices($where . ' AND option_occupancy = 2', $values, $order, $limit, $order_by_state_priority);
             if (empty($cheapest_prices)) {
-                $cheapest_prices = $price->loadAllWithBindings($where . ' AND option_occupancy = 1', $values, $order, $limit);
+                $cheapest_prices = $this->_listCheapestPrices($where . ' AND option_occupancy = 1', $values, $order, $limit, $order_by_state_priority);
             }
         }
         if (empty($cheapest_prices)) {
-            $cheapest_prices = $price->loadAllWithBindings($where, $values, $order, $limit);
+            $cheapest_prices = $this->_listCheapestPrices($where, $values, $order, $limit, $order_by_state_priority);
         }
         if(!empty($filters->state_fallback_order) && !empty($filters->state) && empty($cheapest_prices)) {
             $fallback_filter = clone $filters;
             $fallback_filter->state_fallback_order = array_slice($filters->state_fallback_order, (int)array_search($filters->state, $filters->state_fallback_order) + 1);
             if(!empty($fallback_filter->state_fallback_order[0])){
                 $fallback_filter->state = $fallback_filter->state_fallback_order[0];
-                $cheapest_prices = $this->getCheapestPrices($fallback_filter, $order, $limit);
+                $cheapest_prices = $this->getCheapestPrices($fallback_filter, $order, $limit, $order_by_state_priority);
             }
         }
         return $cheapest_prices;
@@ -866,37 +869,42 @@ class MediaObject extends AbstractObject
     }
 
     /**
-     * Sort cheapest price list by state priority (bookable > request > stop) then price_total ASC, duration DESC, date_departure ASC.
-     * State order: 3 (bookable), 1 (request), 5 (stop), 0 (other).
+     * Loads cheapest price rows. With $order_by_state_priority the database orders by state priority first
+     * (CheapestPrice::STATE_ORDER_BY_PRIO: bookable > request > stop, any other state last), then by $order.
+     * Together with a limit only the needed rows are loaded - getCheapestPrice() used to load all rows of a
+     * media object and sort them in PHP, which exhausted the memory for large media objects.
      *
-     * @param CheapestPriceSpeed[] $cheapest_prices
+     * @param string $where with ? placeholders
+     * @param array $values positional values for $where
+     * @param array $order column => direction
+     * @param array|null $limit [offset, count]
+     * @param bool $order_by_state_priority
      * @return CheapestPriceSpeed[]
+     * @throws Exception
      */
-    private function _sortCheapestPricesByStateAndPrice($cheapest_prices)
+    private function _listCheapestPrices($where, array $values, $order, $limit, $order_by_state_priority)
     {
-        if (!is_array($cheapest_prices) || count($cheapest_prices) <= 1) {
-            return $cheapest_prices;
+        if (!$order_by_state_priority) {
+            return (new CheapestPriceSpeed())->loadAllWithBindings($where, $values, $order, $limit);
         }
-        $stateOrder = [3 => 0, 1 => 1, 5 => 2, 0 => 3];
-        usort($cheapest_prices, function ($a, $b) use ($stateOrder) {
-            $stateA = isset($stateOrder[$a->state]) ? $stateOrder[$a->state] : 3;
-            $stateB = isset($stateOrder[$b->state]) ? $stateOrder[$b->state] : 3;
-            if ($stateA !== $stateB) {
-                return $stateA - $stateB;
+        $state_priority = 'CASE `state`';
+        foreach (CheapestPrice::STATE_ORDER_BY_PRIO as $priority => $state) {
+            $state_priority .= ' WHEN ' . (int)$state . ' THEN ' . (int)$priority;
+        }
+        $state_priority .= ' ELSE ' . count(CheapestPrice::STATE_ORDER_BY_PRIO) . ' END';
+        $order_columns = [$state_priority];
+        foreach ((array)$order as $column_name => $direction) {
+            if (!preg_match('/^[a-zA-Z0-9_]+$/', $column_name)) {
+                continue;
             }
-            $priceCmp = (float)$a->price_total <=> (float)$b->price_total;
-            if ($priceCmp !== 0) {
-                return $priceCmp;
-            }
-            $durationCmp = (float)$b->duration <=> (float)$a->duration;
-            if ($durationCmp !== 0) {
-                return $durationCmp;
-            }
-            $dateA = $a->date_departure instanceof \DateTime ? $a->date_departure->getTimestamp() : 0;
-            $dateB = $b->date_departure instanceof \DateTime ? $b->date_departure->getTimestamp() : 0;
-            return $dateA <=> $dateB;
-        });
-        return $cheapest_prices;
+            $direction = strtoupper(trim($direction));
+            $order_columns[] = '`' . $column_name . '` ' . (in_array($direction, ['ASC', 'DESC'], true) ? $direction : 'ASC');
+        }
+        $query = 'SELECT * FROM ' . (new CheapestPriceSpeed())->getDbTableName() . ' WHERE ' . $where . ' ORDER BY ' . implode(', ', $order_columns);
+        if (!is_null($limit)) {
+            $query .= ' LIMIT ' . (int)$limit[0] . ', ' . (int)$limit[1];
+        }
+        return $this->_db->fetchAll($query, $values, CheapestPriceSpeed::class);
     }
 
     /**

@@ -482,6 +482,85 @@ class MediaObjectCheapestPriceTest extends AbstractTestCase
         $this->assertCount(1, $result);
     }
 
+    public function testGetCheapestPriceLetsTheDatabasePickOneRowByStatePriority(): void
+    {
+        $futureDate = (new DateTime('+30 days'))->format('Y-m-d 00:00:00');
+        $row = $this->createCheapestPriceSpeedRow(1, 599.99, $futureDate, 2, 3);
+        $queries = [];
+        $bindings = [];
+        $db = $this->createMock(\Pressmind\DB\Adapter\AdapterInterface::class);
+        $db->method('fetchAll')->willReturnCallback(function ($query, $values) use ($row, &$queries, &$bindings) {
+            if (strpos($query, 'cheapest_price_speed') === false) {
+                return [];
+            }
+            $queries[] = $query;
+            $bindings[] = $values;
+            return [$row];
+        });
+        $this->attachDefaultDbMethods($db);
+        Registry::getInstance()->add('db', $db);
+
+        $mo = $this->createMediaObject();
+        $mo->setId(100);
+        $result = $mo->getCheapestPrice();
+        $this->assertSame(599.99, $result->price_total);
+        $this->assertCount(1, $queries);
+        $this->assertSame([100], $bindings[0]);
+        $this->assertStringContainsString(
+            'ORDER BY CASE `state` WHEN 3 THEN 0 WHEN 1 THEN 1 WHEN 5 THEN 2 ELSE 3 END, `price_total` ASC, `duration` DESC, `date_departure` ASC',
+            $queries[0]
+        );
+        $this->assertStringEndsWith('LIMIT 0, 1', $queries[0]);
+    }
+
+    public function testGetCheapestPriceKeepsStateFallbackWithOneRowPerQuery(): void
+    {
+        // default filter: state 3 (occupancy 2, 1, all), then the fallback to state 1 - every query loads one row at most
+        $futureDate = (new DateTime('+30 days'))->format('Y-m-d 00:00:00');
+        $rowRequest = $this->createCheapestPriceSpeedRow(1, 3200, $futureDate, 2, 1);
+        $queries = [];
+        $db = $this->createMock(\Pressmind\DB\Adapter\AdapterInterface::class);
+        $db->method('fetchAll')->willReturnCallback(function ($query, $values) use ($rowRequest, &$queries) {
+            if (strpos($query, 'cheapest_price_speed') === false) {
+                return [];
+            }
+            $queries[] = $query;
+            $this->assertStringContainsString('state = ?', $query);
+            return end($values) === CheapestPrice::STATE_REQUEST ? [$rowRequest] : [];
+        });
+        $this->attachDefaultDbMethods($db);
+        Registry::getInstance()->add('db', $db);
+
+        $mo = $this->createMediaObject();
+        $mo->setId(100);
+        $result = $mo->getCheapestPrice(new CheapestPrice());
+        $this->assertSame(1, (int)$result->state);
+        $this->assertCount(4, $queries);
+        foreach ($queries as $query) {
+            $this->assertStringEndsWith('LIMIT 0, 1', $query);
+        }
+    }
+
+    public function testGetCheapestPricesOrdersByStatePriorityOnlyOnRequest(): void
+    {
+        $queries = [];
+        $db = $this->createMock(\Pressmind\DB\Adapter\AdapterInterface::class);
+        $db->method('fetchAll')->willReturnCallback(function ($query) use (&$queries) {
+            if (strpos($query, 'cheapest_price_speed') !== false) {
+                $queries[] = $query;
+            }
+            return [];
+        });
+        $this->attachDefaultDbMethods($db);
+        Registry::getInstance()->add('db', $db);
+
+        $mo = $this->createMediaObject();
+        $mo->setId(100);
+        $mo->getCheapestPrices(null, ['price_total' => 'ASC']);
+        $this->assertCount(1, $queries);
+        $this->assertStringNotContainsString('CASE `state`', $queries[0]);
+    }
+
     private function attachDefaultDbMethods($db): void
     {
         $db->method('fetchRow')->willReturn(null);

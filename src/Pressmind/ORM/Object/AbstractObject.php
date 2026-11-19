@@ -210,15 +210,12 @@ abstract class AbstractObject
      */
     public function loadAll($where = null, $order = null, $limit = null)
     {
-        $registry = Registry::getInstance();
         $values = [];
-        $result = [];
-        $order_columns = [];
-        $query = "SELECT * FROM " . $this->getDbTableName();
+        $whereSql = null;
         $class_name = get_class($this);
 
         if (is_array($where)) {
-            $query .= " WHERE ";
+            $whereSql = '';
             $where_i = 0;
             $allowedColumns = array_keys($this->_definitions['properties']);
             $allowedOperators = ['=', '!=', '<>', '<', '>', '<=', '>=', 'LIKE', 'NOT LIKE', 'IN', 'NOT IN', 'IS NULL', 'IS NOT NULL', 'BETWEEN'];
@@ -269,9 +266,9 @@ abstract class AbstractObject
                 }
                 $keys[] = $key;
                 if($where_i > 0) {
-                    $query .= ' AND ';
+                    $whereSql .= ' AND ';
                 }
-                $query .= '`' . $key . '` ' . $operator . $variable_replacement;
+                $whereSql .= '`' . $key . '` ' . $operator . $variable_replacement;
                 $where_i++;
             }
         } else if(!is_null($where)) {
@@ -280,7 +277,21 @@ abstract class AbstractObject
                 . 'Use array syntax instead. Class: ' . $class_name,
                 E_USER_DEPRECATED
             );
-            $query .= " WHERE " . $where;
+            $whereSql = $where;
+        }
+
+        return $this->loadAllWithBindings($whereSql, $values, $order, $limit);
+    }
+
+    /** Execute an SDK-built WHERE clause with positional parameters. */
+    protected function loadAllWithBindings($whereSql, array $values, $order, $limit)
+    {
+        $registry = Registry::getInstance();
+        $class_name = get_class($this);
+        $order_columns = [];
+        $query = "SELECT * FROM " . $this->getDbTableName();
+        if ($whereSql !== null) {
+            $query .= " WHERE " . $whereSql;
         }
         if(isset($this->_definitions['database']['order_columns']) && !is_null($this->_definitions['database']['order_columns'])) {
             foreach ($this->_definitions['database']['order_columns'] as $column_name => $direction) {

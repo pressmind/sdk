@@ -76,6 +76,21 @@ class MediaObjectCheapestPriceTest extends AbstractTestCase
         $this->assertCount(0, $result);
     }
 
+    public function testSalesApiCanLoadCheapestPricesWithStrictErrorHandler(): void
+    {
+        Registry::getInstance()->add('db', $this->createMockDbForCheapestPriceSpeed([]));
+        $mo = $this->createMediaObject();
+        $mo->setId(3935018);
+        set_error_handler(static function ($severity, $message) {
+            throw new \ErrorException($message, 0, $severity);
+        }, E_USER_DEPRECATED);
+        try {
+            $this->assertSame([], $mo->getCheapestPrices());
+        } finally {
+            restore_error_handler();
+        }
+    }
+
     public function testGetCheapestPricesReturnsRowsFromMock(): void
     {
         $futureDate = (new DateTime('+30 days'))->format('Y-m-d 00:00:00');
@@ -159,22 +174,33 @@ class MediaObjectCheapestPriceTest extends AbstractTestCase
     {
         $futureDate = (new DateTime('+60 days'))->format('Y-m-d 00:00:00');
         $row = $this->createCheapestPriceSpeedRow(1, 799.99, $futureDate);
-        $db = $this->createMockDbForCheapestPriceSpeed([$row]);
-        $db->method('fetchAll')->willReturnCallback(function ($query) use ($row) {
-            if (strpos($query, 'cheapest_price_speed') !== false) {
-                $this->assertStringContainsString('duration BETWEEN', $query);
-                $this->assertStringContainsString('date_departure BETWEEN', $query);
-                return [$row];
-            }
-            return [];
+        $db = $this->createMock(\Pressmind\DB\Adapter\AdapterInterface::class);
+        $this->attachDefaultDbMethods($db);
+        $db->expects($this->once())->method('fetchAll')->willReturnCallback(function ($query, $values) use ($row) {
+            $this->assertStringContainsString('duration BETWEEN ? AND ?', $query);
+            $this->assertStringContainsString('date_departure BETWEEN ? AND ?', $query);
+            $this->assertStringContainsString('price_total BETWEEN ? AND ?', $query);
+            $this->assertSame(2, substr_count($query, '? BETWEEN option_occupancy_min AND option_occupancy_max OR option_occupancy = ?'));
+            $this->assertStringContainsString('transport_type IN (?, ?)', $query);
+            $this->assertStringContainsString('transport_1_airport IN (?)', $query);
+            $this->assertStringContainsString('startingpoint_option_name LIKE ?', $query);
+            $this->assertSame([100, 5, 14, '2026-12-01 00:00:00', '2026-12-31 23:59:59',
+                0, 999, 2, 2, 4, 4, 'bus', 'flight', 'FRA', 'A,1', 3, "%L'Isle%"], $values);
+            return [$row];
         });
         Registry::getInstance()->add('db', $db);
 
         $filters = new CheapestPrice();
         $filters->duration_from = 5;
         $filters->duration_to = 14;
-        $filters->date_from = new DateTime('+30 days');
-        $filters->date_to = new DateTime('+90 days');
+        $filters->date_from = new DateTime('2026-12-01');
+        $filters->date_to = new DateTime('2026-12-31');
+        $filters->price_to = 999;
+        $filters->occupancies = [2, 4];
+        $filters->transport_types = ['bus', 'flight'];
+        $filters->transport_1_airport = 'FRA';
+        $filters->id_option = 'A,1';
+        $filters->startingpoint_option_name = "L'Isle";
 
         $mo = $this->createMediaObject();
         $mo->setId(100);
@@ -401,17 +427,9 @@ class MediaObjectCheapestPriceTest extends AbstractTestCase
         $futureDate = (new DateTime('+30 days'))->format('Y-m-d 00:00:00');
         $rowRequest = $this->createCheapestPriceSpeedRow(1, 3200, $futureDate, 2, 1);
         $db = $this->createMock(\Pressmind\DB\Adapter\AdapterInterface::class);
-        $db->method('fetchAll')->willReturnCallback(function ($query) use ($rowRequest) {
-            if (strpos($query, 'cheapest_price_speed') === false) {
-                return [];
-            }
-            if (strpos($query, 'state = 3') !== false) {
-                return [];
-            }
-            if (strpos($query, 'state = 1') !== false) {
-                return [$rowRequest];
-            }
-            return [];
+        $db->method('fetchAll')->willReturnCallback(function ($query, $values) use ($rowRequest) {
+            $this->assertStringContainsString('state = ?', $query);
+            return end($values) === CheapestPrice::STATE_REQUEST ? [$rowRequest] : [];
         });
         $this->attachDefaultDbMethods($db);
         Registry::getInstance()->add('db', $db);

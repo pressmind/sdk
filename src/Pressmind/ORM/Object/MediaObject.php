@@ -773,98 +773,77 @@ class MediaObject extends AbstractObject
             return [];
         }
         $now = new DateTime();
-        $where = "id_media_object = " . $id . " AND price_total " . (self::_allowZeroPrices() ? '>=' : '>') . " 0";
-        $occupancy_filter_is_set = false;
-        $state_filter_is_set = false;
+        $where = 'id_media_object = ? AND price_total ' . (self::_allowZeroPrices() ? '>=' : '>') . ' 0';
+        $values = [$id];
         if(!is_null($filters)) {
             if(!empty($filters->duration_from) && !empty($filters->duration_to)) {
-                $where .= ' AND duration BETWEEN ' . $filters->duration_from . ' AND ' . $filters->duration_to;
+                $where .= ' AND duration BETWEEN ? AND ?';
+                $values[] = $filters->duration_from;
+                $values[] = $filters->duration_to;
             }
             if(!empty($filters->date_from) && !empty($filters->date_to)) {
-                $where .= " AND date_departure BETWEEN '" . $filters->date_from->format('Y-m-d 00:00:00') . "' AND '" . $filters->date_to->format('Y-m-d 23:59:59') . "'";
+                $where .= ' AND date_departure BETWEEN ? AND ?';
+                $values[] = $filters->date_from->format('Y-m-d 00:00:00');
+                $values[] = $filters->date_to->format('Y-m-d 23:59:59');
             }elseif(!empty($filters->date_from) && empty($filters->date_to)) {
-                $where .= " AND date_departure = '" . $filters->date_from->format('Y-m-d 00:00:00') . "'";
+                $where .= ' AND date_departure = ?';
+                $values[] = $filters->date_from->format('Y-m-d 00:00:00');
             }else{
-                $where .= " AND date_departure > '" . $now->format('Y-m-d 00:00:00') . "'";
+                $where .= ' AND date_departure > ?';
+                $values[] = $now->format('Y-m-d 00:00:00');
             }
             if(!empty($filters->price_to)) {
                 $filters->price_from = empty($filters->price_from) ? 0 : $filters->price_from;
-                $where .= ' AND price_total BETWEEN ' . $filters->price_from . ' AND ' . $filters->price_to;
+                $where .= ' AND price_total BETWEEN ? AND ?';
+                $values[] = $filters->price_from;
+                $values[] = $filters->price_to;
             }
             if(!empty($filters->occupancies)) {
-                $where .= ' AND ((';
-                $im = [];
+                $occupancyConditions = [];
                 foreach ($filters->occupancies as $occupancy) {
-                    $im[] = '(' . $occupancy . ' BETWEEN option_occupancy_min AND option_occupancy_max) OR option_occupancy = ' . $occupancy;
+                    $occupancyConditions[] = '(? BETWEEN option_occupancy_min AND option_occupancy_max OR option_occupancy = ?)';
+                    $values[] = $occupancy;
+                    $values[] = $occupancy;
                 }
-                $where .= implode(') OR (', $im) .  '))';
-                $occupancy_filter_is_set = true;
+                $where .= ' AND (' . implode(' OR ', $occupancyConditions) . ')';
             }
-            if(!empty($filters->id_option)) {
-                $where .= ' AND id_option = "' . $filters->id_option.'"';
-            }
-            if(!empty($filters->id_date)) {
-                $where .= ' AND id_date = "' . $filters->id_date.'"';
-            }
-            if(!empty($filters->id_booking_package)) {
-                $where .= ' AND id_booking_package = "' . $filters->id_booking_package.'"';
-            }
-            if(!empty($filters->id_housing_package)) {
-                $where .= ' AND id_housing_package = "' . $filters->id_housing_package.'"';
-            }
-            if(!empty($filters->housing_package_code_ibe)) {
-                $where .= ' AND housing_package_code_ibe = "' . $filters->housing_package_code_ibe.'"';
-            }
-            if(!empty($filters->transport_types)) {
-                if(is_string($filters->transport_types)){
-                    $filters->transport_types = [$filters->transport_types];
+            foreach (['transport_types' => 'transport_type', 'transport_1_airport' => 'transport_1_airport'] as $property => $column) {
+                if (!empty($filters->$property)) {
+                    if (is_string($filters->$property)) {
+                        $filters->$property = [$filters->$property];
+                    }
+                    $placeholders = array_fill(0, count($filters->$property), '?');
+                    $where .= ' AND ' . $column . ' IN (' . implode(', ', $placeholders) . ')';
+                    $values = array_merge($values, array_values($filters->$property));
                 }
-                $where .= ' AND transport_type in("' . implode('","',$filters->transport_types).'")';
             }
-            if(!empty($filters->transport_1_airport)) {
-                if(is_string($filters->transport_1_airport)){
-                    $filters->transport_1_airport = [$filters->transport_1_airport];
+            $equalityColumns = [
+                'id_option', 'id_date', 'id_booking_package', 'id_housing_package', 'housing_package_code_ibe',
+                'id', 'origin', 'agency', 'state', 'id_startingpoint_option', 'startingpoint_id_city', 'housing_package_id_name',
+            ];
+            foreach ($equalityColumns as $column) {
+                if (!empty($filters->$column)) {
+                    $where .= ' AND ' . $column . ' = ?';
+                    $values[] = $filters->$column;
                 }
-                $where .= ' AND transport_1_airport in("' . implode('","',$filters->transport_1_airport).'")';
-            }
-            if(!empty($filters->id)) {
-                $where .= ' AND id = ' . $filters->id;
-            }
-            if(!empty($filters->origin)) {
-                $where .= ' AND origin = ' . $filters->origin;
-            }
-            if(!empty($filters->agency)) {
-                $where .= ' AND agency = ' . $filters->agency;
-            }
-            if(!empty($filters->state)) {
-                $where .= ' AND state = '.$filters->state;
-                $state_filter_is_set = true;
-            }
-            if(!empty($filters->id_startingpoint_option)) {
-                $where .= ' AND id_startingpoint_option = "'.$filters->id_startingpoint_option.'"';
             }
             if(!empty($filters->startingpoint_option_name)) {
-                $where .= ' AND startingpoint_option_name like "%'.$filters->startingpoint_option_name.'%"';
-            }
-            if(!empty($filters->startingpoint_id_city)) {
-                $where .= ' AND startingpoint_id_city = "'.$filters->startingpoint_id_city.'"';
-            }
-            if(!empty($filters->housing_package_id_name)) {
-                $where .= ' AND housing_package_id_name = "'.$filters->housing_package_id_name.'"';
+                $where .= ' AND startingpoint_option_name LIKE ?';
+                $values[] = '%' . $filters->startingpoint_option_name . '%';
             }
         }
-        if(!$occupancy_filter_is_set && isset($filters->occupancies_disable_fallback) && $filters->occupancies_disable_fallback === false) {
-            $cheapest_prices = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 2', $order, $limit);
+        $price = new CheapestPriceSpeed();
+        $cheapest_prices = [];
+        if(empty($filters->occupancies) && isset($filters->occupancies_disable_fallback) && $filters->occupancies_disable_fallback === false) {
+            $cheapest_prices = $price->loadAllWithBindings($where . ' AND option_occupancy = 2', $values, $order, $limit);
             if (empty($cheapest_prices)) {
-                $cheapest_prices = CheapestPriceSpeed::listAll($where . ' AND option_occupancy = 1', $order, $limit);
+                $cheapest_prices = $price->loadAllWithBindings($where . ' AND option_occupancy = 1', $values, $order, $limit);
             }
-            if (empty($cheapest_prices)) {
-                $cheapest_prices = CheapestPriceSpeed::listAll($where, $order, $limit);
-            }
-        } else {
-            $cheapest_prices = CheapestPriceSpeed::listAll($where, $order, $limit);
         }
-        if(!empty($filters->state_fallback_order) && $state_filter_is_set === true && empty($cheapest_prices)) {
+        if (empty($cheapest_prices)) {
+            $cheapest_prices = $price->loadAllWithBindings($where, $values, $order, $limit);
+        }
+        if(!empty($filters->state_fallback_order) && !empty($filters->state) && empty($cheapest_prices)) {
             $fallback_filter = clone $filters;
             $fallback_filter->state_fallback_order = array_slice($filters->state_fallback_order, (int)array_search($filters->state, $filters->state_fallback_order) + 1);
             if(!empty($fallback_filter->state_fallback_order[0])){

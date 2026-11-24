@@ -23,5 +23,6 @@ class InfoTest extends AbstractTestCase
         $this->assertContains('\CheapestPriceSpeed', Info::STATIC_MODELS);
         $this->assertContains('\Touristic\Booking\Package', Info::STATIC_MODELS);
         $this->assertContains('\Touristic\Insurance\Surcharge', Info::STATIC_MODELS);
+        $this->assertContains('\Touristic\Date\LoyaltyPoints', Info::STATIC_MODELS);
     }
 }

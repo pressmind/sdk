@@ -47,6 +47,25 @@ The `state` field indicates a **display status** — it does **not** define logi
 | `early_bird_discount_group` | EarlyBirdDiscountGroup | Early bird discount schedule |
 | `early_payment_discount_group` | EarlyPaymentDiscountGroup | Early payment discount schedule |
 | `attributes` | Attribute[] | Key/value attributes |
+| `loyalty_points` | LoyaltyPoints[] | Loyalty points rule of this date. See [Loyalty Points](#loyalty-points) |
+
+### Loyalty Points
+
+**Namespace:** `Pressmind\ORM\Object\Touristic\Date\LoyaltyPoints`
+**Table:** `pmt2core_touristic_date_loyalty_points`
+
+Loyalty points rule as delivered per date by the Kuschick import. The field names are the JSON names of that import. `MediaObject::insertCheapestPrice()` uses the first rule of a date to fill `loyalty_points` and `loyalty_points_recipient` in [CheapestPriceSpeed](../cheapest-price-speed-reference.md#price).
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `id` | string(32) | yes | Primary key |
+| `id_media_object` | integer | yes | Reference to the parent MediaObject |
+| `id_booking_package` | string(32) | yes | Reference to the parent Booking Package |
+| `id_date` | string(32) | yes | Reference to the Date |
+| `recipient` | string(1) | no | `A` = registrant, `T` = participant |
+| `calculation` | string(1) | no | `U` = `points` per full `amount` of revenue, `F` = fixed `points` |
+| `points` | integer | no | Points per `amount` (`U`) or fixed points (`F`) |
+| `amount` | float | no | Revenue amount per `points` (`U`). Empty for `F` |
 
 ### Deprecated Properties
 

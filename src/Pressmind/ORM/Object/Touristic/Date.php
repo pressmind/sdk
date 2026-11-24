@@ -668,6 +668,7 @@ class Date extends AbstractObject
                     if(is_null($way_1)){
                         $way_1 = $transport->toStdClass();
                         $way_1->description = $way_1->transport_group;
+                        $way_1->seatplan_transport_code_ibe = null;
                     }else{
                         $way_1->price += $transport->price;
                         $way_1->code_ibe .= '#'.$transport->code_ibe;
@@ -677,10 +678,12 @@ class Date extends AbstractObject
                         $way_1->code .= ','.$transport->code;
                         $way_1->transport_date_to = $transport->transport_date_to;
                     }
+                    $this->_takeFirstSeatplan($way_1, $transport);
                 }else{
                     if(is_null($way_2)){
                         $way_2 = $transport->toStdClass();
                         $way_2->description = $way_2->transport_group;
+                        $way_2->seatplan_transport_code_ibe = null;
                     }else{
                         $way_2->price += $transport->price;
                         $way_2->code_ibe .= '#'.$transport->code_ibe;
@@ -690,6 +693,7 @@ class Date extends AbstractObject
                         $way_2->code .= ','.$transport->code;
                         $way_2->transport_date_to = $transport->transport_date_to;
                     }
+                    $this->_takeFirstSeatplan($way_2, $transport);
                 }
             }
             $compressed_group[$k][] = $way_1;
@@ -702,6 +706,22 @@ class Date extends AbstractObject
             array_splice($transport_pairs, $max_pairs);
         }
         return $transport_pairs;
+    }
+
+    /**
+     * A compressed way requires a seat plan as soon as one of its transports does.
+     * Only the first transport with a seat plan is kept: the CRS answers seat plan
+     * requests per single service, chains of services are not supported.
+     * @param \stdClass $way
+     * @param Transport $transport
+     * @return void
+     */
+    private function _takeFirstSeatplan($way, $transport){
+        if(empty($transport->seatplan_required) || !empty($way->seatplan_transport_code_ibe)){
+            return;
+        }
+        $way->seatplan_required = true;
+        $way->seatplan_transport_code_ibe = $transport->code_ibe;
     }
 
     /**

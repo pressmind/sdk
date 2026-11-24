@@ -102,6 +102,52 @@ class DateTest extends AbstractTestCase
         $this->assertCount(0, $pairs);
     }
 
+    /**
+     * Kneissl P1455 (AMIS #465788): rail, flight and the local round trip bus share one group,
+     * only the bus requires a seat plan and it is not the first transport of the outward way.
+     */
+    public function testGetTransportPairsTakesSeatplanFromAnyTransportOfAGroup(): void
+    {
+        $group = 'Aufpreis AIRail ab/bis Linz und Flugtaxen ab/bis Wien';
+        $date = new Date(null, false);
+        $date->transports = [
+            $this->createGroupTransport('rail', 1, 'BAH', '293723', '2027-04-16 06:00', $group, false),
+            $this->createGroupTransport('bus', 1, 'BUS', '293730', '2027-04-16 14:00', 'Flugtaxen ab/bis Wien#' . $group, true),
+            $this->createGroupTransport('flight', 1, 'FLUG', '293727', '2027-04-16 09:00', 'Flugtaxen ab/bis Wien#' . $group, false),
+            $this->createGroupTransport('return', 2, 'FLUG', '293736', '2027-04-23 10:00', 'Flugtaxen ab/bis Wien#' . $group, false),
+        ];
+
+        $pairs = $date->getTransportPairs([0, 2, 3], ['bus', 'rail', 'return', 'flight'], [], null, false, null);
+        $linz = array_values(array_filter($pairs, function ($pair) use ($group) {
+            return $pair['way1']->transport_group === $group;
+        }));
+
+        $this->assertCount(1, $linz);
+        $this->assertSame('293723#293727#293730', $linz[0]['way1']->code_ibe);
+        $this->assertTrue($linz[0]['way1']->seatplan_required);
+        $this->assertSame('293730', $linz[0]['way1']->seatplan_transport_code_ibe);
+        $this->assertEmpty($linz[0]['way2']->seatplan_required);
+        $this->assertNull($linz[0]['way2']->seatplan_transport_code_ibe);
+    }
+
+    private function createGroupTransport(string $id, int $way, string $type, string $code_ibe, string $from, string $group, bool $seatplan): Transport
+    {
+        $transport = new Transport(null, false);
+        $transport->setId($id);
+        $transport->way = $way;
+        $transport->type = $type;
+        $transport->code_ibe = $code_ibe;
+        $transport->transport_date_from = new \DateTime($from);
+        $transport->transport_date_to = new \DateTime($from);
+        $transport->transport_group = $group;
+        $transport->seatplan_required = $seatplan;
+        $transport->state = 3;
+        $transport->price = 0;
+        $transport->dont_use_for_offers = false;
+        $transport->agencies = null;
+        return $transport;
+    }
+
     public function testGetSightseeingsReturnsArray(): void
     {
         $date = new Date(null, false);

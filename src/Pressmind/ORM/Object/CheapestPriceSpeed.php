@@ -103,6 +103,8 @@ use DateTime;
  * @property string $agency
  * @property string $housing_package_id_name
  * @property int $quota_pax
+ * @property int $loyalty_points
+ * @property string $loyalty_points_recipient
  */
 class CheapestPriceSpeed extends AbstractObject
 {
@@ -780,6 +782,27 @@ class CheapestPriceSpeed extends AbstractObject
                 'required' => false,
                 'filters' => null,
                 'validators' => null
+            ],
+            'loyalty_points' => [
+                'name' => 'loyalty_points',
+                'title' => 'loyalty_points',
+                'type' => 'integer',
+                'required' => false,
+                'filters' => null,
+                'validators' => null
+            ],
+            'loyalty_points_recipient' => [
+                'name' => 'loyalty_points_recipient',
+                'title' => 'loyalty_points_recipient',
+                'type' => 'string',
+                'required' => false,
+                'filters' => null,
+                'validators' => [
+                    [
+                        'name' => 'maxlength',
+                        'params' => 1,
+                    ]
+                ],
             ],
             'infotext' => [
                 'name' => 'infotext',

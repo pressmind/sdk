@@ -7,6 +7,7 @@ use Pressmind\ORM\Object\AbstractObject;
 use DateTime;
 use Pressmind\ORM\Object\Touristic\Booking\Package;
 use Pressmind\ORM\Object\Touristic\Date\Attribute;
+use Pressmind\ORM\Object\Touristic\Date\LoyaltyPoints;
 use Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup\Item;
 use Pressmind\Registry;
 
@@ -39,6 +40,7 @@ use Pressmind\Registry;
  * @property EarlyBirdDiscountGroup $early_bird_discount_group
  * @property EarlyPaymentDiscountGroup $early_payment_discount_group
  * @property Attribute[] $attributes
+ * @property LoyaltyPoints[] $loyalty_points
  */
 class Date extends AbstractObject
 {
@@ -392,6 +394,19 @@ class Date extends AbstractObject
                     'type' => 'hasMany',
                     'related_id' => 'id_date',
                     'class' => Attribute::class,
+                ],
+                'required' => false,
+                'validators' => NULL,
+                'filters' => NULL,
+            ],
+            'loyalty_points' => [
+                'title' => 'loyalty_points',
+                'name' => 'loyalty_points',
+                'type' => 'relation',
+                'relation' => [
+                    'type' => 'hasMany',
+                    'related_id' => 'id_date',
+                    'class' => LoyaltyPoints::class,
                 ],
                 'required' => false,
                 'validators' => NULL,

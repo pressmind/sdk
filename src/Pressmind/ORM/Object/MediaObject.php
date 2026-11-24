@@ -19,6 +19,7 @@ use Pressmind\ORM\Object\MediaObject\MyContent;
 use Pressmind\ORM\Object\Touristic\Base;
 use Pressmind\ORM\Object\Touristic\Booking\Package;
 use Pressmind\ORM\Object\Touristic\Date;
+use Pressmind\ORM\Object\Touristic\Date\LoyaltyPoints;
 use Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup;
 use Pressmind\ORM\Object\Touristic\EarlyBirdDiscountGroup\Item;
 use Pressmind\ORM\Object\Touristic\Insurance\Group;
@@ -1798,6 +1799,8 @@ class MediaObject extends AbstractObject
                         self::$_insert_cheapest_price_log[$this->id][] = 'Skipping date ' . $date->departure->format('Y-m-d') . ' because of agency filter (current agency = '.$agency.') (agencies allowed for this date = '.implode(',',$date_agencies).')';
                         continue;
                     }
+                    $date_loyalty_points = $date->loyalty_points;
+                    $loyalty_points_rule = empty($date_loyalty_points) ? null : $date_loyalty_points[0];
                     /** @var Item[] $early_bird_discounts */
                     // Falls die early_bird_discount_group Relation nicht automatisch geladen wurde, manuell laden
                     if(!empty($date->id_early_bird_discount_group) && empty($date->early_bird_discount_group)){
@@ -2087,6 +2090,7 @@ class MediaObject extends AbstractObject
                                             $cheapestPriceSpeed->price_total = $cheapestPriceSpeed->price_regular_before_discount + $discount;
                                         }
                                     }
+                                    $this->_setLoyaltyPoints($cheapestPriceSpeed, $loyalty_points_rule);
                                     $cheapestPriceSpeed->date_code_ibe = $date->code_ibe;
                                     $cheapestPriceSpeed->housing_package_code_ibe = !empty($housing_package) ? $housing_package->code_ibe : null;
                                     $cheapestPriceSpeed->housing_package_name = !empty($housing_package) ? $housing_package->name : null;
@@ -2209,6 +2213,34 @@ class MediaObject extends AbstractObject
                 return $this->_calculateFixedEarlyBirdDiscount($discount);
         }
         return null;
+    }
+
+    /**
+     * Sets loyalty_points and loyalty_points_recipient from the date's rule, based on the final price_total.
+     * U: points per full amount, calculated in cents. F: fixed points. No rule or another calculation: both null.
+     * @param CheapestPriceSpeed $cheapestPriceSpeed
+     * @param LoyaltyPoints|null $rule
+     * @return void
+     */
+    private function _setLoyaltyPoints($cheapestPriceSpeed, $rule) {
+        $cheapestPriceSpeed->loyalty_points = null;
+        $cheapestPriceSpeed->loyalty_points_recipient = null;
+        if (is_null($rule)) {
+            return;
+        }
+        switch ($rule->calculation) {
+            case LoyaltyPoints::CALCULATION_PER_AMOUNT:
+                $amount_cents = (int) round($rule->amount * 100);
+                $price_total_cents = (int) round($cheapestPriceSpeed->price_total * 100);
+                $cheapestPriceSpeed->loyalty_points = $amount_cents === 0 ? 0 : intdiv($price_total_cents, $amount_cents) * $rule->points;
+                break;
+            case LoyaltyPoints::CALCULATION_FIXED:
+                $cheapestPriceSpeed->loyalty_points = $rule->points;
+                break;
+            default:
+                return;
+        }
+        $cheapestPriceSpeed->loyalty_points_recipient = $rule->recipient;
     }
 
     /**
@@ -2620,6 +2652,7 @@ class MediaObject extends AbstractObject
         self::_deleteItineraryDataForMediaObject($db, $id);
 
         $db->delete('pmt2core_touristic_date_attributes', ['id_media_object = ?', $id]);
+        $db->delete('pmt2core_touristic_date_loyalty_points', ['id_media_object = ?', $id]);
         $db->delete('pmt2core_touristic_transports', ['id_media_object = ?', $id]);
         $db->delete('pmt2core_touristic_dates', ['id_media_object = ?', $id]);
 

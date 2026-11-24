@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the pressmind SDK from February 2025 to October 2026.
+All notable changes to the pressmind SDK from February 2025 to November 2026.
 
 Changes are categorized as:
 - **FEATURE** – New functionality
@@ -12,6 +12,7 @@ Changes are categorized as:
 
 ## Table of Contents
 
+- [November 2026](#november-2026)
 - [October 2026](#october-2026)
 - [September 2026](#september-2026)
 - [August 2026](#august-2026)
@@ -33,6 +34,20 @@ Changes are categorized as:
 - [March 2025](#march-2025)
 - [February 2025](#february-2025)
 - [Summary of Breaking Changes](#summary-of-breaking-changes)
+
+---
+
+## November 2026
+
+### BREAKING: Loyalty points per date and in the cheapest price
+
+- New ORM class `Touristic\Date\LoyaltyPoints` with table `pmt2core_touristic_date_loyalty_points` (`id`, `id_media_object`, `id_booking_package`, `id_date`, `recipient`, `calculation`, `points`, `amount`). It stores the loyalty points rule that the Kuschick import delivers per date. `Touristic\Date` has the new hasMany relation `loyalty_points`, and `MediaObject::deleteTouristic()` also deletes the rules of the media object. See [Touristic: Date](Touristic/Date.md#loyalty-points).
+- `pmt2core_cheapest_price_speed` has two new nullable columns, filled by `MediaObject::insertCheapestPrice()` from the first rule of the date, based on the final `price_total` (after early bird discount):
+  - `loyalty_points` (integer): for `calculation` = `U` (revenue) `intdiv(cents(price_total), cents(amount)) * points` with `cents(x) = (int) round(x * 100)`; `0` if `amount` is `0` or empty. For `calculation` = `F` (fixed) `points`. `null` if the date has no rule; the ORM writes `null` integers as `0`, so a date without a rule is recognised by an empty `loyalty_points_recipient`.
+  - `loyalty_points_recipient` (string): `recipient` of the rule (`A` registrant, `T` participant). Empty if the date has no rule.
+- `getCheapestPrice()` returns both fields with every cheapest price row. See [CheapestPriceSpeed](cheapest-price-speed-reference.md#price).
+
+Before the next import on an existing environment, run `php bin/database-integrity-check --non-interactive --static-only` (creates the new table and adds the two columns). Otherwise the inserts into `pmt2core_cheapest_price_speed` fail.
 
 ---
 

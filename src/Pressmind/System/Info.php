@@ -59,6 +59,7 @@ class Info
         '\Touristic\Booking\Package',
         '\Touristic\Date',
         '\Touristic\Date\Attribute',
+        '\Touristic\Date\LoyaltyPoints',
         '\Touristic\EarlyBirdDiscountGroup',
         '\Touristic\EarlyBirdDiscountGroup\Item',
         '\Touristic\EarlyPaymentDiscountGroup',

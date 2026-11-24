@@ -75,6 +75,8 @@ All price fields are per-person values (unless `option_price_due` indicates othe
 | `included_options_price` | float | — (calculated) | Sum of cheapest required secondary option prices |
 | `diff_to_single_room` | float | — (calculated) | Single room supplement. Only if `generate_single_room_index` is enabled. See [Single Room Index](cheapest-price-aggregation.md#step-11-single-room-index) |
 | `price_mix` | string(32) | `Booking\Package.price_mix` | Pricing mode. See [Price Mix Modes](cheapest-price-aggregation.md#price-mix-modes) |
+| `loyalty_points` | integer | `Date\LoyaltyPoints` (calculated) | Loyalty points for this offer, from the first rule of the date. `calculation` = `U`: `intdiv(cents(price_total), cents(amount)) * points` with `cents(x) = (int) round(x * 100)`, `0` if `amount` is `0` or empty. `calculation` = `F`: `points`. Empty if the date has no rule (stored as `0` by the ORM) |
+| `loyalty_points_recipient` | string(1) | `Date\LoyaltyPoints.recipient` | Who receives the points: `A` = registrant, `T` = participant. Empty if the date has no rule |
 
 ### Early Bird Discount
 
